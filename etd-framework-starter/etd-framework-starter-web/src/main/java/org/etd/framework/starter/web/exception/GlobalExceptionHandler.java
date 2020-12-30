@@ -4,12 +4,15 @@ package org.etd.framework.starter.web.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.utils.exception.ApiRuntimeException;
 import org.etd.framework.common.utils.exception.code.RequestCode;
-import org.etd.framework.starter.web.result.ResultModel;
+import org.etd.framework.common.utils.result.ResultModel;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.client.HttpClientErrorException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -39,6 +42,47 @@ public class GlobalExceptionHandler {
 	public ResultModel handle(HttpServletRequest request, HttpServletResponse response, ApiRuntimeException e) {
 		log.error(e.getMessage(), e);
 		return ResultModel.failed(e.getRequestCode(), e.getMessage(), request.getRequestURI());
+	}
+
+	/**
+	 * 受保护的资源，需要身份权限
+	 *
+	 * @param request
+	 * @param response
+	 * @param e
+	 * @return
+	 */
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	@ExceptionHandler(value = AccessDeniedException.class)
+	public ResultModel handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) {
+		log.error(e.getMessage(), e);
+		return ResultModel.failed(RequestCode.NO_URL_PERMISSION, RequestCode.NO_URL_PERMISSION.getDescription(), request.getRequestURI());
+	}
+
+
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	@ExceptionHandler(value = HttpClientErrorException.Unauthorized.class)
+	public ResultModel handle(HttpServletRequest request, HttpServletResponse response, HttpClientErrorException.Unauthorized e) {
+		log.error(e.getMessage(), e);
+		return ResultModel.failed(RequestCode.NO_PERMISSION, RequestCode.NO_PERMISSION.getDescription(), request.getRequestURI());
+	}
+
+	/**
+	 * 登录失败 统一拦截
+	 *
+	 * @param request
+	 * @param response
+	 * @param e
+	 * @return
+	 */
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	@ExceptionHandler(value = BadCredentialsException.class)
+	public ResultModel handle(HttpServletRequest request, HttpServletResponse response, BadCredentialsException e) {
+		log.error(e.getMessage(), e);
+		return ResultModel.failed(RequestCode.LOGIN_FAILED, e.getMessage(), request.getRequestURI());
 	}
 
 	/**

@@ -49,6 +49,7 @@
         <module>etd-framework-commons</module>
         <module>etd-framework-starter</module>
         <module>etd-framework-dependencies</module>
+        <module>Demo</module>
     </modules>
 
 

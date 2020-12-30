@@ -44,6 +44,8 @@
             <artifactId>fastjson</artifactId>
             <type>jar</type>
         </dependency>
+
+
         <dependency>
             <groupId>org.etd.framework.starter</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>
@@ -51,6 +53,12 @@
             <scope>compile</scope>
         </dependency>
 
+
+        <dependency>
+            <groupId>org.etd.framework.starter</groupId>
+            <artifactId>etd-framework-starter-security</artifactId>
+            <version>${edt.framework.version}</version>
+        </dependency>
 
     </dependencies>
 
@@ -60,8 +68,8 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <artifactId>etd-framework-starter-dependencies</artifactId>
-                <groupId>org.etd.framework.starter</groupId>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-dependencies</artifactId>
                 <version>0.0.1-RELEASES</version>
                 <scope>import</scope>
                 <type>pom</type>

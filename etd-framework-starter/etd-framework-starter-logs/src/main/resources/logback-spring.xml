@@ -5,7 +5,7 @@
     <!--服务器信息-->
     <springProperty name="appName" scope="context" source="spring.application.name"/>
     <conversionRule conversionWord="ip"
-                    converterClass="com.penglai.yaji.framework.starter.log.converter.LogIpConverter"/>
+                    converterClass="org.etd.framework.starter.log.converter.LogIpConverter"/>
     <springProperty name="port" scope="context" source="server.port" defaultValue="0000"/>
 
     <!--日志输出路径-->

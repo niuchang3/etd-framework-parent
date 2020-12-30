@@ -21,6 +21,7 @@
         <module>etd-framework-starter-amqp</module>
         <module>etd-framework-starter-web</module>
         <module>etd-framework-starter-logs</module>
+        <module>etd-framework-starter-security</module>
     </modules>
 
 </project>

@@ -11,8 +11,10 @@ import org.etd.framework.starter.web.interceptor.CustomInterceptor;
 import org.etd.framework.starter.web.interceptor.config.CustomDefaultInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -28,15 +30,19 @@ import java.util.List;
  * @description
  * @date 2020/9/2
  */
+@Order(0)
 @Configuration
 @ComponentScan({"org.etd.framework.starter.web.*"})
 public class WebAppConfig extends WebMvcConfigurationSupport {
 
 
+	@Bean
 	@ConditionalOnMissingBean(CustomInterceptor.class)
 	public CustomInterceptor initCustomInterceptor() {
 		return new CustomDefaultInterceptor();
 	}
+
+
 
 	@Autowired
 	private CustomInterceptor customInterceptor;

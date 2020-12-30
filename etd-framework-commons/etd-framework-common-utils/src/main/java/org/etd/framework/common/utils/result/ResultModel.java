@@ -1,4 +1,4 @@
-package org.etd.framework.starter.web.result;
+package org.etd.framework.common.utils.result;
 
 
 import lombok.AllArgsConstructor;
