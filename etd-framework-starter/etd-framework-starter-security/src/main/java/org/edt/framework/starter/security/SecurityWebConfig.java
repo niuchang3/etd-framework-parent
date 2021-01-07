@@ -58,6 +58,8 @@ public class SecurityWebConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers(SecurityConstants.LOGIN_MANNER.PASSWORD.getRequestMethod().name(), SecurityConstants.LOGIN_MANNER.PASSWORD.getUrl()).permitAll()
 				// 以/api/**下的所有接口全部需要认证
 				.antMatchers(SecurityConstants.FILTER_ALL).authenticated()
+				// 所有删除类接口，只有管理员才可以调用
+				.antMatchers(SecurityConstants.FILTER_ALL).hasRole("ADMIN")
 				// 其他资源全部放行
 				.anyRequest().permitAll()
 
