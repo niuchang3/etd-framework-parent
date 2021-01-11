@@ -11,3 +11,8 @@ spring:
     password: PenglaiCache
     redisson:
       config: classpath:redisson.yml
+#wx:
+#  pay:
+#    service:
+#      provider:
+#        api-v3-mch-key: 1213321

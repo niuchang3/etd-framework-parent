@@ -22,6 +22,7 @@
         <module>etd-framework-starter-web</module>
         <module>etd-framework-starter-logs</module>
         <module>etd-framework-starter-security</module>
+        <module>etd-framework-starter-pay</module>
     </modules>
 
 </project>

@@ -1,8 +1,11 @@
 package org.edt.framework.starter.security.filter;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.edt.framework.starter.security.constants.SecurityConstants;
 import org.edt.framework.starter.security.token.JwtToken;
+import org.etd.framework.common.utils.exception.ApiRuntimeException;
+import org.etd.framework.common.utils.exception.code.RequestCode;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +27,7 @@ import java.io.IOException;
  * @date 2020/12/26
  */
 @Order(0)
+@Slf4j
 public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 
 
@@ -32,7 +36,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 	/**
 	 * 最大重试次数
 	 */
-	private final static Integer maxRetry = 3;
+	private final static Integer maxRetry = 2;
 
 	/**
 	 * Creates an instance which will authenticate against the supplied
@@ -66,12 +70,21 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 
 		String previousToken = "";
 		Integer retryNumber = 0;
+
+		String tokenKey = null;
+		try {
+			tokenKey = JwtToken.getId(tokenValue);
+		} catch (Exception e) {
+			throw new ApiRuntimeException(RequestCode.NO_PERMISSION);
+		}
+
 		while (retryNumber < maxRetry) {
 			try {
-				previousToken = stringRedisTemplate.opsForValue().get(JwtToken.getId(tokenValue));
+				previousToken = stringRedisTemplate.opsForValue().get(tokenKey);
 				break;
 			} catch (Exception e) {
 				retryNumber++;
+				log.error("token解析失败，第"+retryNumber+"次，尝试重新获取");
 				try {
 					Thread.sleep(1000 << retryNumber);
 				} catch (InterruptedException e1) {
@@ -80,7 +93,6 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 			}
 
 		}
-
 
 		if (StringUtils.isEmpty(previousToken)) {
 			SecurityContextHolder.clearContext();

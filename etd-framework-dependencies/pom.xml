@@ -36,6 +36,9 @@
 
         <jwt.version>0.11.2</jwt.version>
 
+        <!--第三方开源SDK https://github.com/Wechat-Group/WxJava-->
+        <weixin.java.version>4.0.0</weixin.java.version>
+
 
     </properties>
 
@@ -172,6 +175,14 @@
                         <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+
+            <!--第三方开源微信支付 SDK https://github.com/Wechat-Group/WxJava-->
+            <dependency>
+                <groupId>com.github.binarywang</groupId>
+                <artifactId>weixin-java-pay</artifactId>
+                <version>${weixin.java.version}</version>
             </dependency>
 
 
