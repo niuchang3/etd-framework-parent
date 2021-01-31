@@ -13,4 +13,6 @@ public class UserPasswordLoginDTO {
 	private String account;
 
 	private String password;
+
+	private boolean isRememberMe;
 }

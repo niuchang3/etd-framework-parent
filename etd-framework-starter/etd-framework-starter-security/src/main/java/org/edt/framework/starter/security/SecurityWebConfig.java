@@ -58,8 +58,8 @@ public class SecurityWebConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers(SecurityConstants.LOGIN_MANNER.PASSWORD.getRequestMethod().name(), SecurityConstants.LOGIN_MANNER.PASSWORD.getUrl()).permitAll()
 				// 以/api/**下的所有接口全部需要认证
 				.antMatchers(SecurityConstants.FILTER_ALL).authenticated()
-				// 所有删除类接口，只有管理员才可以调用
-				.antMatchers(SecurityConstants.FILTER_ALL).hasRole("ADMIN")
+				// 超级管理员可以调用所有接口
+				.antMatchers(SecurityConstants.FILTER_ALL).hasRole("SUPER_ADMIN")
 				// 其他资源全部放行
 				.anyRequest().permitAll()
 
@@ -91,5 +91,14 @@ public class SecurityWebConfig extends WebSecurityConfigurerAdapter {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
+	}
+
+
+	public static void main(String[] args) {
+		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+		String password = encoder.encode("123456789");
+
+		System.out.println(password);
+		System.out.println(encoder.matches("123456789", password));
 	}
 }

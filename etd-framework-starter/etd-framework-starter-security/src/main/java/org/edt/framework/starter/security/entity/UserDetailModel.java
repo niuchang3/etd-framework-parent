@@ -19,6 +19,12 @@ public class UserDetailModel implements Serializable {
 
 	private String name;
 
+	private String userImage;
+
+	private String mobile;
+
+	private String email;
+
 	private String account;
 
 	private String password;

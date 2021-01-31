@@ -25,6 +25,8 @@
 
         <!--Mybatis-->
         <mybatis.version>3.3.2</mybatis.version>
+        <!--德鲁伊-->
+        <druid.version>1.1.20</druid.version>
         <!--缓存框架-->
         <redisson.version>3.13.2</redisson.version>
         <fastjson.version>1.2.46</fastjson.version>
@@ -41,6 +43,14 @@
 
 
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>${druid.version}</version>
+        </dependency>
+    </dependencies>
 
 
     <dependencyManagement>
@@ -78,6 +88,12 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-boot-starter</artifactId>
                 <version>${mybatis.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>${druid.version}</version>
             </dependency>
 
             <dependency>
