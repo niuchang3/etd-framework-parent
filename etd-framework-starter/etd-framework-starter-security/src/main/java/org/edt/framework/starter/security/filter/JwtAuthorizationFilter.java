@@ -5,7 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.edt.framework.starter.security.constants.SecurityConstants;
 import org.edt.framework.starter.security.token.JwtToken;
 import org.etd.framework.common.utils.exception.ApiRuntimeException;
-import org.etd.framework.common.utils.exception.code.RequestCode;
+import org.etd.framework.common.core.exception.code.RequestCode;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;

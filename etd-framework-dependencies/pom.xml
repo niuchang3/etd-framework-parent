@@ -43,7 +43,7 @@
 
         <oauth2.authorization.version>0.2.0</oauth2.authorization.version>
 
-
+        <guava.version>20.0</guava.version>
     </properties>
 
     <dependencies>
@@ -68,14 +68,11 @@
             </dependency>
 
 
-
             <dependency>
                 <groupId>org.etd.framework.commons</groupId>
                 <artifactId>etd-framework-common-utils</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
-
-
 
 
             <dependency>
@@ -146,13 +143,11 @@
             </dependency>
 
 
-
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>transmittable-thread-local</artifactId>
                 <version>${alibaba.transmittable.version}</version>
             </dependency>
-
 
 
             <dependency>
@@ -212,6 +207,13 @@
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-oauth2-authorization-server</artifactId>
                 <version>${oauth2.authorization.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
             </dependency>
 
 

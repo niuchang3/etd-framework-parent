@@ -1,7 +1,7 @@
 package org.etd.framework.demo.controller;
 
 import org.edt.framework.starter.security.utils.UserDetailUtils;
-import org.etd.framework.common.utils.result.ResultModel;
+import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

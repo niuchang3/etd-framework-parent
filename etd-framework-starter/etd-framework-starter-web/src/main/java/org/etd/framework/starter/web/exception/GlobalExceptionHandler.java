@@ -3,7 +3,7 @@ package org.etd.framework.starter.web.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.utils.exception.ApiRuntimeException;
-import org.etd.framework.common.utils.exception.code.RequestCode;
+import org.etd.framework.common.core.exception.code.RequestCode;
 import org.etd.framework.common.utils.result.ResultModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;

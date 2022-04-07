@@ -49,10 +49,7 @@ public class AmqpConfig {
 			@Override
 			public Message postProcessMessage(Message message) throws AmqpException {
 				Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
-
-
 				message.getMessageProperties().setHeader(LogConstant.TRACE_ID_HEADER, copyOfContextMap.get(LogConstant.LOG_TRACE_ID));
-
 				return message;
 			}
 

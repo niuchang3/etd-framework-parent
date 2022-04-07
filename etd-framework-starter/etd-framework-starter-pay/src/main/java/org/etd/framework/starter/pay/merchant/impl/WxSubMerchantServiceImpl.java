@@ -7,7 +7,7 @@ import com.github.binarywang.wxpay.service.WxPayService;
 import com.github.binarywang.wxpay.service.impl.Applyment4SubServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.utils.exception.ApiRuntimeException;
-import org.etd.framework.common.utils.exception.code.RequestCode;
+import org.etd.framework.common.core.exception.code.RequestCode;
 import org.etd.framework.starter.pay.merchant.SubMerchantService;
 import org.etd.framework.starter.pay.merchant.dto.SubMerchantApply;
 import org.etd.framework.starter.pay.merchant.dto.impl.WxSubMerchantApply;

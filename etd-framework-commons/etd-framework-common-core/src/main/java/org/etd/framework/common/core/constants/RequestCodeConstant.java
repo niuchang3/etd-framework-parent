@@ -1,4 +1,4 @@
-package org.etd.framework.common.utils.exception.code;
+package org.etd.framework.common.core.constants;
 
 import lombok.Getter;
 
@@ -8,7 +8,7 @@ import lombok.Getter;
  * @date 2020/11/12
  */
 
-public enum RequestCode {
+public enum RequestCodeConstant {
 	/**
 	 * 调用成功
 	 */
@@ -56,7 +56,7 @@ public enum RequestCode {
 	private String description;
 
 
-	RequestCode(Integer code, String description) {
+	RequestCodeConstant(Integer code, String description) {
 		this.code = code;
 		this.description = description;
 	}

@@ -1,4 +1,4 @@
-package org.etd.framework.common.utils.page;
+package org.etd.framework.common.core.model;
 
 
 import lombok.Data;
@@ -12,7 +12,7 @@ import java.util.List;
  * @date 2020/8/31
  */
 @Data
-public class PageInfo {
+public class PageInfoModel {
 
 
 	/**

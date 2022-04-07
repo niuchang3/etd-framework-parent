@@ -47,6 +47,7 @@
         <module>etd-framework-dependencies</module>
         <module>Demo</module>
         <module>etd-framework-authorization</module>
+        <module>etd-framework-common-core</module>
     </modules>
 
 

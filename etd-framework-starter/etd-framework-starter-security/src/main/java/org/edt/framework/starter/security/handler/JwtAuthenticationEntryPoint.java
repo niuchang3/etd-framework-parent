@@ -1,6 +1,6 @@
 package org.edt.framework.starter.security.handler;
 
-import org.etd.framework.common.utils.exception.code.RequestCode;
+import org.etd.framework.common.core.exception.code.RequestCode;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 

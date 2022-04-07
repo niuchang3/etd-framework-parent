@@ -18,6 +18,7 @@
 
     <modules>
         <module>etd-framework-common-utils</module>
+        <module>etd-framework-common-core</module>
     </modules>
 
 
