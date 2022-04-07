@@ -101,6 +101,7 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(new TraceInterceptor())
 				.addPathPatterns("/**");
+
 		registry.addInterceptor(customInterceptor)
 				.addPathPatterns(customInterceptor.getInterceptorsPath());
 		super.addInterceptors(registry);
