@@ -1,4 +1,4 @@
-package org.etd.framework.starter.web.interceptor.config;
+package org.etd.framework.starter.web.interceptor.extend;
 
 import org.etd.framework.starter.web.interceptor.CustomInterceptor;
 
