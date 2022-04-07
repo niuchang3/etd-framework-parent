@@ -37,10 +37,6 @@
                 </configuration>
             </plugin>
 
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
         </plugins>
     </build>
 
@@ -50,6 +46,7 @@
         <module>etd-framework-starter</module>
         <module>etd-framework-dependencies</module>
         <module>Demo</module>
+        <module>etd-framework-authorization</module>
     </modules>
 
 

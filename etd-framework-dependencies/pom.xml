@@ -17,7 +17,7 @@
 
 
     <properties>
-        <spring.boot.version>2.3.5.RELEASE</spring.boot.version>
+        <spring.boot.version>2.6.1</spring.boot.version>
         <!--第三方工具类-->
         <hutool.version>5.3.8</hutool.version>
         <javax.validation.version>2.0.1.Final</javax.validation.version>
@@ -40,6 +40,8 @@
 
         <!--第三方开源SDK https://github.com/Wechat-Group/WxJava-->
         <weixin.java.version>4.0.0</weixin.java.version>
+
+        <oauth2.authorization.version>0.2.0</oauth2.authorization.version>
 
 
     </properties>
@@ -64,6 +66,17 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+
+
+            <dependency>
+                <groupId>org.etd.framework.commons</groupId>
+                <artifactId>etd-framework-common-utils</artifactId>
+                <version>${edt.framework.version}</version>
+            </dependency>
+
+
+
 
             <dependency>
                 <groupId>cn.hutool</groupId>
@@ -132,12 +145,6 @@
                 <version>${commons.lang3.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.etd.framework.commons</groupId>
-                <artifactId>etd-framework-common-utils</artifactId>
-                <version>${edt.framework.version}</version>
-            </dependency>
-
 
 
             <dependency>
@@ -199,6 +206,12 @@
                 <groupId>com.github.binarywang</groupId>
                 <artifactId>weixin-java-pay</artifactId>
                 <version>${weixin.java.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-oauth2-authorization-server</artifactId>
+                <version>${oauth2.authorization.version}</version>
             </dependency>
 
 
