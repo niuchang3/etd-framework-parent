@@ -6,6 +6,11 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 
+/**
+ * 获取SpringContext上下文
+ *
+ * @author Administrator
+ */
 @Component
 public class SpringContextHelper implements ApplicationContextAware {
 
