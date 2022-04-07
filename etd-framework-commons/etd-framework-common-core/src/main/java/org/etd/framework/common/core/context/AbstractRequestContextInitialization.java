@@ -50,5 +50,6 @@ public abstract class AbstractRequestContextInitialization<E> implements Request
         RequestContext.setTenantCode(getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode()));
         RequestContext.setProductCode(getHeaderValue(e, RequestContextConstant.PRODUCT_CODE.getCode()));
         RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
+        RequestContext.setAttribute(getAttribute(e));
     }
 }

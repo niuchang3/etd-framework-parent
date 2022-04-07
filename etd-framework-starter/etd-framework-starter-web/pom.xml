@@ -65,6 +65,13 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.etd.framework.commons</groupId>
+            <artifactId>etd-framework-common-core</artifactId>
+            <version>0.0.1-RELEASES</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
 

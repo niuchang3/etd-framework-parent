@@ -36,6 +36,10 @@ import java.util.List;
 public class WebAppConfig extends WebMvcConfigurationSupport {
 
 
+	@Autowired
+	private CustomInterceptor customInterceptor;
+
+
 	@Bean
 	@ConditionalOnMissingBean(CustomInterceptor.class)
 	public CustomInterceptor initCustomInterceptor() {
@@ -44,8 +48,6 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 
 
 
-	@Autowired
-	private CustomInterceptor customInterceptor;
 
 	@Override
 	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
@@ -60,14 +62,11 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 		config.setSerializeConfig(serializeConfig);
 
 		//null值转换为空字符串
-		config.setSerializeFilters(new ValueFilter() {
-			@Override
-			public Object process(Object object, String name, Object value) {
-				if (value == null) {
-					return "";
-				}
-				return value;
+		config.setSerializeFilters((ValueFilter) (object, name, value) -> {
+			if (value == null) {
+				return "";
 			}
+			return value;
 		});
 
 		config.setSerializerFeatures(

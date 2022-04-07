@@ -6,6 +6,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.io.Serializable;
+import java.util.Map;
 
 
 /**
@@ -124,5 +125,14 @@ public class RequestContext implements Serializable {
 
     public static void setAttribute(String key, Object value) {
         getRequestContext().setAttribute(key, value);
+    }
+
+
+    public static Map<String, Object> getAttribute() {
+        return getRequestContext().getAttribute();
+    }
+
+    public static void setAttribute(Map<String, Object> attribute) {
+        getRequestContext().setAttribute(attribute);
     }
 }

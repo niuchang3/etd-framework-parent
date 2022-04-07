@@ -18,15 +18,15 @@ import javax.servlet.http.HttpServletResponse;
 @Component
 public class TraceInterceptor implements HandlerInterceptor {
 
-	@Override
-	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-		String traceId = request.getHeader(LogConstant.TRACE_ID_HEADER);
-		if (StrUtil.isNotEmpty(traceId)) {
-			MDC.put(LogConstant.LOG_TRACE_ID, traceId);
-		} else {
-			traceId = IdUtil.fastSimpleUUID();
-			MDC.put(LogConstant.LOG_TRACE_ID, traceId);
-		}
-		return true;
-	}
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        String traceId = request.getHeader(LogConstant.TRACE_ID_HEADER);
+        if (StrUtil.isNotEmpty(traceId)) {
+            MDC.put(LogConstant.LOG_TRACE_ID, traceId);
+        } else {
+            traceId = IdUtil.fastSimpleUUID();
+            MDC.put(LogConstant.LOG_TRACE_ID, traceId);
+        }
+        return true;
+    }
 }
