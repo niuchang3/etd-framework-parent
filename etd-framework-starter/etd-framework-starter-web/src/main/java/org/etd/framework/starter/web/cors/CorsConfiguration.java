@@ -15,7 +15,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
  */
 @Configuration
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class CORSConfiguration {
+public class CorsConfiguration {
 
 	/**
 	 * 从配置文件读取项目使用的环境（dev，pord，test等）,默认值：空字符串

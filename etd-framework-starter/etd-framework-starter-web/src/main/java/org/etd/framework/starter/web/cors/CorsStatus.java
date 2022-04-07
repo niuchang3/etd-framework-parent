@@ -8,7 +8,7 @@ import lombok.Setter;
  *
  * @author Young
  * @date 2019/10/29 9:24
- * @see CORSConfiguration
+ * @see CorsConfiguration
  */
 @Getter
 @Setter
