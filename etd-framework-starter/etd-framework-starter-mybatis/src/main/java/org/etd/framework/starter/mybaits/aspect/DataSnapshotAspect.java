@@ -11,7 +11,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.etd.framework.common.utils.SpringContextHelper;
+import org.etd.framework.common.core.spring.SpringContextHelper;
 import org.etd.framework.starter.mybaits.annotation.DataSnapshot;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;

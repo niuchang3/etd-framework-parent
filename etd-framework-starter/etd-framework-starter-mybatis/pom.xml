@@ -48,9 +48,8 @@
         </dependency>
         <dependency>
             <groupId>org.etd.framework.commons</groupId>
-            <artifactId>etd-framework-common-utils</artifactId>
+            <artifactId>etd-framework-common-core</artifactId>
         </dependency>
-
 
     </dependencies>
 

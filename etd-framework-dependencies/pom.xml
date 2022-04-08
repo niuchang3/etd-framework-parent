@@ -67,6 +67,11 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.etd.framework.commons</groupId>
+                <artifactId>etd-framework-common-core</artifactId>
+                <version>${edt.framework.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.etd.framework.commons</groupId>
