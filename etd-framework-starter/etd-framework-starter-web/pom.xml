@@ -38,13 +38,6 @@
             <scope>compile</scope>
         </dependency>
 
-
-        <dependency>
-            <groupId>org.etd.framework.starter</groupId>
-            <artifactId>etd-framework-starter-security</artifactId>
-            <version>${edt.framework.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>

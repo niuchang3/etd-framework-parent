@@ -6,8 +6,8 @@ import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
+//import org.springframework.security.access.AccessDeniedException;
+//import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -52,13 +52,13 @@ public class GlobalExceptionHandler {
      * @param e
      * @return
      */
-    @ResponseBody
-    @ResponseStatus(HttpStatus.OK)
-    @ExceptionHandler(value = AccessDeniedException.class)
-    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) {
-        log.error(e.getMessage(), e);
-        return ResultModel.failed(RequestCodeConstant.NO_URL_PERMISSION, RequestCodeConstant.NO_URL_PERMISSION.getDescription(), request.getRequestURI());
-    }
+//    @ResponseBody
+//    @ResponseStatus(HttpStatus.OK)
+//    @ExceptionHandler(value = AccessDeniedException.class)
+//    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) {
+//        log.error(e.getMessage(), e);
+//        return ResultModel.failed(RequestCodeConstant.NO_URL_PERMISSION, RequestCodeConstant.NO_URL_PERMISSION.getDescription(), request.getRequestURI());
+//    }
 
 
     @ResponseBody
@@ -77,13 +77,13 @@ public class GlobalExceptionHandler {
      * @param e
      * @return
      */
-    @ResponseBody
-    @ResponseStatus(HttpStatus.OK)
-    @ExceptionHandler(value = BadCredentialsException.class)
-    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, BadCredentialsException e) {
-        log.error(e.getMessage(), e);
-        return ResultModel.failed(RequestCodeConstant.LOGIN_FAILED, e.getMessage(), request.getRequestURI());
-    }
+//    @ResponseBody
+//    @ResponseStatus(HttpStatus.OK)
+//    @ExceptionHandler(value = BadCredentialsException.class)
+//    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, BadCredentialsException e) {
+//        log.error(e.getMessage(), e);
+//        return ResultModel.failed(RequestCodeConstant.LOGIN_FAILED, e.getMessage(), request.getRequestURI());
+//    }
 
     /**
      * 统一处理运行时异常

@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Import;
  * RabbitMQ Config
  */
 @Configuration
-@ConditionalOnProperty(prefix = "spring",name = "rabbitmq")
+@ConditionalOnProperty("spring.rabbitmq.host")
 @Import(DefaultQueueConfig.class)
 public class RabbitMQConfig extends RabbitMQRequestContextInitializer {
 

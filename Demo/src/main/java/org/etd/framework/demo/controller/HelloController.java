@@ -1,9 +1,9 @@
 package org.etd.framework.demo.controller;
 
-import org.edt.framework.starter.security.utils.UserDetailUtils;
+//import org.edt.framework.starter.security.utils.UserDetailUtils;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
-import org.springframework.security.access.prepost.PreAuthorize;
+//import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,12 +24,12 @@ public class HelloController {
 	@AutoLog("Hello Controller")
 	@GetMapping("/permit")
 	public ResultModel hello() {
-		Object userDetail = UserDetailUtils.getUserDetail();
-		return ResultModel.success(userDetail);
+//		Object userDetail = UserDetailUtils.getUserDetail();
+		return ResultModel.success("success");
 	}
 
 
-	@PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
+//	@PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
 	@AutoLog("Hello Controller")
 	@GetMapping("/hello")
 	public ResultModel helloController() {
