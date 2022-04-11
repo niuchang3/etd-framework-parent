@@ -41,9 +41,15 @@ public abstract class AbstractRequestContextInitialization<E> implements Request
      */
     protected abstract String getRemoteIp(E e);
 
+    @Override
+    public void beforeInitialization(E e) {
+
+    }
 
     @Override
     public void initialization(E e) {
+        RequestContext.clean();
+        beforeInitialization(e);
         String traceId = getHeaderValue(e, RequestContextConstant.TRACE_ID.getCode());
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
         RequestContext.setRequestIP(getRemoteIp(e));
@@ -51,5 +57,11 @@ public abstract class AbstractRequestContextInitialization<E> implements Request
         RequestContext.setProductCode(getHeaderValue(e, RequestContextConstant.PRODUCT_CODE.getCode()));
         RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
         RequestContext.setAttribute(getAttribute(e));
+        afterInitialization(e);
+    }
+
+    @Override
+    public void afterInitialization(E e) {
+
     }
 }

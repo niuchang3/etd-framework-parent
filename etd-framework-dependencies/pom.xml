@@ -79,6 +79,12 @@
                 <version>${edt.framework.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.etd.framework.starter</groupId>
+                <artifactId>etd-framework-starter-logs</artifactId>
+                <version>${edt.framework.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>cn.hutool</groupId>
