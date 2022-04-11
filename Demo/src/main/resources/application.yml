@@ -11,6 +11,12 @@ spring:
     password: PenglaiCache
     redisson:
       config: classpath:redisson.yml
+  rabbitmq:
+    host: 172.16.6.55
+    port: 5672
+    username: admin
+    password: admin
+    virtual-host: /
 #wx:
 #  pay:
 #    service:

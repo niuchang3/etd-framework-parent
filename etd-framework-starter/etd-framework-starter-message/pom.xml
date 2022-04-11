@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.etd.framework.starter</groupId>
-    <artifactId>etd-framework-starter-messageRequest</artifactId>
+    <artifactId>etd-framework-starter-message</artifactId>
 
     <dependencies>
 

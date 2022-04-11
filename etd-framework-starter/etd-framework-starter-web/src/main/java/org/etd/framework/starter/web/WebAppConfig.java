@@ -8,10 +8,7 @@ import com.alibaba.fastjson.support.config.FastJsonConfig;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 import org.etd.framework.starter.log.lnterceptor.TraceInterceptor;
 import org.etd.framework.starter.web.interceptor.CustomInterceptor;
-import org.etd.framework.starter.web.interceptor.extend.CustomDefaultInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -38,14 +35,6 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 
 	@Autowired
 	private CustomInterceptor customInterceptor;
-
-
-	@Bean
-	@ConditionalOnMissingBean(CustomInterceptor.class)
-	public CustomInterceptor initCustomInterceptor() {
-		return new CustomDefaultInterceptor();
-	}
-
 
 
 

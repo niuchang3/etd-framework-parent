@@ -8,7 +8,18 @@ import java.io.Serializable;
  * @date 2020/9/15
  */
 public class LogConstant implements Serializable {
-
+    /**
+     * 服务信息
+     */
+    public static final String APPLICATION_NAME_HEADER = "x-application-header";
+    /**
+     * 服务信息版本信息
+     */
+    public static final String APPLICATION_VERSION_HEADER = "x-application-version-header";
+    /**
+     * 代理信息
+     */
+    public static final String USER_AGENT = "User-Agent";
     /**
      * 日志链路追踪id日志标志
      */

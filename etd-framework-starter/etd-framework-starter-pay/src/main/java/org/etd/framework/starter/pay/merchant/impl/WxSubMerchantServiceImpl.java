@@ -6,8 +6,8 @@ import com.github.binarywang.wxpay.exception.WxPayException;
 import com.github.binarywang.wxpay.service.WxPayService;
 import com.github.binarywang.wxpay.service.impl.Applyment4SubServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.etd.framework.common.utils.exception.ApiRuntimeException;
-import org.etd.framework.common.core.exception.code.RequestCode;
+import org.etd.framework.common.core.constants.RequestCodeConstant;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.pay.merchant.SubMerchantService;
 import org.etd.framework.starter.pay.merchant.dto.SubMerchantApply;
 import org.etd.framework.starter.pay.merchant.dto.impl.WxSubMerchantApply;
@@ -52,7 +52,7 @@ public class WxSubMerchantServiceImpl implements SubMerchantService {
 					.errCodeDes(e.getErrCodeDes())
 					.buildErrorMsg();
 
-			throw new ApiRuntimeException(RequestCode.FAILED, errorMessage);
+			throw new ApiRuntimeException(RequestCodeConstant.FAILED, errorMessage);
 		}
 	}
 

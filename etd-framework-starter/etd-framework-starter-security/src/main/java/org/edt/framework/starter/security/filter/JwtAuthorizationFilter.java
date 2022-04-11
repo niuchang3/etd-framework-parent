@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.edt.framework.starter.security.constants.SecurityConstants;
 import org.edt.framework.starter.security.token.JwtToken;
-import org.etd.framework.common.utils.exception.ApiRuntimeException;
-import org.etd.framework.common.core.exception.code.RequestCode;
+import org.etd.framework.common.core.constants.RequestCodeConstant;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -73,9 +73,9 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 
 		String tokenKey = null;
 		try {
-			tokenKey = JwtToken.getId(tokenValue);
+//			tokenKey = JwtToken.getId(tokenValue);
 		} catch (Exception e) {
-			throw new ApiRuntimeException(RequestCode.NO_PERMISSION);
+			throw new ApiRuntimeException(RequestCodeConstant.NO_PERMISSION);
 		}
 
 		while (retryNumber < maxRetry) {
@@ -99,8 +99,8 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 			chain.doFilter(request, response);
 			return;
 		}
-		UsernamePasswordAuthenticationToken authentication = JwtToken.getAuthentication(tokenValue);
-		SecurityContextHolder.getContext().setAuthentication(authentication);
+//		UsernamePasswordAuthenticationToken authentication = JwtToken.getAuthentication(tokenValue);
+//		SecurityContextHolder.getContext().setAuthentication(authentication);
 		chain.doFilter(request, response);
 	}
 }

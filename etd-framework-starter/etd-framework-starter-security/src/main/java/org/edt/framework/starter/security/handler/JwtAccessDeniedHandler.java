@@ -1,6 +1,7 @@
 package org.edt.framework.starter.security.handler;
 
-import org.etd.framework.common.core.exception.code.RequestCode;
+
+import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
@@ -26,6 +27,6 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 	 */
 	@Override
 	public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
-		response.sendError(RequestCode.NO_URL_PERMISSION.getCode(), RequestCode.NO_URL_PERMISSION.getDescription());
+		response.sendError(RequestCodeConstant.NO_URL_PERMISSION.getCode(), RequestCodeConstant.NO_URL_PERMISSION.getDescription());
 	}
 }

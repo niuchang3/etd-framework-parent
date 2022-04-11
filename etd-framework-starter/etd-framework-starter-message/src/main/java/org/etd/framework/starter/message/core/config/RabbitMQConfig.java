@@ -9,11 +9,17 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * RabbitMQ Config
  */
+@Configuration
+@ConditionalOnProperty(prefix = "spring",name = "rabbitmq")
+@Import(DefaultQueueConfig.class)
 public class RabbitMQConfig extends RabbitMQRequestContextInitializer {
 
     /**
@@ -31,6 +37,7 @@ public class RabbitMQConfig extends RabbitMQRequestContextInitializer {
      * @param connectionFactory
      * @return
      */
+
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate();

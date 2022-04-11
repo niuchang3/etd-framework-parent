@@ -2,6 +2,7 @@ package org.etd.framework.starter.log.lnterceptor;
 
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.starter.log.constant.LogConstant;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ public class TraceInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String traceId = request.getHeader(LogConstant.TRACE_ID_HEADER);
+        String traceId = request.getHeader(RequestContextConstant.TRACE_ID.getCode());
         if (StrUtil.isNotEmpty(traceId)) {
             MDC.put(LogConstant.LOG_TRACE_ID, traceId);
         } else {

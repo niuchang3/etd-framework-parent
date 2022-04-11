@@ -17,32 +17,17 @@
         <dependency>
             <groupId>org.etd.framework.commons</groupId>
             <artifactId>etd-framework-common-utils</artifactId>
-            <type>jar</type>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <type>jar</type>
         </dependency>
 
-
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <type>jar</type>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <type>jar</type>
-        </dependency>
 
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <type>jar</type>
         </dependency>
 
 

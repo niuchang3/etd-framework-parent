@@ -14,7 +14,6 @@ import java.util.Map;
  *
  * @author 牛昌
  */
-@Slf4j
 @Data
 public class RequestContext implements Serializable {
 

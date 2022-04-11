@@ -1,6 +1,7 @@
 package org.edt.framework.starter.security.handler;
 
-import org.etd.framework.common.core.exception.code.RequestCode;
+
+import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
@@ -32,6 +33,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 	 */
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-		response.sendError(RequestCode.NO_PERMISSION.getCode(), RequestCode.NO_PERMISSION.getDescription());
+		response.sendError(RequestCodeConstant.NO_PERMISSION.getCode(), RequestCodeConstant.NO_PERMISSION.getDescription());
 	}
 }

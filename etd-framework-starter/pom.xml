@@ -18,7 +18,7 @@
         <module>etd-framework-starter-mybatis</module>
         <module>etd-framework-starter-cache</module>
         <module>etd-framework-starter-elasticsearch</module>
-        <module>etd-framework-starter-messageRequest</module>
+        <module>etd-framework-starter-message</module>
         <module>etd-framework-starter-web</module>
         <module>etd-framework-starter-logs</module>
         <module>etd-framework-starter-security</module>

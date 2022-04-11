@@ -22,22 +22,17 @@
         </dependency>
 
         <dependency>
-            <groupId>org.etd.framework.starter</groupId>
-            <artifactId>etd-framework-starter-security</artifactId>
-            <version>0.0.1-RELEASES</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.etd.framework.starter</groupId>
-            <artifactId>etd-framework-starter-pay</artifactId>
-            <version>0.0.1-RELEASES</version>
-        </dependency>
-        <dependency>
             <groupId>org.etd.framework.commons</groupId>
             <artifactId>etd-framework-common-core</artifactId>
             <version>0.0.1-RELEASES</version>
             <scope>compile</scope>
         </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.etd.framework.starter</groupId>-->
+<!--            <artifactId>etd-framework-starter-message</artifactId>-->
+<!--            <version>0.0.1-RELEASES</version>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>

@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.etd.framework.starter.messageRequest.MessageConfig
+  org.etd.framework.starter.message.MessageConfig

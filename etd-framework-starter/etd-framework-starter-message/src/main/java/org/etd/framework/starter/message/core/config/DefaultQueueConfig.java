@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration;
  * @description
  * @date 2020/9/7
  */
-@Configuration
 public class DefaultQueueConfig {
 
     /**
