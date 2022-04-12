@@ -23,7 +23,7 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
     @Override
     public void sendMessage(MessageQueue messageQueue, NotificationMsgRequest notificationMsgRequest) {
         RabbitQueue rabbitQueue = (RabbitQueue) messageQueue;
-        rabbitTemplate.convertAndSend(rabbitQueue.getQueueName(), notificationMsgRequest);
+        rabbitTemplate.convertAndSend(rabbitQueue.getRouteKey(), notificationMsgRequest);
     }
 
 
