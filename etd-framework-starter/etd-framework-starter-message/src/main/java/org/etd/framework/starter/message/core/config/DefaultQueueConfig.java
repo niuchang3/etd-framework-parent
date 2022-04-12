@@ -1,9 +1,8 @@
 package org.etd.framework.starter.message.core.config;
 
-import org.etd.framework.starter.message.core.queue.extend.DefaultRabbitMQQueue;
+import org.etd.framework.starter.message.core.queue.extend.DefaultRabbitQueue;
 import org.springframework.amqp.core.*;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * 系统默认Mq信息
@@ -20,7 +19,7 @@ public class DefaultQueueConfig {
     @Bean
     DirectExchange createDefaultExchange() {
         return (DirectExchange) ExchangeBuilder
-                .directExchange(DefaultRabbitMQQueue.DEFAULT.getExchange())
+                .directExchange(DefaultRabbitQueue.DEFAULT.getExchange())
                 .durable(true)
                 .build();
     }
@@ -31,7 +30,7 @@ public class DefaultQueueConfig {
      */
     @Bean
     public Queue createDefaultQueue() {
-        return new Queue(DefaultRabbitMQQueue.DEFAULT.getQueueName());
+        return new Queue(DefaultRabbitQueue.DEFAULT.getQueueName());
     }
 
 
@@ -43,7 +42,7 @@ public class DefaultQueueConfig {
         return BindingBuilder
                 .bind(createDefaultQueue)
                 .to(createDefaultExchange)
-                .with(DefaultRabbitMQQueue.DEFAULT.getRouteKey());
+                .with(DefaultRabbitQueue.DEFAULT.getRouteKey());
     }
 
 }

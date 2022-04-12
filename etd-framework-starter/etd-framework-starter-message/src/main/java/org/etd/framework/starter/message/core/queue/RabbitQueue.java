@@ -1,6 +1,6 @@
 package org.etd.framework.starter.message.core.queue;
 
-import org.etd.framework.starter.message.core.queue.MessageQueue;
+import org.etd.framework.common.core.queue.MessageQueue;
 
 public interface RabbitQueue extends MessageQueue {
 

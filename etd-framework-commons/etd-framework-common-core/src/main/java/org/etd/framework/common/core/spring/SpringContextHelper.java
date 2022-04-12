@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
  *
  * @author Administrator
  */
-@Component
 public class SpringContextHelper implements ApplicationContextAware {
 
     private static ApplicationContext context = null;

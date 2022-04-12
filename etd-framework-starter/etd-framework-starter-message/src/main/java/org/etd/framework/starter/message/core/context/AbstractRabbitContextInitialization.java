@@ -12,7 +12,7 @@ import org.springframework.amqp.core.Message;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RabbitMQRequestContextInitializer extends AbstractRequestContextInitialization<Message> implements RequestContextInitialization<Message> {
+public abstract class AbstractRabbitContextInitialization extends AbstractRequestContextInitialization<Message> implements RequestContextInitialization<Message> {
 
     @Override
     protected String getHeaderValue(Message message, String headerName) {

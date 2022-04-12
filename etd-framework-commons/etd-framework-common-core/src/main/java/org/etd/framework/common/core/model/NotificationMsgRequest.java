@@ -1,8 +1,9 @@
-package org.etd.framework.starter.message.core.model;
+package org.etd.framework.common.core.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.etd.framework.common.core.context.model.RequestContextModel;
 
 import java.io.Serializable;
@@ -15,17 +16,12 @@ import java.io.Serializable;
  * @date 2020/9/7
  */
 @Data
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
-public class MessageRequest<T extends Serializable> implements Serializable {
-    /**
-     * 消息ID
-     */
-    private String messageId;
-    /**
-     * 消息处理类型
-     */
-    private String messageHandleType;
+public class NotificationMsgRequest<T extends Serializable> implements Serializable {
+
+
     /**
      * 消息处理Code
      */
@@ -35,6 +31,10 @@ public class MessageRequest<T extends Serializable> implements Serializable {
      * 消息主体
      */
     private T messageBody;
+    /**
+     * 重试次数
+     */
+    private int retries = 1;
     /**
      * 请求上下文Model
      */

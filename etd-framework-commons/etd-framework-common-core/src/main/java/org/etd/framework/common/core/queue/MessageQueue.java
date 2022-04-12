@@ -1,4 +1,4 @@
-package org.etd.framework.starter.message.core.queue;
+package org.etd.framework.common.core.queue;
 
 /**
  * 消息队列定义

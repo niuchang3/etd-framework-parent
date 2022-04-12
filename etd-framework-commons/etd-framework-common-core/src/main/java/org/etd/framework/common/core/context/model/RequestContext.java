@@ -1,7 +1,7 @@
 package org.etd.framework.common.core.context.model;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import lombok.EqualsAndHashCode;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.ObjectUtils;
 
@@ -14,6 +14,7 @@ import java.util.Map;
  *
  * @author 牛昌
  */
+@EqualsAndHashCode
 @Data
 public class RequestContext implements Serializable {
 

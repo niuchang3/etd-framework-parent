@@ -2,10 +2,14 @@ package org.etd.framework.common.core.context.model;
 
 import com.google.common.collect.Maps;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.Map;
 
+@EqualsAndHashCode
+@ToString
 @Data
 public class RequestContextModel implements Serializable {
 
