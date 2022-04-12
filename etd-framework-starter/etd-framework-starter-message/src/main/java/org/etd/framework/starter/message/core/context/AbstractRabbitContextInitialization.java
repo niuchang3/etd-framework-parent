@@ -1,14 +1,18 @@
 package org.etd.framework.starter.message.core.context;
 
 import com.google.common.collect.Maps;
+import com.google.gson.Gson;
 import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.AbstractRequestContextInitialization;
 import org.etd.framework.common.core.context.RequestContextInitialization;
 import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.starter.log.constant.LogConstant;
 import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
+import org.springframework.util.ObjectUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,7 +25,17 @@ public abstract class AbstractRabbitContextInitialization extends AbstractReques
 
     @Override
     protected Map<String, Object> getAttribute(Message message) {
-        return Maps.newHashMap();
+        Map<String, Object> attr = Maps.newHashMap();
+        try {
+            NotificationMsgRequest notificationMsgRequest = new Gson().fromJson(new String(message.getBody(), StandardCharsets.UTF_8), NotificationMsgRequest.class);
+            if (!ObjectUtils.isEmpty(notificationMsgRequest) &&
+                    !ObjectUtils.isEmpty(notificationMsgRequest.getRequestContextModel()) &&
+                    !ObjectUtils.isEmpty(notificationMsgRequest.getRequestContextModel().getAttribute())) {
+                attr.putAll(notificationMsgRequest.getRequestContextModel().getAttribute());
+            }
+        } finally {
+            return attr;
+        }
     }
 
     @Override

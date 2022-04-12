@@ -10,7 +10,10 @@ import org.etd.framework.starter.message.core.service.RabbitMessageService;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @author Young
@@ -55,7 +58,7 @@ public class HelloController {
     @Event
     @AutoLog("测试2")
     @GetMapping("/test2")
-    public void test2() {
+    public void test2(@RequestParam String name) {
     }
 
 }

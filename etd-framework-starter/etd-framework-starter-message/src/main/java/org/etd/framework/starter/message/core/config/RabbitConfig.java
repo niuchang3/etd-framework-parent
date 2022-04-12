@@ -7,6 +7,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -25,6 +26,7 @@ public class RabbitConfig extends AbstractRabbitContextInitialization {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate();
         template.setConnectionFactory(connectionFactory);
+        template.setMessageConverter(new Jackson2JsonMessageConverter());
         template.addBeforePublishPostProcessors(message -> {
             setRabbitMqMessageHeads(message);
             return message;
@@ -36,6 +38,7 @@ public class RabbitConfig extends AbstractRabbitContextInitialization {
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(new Jackson2JsonMessageConverter());
         factory.setAfterReceivePostProcessors(message -> {
             initialization(message);
             return message;

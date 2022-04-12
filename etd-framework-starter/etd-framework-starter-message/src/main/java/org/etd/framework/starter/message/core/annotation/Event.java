@@ -10,7 +10,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface Event {
 
-    String messageHandleCode() default "defaultHandle";
+    String[] messageHandleCode() default "defaultHandle";
 
     int retries() default 1;
 }
