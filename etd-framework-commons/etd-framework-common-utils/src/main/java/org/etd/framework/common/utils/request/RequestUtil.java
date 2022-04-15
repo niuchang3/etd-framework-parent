@@ -138,7 +138,6 @@ public class RequestUtil {
 
     /**
      * 判断字符串是否是一个IP地址
-     *
      */
     public static boolean isIPAddr(String addr) {
         if (StringUtils.isEmpty(addr)) {
@@ -172,7 +171,6 @@ public class RequestUtil {
 
     /**
      * 获取HTTP端口
-     *
      */
     public static int getHttpPort(HttpServletRequest req) {
         try {
@@ -184,7 +182,6 @@ public class RequestUtil {
 
     /**
      * 获取浏览器提交的整形参数
-     *
      */
     public static int getParam(HttpServletRequest req, String param, int defaultValue) {
         return NumberUtils.toInt(req.getParameter(param), defaultValue);
@@ -205,5 +202,4 @@ public class RequestUtil {
         String value = req.getParameter(param);
         return (StringUtils.isEmpty(value)) ? defaultValue : value;
     }
-
 }

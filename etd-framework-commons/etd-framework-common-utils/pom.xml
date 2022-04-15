@@ -14,7 +14,7 @@
 
 
     <dependencies>
-     
+
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-core</artifactId>
@@ -35,7 +35,6 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
-
     </dependencies>
 
 
