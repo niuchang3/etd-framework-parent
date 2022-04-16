@@ -1,6 +1,5 @@
 package org.etd.framework.starter.message.core.aspect;
 
-import com.oracle.webservices.internal.api.message.PropertySet;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
@@ -10,7 +9,6 @@ import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.utils.json.JsonUtils;
 import org.etd.framework.starter.message.core.annotation.Event;
-import org.etd.framework.starter.message.core.queue.RabbitQueue;
 import org.etd.framework.starter.message.core.queue.extend.DefaultRabbitQueue;
 import org.etd.framework.starter.message.core.service.RabbitMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +40,7 @@ public class EventAspect {
             request.setMessageBody(gson);
             request.setRetries(declaredAnnotation.retries());
             request.setRequestContextModel(RequestContext.getRequestContext());
-            rabbitMessageService.sendMessage(DefaultRabbitQueue.DEFAULT,request);
+            rabbitMessageService.sendMessage(DefaultRabbitQueue.DEFAULT, request);
         }
 
     }

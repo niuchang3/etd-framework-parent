@@ -1,10 +1,10 @@
 package org.etd.framework.starter.cache.redis.impl;
 
-import com.qm.ep.sanyi.redis.RLock;
-import com.qm.ep.sanyi.redis.RedisLockGuard;
-import com.qm.ep.sanyi.redis.config.RedisLuaScripts;
-import com.qm.tds.api.exception.QmException;
+
 import lombok.extern.slf4j.Slf4j;
+import org.etd.framework.starter.cache.redis.RLock;
+import org.etd.framework.starter.cache.redis.RedisLockGuard;
+import org.etd.framework.starter.cache.redis.config.RedisLuaScripts;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.ArrayList;
@@ -100,7 +100,7 @@ public class RReentrantLock implements RLock {
         List<String> keys = getKeys();
         Long execute = (Long) redisTemplate.execute(RedisLuaScripts.unLock(), keys, expire);
         if (execute == null) {
-            throw new QmException("尝试解锁失败，Lock-key:" + key + " ,thread-id:" + Thread.currentThread().getId());
+            throw new RuntimeException("尝试解锁失败，Lock-key:" + key + " ,thread-id:" + Thread.currentThread().getId());
         }
     }
 
