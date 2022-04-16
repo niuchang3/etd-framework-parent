@@ -28,6 +28,10 @@ import java.util.*;
  */
 public class BaseServiceImpl<M extends BaseMapper<T>, T extends Serializable> extends ServiceImpl<BaseMapper<T>, T> implements BaseService<T> {
 
+
+
+
+
 	@Autowired
 	protected M mapper;
 
