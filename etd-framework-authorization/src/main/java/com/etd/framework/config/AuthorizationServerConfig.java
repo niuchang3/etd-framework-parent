@@ -1,5 +1,7 @@
 package com.etd.framework.config;
 
+import com.etd.framework.authorization.password.UserPasswordAuthenticationProvider;
+import com.etd.framework.authorization.password.UserPasswordTokenAuthenticationConverter;
 import com.etd.framework.jose.Jwks;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -14,38 +16,44 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
-import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.config.ProviderSettings;
+import org.springframework.security.oauth2.server.authorization.web.OAuth2TokenEndpointFilter;
+import org.springframework.security.oauth2.server.authorization.web.authentication.DelegatingAuthenticationConverter;
+import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2AuthorizationCodeAuthenticationConverter;
+import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2ClientCredentialsAuthenticationConverter;
+import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2RefreshTokenAuthenticationConverter;
+import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
 
-    public AuthorizationServerConfig() {
-    }
-
-
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
         OAuth2AuthorizationServerConfigurer<HttpSecurity> authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer<>();
-//         添加客户端信息
+//         添加客户端信息c
 //        authorizationServerConfigurer.registeredClientRepository();
 //         添加授权服务
 //        authorizationServerConfigurer.authorizationService();
@@ -61,27 +69,54 @@ public class AuthorizationServerConfig {
 //            authorizationEndpoint.consentPage()
 //        });
 
+//        authorizationServerConfigurer.configure();
+
+        authorizationServerConfigurer.withObjectPostProcessor(new ObjectPostProcessor<OAuth2TokenEndpointFilter>() {
+            @Override
+            public <O extends OAuth2TokenEndpointFilter> O postProcess(O oauth2TokenEndpointFilter) {
+                oauth2TokenEndpointFilter.setAuthenticationConverter(new DelegatingAuthenticationConverter(
+                        Arrays.asList(
+                                new OAuth2AuthorizationCodeAuthenticationConverter(),
+                                new OAuth2RefreshTokenAuthenticationConverter(),
+                                new OAuth2ClientCredentialsAuthenticationConverter(),
+                                new UserPasswordTokenAuthenticationConverter())));
+                return oauth2TokenEndpointFilter;
+            }
+        });
 //        authorizationServerConfigurer.tokenEndpoint(tokenEndpoint -> {
 //            身份验证支持：AuthenticationProvider
-//            tokenEndpoint.authenticationProvider()
+
+//            tokenEndpoint.authenticationProvider(new UserPassworAuthenticationProvider());
 //            tokenEndpoint.accessTokenRequestConverter();
 //            tokenEndpoint.accessTokenResponseHandler();
 //            tokenEndpoint.errorResponseHandler()
 //        });
 
 
+
         RequestMatcher endpointsMatcher = authorizationServerConfigurer
                 .getEndpointsMatcher();
         http
                 .requestMatcher(endpointsMatcher)
+                .authorizeRequests(authorizeRequests ->{
+                    authorizeRequests.antMatchers("/oauth2/token").permitAll();
+                })
                 .authorizeRequests(authorizeRequests ->
                         authorizeRequests.anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
                 .apply(authorizationServerConfigurer);
 
+        DefaultSecurityFilterChain securityFilterChain = http.formLogin(Customizer.withDefaults()).build();
 
-        return http.formLogin(Customizer.withDefaults()).build();
+        UserPasswordAuthenticationProvider userPasswordAuthenticationProvider =
+                new UserPasswordAuthenticationProvider(http.getSharedObject(JwtEncoder.class),
+                http.getSharedObject(ProviderSettings.class));
+
+        http.authenticationProvider(userPasswordAuthenticationProvider);
+
+//        http.authenticationProvider()
+        return securityFilterChain;
     }
 
     /**
@@ -98,6 +133,7 @@ public class AuthorizationServerConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
                 .redirectUri("http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc")
                 .redirectUri("http://127.0.0.1:8080/authorized")
                 .scope(OidcScopes.OPENID)
@@ -122,17 +158,12 @@ public class AuthorizationServerConfig {
         return new JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository);
     }
 
-    /**
-     * 授权服务
-     *
-     * @param jdbcTemplate
-     * @param registeredClientRepository
-     * @return
-     */
-    @Bean
-    public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
-        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
-    }
+
+//    @Bean
+//    public OAuth2AuthorizationService authorizationService(JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
+//
+//        return new JdbcOAuth2AuthorizationService(jdbcOperations,registeredClientRepository);
+//    }
 
 
     @Bean

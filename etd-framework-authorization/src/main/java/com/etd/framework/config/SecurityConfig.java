@@ -16,15 +16,17 @@ public class SecurityConfig {
 
     /**
      * 配置默认的登录表单
+     *
      * @param http
      * @return
      * @throws Exception
      */
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeRequests(authorizeRequests ->
+
+        http.authorizeRequests(authorizeRequests ->
                         authorizeRequests.anyRequest().authenticated()
+
                 )
                 .formLogin(withDefaults());
         return http.build();
@@ -32,6 +34,7 @@ public class SecurityConfig {
 
     /**
      * 创建用户信息
+     *
      * @return
      */
     @Bean
