@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -25,6 +26,7 @@ import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -53,23 +55,6 @@ public class AuthorizationServerConfig {
 
         OAuth2AuthorizationServerConfigurer<HttpSecurity> authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer<>();
-//         添加客户端信息c
-//        authorizationServerConfigurer.registeredClientRepository();
-//         添加授权服务
-//        authorizationServerConfigurer.authorizationService();
-//         添加授权同意服务
-//        authorizationServerConfigurer.authorizationConsentService();
-
-//         授权端点，通常可以自定义授权确认页面
-//        authorizationServerConfigurer.authorizationEndpoint(authorizationEndpoint -> {
-//            authorizationEndpoint.authorizationRequestConverter()
-//            authorizationEndpoint.authenticationProvider()
-//            authorizationEndpoint.authorizationResponseHandler()
-//            authorizationEndpoint.errorResponseHandler()
-//            authorizationEndpoint.consentPage()
-//        });
-
-//        authorizationServerConfigurer.configure();
 
         authorizationServerConfigurer.withObjectPostProcessor(new ObjectPostProcessor<OAuth2TokenEndpointFilter>() {
             @Override
@@ -83,22 +68,13 @@ public class AuthorizationServerConfig {
                 return oauth2TokenEndpointFilter;
             }
         });
-//        authorizationServerConfigurer.tokenEndpoint(tokenEndpoint -> {
-//            身份验证支持：AuthenticationProvider
-
-//            tokenEndpoint.authenticationProvider(new UserPassworAuthenticationProvider());
-//            tokenEndpoint.accessTokenRequestConverter();
-//            tokenEndpoint.accessTokenResponseHandler();
-//            tokenEndpoint.errorResponseHandler()
-//        });
-
-
 
         RequestMatcher endpointsMatcher = authorizationServerConfigurer
                 .getEndpointsMatcher();
+
         http
                 .requestMatcher(endpointsMatcher)
-                .authorizeRequests(authorizeRequests ->{
+                .authorizeRequests(authorizeRequests -> {
                     authorizeRequests.antMatchers("/oauth2/token").permitAll();
                 })
                 .authorizeRequests(authorizeRequests ->
@@ -110,12 +86,14 @@ public class AuthorizationServerConfig {
         DefaultSecurityFilterChain securityFilterChain = http.formLogin(Customizer.withDefaults()).build();
 
         UserPasswordAuthenticationProvider userPasswordAuthenticationProvider =
-                new UserPasswordAuthenticationProvider(http.getSharedObject(JwtEncoder.class),
-                http.getSharedObject(ProviderSettings.class));
+                new UserPasswordAuthenticationProvider(
+                        http.getSharedObject(AuthenticationManager.class),
+                        http.getSharedObject(JwtEncoder.class),
+                        http.getSharedObject(ProviderSettings.class),
+                        http.getSharedObject(OAuth2AuthorizationService.class));
 
         http.authenticationProvider(userPasswordAuthenticationProvider);
 
-//        http.authenticationProvider()
         return securityFilterChain;
     }
 
