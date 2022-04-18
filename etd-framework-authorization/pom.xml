@@ -37,11 +37,22 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
-
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
         </dependency>
+
+        <!--mysql驱动-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+
+<!--        <dependency>-->
+<!--            <groupId>com.h2database</groupId>-->
+<!--            <artifactId>h2</artifactId>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.etd.framework.commons</groupId>

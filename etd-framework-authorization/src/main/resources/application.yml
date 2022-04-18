@@ -7,3 +7,27 @@ logging:
     org.springframework.security: INFO
     org.springframework.security.oauth2: INFO
 #    org.springframework.boot.autoconfigure: DEBUG
+
+
+spring:
+  datasource:
+    druid:
+      #MySQL
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://172.16.7.200:3306/sys?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+      username: root
+      password: root
+      initial-size: 5
+      max-active: 20
+      min-idle: 10
+      max-wait: 6000
+      time-between-eviction-runs-millis: 2000
+      min-evictable-idle-time-millis: 600000
+      max-evictable-idle-time-millis: 900000
+      validation-query: select 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      phy-max-use-count: 1000
+      filters: stat

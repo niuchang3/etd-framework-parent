@@ -7,14 +7,13 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
@@ -25,6 +24,7 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
@@ -40,13 +40,18 @@ import org.springframework.security.oauth2.server.authorization.web.authenticati
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.util.ObjectUtils;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.UUID;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
+//
+//    @Autowired
+//    private DataSource dataSource;
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -121,7 +126,11 @@ public class AuthorizationServerConfig {
                 .build();
 
         JdbcRegisteredClientRepository jdbcRegisteredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
-        jdbcRegisteredClientRepository.save(registeredClient);
+
+        RegisteredClient client = jdbcRegisteredClientRepository.findByClientId(registeredClient.getClientId());
+        if(ObjectUtils.isEmpty(client)){
+            jdbcRegisteredClientRepository.save(registeredClient);
+        }
         return jdbcRegisteredClientRepository;
     }
 
@@ -137,26 +146,28 @@ public class AuthorizationServerConfig {
     }
 
 
-//    @Bean
-//    public OAuth2AuthorizationService authorizationService(JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
-//
-//        return new JdbcOAuth2AuthorizationService(jdbcOperations,registeredClientRepository);
-//    }
-
-
     @Bean
-    public EmbeddedDatabase embeddedDatabase() {
-        // @formatter:off
-        return new EmbeddedDatabaseBuilder()
-                .generateUniqueName(true)
-                .setType(EmbeddedDatabaseType.H2)
-                .setScriptEncoding("UTF-8")
-                .addScript("classpath:oauth2-authorization-schema.sql")
-                .addScript("classpath:oauth2-authorization-consent-schema.sql")
-                .addScript("classpath:oauth2-registered-client-schema.sql")
-                .build();
-        // @formatter:on
+    public OAuth2AuthorizationService authorizationService(JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
+
+        return new JdbcOAuth2AuthorizationService(jdbcOperations, registeredClientRepository);
     }
+
+
+//
+//
+//    @Bean
+//    public EmbeddedDatabase embeddedDatabase() {
+//        // @formatter:off
+//        return new EmbeddedDatabaseBuilder()
+//                .generateUniqueName(true)
+//                .setType(EmbeddedDatabaseType.H2)
+//                .setScriptEncoding("UTF-8")
+//                .addScript("classpath:oauth2-authorization-schema.sql")
+//                .addScript("classpath:oauth2-authorization-consent-schema.sql")
+//                .addScript("classpath:oauth2-registered-client-schema.sql")
+//                .build();
+//        // @formatter:on
+//    }
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
