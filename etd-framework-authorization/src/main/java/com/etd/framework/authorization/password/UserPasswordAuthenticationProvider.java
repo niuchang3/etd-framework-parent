@@ -12,10 +12,7 @@ import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
-import org.springframework.security.oauth2.jwt.JoseHeader;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.authorization.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -42,6 +39,8 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
 
     private final JwtEncoder jwtEncoder;
 
+    private final JwtDecoder jwtDecoder;
+
     private final ProviderSettings providerSettings;
 
     private final OAuth2AuthorizationService authorizationService;
@@ -57,11 +56,12 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
     private OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer = (context) -> {
     };
 
-    public UserPasswordAuthenticationProvider(AuthenticationManager authenticationManager, JwtEncoder jwtEncoder, ProviderSettings providerSettings, OAuth2AuthorizationService authorizationService) {
+    public UserPasswordAuthenticationProvider(AuthenticationManager authenticationManager, JwtEncoder jwtEncoder, ProviderSettings providerSettings, OAuth2AuthorizationService authorizationService, JwtDecoder jwtDecoder) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
         this.providerSettings = providerSettings;
         this.authorizationService = authorizationService;
+        this.jwtDecoder = jwtDecoder;
     }
 
     @Override
@@ -111,6 +111,8 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
         JoseHeader headers = context.getHeaders().build();
         JwtClaimsSet claims = context.getClaims().build();
         Jwt jwtAccessToken = this.jwtEncoder.encode(headers, claims);
+
+
         Set<String> scope = claims.getClaim(OAuth2ParameterNames.SCOPE);
 
         OAuth2AccessToken accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,

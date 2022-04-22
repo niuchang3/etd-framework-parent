@@ -22,6 +22,7 @@ import org.springframework.security.config.annotation.web.configurers.oauth2.ser
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
@@ -95,7 +96,8 @@ public class AuthorizationServerConfig {
                         http.getSharedObject(AuthenticationManager.class),
                         http.getSharedObject(JwtEncoder.class),
                         http.getSharedObject(ProviderSettings.class),
-                        http.getSharedObject(OAuth2AuthorizationService.class));
+                        http.getSharedObject(OAuth2AuthorizationService.class),
+                        http.getSharedObject(JwtDecoder.class));
 
         http.authenticationProvider(userPasswordAuthenticationProvider);
 
@@ -173,7 +175,10 @@ public class AuthorizationServerConfig {
     public JWKSource<SecurityContext> jwkSource() {
         RSAKey rsaKey = Jwks.generateRsa();
         JWKSet jwkSet = new JWKSet(rsaKey);
-        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+        return (jwkSelector, securityContext) -> {
+
+            return jwkSelector.select(jwkSet);
+        };
     }
 
 }

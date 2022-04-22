@@ -15,6 +15,17 @@ public class EtdUserDetailsServiceImpl implements EtdUserDetailsService {
                 .password("password")
                 .roles("USER")
                 .build();
+
+        if("user2".equals(username)){
+            user = User.withDefaultPasswordEncoder()
+                    .username("user2")
+                    .password("password")
+                    .roles("ROLE")
+                    .build();
+        }
+
+
+
         return user;
     }
 }
