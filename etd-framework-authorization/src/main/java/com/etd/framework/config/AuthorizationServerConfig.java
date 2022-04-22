@@ -7,7 +7,6 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -22,6 +21,7 @@ import org.springframework.security.config.annotation.web.configurers.oauth2.ser
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
@@ -33,6 +33,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.config.ProviderSettings;
+import org.springframework.security.oauth2.server.authorization.config.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.web.OAuth2TokenEndpointFilter;
 import org.springframework.security.oauth2.server.authorization.web.authentication.DelegatingAuthenticationConverter;
 import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2AuthorizationCodeAuthenticationConverter;
@@ -43,7 +44,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
 
-import javax.sql.DataSource;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -111,6 +112,19 @@ public class AuthorizationServerConfig {
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
+
+//        Instant issuedAt = Instant.now();
+//        Instant expiresAt = issuedAt.plus(8, ChronoUnit.HOURS);
+
+
+//        ClientSettings tokenSettings = ClientSettings.builder().requireAuthorizationConsent(true).build();
+
+        TokenSettings tokenSettings = TokenSettings.builder()
+                .accessTokenTimeToLive(Duration.ofHours(2))
+                .reuseRefreshTokens(true)
+                .refreshTokenTimeToLive(Duration.ofHours(8))
+                .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256).build();
+
         RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("messaging-client")
                 .clientSecret("{noop}secret")
@@ -125,15 +139,26 @@ public class AuthorizationServerConfig {
                 .scope("message.read")
                 .scope("message.write")
                 .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+                .tokenSettings(getTokenSettings())
                 .build();
+
 
         JdbcRegisteredClientRepository jdbcRegisteredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
         RegisteredClient client = jdbcRegisteredClientRepository.findByClientId(registeredClient.getClientId());
-        if(ObjectUtils.isEmpty(client)){
+        if (ObjectUtils.isEmpty(client)) {
             jdbcRegisteredClientRepository.save(registeredClient);
         }
         return jdbcRegisteredClientRepository;
+    }
+
+
+    public TokenSettings getTokenSettings() {
+        return TokenSettings.builder()
+                .accessTokenTimeToLive(Duration.ofHours(2))
+                .reuseRefreshTokens(true)
+                .refreshTokenTimeToLive(Duration.ofHours(8))
+                .idTokenSignatureAlgorithm(SignatureAlgorithm.RS256).build();
     }
 
     /**

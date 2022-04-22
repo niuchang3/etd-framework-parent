@@ -10,22 +10,20 @@ public class EtdUserDetailsServiceImpl implements EtdUserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserDetails user = User.withDefaultPasswordEncoder()
-                .username("user1")
-                .password("password")
-                .roles("USER")
-                .build();
-
-        if("user2".equals(username)){
-            user = User.withDefaultPasswordEncoder()
+        if ("user1".equals(username)) {
+            return User.withDefaultPasswordEncoder()
+                    .username("user1")
+                    .password("password")
+                    .roles("USER")
+                    .build();
+        }
+        if ("user2".equals(username)) {
+            return User.withDefaultPasswordEncoder()
                     .username("user2")
                     .password("password")
                     .roles("ROLE")
                     .build();
         }
-
-
-
-        return user;
+        return null;
     }
 }
