@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>etd-framework-authorization</artifactId>
-
+    <packaging>jar</packaging>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -49,10 +49,10 @@
         </dependency>
 
 
-<!--        <dependency>-->
-<!--            <groupId>com.h2database</groupId>-->
-<!--            <artifactId>h2</artifactId>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.h2database</groupId>-->
+        <!--            <artifactId>h2</artifactId>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>org.etd.framework.commons</groupId>
@@ -74,5 +74,9 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+
+
+
 
 </project>
