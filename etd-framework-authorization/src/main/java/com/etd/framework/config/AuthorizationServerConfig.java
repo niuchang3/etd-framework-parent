@@ -2,6 +2,7 @@ package com.etd.framework.config;
 
 import com.etd.framework.authorization.password.UserPasswordAuthenticationProvider;
 import com.etd.framework.authorization.password.UserPasswordTokenAuthenticationConverter;
+import com.etd.framework.exception.Oauth2AuthenticationFailureHandler;
 import com.etd.framework.jose.Jwks;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -16,6 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -58,10 +60,10 @@ public class AuthorizationServerConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
         OAuth2AuthorizationServerConfigurer<HttpSecurity> authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer<>();
+
 
         authorizationServerConfigurer.withObjectPostProcessor(new ObjectPostProcessor<OAuth2TokenEndpointFilter>() {
             @Override
@@ -72,10 +74,11 @@ public class AuthorizationServerConfig {
                                 new OAuth2RefreshTokenAuthenticationConverter(),
                                 new OAuth2ClientCredentialsAuthenticationConverter(),
                                 new UserPasswordTokenAuthenticationConverter())));
+
+                oauth2TokenEndpointFilter.setAuthenticationFailureHandler(new Oauth2AuthenticationFailureHandler());
                 return oauth2TokenEndpointFilter;
             }
         });
-
         RequestMatcher endpointsMatcher = authorizationServerConfigurer
                 .getEndpointsMatcher();
 
@@ -89,6 +92,7 @@ public class AuthorizationServerConfig {
                 )
                 .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
                 .apply(authorizationServerConfigurer);
+
 
         DefaultSecurityFilterChain securityFilterChain = http.formLogin(Customizer.withDefaults()).build();
 

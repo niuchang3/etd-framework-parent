@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import lombok.Setter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -76,8 +77,14 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
 
         UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(username, password);
 
+        Class<? extends Authentication> toTest = usernamePasswordAuthenticationToken.getClass();
 
-        Authentication userNamePasswordAuthenticate = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
+        Authentication userNamePasswordAuthenticate = null;
+        try {
+            userNamePasswordAuthenticate = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
+        } catch (AuthenticationException e) {
+            throw e;
+        }
 
 
         // 生成token信息

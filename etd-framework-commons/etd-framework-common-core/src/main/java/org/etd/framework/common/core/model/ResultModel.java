@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.etd.framework.common.core.constants.RequestCodeConstant;
+import org.etd.framework.common.core.constants.RequestCodeConverter;
 
 import java.io.Serializable;
 
@@ -61,17 +62,20 @@ public class ResultModel<T> implements Serializable {
      * @param <T>
      * @return
      */
-    public static <T> ResultModel<T> failed(RequestCodeConstant requestCode, String message, String url) {
+    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, String message, String url) {
         return new ResultModel(requestCode.getCode(), requestCode.getDescription(), message, "", url);
     }
 
+    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode) {
+        return new ResultModel(requestCode.getCode(), requestCode.getDescription(), requestCode.getDescription(), "", "");
+    }
     /**
      * 操作失败
      *
      * @param <T>
      * @return
      */
-    public static <T> ResultModel<T> failed(RequestCodeConstant requestCode, String devMessage, String message, String url) {
+    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, String devMessage, String message, String url) {
         return new ResultModel(requestCode.getCode(), devMessage, message, "", url);
     }
 
