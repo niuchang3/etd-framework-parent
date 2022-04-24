@@ -56,7 +56,7 @@ public final class Jwks {
     }
 
     public static RSAKey generateRsa(RedisTemplate redisTemplate) throws ParseException {
-        String ras = (String) redisTemplate.opsForValue().get("test:ras:key");
+        String ras = (String) redisTemplate.opsForValue().get("etd:ras:key");
         if (StringUtils.isNotEmpty(ras)){
             return RSAKey.parse(ras);
         }
