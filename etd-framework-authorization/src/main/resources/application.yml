@@ -31,3 +31,8 @@ spring:
       keep-alive: true
       phy-max-use-count: 1000
       filters: stat
+  redis:
+    database: 8
+    host: 172.16.7.200
+    password: 123456
+    port: 6379
