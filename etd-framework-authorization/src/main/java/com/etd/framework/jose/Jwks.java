@@ -1,13 +1,11 @@
 package com.etd.framework.jose;
 
-import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.util.ObjectUtils;
 
 import javax.crypto.SecretKey;
 import java.security.KeyPair;
@@ -57,19 +55,12 @@ public final class Jwks {
 
     public static RSAKey generateRsa(RedisTemplate redisTemplate) throws ParseException {
         String ras = (String) redisTemplate.opsForValue().get("etd:ras:key");
-        if (StringUtils.isNotEmpty(ras)){
+        if (StringUtils.isNotEmpty(ras)) {
             return RSAKey.parse(ras);
         }
         RSAKey rsaKey = generateRsa();
         redisTemplate.opsForValue().set("test:ras:key", rsaKey.toJSONString());
         return rsaKey;
-
-    }
-
-
-    public static void main(String[] args) throws JOSEException {
-        RSAKey rsaKey = Jwks.generateRsa();
-        rsaKey.toJSONString();
 
     }
 
