@@ -146,6 +146,7 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
         OAuth2Authorization authorization = authorizationBuilder.build();
         authorizationService.save(authorization);
 
+
         return new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, refreshToken, Maps.newLinkedHashMap());
     }
 
