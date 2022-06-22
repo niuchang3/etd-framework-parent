@@ -17,7 +17,10 @@
 
 
     <properties>
-        <spring.boot.version>2.6.1</spring.boot.version>
+        <!--   SpringCloud相关依赖     -->
+        <spring.boot.version>2.6.3</spring.boot.version>
+        <spring.alibaba.version>2021.0.1.0</spring.alibaba.version>
+        <spring.cloud.version>2021.0.1</spring.cloud.version>
         <!--第三方工具类-->
         <hutool.version>5.3.8</hutool.version>
         <javax.validation.version>2.0.1.Final</javax.validation.version>
@@ -67,6 +70,23 @@
             </dependency>
 
             <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring.cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring.alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+
+            <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-oauth2-authorization-server</artifactId>
                 <version>${oauth2.authorization.version}</version>
@@ -78,7 +98,6 @@
                 <artifactId>druid-spring-boot-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
-
 
 
             <!--   本地工程jar包管理     -->
@@ -210,7 +229,6 @@
             </dependency>
 
 
-
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>transmittable-thread-local</artifactId>
@@ -223,9 +241,6 @@
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
-
-
-
 
 
             <!--JWT 相关jar包-->

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>etd-framework-starter</artifactId>
+        <groupId>org.etd.framework.starter</groupId>
+        <version>0.0.1-RELEASES</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>etd-framework-starter-state-machine</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.etd.framework.commons</groupId>
+            <artifactId>etd-framework-common-core</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-dependencies</artifactId>
+                <version>0.0.1-RELEASES</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>
