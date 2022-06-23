@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.etd.framework.starter</groupId>
+    <groupId>org.etd.framework</groupId>
     <artifactId>etd-framework-starter</artifactId>
     <packaging>pom</packaging>
 

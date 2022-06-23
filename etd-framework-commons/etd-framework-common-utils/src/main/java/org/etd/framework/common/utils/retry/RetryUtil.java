@@ -12,7 +12,7 @@ public class RetryUtil {
         boolean success = true;
         Exception exception = null;
         final int retry = retryNum <= 0 ? 1 : retryNum > 5 ? 5 : retryNum;
-        Object value = null;
+        T value = null;
         for (int i = 0; i < retry; i++) {
             try {
                 value = callee.call();
@@ -30,8 +30,8 @@ public class RetryUtil {
 
         boolean finalSuccess = success;
         Exception finalException = exception;
-        Object finalValue = value;
-        RetryUtil.Result result = new Result() {
+        T finalValue = value;
+        RetryUtil.Result<T> result = new Result<T>() {
             @Override
             public boolean isSuccess() {
                 return finalSuccess;
@@ -43,7 +43,7 @@ public class RetryUtil {
             }
 
             @Override
-            public Object value() {
+            public T value() {
                 return finalValue;
             }
         };
@@ -66,15 +66,15 @@ public class RetryUtil {
         T value();
     }
 
-    /**
-     * @param args
-     * @throws Exception
-     */
-    public static void main(String[] args) throws Exception {
-        Result<String> result = RetryUtil.invoke(() -> {
-            throw new RuntimeException("测试重试工具类");
-        }, 20);
-        System.out.println(result);
-    }
+//    /**
+//     * @param args
+//     * @throws Exception
+//     */
+//    public static void main(String[] args) throws Exception {
+//        Result<String> result = RetryUtil.invoke(() -> {
+//            throw new RuntimeException("测试重试工具类");
+//        }, 20);
+//        System.out.println(result);
+//    }
 
 }

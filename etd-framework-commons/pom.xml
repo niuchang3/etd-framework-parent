@@ -11,7 +11,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.etd.framework.commons</groupId>
+    <groupId>org.etd.framework</groupId>
     <artifactId>etd-framework-commons</artifactId>
     <packaging>pom</packaging>
 

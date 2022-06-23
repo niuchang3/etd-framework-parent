@@ -4,11 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>etd-framework-commons</artifactId>
-        <groupId>org.etd.framework.commons</groupId>
+        <groupId>org.etd.framework</groupId>
         <version>0.0.1-RELEASES</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>org.etd.framework</groupId>
     <artifactId>etd-framework-common-core</artifactId>
 
     <properties>
@@ -41,7 +42,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.etd.framework.commons</groupId>
+            <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-common-utils</artifactId>
         </dependency>
 

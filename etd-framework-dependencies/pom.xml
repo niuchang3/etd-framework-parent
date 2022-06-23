@@ -12,7 +12,6 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.etd.framework</groupId>
     <artifactId>etd-framework-dependencies</artifactId>
-    <version>${edt.framework.version}</version>
     <packaging>pom</packaging>
 
 
@@ -102,38 +101,38 @@
 
             <!--   本地工程jar包管理     -->
             <dependency>
-                <groupId>org.etd.framework.starter</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-web</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.etd.framework.commons</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-common-core</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.etd.framework.commons</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-common-utils</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.etd.framework.starter</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-message</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
 
 
             <dependency>
-                <groupId>org.etd.framework.starter</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-logs</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.etd.framework.starter</groupId>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-security</artifactId>
                 <version>${edt.framework.version}</version>
             </dependency>
