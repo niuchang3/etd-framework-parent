@@ -62,20 +62,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!--            <plugin>-->
-            <!--                <groupId>org.apache.maven.plugins</groupId>-->
-            <!--                <artifactId>maven-compiler-plugin</artifactId>-->
-            <!--                <version>3.8.1</version>-->
-            <!--                <configuration>-->
-            <!--                    <compilerArgument>-Xlint:unchecked</compilerArgument>-->
-            <!--                    <source>${maven.compiler.source}</source>-->
-            <!--                    <target>${maven.compiler.source}</target>-->
-            <!--                    <encoding>UTF-8</encoding>-->
-            <!--                    <verbose>false</verbose>-->
-            <!--                </configuration>-->
-            <!--            </plugin>-->
-
         </plugins>
     </build>
 
