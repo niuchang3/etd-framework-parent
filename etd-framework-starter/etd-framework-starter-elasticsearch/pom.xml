@@ -29,6 +29,23 @@
             <artifactId>hutool-core</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.11.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hankcs</groupId>
+            <artifactId>hanlp</artifactId>
+            <version>portable-1.8.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-common-utils</artifactId>
+        </dependency>
+
     </dependencies>
 
 

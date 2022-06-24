@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.etd.framework</groupId>
-    <artifactId>Demo</artifactId>
+    <artifactId>demo</artifactId>
     <version>0.0.1-RELEASES</version>
 
 
@@ -61,6 +61,45 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <configuration>
+                    <!--镜像名称-->
+                    <imageName>${project.artifactId}:${project.version}</imageName>
+                    <!--指定标签-->
+                    <imageTags>
+                        <imageTag>latest</imageTag>
+                    </imageTags>
+                    <!--基础镜像jdk1.8-->
+                    <baseImage>java</baseImage>
+                    <!--制作者提供本人信息-->
+                    <maintainer>niuchang</maintainer>
+                    <!--切换到Root目录-->
+                    <workdir>/opt/java</workdir>
+                    <cmd>["java", "-version"]</cmd>
+                    <entryPoint>["java", "-jar", "${project.build.finalName}.jar"]</entryPoint>
+
+                    <!--指定DockerFile路径-->
+<!--                    <dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>-->
+
+                    <!--指定远程docker api地址-->
+                    <dockerHost>http://172.16.7.200:2375</dockerHost>
+
+                    <!-- 这里是复制 jar 包到 docker 容器指定目录配置 -->
+                    <resources>
+                        <resource>
+                            <targetPath>/opt/java</targetPath>
+                            <!--用于指定需要复制的根目录-->
+                            <directory>${project.build.directory}</directory>
+                            <!--用于指定需要复制的jar文件-->
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
             </plugin>
         </plugins>
     </build>
