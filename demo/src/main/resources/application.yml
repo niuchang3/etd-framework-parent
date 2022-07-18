@@ -4,6 +4,8 @@ server:
   port: 8090
 
 spring:
+  profiles:
+    active: local
   application:
     name: demo
   redis:
@@ -22,4 +24,6 @@ spring:
         jwt:
           issuer-uri: http://localhost:8080
           jwk-set-uri: http://localhost:8080/oauth2/jwks
-
+logging:
+  level:
+    root: error

@@ -1,7 +1,7 @@
 package org.etd.framework.starter.log.aspect;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
-import cn.hutool.json.JSONUtil;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -28,19 +28,20 @@ import javax.servlet.http.HttpServletRequest;
 public class AutoLogAspect {
 
 
-	@Around("@within(autoLog) || @annotation(autoLog)")
-	public Object beforeMethod(ProceedingJoinPoint joinPoint, AutoLog autoLog) throws Throwable {
-		LogInfo logInfo = LogInfo.getInstance(joinPoint, autoLog);
-		try {
-			Object proceed = joinPoint.proceed();
-			log.info("{}", JSONUtil.parseObj(logInfo));
-			return proceed;
-		} catch (Throwable throwable) {
-			logInfo.setLogType(LogConstant.LOG_TYPE.error.name());
-			logInfo.setMessage(ExceptionUtil.stacktraceToString(throwable));
-			log.error("{}", JSONUtil.parseObj(logInfo));
-			throw throwable;
-		}
-	}
+    @Around("@within(autoLog) || @annotation(autoLog)")
+    public Object beforeMethod(ProceedingJoinPoint joinPoint, AutoLog autoLog) throws Throwable {
+        LogInfo logInfo = LogInfo.getInstance(joinPoint, autoLog);
+        try {
+            Object proceed = joinPoint.proceed();
+
+            log.info("{}", new Gson().toJson(logInfo));
+            return proceed;
+        } catch (Throwable throwable) {
+            logInfo.setLogType(LogConstant.LOG_TYPE.error.name());
+            logInfo.setMessage(ExceptionUtil.stacktraceToString(throwable));
+            log.error("{}", new Gson().toJson(logInfo));
+            throw throwable;
+        }
+    }
 
 }

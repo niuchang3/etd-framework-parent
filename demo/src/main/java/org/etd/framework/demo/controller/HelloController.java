@@ -1,5 +1,6 @@
 package org.etd.framework.demo.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.core.model.ResultModel;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @description
  * @date 2020/12/26
  */
+@Slf4j
 @RestController
 public class HelloController {
 
@@ -49,6 +51,7 @@ public class HelloController {
     @AutoLog("Hello Controller")
     @GetMapping("/hello")
     public ResultModel helloController() {
+        log.info("Hello Controller");
         return ResultModel.success("Hello Controller");
     }
 

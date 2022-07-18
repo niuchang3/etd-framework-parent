@@ -4,6 +4,8 @@ import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.core.queue.MessageQueue;
 import org.etd.framework.starter.message.core.queue.RabbitQueue;
 import org.etd.framework.starter.message.core.service.RabbitMessageService;
+import org.springframework.amqp.core.ReturnedMessage;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,4 +66,13 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
     }
 
 
+    @Override
+    public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+
+    }
+
+    @Override
+    public void returnedMessage(ReturnedMessage returned) {
+
+    }
 }

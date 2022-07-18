@@ -28,8 +28,6 @@
     <!-- 彩色日志 -->
     <!-- 彩色日志依赖的渲染类 -->
     <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
-    <conversionRule conversionWord="wex"
-                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
     <conversionRule conversionWord="wEx"
                     converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
 
@@ -37,10 +35,6 @@
     <!-- 彩色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN"
               value="[${appName}:%ip:${port}] %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%level){blue} %clr(${PID}){magenta} %clr([%X{traceId}]){yellow} %clr([%thread]){orange} %clr(%-40.40logger{39}){cyan} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
-
-    <!--没有颜色的格式-->
-    <!--<property name="CONSOLE_LOG_PATTERN_NO_COLOR"-->
-              <!--value="[${appName}:%ip:${port}] %d{yyyy-MM-dd HH:mm:ss.SSS}{faint} %level ${PID} [%X{traceId}] [%thread] %-40.40logger{39} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>-->
 
     <!--没有颜色的格式-->
     <property name="CONSOLE_LOG_PATTERN_NO_COLOR"
@@ -56,7 +50,8 @@
         </encoder>
     </appender>
 
-    <!-- 系统访问日志-->
+
+    <!-- 系统访问日志，输出到文件-->
     <appender name="systemAccessLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <!-- 设置文件输入路径-->
         <file>${access}/access.log</file>
@@ -65,7 +60,6 @@
             <pattern>${CONSOLE_LOG_PATTERN_NO_COLOR}</pattern>
             <charset>UTF-8</charset>
         </encoder>
-
         <!-- 系统日志文件分割策略：日期+文件大小的方式进行切割，当天日志超过50M时会在文件后面添加索引-->
         <!--  文件格式： access.2020-12-16.0.log -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -74,6 +68,11 @@
             <maxHistory>${logMaxDay}</maxHistory>
             <maxFileSize>${logMaxSize}</maxFileSize>
         </rollingPolicy>
+
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
     </appender>
 
     <!--系统访问日志异步打印-->
@@ -87,7 +86,16 @@
     </appender>
 
 
-    <!-- 按照每天生成常规日志文件 -->
+    <!-- 系统访问日志级别调整为INFO级   -->
+    <logger name="org.etd.framework.starter.log.aspect.AutoLogAspect" level="INFO" addtivity="false">
+        <appender-ref ref="systemAccessLogAsync"/>
+    </logger>
+
+
+
+
+
+    <!-- 文件日志，按照每天生成常规日志文件 -->
     <appender name="FileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${logPath}/${appName}.log</file>
 
@@ -105,14 +113,7 @@
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>INFO</level>
         </filter>
-
     </appender>
-
-
-    <!--设置日志级别为debug级别-->
-    <logger name="org.etd.framework.starter.log.aspect.AutoLogAspect" level="debug" addtivity="false">
-        <appender-ref ref="systemAccessLogAsync"/>
-    </logger>
 
 
     <appender name="regularLogAsync" class="ch.qos.logback.classic.AsyncAppender">
@@ -120,8 +121,9 @@
         <appender-ref ref="FileAppender"/>
     </appender>
 
+
     <!--生产环境下，将此级别配置为适合的级别，以免日志文件太多或影响程序性能-->
-    <root level="INFO">
+    <root>
         <appender-ref ref="stdoutAppender"/>
         <appender-ref ref="regularLogAsync"/>
     </root>

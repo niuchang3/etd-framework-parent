@@ -2,6 +2,7 @@ package org.etd.framework.starter.message.core.service;
 
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.core.queue.MessageQueue;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
  * @date 2020/9/7
  */
 @Component
-public interface RabbitMessageService extends NotificationMessageService {
+public interface RabbitMessageService extends NotificationMessageService, RabbitTemplate.ConfirmCallback,RabbitTemplate.ReturnsCallback {
 
 
     /**
