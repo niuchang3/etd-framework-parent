@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>
-            <version>${edt.framework.version}</version>
+            <version>${etd.framework.version}</version>
             <scope>compile</scope>
         </dependency>
 

@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.edt.framework.starter.security.SecurityWebConfig
+  org.etd.framework.starter.security.SecurityWebConfig

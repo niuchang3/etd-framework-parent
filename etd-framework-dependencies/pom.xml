@@ -103,38 +103,38 @@
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-web</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-common-core</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-common-utils</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-message</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-logs</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-security</artifactId>
-                <version>${edt.framework.version}</version>
+                <version>${etd.framework.version}</version>
             </dependency>
 
             <!--     其他第三方jar包管理       -->

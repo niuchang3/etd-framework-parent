@@ -1,4 +1,4 @@
-package org.edt.framework.starter.security;
+package org.etd.framework.starter.security;
 
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
  * @date 2020/12/26
  */
 @Configuration
-@ComponentScan({"org.edt.framework.starter.security.*"})
+@ComponentScan({"org.etd.framework.starter.security.*"})
 public class SecurityWebConfig {
 
 }

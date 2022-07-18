@@ -48,7 +48,7 @@
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-cache</artifactId>
-            <version>${edt.framework.version}</version>
+            <version>${etd.framework.version}</version>
         </dependency>
 
         <dependency>

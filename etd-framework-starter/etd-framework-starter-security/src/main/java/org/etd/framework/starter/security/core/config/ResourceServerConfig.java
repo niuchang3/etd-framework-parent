@@ -1,4 +1,4 @@
-package org.edt.framework.starter.security.core.config;
+package org.etd.framework.starter.security.core.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
