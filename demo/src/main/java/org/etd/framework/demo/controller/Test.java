@@ -2,7 +2,7 @@ package org.etd.framework.demo.controller;
 
 import java.io.File;
 
-public class Main {
+public class Test {
 
     public static void main(String[] args) {
 
@@ -11,6 +11,7 @@ public class Main {
     }
     public static void delete(File f)
     {
+
         //数组指向文件夹中的文件和文件夹
         File[] fi=f.listFiles();
         //遍历文件和文件夹

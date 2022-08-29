@@ -12,8 +12,6 @@ import org.redisson.api.RList;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,7 +38,7 @@ public class HelloController {
     @AutoLog("Hello Controller")
     @GetMapping("/permit")
     public ResultModel hello() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // 將JWT信息转换为UserBean
 //		Object userDetail = UserDetailUtils.getUserDetail();
         return ResultModel.success("success");

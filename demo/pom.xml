@@ -42,9 +42,15 @@
 
         <dependency>
             <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-starter-security</artifactId>
+            <artifactId>etd-framework-starter-mybatis</artifactId>
             <version>0.0.1-RELEASES</version>
         </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.etd.framework</groupId>-->
+<!--            <artifactId>etd-framework-starter-security</artifactId>-->
+<!--            <version>0.0.1-RELEASES</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.etd.framework</groupId>

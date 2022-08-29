@@ -8,6 +8,8 @@ spring:
     active: local
   application:
     name: demo
+  main:
+      allow-circular-references: true
   redis:
     database: 8
     host: 172.16.7.200
@@ -18,12 +20,45 @@ spring:
     port: 5672
     username: admin
     password: admin
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080
-          jwk-set-uri: http://localhost:8080/oauth2/jwks
-logging:
-  level:
-    root: error
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://${MYSQL_HOST:172.16.7.200}:${MYSQL_PORT:3306}/test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+      username: root
+      password: root
+      initial-size: 10
+      max-active: 400
+      min-idle: 2
+      max-wait: 60000
+      removeAbandoned: true
+      removeAbandonedTimeout: 600
+      logAbandoned: true
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 5
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      #Oracle需要打开注释
+      #validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      filter:
+        stat:
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: false
+        wall:
+          config:
+            multi-statement-allow: true
+
+mybatis-plus:
+    mapper-locations: classpath*:/mapper/**/*.xml,classpath:/META-INF/modeler-mybatis-mappings/*.xml
+#  security:
+#    oauth2:
+#      resourceserver:
+#        jwt:
+#          issuer-uri: http://localhost:8080
+#          jwk-set-uri: http://localhost:8080/oauth2/jwks
+#logging:
+#  level:
+#    root: INFO
