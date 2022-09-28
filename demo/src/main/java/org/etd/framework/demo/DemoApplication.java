@@ -2,6 +2,7 @@ package org.etd.framework.demo;
 
 import org.etd.framework.common.core.spring.SpringContextHelper;
 import org.etd.framework.starter.web.WebAppConfig;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Import;
  * @description
  * @date 2020/12/26
  */
+//@MapperScan
 @Import({WebAppConfig.class, SpringContextHelper.class})
 @SpringBootApplication
 public class DemoApplication {

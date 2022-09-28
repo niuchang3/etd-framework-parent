@@ -20,6 +20,7 @@ spring:
     port: 5672
     username: admin
     password: admin
+
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
@@ -52,7 +53,8 @@ spring:
             multi-statement-allow: true
 
 mybatis-plus:
-    mapper-locations: classpath*:/mapper/**/*.xml,classpath:/META-INF/modeler-mybatis-mappings/*.xml
+    mapper-locations: classpath*:/mapper/*.xml
+
 #  security:
 #    oauth2:
 #      resourceserver:

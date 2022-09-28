@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.demo.entity.Classs;
+import org.etd.framework.demo.service.ClasssService;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.framework.starter.message.core.annotation.Event;
 import org.etd.framework.starter.message.core.queue.extend.DefaultRabbitQueue;
@@ -34,6 +36,9 @@ public class HelloController {
 
     @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private ClasssService classsService;
 
     @AutoLog("Hello Controller")
     @GetMapping("/permit")
@@ -71,6 +76,21 @@ public class HelloController {
     public void test2(@RequestParam String name) {
         RList<Object> test = redissonClient.getList("test");
         test.add("测试");
+    }
+
+    @GetMapping("/test3")
+    public void test3() {
+        Classs classs = new Classs();
+        classs.setName("222");
+        classsService.save(classs);
+    }
+
+    @GetMapping("/test4")
+    public void test4() {
+        Classs classs = new Classs();
+        classs.setId(1574946066271305729L);
+        classs.setName("333");
+        classsService.updateById(classs);
     }
 
 }

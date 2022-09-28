@@ -30,13 +30,6 @@ public @interface DataSnapshot {
     Class<?> snapshotClass();
 
     /**
-     * 物理主键ID
-     *
-     * @return
-     */
-    String sequenceField() default "sequenceNbr";
-
-    /**
      * 快照生成时，存放原始对象物理主键的字段
      *
      * @return

@@ -2,9 +2,9 @@ package org.etd.framework.starter.mybaits.aspect;
 
 
 import cn.hutool.core.util.ReflectUtil;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -17,6 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 @Slf4j
@@ -42,8 +43,16 @@ public class DataSnapshotAspect {
         if (dataSnapshot == null) {
             return proceed;
         }
+        Field field = null;
+        for (Field declaredField : params.getClass().getDeclaredFields()) {
+            TableId declaredAnnotation = declaredField.getDeclaredAnnotation(TableId.class);
+            if (!ObjectUtils.isEmpty(declaredAnnotation)) {
+                field = declaredField;
+                break;
+            }
+        }
         log.info("-----------------生成数据快照----------");
-        Object oldSequence = ReflectUtil.getFieldValue(params, dataSnapshot.sequenceField());
+        Object oldSequence = ReflectUtil.getFieldValue(params, field);
         // 如果物理主键为空则不生成快照信息
         if (ObjectUtils.isEmpty(oldSequence)) {
             return proceed;
@@ -71,7 +80,15 @@ public class DataSnapshotAspect {
         //将原始表的物理主键映射快照中
         ReflectUtil.setFieldValue(newEntity, dataSnapshot.originalSequenceField(), oldSequence);
         //修改快照表的主键ID
-        ReflectUtil.setFieldValue(newEntity, dataSnapshot.sequenceField(), IdWorker.getId());
+        Field field = null;
+        for (Field declaredField : newEntity.getClass().getDeclaredFields()) {
+            TableId declaredAnnotation = declaredField.getDeclaredAnnotation(TableId.class);
+            if (!ObjectUtils.isEmpty(declaredAnnotation)) {
+                field = declaredField;
+                break;
+            }
+        }
+        ReflectUtil.setFieldValue(newEntity, field, null);
         return newEntity;
     }
 
