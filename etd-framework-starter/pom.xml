@@ -24,6 +24,8 @@
         <module>etd-framework-starter-security</module>
         <module>etd-framework-starter-pay</module>
         <module>etd-framework-starter-state-machine</module>
+        <module>etd-framework-starter-job</module>
+        <module>etd-framework-starter-storage</module>
     </modules>
 
 </project>

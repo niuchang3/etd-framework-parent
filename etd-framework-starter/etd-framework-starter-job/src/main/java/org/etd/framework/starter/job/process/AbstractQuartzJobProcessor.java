@@ -7,10 +7,11 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
 /**
- * Quartz Job 处理器
+ * Quartz DefaultJob 处理器
  */
 @Slf4j
 public abstract class AbstractQuartzJobProcessor extends AbstractJobProcessor<JobExecutionContext> implements JobProcessor<JobExecutionContext>, Job {
+
 
 
     @Override
@@ -27,9 +28,4 @@ public abstract class AbstractQuartzJobProcessor extends AbstractJobProcessor<Jo
         }
     }
 
-
-    @Override
-    public void doProcess(JobExecutionContext context) {
-
-    }
 }

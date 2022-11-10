@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Import;
  * @description
  * @date 2020/12/26
  */
-//@MapperScan
+@MapperScan("org.etd.framework.demo.mapper")
 @Import({WebAppConfig.class, SpringContextHelper.class})
 @SpringBootApplication
 public class DemoApplication {

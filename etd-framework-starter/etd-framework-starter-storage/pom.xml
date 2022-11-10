@@ -6,11 +6,10 @@
         <artifactId>etd-framework-parent</artifactId>
         <groupId>org.etd.framework</groupId>
         <version>0.0.1-RELEASES</version>
-        <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>etd-framework-starter-Job</artifactId>
+    <artifactId>etd-framework-starter-storage</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -19,8 +18,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-quartz</artifactId>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
         </dependency>
 
         <dependency>
@@ -29,16 +33,39 @@
         </dependency>
 
         <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-common-core</artifactId>
         </dependency>
 
         <dependency>
-            <groupId></groupId>
-            <artifactId>spring-</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
         </dependency>
     </dependencies>
-
 
     <dependencyManagement>
         <dependencies>

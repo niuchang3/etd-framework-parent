@@ -11,7 +11,7 @@ import java.util.Map;
  * @param <T>
  */
 @Data
-public class Job<T extends Serializable> implements Serializable {
+public class DefaultJob implements Serializable {
 
     /**
      * 任务ID
@@ -22,10 +22,6 @@ public class Job<T extends Serializable> implements Serializable {
      */
     private String jobGroup;
     /**
-     * 任务类型，local，Feign调用，OR 其他
-     */
-    private String jobType;
-    /**
      * 执行器
      */
     private String jobExecution;
@@ -34,9 +30,13 @@ public class Job<T extends Serializable> implements Serializable {
      */
     private String cronExpression;
     /**
-     * 请求参数
+     * Job状态
      */
-    private T body;
+    private String status;
+    /**
+     * 任务执行次数
+     */
+    private Integer executedCount;
     /**
      * 默认执行一次
      */

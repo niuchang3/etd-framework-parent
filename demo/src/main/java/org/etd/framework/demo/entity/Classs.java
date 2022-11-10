@@ -18,6 +18,8 @@ import org.etd.framework.starter.mybaits.annotation.DataSnapshot;
 @Data
 public class Classs {
 
+
+
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 

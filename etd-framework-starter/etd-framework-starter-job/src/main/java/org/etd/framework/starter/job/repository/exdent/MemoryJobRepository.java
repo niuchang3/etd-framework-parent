@@ -1,13 +1,13 @@
 package org.etd.framework.starter.job.repository.exdent;
 
 import com.google.common.collect.Maps;
-import org.etd.framework.starter.job.bean.Job;
+import org.etd.framework.starter.job.bean.DefaultJob;
 import org.etd.framework.starter.job.repository.JobRepository;
 
 import java.util.Map;
 
 
-public class MemoryJobRepository implements JobRepository<Job> {
+public class MemoryJobRepository implements JobRepository<DefaultJob> {
 
     private Map<String, Object> jobs = Maps.newHashMap();
 
@@ -15,22 +15,22 @@ public class MemoryJobRepository implements JobRepository<Job> {
 
 
     @Override
-    public void save(Job job) {
-        jobs.put(job.getJobId(), jobs);
+    public void save(DefaultJob defaultJob) {
+        jobs.put(defaultJob.getJobId(), jobs);
     }
 
     @Override
-    public void delete(Job job) {
-        jobs.remove(job.getJobId());
+    public void delete(DefaultJob defaultJob) {
+        jobs.remove(defaultJob.getJobId());
     }
 
     @Override
-    public void update(Job job) {
-        save(job);
+    public void update(DefaultJob defaultJob) {
+        save(defaultJob);
     }
 
     @Override
-    public void select(Job job) {
-        jobs.get(job.getJobId());
+    public void select(DefaultJob defaultJob) {
+        jobs.get(defaultJob.getJobId());
     }
 }
