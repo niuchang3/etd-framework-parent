@@ -21,6 +21,7 @@ import java.io.Serializable;
 @ConfigurationProperties(prefix = "wx.pay.service.provider")
 public class WxServiceProviderProperties implements Serializable {
 
+
 	/**
 	 * 服务商APP_ID
 	 */

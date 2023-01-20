@@ -3,14 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>etd-framework-parent</artifactId>
+        <artifactId>etd-framework-starter</artifactId>
         <groupId>org.etd.framework</groupId>
         <version>0.0.1-RELEASES</version>
-        <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>etd-framework-starter-Job</artifactId>
+    <artifactId>etd-framework-starter-rules</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -19,22 +18,37 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-quartz</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
 
+        <!--drools规则引擎-->
         <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-core</artifactId>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-compiler</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-mvel</artifactId>
         </dependency>
 
-    </dependencies>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-mybatis</artifactId>
+            <version>0.0.1-RELEASES</version>
+        </dependency>
+    </dependencies>
 
     <dependencyManagement>
         <dependencies>

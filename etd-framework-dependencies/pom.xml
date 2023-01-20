@@ -53,6 +53,8 @@
 
         <minio.version>8.4.3</minio.version>
         <alibaba.oss.version>3.10.2</alibaba.oss.version>
+
+        <drools.verson>7.73.0.Final</drools.verson>
     </properties>
 
 
@@ -284,6 +286,16 @@
                 <artifactId>aliyun-sdk-oss</artifactId>
                 <version>${alibaba.oss.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.drools</groupId>
+                <artifactId>drools-bom</artifactId>
+                <type>pom</type>
+                <version>${drools.verson}</version>
+                <scope>import</scope>
+            </dependency>
+
+
         </dependencies>
 
     </dependencyManagement>

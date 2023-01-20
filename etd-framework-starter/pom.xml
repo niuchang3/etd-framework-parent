@@ -26,6 +26,7 @@
         <module>etd-framework-starter-state-machine</module>
         <module>etd-framework-starter-job</module>
         <module>etd-framework-starter-storage</module>
+        <module>etd-framework-starter-rules</module>
     </modules>
 
 </project>
