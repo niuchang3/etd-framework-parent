@@ -2,7 +2,7 @@ package org.etd.framework.starter.message.core.config;
 
 import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
-import org.etd.framework.starter.message.core.context.AbstractRabbitContextInitialization;
+import org.etd.framework.starter.message.core.context.AbstractRabbitRequestContextInitialization;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration
 @Import({DefaultQueueConfig.class})
-public class RabbitConfig extends AbstractRabbitContextInitialization {
+public class RabbitConfig extends AbstractRabbitRequestContextInitialization {
 
 
     @Bean

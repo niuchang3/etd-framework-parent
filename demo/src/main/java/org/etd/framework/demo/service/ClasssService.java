@@ -1,7 +1,6 @@
 package org.etd.framework.demo.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
-import org.etd.framework.demo.entity.Classs;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 
 /**
  * (Classs)表服务接口
@@ -9,7 +8,8 @@ import org.etd.framework.demo.entity.Classs;
  * @author 牛昌
  * @since 2022-09-28 09:55:53
  */
-public interface ClasssService extends IService<Classs> {
+public interface ClasssService<T> {
 
+    IPage<T> pageAll(IPage<T> pageModel);
 }
 

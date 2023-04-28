@@ -1,5 +1,7 @@
 package org.etd.framework.demo.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
@@ -78,19 +80,10 @@ public class HelloController {
         test.add("测试");
     }
 
-    @GetMapping("/test3")
-    public void test3() {
-        Classs classs = new Classs();
-        classs.setName("222");
-        classsService.save(classs);
-    }
 
-    @GetMapping("/test4")
-    public void test4() {
-        Classs classs = new Classs();
-        classs.setId(1574946066271305729L);
-        classs.setName("333");
-        classsService.updateById(classs);
+    @GetMapping("/test5")
+    public ResultModel<IPage<Classs>> test5() {
+        IPage page = classsService.pageAll(new Page(1, 20));
+        return ResultModel.success(page);
     }
-
 }

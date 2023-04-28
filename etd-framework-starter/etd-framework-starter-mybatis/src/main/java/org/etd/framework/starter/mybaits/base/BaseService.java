@@ -1,4 +1,4 @@
-package org.etd.framework.starter.mybaits.core;
+package org.etd.framework.starter.mybaits.base;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;

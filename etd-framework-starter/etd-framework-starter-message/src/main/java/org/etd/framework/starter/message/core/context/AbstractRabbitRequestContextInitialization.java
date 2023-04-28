@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.AbstractRequestContextInitialization;
-import org.etd.framework.common.core.context.RequestContextInitialization;
+import org.etd.framework.common.core.context.ContextInitialization;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.starter.log.constant.LogConstant;
@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class AbstractRabbitContextInitialization extends AbstractRequestContextInitialization<Message> implements RequestContextInitialization<Message> {
+public abstract class AbstractRabbitRequestContextInitialization extends AbstractRequestContextInitialization<Message> implements ContextInitialization<Message> {
 
     @Override
     protected String getHeaderValue(Message message, String headerName) {

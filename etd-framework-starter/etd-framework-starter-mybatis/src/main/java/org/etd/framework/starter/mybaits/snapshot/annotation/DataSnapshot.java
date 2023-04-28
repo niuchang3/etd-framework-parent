@@ -1,4 +1,4 @@
-package org.etd.framework.starter.mybaits.annotation;
+package org.etd.framework.starter.mybaits.snapshot.annotation;
 
 
 import java.lang.annotation.*;

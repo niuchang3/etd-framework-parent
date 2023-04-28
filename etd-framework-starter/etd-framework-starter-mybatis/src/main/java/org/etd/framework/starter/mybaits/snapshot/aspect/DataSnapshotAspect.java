@@ -1,4 +1,4 @@
-package org.etd.framework.starter.mybaits.aspect;
+package org.etd.framework.starter.mybaits.snapshot.aspect;
 
 
 import cn.hutool.core.util.ReflectUtil;
@@ -12,9 +12,8 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.etd.framework.common.core.spring.SpringContextHelper;
-import org.etd.framework.starter.mybaits.annotation.DataSnapshot;
+import org.etd.framework.starter.mybaits.snapshot.annotation.DataSnapshot;
 import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
 import java.lang.reflect.Field;
@@ -22,7 +21,6 @@ import java.lang.reflect.Method;
 
 @Slf4j
 @Aspect
-@Component
 public class DataSnapshotAspect {
 
 

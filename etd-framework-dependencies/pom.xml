@@ -26,7 +26,8 @@
         <commons.lang3.version>3.8.1</commons.lang3.version>
 
         <!--Mybatis-->
-        <mybatis.version>3.3.2</mybatis.version>
+<!--        <mybatis.version>3.3.2</mybatis.version>-->
+        <mybatis.version>3.5.3</mybatis.version>
         <!--德鲁伊-->
         <druid.version>1.1.20</druid.version>
         <!--缓存框架-->

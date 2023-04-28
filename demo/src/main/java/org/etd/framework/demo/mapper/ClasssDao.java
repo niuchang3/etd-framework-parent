@@ -1,8 +1,8 @@
 package org.etd.framework.demo.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.etd.framework.demo.entity.Classs;
+import org.etd.framework.starter.mybaits.base.mapper.EtdBaseMapper;
 
 /**
  * (Classs)表数据库访问层
@@ -11,7 +11,7 @@ import org.etd.framework.demo.entity.Classs;
  * @since 2022-09-28 09:55:53
  */
 @Mapper
-public interface ClasssDao extends BaseMapper<Classs> {
+public interface ClasssDao extends EtdBaseMapper<Classs> {
 
 }
 

@@ -12,13 +12,13 @@ import java.util.List;
  * @date 2020/8/31
  */
 @Data
-public class PageModel {
+public class PageModel<T> {
 
 
     /**
      * 查询数据列表
      */
-    protected List<Object> records = Collections.emptyList();
+    protected List<T> records = Collections.emptyList();
 
     /**
      * 总数
