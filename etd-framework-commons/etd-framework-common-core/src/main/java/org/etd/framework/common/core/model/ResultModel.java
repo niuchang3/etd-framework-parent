@@ -1,11 +1,16 @@
 package org.etd.framework.common.core.model;
 
 
+import cn.hutool.core.exceptions.ExceptionUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.constants.RequestCodeConverter;
+import org.etd.framework.common.core.spring.SpringContextHelper;
+import org.springframework.core.env.Environment;
+import org.springframework.util.ObjectUtils;
 
 import java.io.Serializable;
 
@@ -62,21 +67,25 @@ public class ResultModel<T> implements Serializable {
      * @param <T>
      * @return
      */
-    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, String message, String url) {
-        return new ResultModel(requestCode.getCode(), requestCode.getDescription(), message, "", url);
+    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, Throwable throwable, String message, String url) {
+        return new ResultModel(requestCode.getCode(), getDevMessage(throwable), message, "", url);
     }
 
-    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode) {
-        return new ResultModel(requestCode.getCode(), requestCode.getDescription(), requestCode.getDescription(), "", "");
-    }
     /**
-     * 操作失败
+     * 开发环境会获取栈信息，方便开发人员调试异常
      *
-     * @param <T>
+     * @param throwable
      * @return
      */
-    public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, String devMessage, String message, String url) {
-        return new ResultModel(requestCode.getCode(), devMessage, message, "", url);
+    private static String getDevMessage(Throwable throwable) {
+        Environment environment = SpringContextHelper.getApplicationContext().getEnvironment();
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (ObjectUtils.isEmpty(activeProfiles)) {
+            return null;
+        }
+        if (StringUtils.equals("dev", activeProfiles[0])) {
+            return ExceptionUtil.stacktraceToString(throwable);
+        }
+        return null;
     }
-
 }

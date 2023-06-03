@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = ApiRuntimeException.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, ApiRuntimeException e) {
         log.error(e.getMessage(), e);
-        return ResultModel.failed(e.getRequestCode(), e.getMessage(), request.getRequestURI());
+        return ResultModel.failed(e.getRequestCode(), e, e.getMessage(), request.getRequestURI());
     }
 
 
@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = HttpClientErrorException.Unauthorized.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, HttpClientErrorException.Unauthorized e) {
         log.error(e.getMessage(), e);
-        return ResultModel.failed(RequestCodeConstant.NO_PERMISSION, RequestCodeConstant.NO_PERMISSION.getDescription(), request.getRequestURI());
+        return ResultModel.failed(RequestCodeConstant.NO_PERMISSION, e, e.getMessage(), request.getRequestURI());
     }
 
 
@@ -65,8 +65,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = RuntimeException.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, RuntimeException e) {
         log.error(e.getMessage(), e);
-
-        return ResultModel.failed(RequestCodeConstant.INTERNAL_SERVER_ERROR, e.getMessage(), "系统繁忙，请稍后在试", request.getRequestURI());
+        return ResultModel.failed(RequestCodeConstant.INTERNAL_SERVER_ERROR, e, "系统繁忙，请稍后在试", request.getRequestURI());
     }
 
 
@@ -83,7 +82,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = Exception.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, Exception e) {
         log.error(e.getMessage(), e);
-        return ResultModel.failed(RequestCodeConstant.INTERNAL_SERVER_ERROR, e.getMessage(), "系统繁忙，请稍后在试", request.getRequestURI());
+        return ResultModel.failed(RequestCodeConstant.INTERNAL_SERVER_ERROR, e, "系统繁忙，请稍后在试", request.getRequestURI());
     }
 
 }

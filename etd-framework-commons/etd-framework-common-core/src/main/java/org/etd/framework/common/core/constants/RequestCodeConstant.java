@@ -24,7 +24,7 @@ public enum RequestCodeConstant implements RequestCodeConverter {
     /**
      * 服务器代码报错
      */
-    INTERNAL_SERVER_ERROR(500, "服务器代码报错。"),
+    INTERNAL_SERVER_ERROR(500, "服务器异常。"),
     /**
      * 业务状态码：5000
      */

@@ -46,17 +46,15 @@
             <version>0.0.1-RELEASES</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.etd.framework</groupId>-->
-<!--            <artifactId>etd-framework-starter-security</artifactId>-->
-<!--            <version>0.0.1-RELEASES</version>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>
             <version>0.0.1-RELEASES</version>
         </dependency>
+
+
+
     </dependencies>
 
 

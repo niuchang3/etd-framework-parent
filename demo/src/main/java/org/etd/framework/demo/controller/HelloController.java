@@ -46,7 +46,6 @@ public class HelloController {
     @GetMapping("/permit")
     public ResultModel hello() {
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // 將JWT信息转换为UserBean
 //		Object userDetail = UserDetailUtils.getUserDetail();
         return ResultModel.success("success");
     }

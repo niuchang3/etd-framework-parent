@@ -2,8 +2,6 @@ package org.etd.framework.demo.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.etd.framework.common.core.model.PageModel;
 import org.etd.framework.demo.entity.Classs;
 import org.etd.framework.demo.mapper.ClasssDao;
 import org.etd.framework.demo.service.ClasssService;

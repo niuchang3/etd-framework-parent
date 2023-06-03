@@ -1,8 +1,5 @@
 package org.etd.framework.common.core.constants;
 
-import org.apache.commons.lang3.StringUtils;
-import org.etd.framework.common.core.model.ResultModel;
-
 public interface RequestCodeConverter {
 
     Integer getCode();
@@ -10,7 +7,7 @@ public interface RequestCodeConverter {
     String getName();
 
     String getDescription();
-
+/*
     static ResultModel convertError(RequestCodeConverter[] codes, Integer code) {
         for (RequestCodeConverter requestCode : codes) {
             if (!requestCode.getCode().equals(code)) {
@@ -29,5 +26,5 @@ public interface RequestCodeConverter {
             return ResultModel.failed(requestCode);
         }
         return ResultModel.failed(RequestCodeConstant.FAILED);
-    }
+    }*/
 }

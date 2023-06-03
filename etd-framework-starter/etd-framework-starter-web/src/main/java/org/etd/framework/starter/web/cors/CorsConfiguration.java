@@ -24,7 +24,7 @@ public class CorsConfiguration {
 	private String active;
 
 	//全局配置跨域
-	@Bean("corsConfigurer")
+	/*@Bean("corsConfigurer")
 	@Profile({"local", "qa", "dev"})
 	public WebMvcConfigurer corsConfigurer() {
 		return new WebMvcConfigurerAdapter() {
@@ -32,7 +32,7 @@ public class CorsConfiguration {
 			public void addCorsMappings(CorsRegistry registry) {
 				registry.addMapping("/**")
 						.allowCredentials(true).maxAge(3600)
-						.allowedOrigins("*")
+						.allowedOrigins("127.0.0.1")
 						.allowedMethods("*").allowedHeaders("*");
 			}
 		};
@@ -49,6 +49,6 @@ public class CorsConfiguration {
 		}
 		return cs;
 	}
-
+*/
 
 }
