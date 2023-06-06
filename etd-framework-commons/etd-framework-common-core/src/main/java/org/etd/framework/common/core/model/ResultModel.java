@@ -78,6 +78,9 @@ public class ResultModel<T> implements Serializable {
      * @return
      */
     private static String getDevMessage(Throwable throwable) {
+        if(ObjectUtils.isEmpty(throwable)){
+            return null;
+        }
         Environment environment = SpringContextHelper.getApplicationContext().getEnvironment();
         String[] activeProfiles = environment.getActiveProfiles();
         if (ObjectUtils.isEmpty(activeProfiles)) {

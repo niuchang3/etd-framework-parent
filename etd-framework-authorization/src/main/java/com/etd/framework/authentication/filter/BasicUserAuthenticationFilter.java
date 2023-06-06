@@ -1,5 +1,6 @@
 package com.etd.framework.authentication.filter;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+@Slf4j
 public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
 
     private RequestMatcher authenticationRequestMatcher;
@@ -73,10 +75,16 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         Authentication authentication = converter.convert(request);
-        if(ObjectUtils.isEmpty(authentication)){
-            filterChain.doFilter(request,response);
+        if (ObjectUtils.isEmpty(authentication)) {
+            filterChain.doFilter(request, response);
         }
-        authenticationManager.authenticate(authentication);
+        try {
+            Authentication authenticate = authenticationManager.authenticate(authentication);
+            doProcessSuccessHandler(request, response, authentication);
+        } catch (AuthenticationException e) {
+            log.error(e.getMessage(), e);
+            doProcessFailureHandler(request, response, e);
+        }
     }
 
     /**

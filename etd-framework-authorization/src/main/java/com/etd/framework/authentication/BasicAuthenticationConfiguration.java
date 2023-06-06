@@ -19,6 +19,7 @@ public class BasicAuthenticationConfiguration extends AbstractHttpConfigurer<Bas
 
     private final Map<Class<? extends AbstractBasicAuthenticationConfigurer>, AbstractBasicAuthenticationConfigurer> configurers = defaultConfig();
 
+
     private RequestMatcher endpointsMatcher;
 
     /**
@@ -71,8 +72,7 @@ public class BasicAuthenticationConfiguration extends AbstractHttpConfigurer<Bas
             config.init(httpSecurity);
             requestMatchers.add(config.getRequestMatcher());
         });
-        RequestMatcher request = new OrRequestMatcher(requestMatchers);
-        httpSecurity.csrf().ignoringRequestMatchers(request);
+        endpointsMatcher = new OrRequestMatcher(requestMatchers);
     }
 
     @Override
@@ -80,4 +80,8 @@ public class BasicAuthenticationConfiguration extends AbstractHttpConfigurer<Bas
         configurers.values().forEach(config -> config.configure(httpSecurity));
     }
 
+
+    public RequestMatcher getEndpointsMatcher() {
+        return (request) -> this.endpointsMatcher.matches(request);
+    }
 }
