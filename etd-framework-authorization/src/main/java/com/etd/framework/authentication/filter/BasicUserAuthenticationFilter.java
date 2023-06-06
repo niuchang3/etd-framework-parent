@@ -1,6 +1,9 @@
 package com.etd.framework.authentication.filter;
 
+import com.etd.framework.authentication.event.AuthenticationFailEvent;
+import com.etd.framework.authentication.event.AuthenticationSuccessEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -23,13 +26,17 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
     private RequestMatcher authenticationRequestMatcher;
 
     private AuthenticationManager authenticationManager;
-
+    /**
+     * 发送成功或失败处理
+     */
     private AuthenticationSuccessHandler authenticationSuccessHandler = this::doProcessSuccessHandler;
 
     private AuthenticationFailureHandler authenticationFailureHandler = this::doProcessFailureHandler;
 
 
     private AuthenticationConverter converter = null;
+
+    private ApplicationContext context;
 
 
     public BasicUserAuthenticationFilter() {
@@ -45,8 +52,13 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
      * @param authenticationConverter
      * @return
      */
-    public BasicUserAuthenticationFilter setAuthenticationConverter(AuthenticationConverter authenticationConverter) {
+    public BasicUserAuthenticationFilter addAuthenticationConverter(AuthenticationConverter authenticationConverter) {
         converter = authenticationConverter;
+        return this;
+    }
+
+    public BasicUserAuthenticationFilter addApplicationContext(ApplicationContext context) {
+        this.context = context;
         return this;
     }
 
@@ -74,16 +86,23 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        if (!authenticationRequestMatcher.matches(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         Authentication authentication = converter.convert(request);
         if (ObjectUtils.isEmpty(authentication)) {
             filterChain.doFilter(request, response);
+            return;
         }
         try {
             Authentication authenticate = authenticationManager.authenticate(authentication);
-            doProcessSuccessHandler(request, response, authentication);
+            doProcessSuccessHandler(request, response, authenticate);
         } catch (AuthenticationException e) {
             log.error(e.getMessage(), e);
             doProcessFailureHandler(request, response, e);
+            throw e;
         }
     }
 
@@ -96,6 +115,8 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
      */
     private void doProcessSuccessHandler(HttpServletRequest request, HttpServletResponse response,
                                          Authentication authentication) {
+
+        context.publishEvent(new AuthenticationSuccessEvent(authentication));
     }
 
     /**
@@ -107,7 +128,7 @@ public class BasicUserAuthenticationFilter extends OncePerRequestFilter {
      */
     private void doProcessFailureHandler(HttpServletRequest request, HttpServletResponse response,
                                          AuthenticationException exception) {
-
+        context.publishEvent(new AuthenticationFailEvent(request, exception));
     }
 
 }

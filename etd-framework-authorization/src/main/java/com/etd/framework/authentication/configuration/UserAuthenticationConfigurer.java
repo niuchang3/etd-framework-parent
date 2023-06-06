@@ -6,6 +6,7 @@ import com.etd.framework.authentication.converter.UserNamePasswordAuthentication
 import com.etd.framework.authentication.filter.BasicUserAuthenticationFilter;
 import com.etd.framework.authentication.provider.UserNamePasswordAuthenticationProvider;
 import com.google.common.collect.Lists;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -84,7 +85,8 @@ public class UserAuthenticationConfigurer extends AbstractBasicAuthenticationCon
         BasicUserAuthenticationFilter filter = new BasicUserAuthenticationFilter();
         filter.addAuthenticationManager(httpSecurity.getSharedObject(AuthenticationManager.class))
                 .addAuthenticationRequestMatcher(requestMatcher)
-                .setAuthenticationConverter(new DelegatingDefaultAuthenticationConverter(authenticationConverters));
+                .addAuthenticationConverter(new DelegatingDefaultAuthenticationConverter(authenticationConverters))
+                .addApplicationContext(httpSecurity.getSharedObject(ApplicationContext.class));
 
         httpSecurity.addFilterAfter(filter, FilterSecurityInterceptor.class);
     }
