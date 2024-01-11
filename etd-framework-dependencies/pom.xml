@@ -5,7 +5,7 @@
     <parent>
         <artifactId>etd-framework-parent</artifactId>
         <groupId>org.etd.framework</groupId>
-        <version>0.0.1-RELEASES</version>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
 
 

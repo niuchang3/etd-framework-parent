@@ -5,7 +5,7 @@
     <parent>
         <artifactId>etd-framework-commons</artifactId>
         <groupId>org.etd.framework</groupId>
-        <version>0.0.1-RELEASES</version>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -45,7 +45,7 @@
             <dependency>
                 <artifactId>etd-framework-dependencies</artifactId>
                 <groupId>org.etd.framework</groupId>
-                <version>0.0.1-RELEASES</version>
+                <version>0.0.1-SNAPSHOT</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
