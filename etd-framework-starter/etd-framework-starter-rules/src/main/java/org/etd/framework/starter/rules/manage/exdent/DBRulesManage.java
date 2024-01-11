@@ -2,6 +2,8 @@ package org.etd.framework.starter.rules.manage.exdent;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.exceptions.ApiException;
+import org.etd.framework.common.core.constants.RequestCodeConstant;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.rules.entity.DroolsRule;
 import org.etd.framework.starter.rules.entity.DroolsRuleNames;
 import org.etd.framework.starter.rules.manage.RulesManage;
@@ -62,7 +64,7 @@ public class DBRulesManage extends RulesManage {
         }
         checkRuleNameExist(names);
         if (exist(droolsRule.getKieBaseName())) {
-            throw new ApiException("已存在" + droolsRule.getKieBaseName() + "请勿重复添加");
+            throw new ApiRuntimeException(RequestCodeConstant.VALIDATE_ERROR,"已存在" + droolsRule.getKieBaseName() + "请勿重复添加");
         }
         droolsRule.setCreatedTime(new Date());
         droolsRulesMapper.insert(droolsRule);
@@ -96,7 +98,7 @@ public class DBRulesManage extends RulesManage {
         if (CollectionUtils.isEmpty(droolsRuleNames)) {
             return;
         }
-        throw new ApiException(droolsRuleNames.get(0).getRuleName() + ",规则已存在,请勿重复添加");
+        throw new ApiRuntimeException(RequestCodeConstant.VALIDATE_ERROR,droolsRuleNames.get(0).getRuleName() + ",规则已存在,请勿重复添加");
     }
 
     private List<String> extractRuleName(DroolsRule droolsRule) {
@@ -106,7 +108,7 @@ public class DBRulesManage extends RulesManage {
             rulesNames.add(matcher.group(1));
         }
         if (ObjectUtils.isEmpty(rulesNames)) {
-            throw new ApiException("Drools语法错误,规则必须包含 rule  end 体");
+            throw new ApiRuntimeException(RequestCodeConstant.VALIDATE_ERROR,"Drools语法错误,规则必须包含 rule  end 体");
         }
         return rulesNames;
     }
