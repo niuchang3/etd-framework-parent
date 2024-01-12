@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.converter.extend;
 
 import com.etd.framework.starter.oauth.authentication.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.oauth.authentication.converter.AbstractAuthenticationConverter;
-import com.etd.framework.starter.oauth.authentication.token.request.Oauth2AuthorizationCodeAuthenticationToken;
+import com.etd.framework.starter.oauth.authentication.token.Oauth2AuthorizationCodeRequestToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 
@@ -22,13 +22,13 @@ public class Oauth2AuthorizeCodeRequestConverter extends AbstractAuthenticationC
     @Override
     protected Authentication doConvert(HttpServletRequest request) {
 
-        String responseType = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.response_type.name());
-        String clientId = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.client_id.name());
-        String redirectUri = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.redirect_uri.name());
-        String scope = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.scope.name());
-        String state = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.state.name());
+        String responseType = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeRequestAuthentication.response_type.name());
+        String clientId = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeRequestAuthentication.client_id.name());
+        String redirectUri = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeRequestAuthentication.redirect_uri.name());
+        String scope = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeRequestAuthentication.scope.name());
+        String state = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeRequestAuthentication.state.name());
 
-        Oauth2AuthorizationCodeAuthenticationToken authenticationToken = new Oauth2AuthorizationCodeAuthenticationToken(Collections.emptyList(), clientId);
+        Oauth2AuthorizationCodeRequestToken authenticationToken = new Oauth2AuthorizationCodeRequestToken(Collections.emptyList(), clientId);
         authenticationToken.setResponseType(responseType);
         authenticationToken.setRedirectUri(redirectUri);
         authenticationToken.setScope(convertScopeSet(scope));

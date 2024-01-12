@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.filter.extend;
 
 import com.etd.framework.starter.oauth.authentication.converter.DelegatingAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2AuthorizeCodeRequestConverter;
-import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2ImplicitRequestConverter;
+import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2ImplicitAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.filter.AbstractOauth2RequestFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -27,7 +27,7 @@ public class Oauth2AuthorizeRequestFilter extends AbstractOauth2RequestFilter {
         DelegatingAuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
         authenticationConverter
                 .addAuthenticationConverter(new Oauth2AuthorizeCodeRequestConverter())
-                .addAuthenticationConverter(new Oauth2ImplicitRequestConverter());
+                .addAuthenticationConverter(new Oauth2ImplicitAuthenticationConverter());
         addAuthenticationConverter(authenticationConverter);
     }
 

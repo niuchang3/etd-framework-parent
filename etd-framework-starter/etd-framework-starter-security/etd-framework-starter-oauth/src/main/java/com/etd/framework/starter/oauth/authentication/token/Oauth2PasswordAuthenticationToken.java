@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.authentication.token.request;
+package com.etd.framework.starter.oauth.authentication.token;
 
 import com.etd.framework.starter.oauth.authentication.token.AbstractOauth2AuthenticationToken;
 import lombok.Getter;

@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.converter.extend;
 
 import com.etd.framework.starter.oauth.authentication.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.oauth.authentication.converter.AbstractAuthenticationConverter;
-import com.etd.framework.starter.oauth.authentication.token.request.Oauth2PasswordAuthenticationToken;
+import com.etd.framework.starter.oauth.authentication.token.Oauth2PasswordAuthenticationToken;
 import com.google.common.collect.Lists;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * 用户名密码身份转换器
  */
-public class Oauth2UserPasswordTokenRequestConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
+public class Oauth2PasswordAuthenticationConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
 
 
     @Override

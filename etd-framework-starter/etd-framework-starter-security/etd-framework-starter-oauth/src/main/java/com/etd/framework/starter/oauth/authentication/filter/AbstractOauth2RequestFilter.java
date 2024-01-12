@@ -2,9 +2,15 @@ package com.etd.framework.starter.oauth.authentication.filter;
 
 import com.etd.framework.starter.oauth.authentication.converter.DelegatingAuthenticationConverter;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -14,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 
+@Slf4j
 public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
     /**
      * 身份认证管理器
@@ -31,7 +38,9 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
     @Getter
     private AuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
 
+    private AuthenticationSuccessHandler successHandler;
 
+    private AuthenticationFailureHandler failureHandler;
     /**
      * 设置身份验证匹配器
      *
@@ -76,10 +85,22 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        Authentication authentication = authenticationConverter.convert(request);
+        if (ObjectUtils.isEmpty(authentication)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        try {
+            Authentication authenticate = authenticationManager.authenticate(authentication);
+            if (!authenticate.isAuthenticated()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-
-//        authenticationManager.authenticate()
-//        authenticationManager.authenticate()
+        } catch (AuthenticationException e) {
+            log.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
 
     }
 

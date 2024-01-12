@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.converter.extend;
 
 import com.etd.framework.starter.oauth.authentication.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.oauth.authentication.converter.AbstractAuthenticationConverter;
-import com.etd.framework.starter.oauth.authentication.token.request.Oauth2ImplicitAuthenticationToken;
+import com.etd.framework.starter.oauth.authentication.token.Oauth2ImplicitAuthenticationToken;
 import com.google.common.collect.Lists;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Oauth 2授权隐式请求转换器
  */
-public class Oauth2ImplicitRequestConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
+public class Oauth2ImplicitAuthenticationConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
 
 
     @Override

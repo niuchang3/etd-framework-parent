@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.converter.extend;
 
 import com.etd.framework.starter.oauth.authentication.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.oauth.authentication.converter.AbstractAuthenticationConverter;
-import com.etd.framework.starter.oauth.authentication.token.request.Oauth2ClientCredentialsAuthenticationToken;
+import com.etd.framework.starter.oauth.authentication.token.Oauth2ClientCredentialsAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 
@@ -12,7 +12,7 @@ import java.util.Collections;
 /**
  * 客户端凭证 认证转换器
  */
-public class Oauth2ClientCredentialsTokenRequestConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
+public class Oauth2ClientCredentialsAuthenticationConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
 
     @Override
     protected String getGrantType() {

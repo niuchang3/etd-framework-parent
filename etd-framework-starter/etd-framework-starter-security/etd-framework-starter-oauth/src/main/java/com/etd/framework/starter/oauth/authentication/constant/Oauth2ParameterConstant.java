@@ -29,7 +29,7 @@ public interface Oauth2ParameterConstant {
     /**
      * 授权码认证所需参数
      */
-    enum AuthorizationCodeAuthentication {
+    enum AuthorizationCodeRequestAuthentication {
         response_type,
         client_id,
         redirect_uri,
@@ -41,7 +41,7 @@ public interface Oauth2ParameterConstant {
     /**
      * 授权码token所需参数
      */
-    enum AuthorizationTokenAuthentication {
+    enum AuthorizationCodeAuthentication {
         grant_type,
         client_id,
         code,

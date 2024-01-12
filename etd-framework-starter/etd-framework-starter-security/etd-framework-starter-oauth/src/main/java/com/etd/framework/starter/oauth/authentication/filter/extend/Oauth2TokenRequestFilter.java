@@ -1,5 +1,9 @@
 package com.etd.framework.starter.oauth.authentication.filter.extend;
 
+import com.etd.framework.starter.oauth.authentication.converter.DelegatingAuthenticationConverter;
+import com.etd.framework.starter.oauth.authentication.converter.extend.OAuth2AuthorizationCodeAuthenticationConverter;
+import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2ClientCredentialsAuthenticationConverter;
+import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2PasswordAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.filter.AbstractOauth2RequestFilter;
 import lombok.Builder;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -27,7 +31,13 @@ public class Oauth2TokenRequestFilter extends AbstractOauth2RequestFilter {
      * 默认的身份认证转换器
      */
     private void defaultAuthenticationConverter() {
-        addAuthenticationConverter(null);
+
+        DelegatingAuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
+        authenticationConverter
+                .addAuthenticationConverter(new OAuth2AuthorizationCodeAuthenticationConverter())
+                .addAuthenticationConverter(new Oauth2ClientCredentialsAuthenticationConverter())
+                .addAuthenticationConverter(new Oauth2PasswordAuthenticationConverter());
+        addAuthenticationConverter(authenticationConverter);
     }
 
     private void defaultRequestMatcher() {
