@@ -7,6 +7,13 @@
         <groupId>org.etd.framework</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
+    <packaging>pom</packaging>
+    <modules>
+
+        <module>etd-framework-starter-oauth</module>
+    </modules>
+
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.etd.framework</groupId>
@@ -18,38 +25,7 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
 
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-utils</artifactId>
-            <type>jar</type>
-        </dependency>
-
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-starter-cache</artifactId>
-            <version>${etd.framework.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-core</artifactId>
-        </dependency>
 
     </dependencies>
 
