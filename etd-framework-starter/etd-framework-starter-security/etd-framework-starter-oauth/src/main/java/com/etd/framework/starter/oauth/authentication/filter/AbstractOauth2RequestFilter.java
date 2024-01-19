@@ -36,11 +36,12 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
      * 请求参数转换器
      */
     @Getter
-    private AuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
+    private final AuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
 
     private AuthenticationSuccessHandler successHandler;
 
     private AuthenticationFailureHandler failureHandler;
+
     /**
      * 设置身份验证匹配器
      *

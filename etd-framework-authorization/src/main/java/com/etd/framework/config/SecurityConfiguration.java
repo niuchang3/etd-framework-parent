@@ -14,7 +14,7 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain defaultAuthenticationServer(HttpSecurity http) throws Exception {
 
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
         BasicAuthorizationServerConfiguration.applyDefaultBasicSecurity(http);
         return http.build();

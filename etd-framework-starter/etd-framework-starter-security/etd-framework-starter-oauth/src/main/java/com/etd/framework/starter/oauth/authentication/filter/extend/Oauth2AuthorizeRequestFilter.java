@@ -1,6 +1,5 @@
 package com.etd.framework.starter.oauth.authentication.filter.extend;
 
-import com.etd.framework.starter.oauth.authentication.converter.DelegatingAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2AuthorizeCodeRequestConverter;
 import com.etd.framework.starter.oauth.authentication.converter.extend.Oauth2ImplicitAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.filter.AbstractOauth2RequestFilter;
@@ -24,11 +23,8 @@ public class Oauth2AuthorizeRequestFilter extends AbstractOauth2RequestFilter {
      * 默认的身份认证转换器
      */
     private void defaultAuthenticationConverter() {
-        DelegatingAuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
-        authenticationConverter
-                .addAuthenticationConverter(new Oauth2AuthorizeCodeRequestConverter())
-                .addAuthenticationConverter(new Oauth2ImplicitAuthenticationConverter());
-        addAuthenticationConverter(authenticationConverter);
+        addAuthenticationConverter(new Oauth2AuthorizeCodeRequestConverter());
+        addAuthenticationConverter(new Oauth2ImplicitAuthenticationConverter());
     }
 
     private void defaultRequestMatcher() {

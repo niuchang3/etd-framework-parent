@@ -22,11 +22,11 @@ public class Oauth2ImplicitAuthenticationConverter extends AbstractAuthenticatio
 
     @Override
     protected Authentication doConvert(HttpServletRequest request) {
-        String responseType = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.response_type.name());
-        String clientId = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.client_id.name());
-        String redirectUri = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.redirect_uri.name());
-        String scope = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.scope.name());
-        String state = obtainRequestParams(request, Oauth2ParameterConstant.AuthorizationCodeAuthentication.state.name());
+        String responseType = obtainRequestParams(request, Oauth2ParameterConstant.ImplicitAuthentication.response_type.name());
+        String clientId = obtainRequestParams(request, Oauth2ParameterConstant.ImplicitAuthentication.client_id.name());
+        String redirectUri = obtainRequestParams(request, Oauth2ParameterConstant.ImplicitAuthentication.redirect_uri.name());
+        String scope = obtainRequestParams(request, Oauth2ParameterConstant.ImplicitAuthentication.scope.name());
+        String state = obtainRequestParams(request, Oauth2ParameterConstant.ImplicitAuthentication.state.name());
 
         Oauth2ImplicitAuthenticationToken authenticationToken = new Oauth2ImplicitAuthenticationToken(clientId, Lists.newArrayList());
         authenticationToken.setResponseType(responseType);
