@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Oauth 2授权隐式请求转换器
  */
+@Deprecated
 public class Oauth2ImplicitAuthenticationConverter extends AbstractAuthenticationConverter implements AuthenticationConverter {
 
 

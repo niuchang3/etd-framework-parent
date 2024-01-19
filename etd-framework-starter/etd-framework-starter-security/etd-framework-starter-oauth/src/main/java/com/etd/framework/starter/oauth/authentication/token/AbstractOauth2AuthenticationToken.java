@@ -9,7 +9,7 @@ import java.util.Collection;
  * 抽象的Oauth2身份认证令牌
  * <ui>
  * <li>
- * <a src='https://www.ruanyifeng.com/blog/2019/04/oauth-grant-types.html'>参考文档</a>
+ * @see <a src='https://datatracker.ietf.org/doc/html/rfc6749#section-4.1'>参考文档
  * </li>
  * <li>
  * authorize(授权)模式下

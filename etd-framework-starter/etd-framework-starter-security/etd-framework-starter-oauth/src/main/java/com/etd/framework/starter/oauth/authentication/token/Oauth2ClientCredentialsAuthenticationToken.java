@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
+import java.util.Set;
 
 /**
  * 客户端凭证身份认证令牌
@@ -18,6 +19,8 @@ public class Oauth2ClientCredentialsAuthenticationToken extends AbstractOauth2Au
 
     private String grantType;
 
+
+    private Set<String> scope;
 
     public Oauth2ClientCredentialsAuthenticationToken(Object principal, Object credentials, Collection<? extends GrantedAuthority> authorities) {
         super(authorities, principal, credentials);

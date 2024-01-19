@@ -6,6 +6,9 @@ import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
 
+/**
+ * <a src='https://datatracker.ietf.org/doc/html/rfc6749#section-4.1'>Oauth2 授权码认证</a>
+ */
 @Getter
 @Setter
 public class Oauth2AuthorizationCodeAuthenticationToken extends AbstractOauth2AuthenticationToken {

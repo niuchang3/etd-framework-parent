@@ -4,6 +4,7 @@ import com.etd.framework.starter.oauth.authentication.constant.Oauth2ParameterCo
 import com.etd.framework.starter.oauth.authentication.converter.AbstractAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.token.Oauth2ClientCredentialsAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,11 +22,16 @@ public class Oauth2ClientCredentialsAuthenticationConverter extends AbstractAuth
 
     @Override
     protected Authentication doConvert(HttpServletRequest request) {
+        Authentication clientPrincipal = SecurityContextHolder.getContext().getAuthentication();
+        String clientId = (String) clientPrincipal.getPrincipal();
+        String clientSecret = (String) clientPrincipal.getCredentials();
+
 
         String grantType = obtainRequestParams(request, Oauth2ParameterConstant.GRANT_TYPE.class.getSimpleName().toLowerCase());
-        Oauth2ClientCredentialsAuthenticationToken authenticationToken = new Oauth2ClientCredentialsAuthenticationToken(null, Collections.emptyList());
+        String scope = obtainRequestParams(request, Oauth2ParameterConstant.ClientCredentialsAuthentication.scope.name());
+        Oauth2ClientCredentialsAuthenticationToken authenticationToken = new Oauth2ClientCredentialsAuthenticationToken(clientId, clientSecret, Collections.emptyList());
         authenticationToken.setGrantType(grantType);
-
+        authenticationToken.setScope(convertScopeSet(scope));
         return authenticationToken;
     }
 }

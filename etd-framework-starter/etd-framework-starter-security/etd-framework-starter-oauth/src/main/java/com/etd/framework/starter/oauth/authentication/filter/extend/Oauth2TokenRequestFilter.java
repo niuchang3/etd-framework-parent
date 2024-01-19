@@ -30,6 +30,7 @@ public class Oauth2TokenRequestFilter extends AbstractOauth2RequestFilter {
      * 默认的身份认证转换器
      */
     private void defaultAuthenticationConverter() {
+
         addAuthenticationConverter(new OAuth2AuthorizationCodeAuthenticationConverter());
         addAuthenticationConverter(new Oauth2ClientCredentialsAuthenticationConverter());
         addAuthenticationConverter(new Oauth2PasswordAuthenticationConverter());

@@ -1,6 +1,5 @@
 package com.etd.framework.starter.oauth.authentication.token;
 
-import com.etd.framework.starter.oauth.authentication.token.AbstractOauth2AuthenticationToken;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,6 +14,10 @@ import java.util.Set;
 @Getter
 @Setter
 public class Oauth2PasswordAuthenticationToken extends AbstractOauth2AuthenticationToken {
+
+    private String username;
+
+    private String password;
 
     private String captcha;
 

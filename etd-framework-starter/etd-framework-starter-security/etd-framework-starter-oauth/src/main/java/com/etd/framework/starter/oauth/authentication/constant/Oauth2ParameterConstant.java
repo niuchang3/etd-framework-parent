@@ -76,6 +76,8 @@ public interface Oauth2ParameterConstant {
      * 客户端凭证所需参数
      */
     enum ClientCredentialsAuthentication {
+        client_id,
+        client_secret,
         grant_type,
         scope
     }

@@ -9,6 +9,7 @@ import java.util.Set;
 
 /**
  * 授权码身份认证令牌
+ * <a src='https://datatracker.ietf.org/doc/html/rfc6749#section-4.1'>Oauth2授权码请求</a>
  */
 @Getter
 @Setter
@@ -23,11 +24,8 @@ public class Oauth2AuthorizationCodeRequestToken extends AbstractOauth2Authentic
     private String state;
 
 
-    public Oauth2AuthorizationCodeRequestToken(Collection<? extends GrantedAuthority> authorities, Object principal, Object credentials) {
+    public Oauth2AuthorizationCodeRequestToken(Object principal, Object credentials, Collection<? extends GrantedAuthority> authorities) {
         super(authorities, principal, credentials);
     }
 
-    public Oauth2AuthorizationCodeRequestToken(Collection<? extends GrantedAuthority> authorities, Object principal) {
-        super(authorities, principal);
-    }
 }
