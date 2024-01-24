@@ -16,6 +16,8 @@ public class SecurityConfiguration {
 
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
+
+
         BasicAuthorizationServerConfiguration.applyDefaultBasicSecurity(http);
         return http.build();
     }

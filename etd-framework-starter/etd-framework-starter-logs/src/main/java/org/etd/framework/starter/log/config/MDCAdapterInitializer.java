@@ -9,13 +9,13 @@ import org.springframework.context.ConfigurableApplicationContext;
  * @description
  * @date 2020/12/16
  */
+
 public class MDCAdapterInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-	@Override
-	public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
-		AutuLogMDCAdapter.getInstance();
-	}
-
+    @Override
+    public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+        AutuLogMDCAdapter.getInstance();
+    }
 
 
 }

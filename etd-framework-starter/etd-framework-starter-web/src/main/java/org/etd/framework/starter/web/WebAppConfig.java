@@ -9,6 +9,7 @@ import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 import org.etd.framework.starter.log.lnterceptor.TraceInterceptor;
 import org.etd.framework.starter.web.interceptor.CustomInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -31,7 +32,7 @@ import java.util.List;
  */
 @Order(0)
 @Configuration
-@ComponentScan({"org.etd.framework.starter.web.*"})
+@ComponentScan({"org.etd.framework.starter.web.**"})
 public class WebAppConfig extends WebMvcConfigurationSupport {
 
 

@@ -1,0 +1,8 @@
+server:
+  servlet:
+    context-path: /upms
+  port: 8090
+
+logging:
+  level:
+    root: INFO

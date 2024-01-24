@@ -1,6 +1,7 @@
 package com.etd.framework.starter.oauth;
 
 
+import com.etd.framework.starter.oauth.authentication.configurer.DefaultOauth2ServerAuthorizationConfigurer;
 import com.etd.framework.starter.oauth.authentication.service.Oauth2AuthorizationConsentService;
 import com.etd.framework.starter.oauth.authentication.service.Oauth2AuthorizationService;
 import com.etd.framework.starter.oauth.authentication.service.Oauth2ClientService;
@@ -15,10 +16,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
-@ComponentScan({"com.etd.framework.starter.oauth.authentication.*"})
+@ComponentScan({"com.etd.framework.starter.oauth.*"})
 @EnableConfigurationProperties
 public class OauthAuthenticationConfiguring {
 
@@ -26,10 +29,9 @@ public class OauthAuthenticationConfiguring {
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain defaultAuthenticationServer(HttpSecurity http) throws Exception {
-
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-//        BasicAuthorizationServerConfiguration.applyDefaultBasicSecurity(http);
-        return http.build();
+        DefaultOauth2ServerAuthorizationConfigurer.applyDefaultOauth2ServerAuthorization(http);
+        DefaultSecurityFilterChain build = http.build();
+        return build;
     }
 
     /**

@@ -11,10 +11,10 @@ public interface Oauth2ParameterConstant {
      */
     enum GRANT_TYPE {
         authorization_code,
-        implicit,
-        password,
         client_credentials,
-        refresh_token
+        refresh_token,
+        login_password,
+        login_mobile,
     }
 
     /**
@@ -48,26 +48,13 @@ public interface Oauth2ParameterConstant {
         redirect_uri
     }
 
-    /**
-     * 隐藏式授权所需参数
-     */
-    enum ImplicitAuthentication {
-        response_type,
-        client_id,
-        redirect_uri,
-        scope,
-        state,
-    }
-
 
     /**
-     * 密码模式所用参数
+     * Basic 密码登录
      */
-    enum PasswordAuthentication {
-        grant_type,
+    enum LoginAuthentication {
         username,
         password,
-        scope,
         captcha,
 
     }
@@ -82,3 +69,4 @@ public interface Oauth2ParameterConstant {
         scope
     }
 }
+

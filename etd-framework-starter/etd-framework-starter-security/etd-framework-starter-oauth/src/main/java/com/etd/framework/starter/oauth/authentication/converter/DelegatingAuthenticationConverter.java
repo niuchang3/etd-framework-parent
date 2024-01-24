@@ -21,6 +21,11 @@ public class DelegatingAuthenticationConverter implements AuthenticationConverte
         return this;
     }
 
+    public DelegatingAuthenticationConverter addAuthenticationConverter(List<AuthenticationConverter> authenticationConverters) {
+        this.converters.addAll(authenticationConverters);
+        return this;
+    }
+
 
     @Override
     public Authentication convert(HttpServletRequest request) {

@@ -1,6 +1,5 @@
 package com.etd.framework.starter.oauth.authentication.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,7 +40,6 @@ public class Oauth2UserDetails implements Serializable {
     /**
      * 生日
      */
-    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date birthday;
     /**
      * 性别

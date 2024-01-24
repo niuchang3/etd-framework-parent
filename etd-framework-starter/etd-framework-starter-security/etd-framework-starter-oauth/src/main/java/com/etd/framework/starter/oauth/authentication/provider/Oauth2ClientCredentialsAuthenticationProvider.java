@@ -1,5 +1,6 @@
 package com.etd.framework.starter.oauth.authentication.provider;
 
+import com.etd.framework.starter.oauth.authentication.token.Oauth2ClientCredentialsAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -13,6 +14,6 @@ public class Oauth2ClientCredentialsAuthenticationProvider implements Authentica
 
     @Override
     public boolean supports(Class<?> authentication) {
-        return false;
+        return Oauth2ClientCredentialsAuthenticationToken.class.isAssignableFrom(authentication);
     }
 }

@@ -10,6 +10,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.framework.starter.log.constant.LogConstant;
 import org.slf4j.MDC;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -136,7 +137,9 @@ public class LogInfo {
 		logInfo.setClassMethodName(methodSignature.getName());
 
 		Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
-		logInfo.setTraceId(copyOfContextMap.containsKey(LogConstant.LOG_TRACE_ID) ? copyOfContextMap.get(LogConstant.LOG_TRACE_ID) : null);
+		if(!CollectionUtils.isEmpty(copyOfContextMap)){
+			logInfo.setTraceId(copyOfContextMap.containsKey(LogConstant.LOG_TRACE_ID) ? copyOfContextMap.get(LogConstant.LOG_TRACE_ID) : null);
+		}
 		logInfo.setParameters(joinPoint.getArgs());
 		if (!ObjectUtils.isEmpty(requestAttributes)) {
 			ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) requestAttributes;

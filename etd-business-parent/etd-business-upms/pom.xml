@@ -1,0 +1,63 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.etd.framework</groupId>
+        <artifactId>etd-framework-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <groupId>org.etd.framework.business</groupId>
+    <artifactId>etd-business-upms</artifactId>
+    <packaging>jar</packaging>
+
+    <name>etd-business-upms</name>
+    <url>http://maven.apache.org</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-oauth</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-logs</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-common-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-dependencies</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

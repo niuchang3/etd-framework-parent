@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.io.Serializable;
 
@@ -11,7 +12,7 @@ import java.io.Serializable;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Oauth2Authority implements Serializable {
+public class Oauth2Authority implements GrantedAuthority, Serializable {
 
     private static final long serialVersionUID = -1L;
     /**
@@ -37,4 +38,8 @@ public class Oauth2Authority implements Serializable {
     private String authorityCode;
 
 
+    @Override
+    public String getAuthority() {
+        return "";
+    }
 }

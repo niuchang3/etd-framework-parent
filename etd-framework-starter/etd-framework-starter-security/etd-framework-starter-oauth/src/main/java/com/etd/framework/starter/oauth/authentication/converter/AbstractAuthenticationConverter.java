@@ -28,6 +28,10 @@ public abstract class AbstractAuthenticationConverter implements AuthenticationC
 
 
     private String obtainGrantType(HttpServletRequest request) {
+        String grantType = request.getHeader(Oauth2ParameterConstant.GRANT_TYPE.class.getSimpleName().toLowerCase());
+        if (!StringUtils.isEmpty(grantType)) {
+            return grantType;
+        }
         return request.getParameter(Oauth2ParameterConstant.GRANT_TYPE.class.getSimpleName().toLowerCase());
     }
 

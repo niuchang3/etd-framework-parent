@@ -3,9 +3,11 @@ package com.etd.framework.starter.oauth.authentication.filter;
 import com.etd.framework.starter.oauth.authentication.converter.DelegatingAuthenticationConverter;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -25,32 +27,35 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
     /**
      * 身份认证管理器
      */
-    @Getter
     private AuthenticationManager authenticationManager;
+    /**
+     * 请求参数转换器
+     */
+    private AuthenticationConverter authenticationConverter;
     /**
      * 认证请求匹配器
      */
     @Getter
     private RequestMatcher requestMatcher;
     /**
-     * 请求参数转换器
+     * 成功处理器
      */
-    @Getter
-    private final AuthenticationConverter authenticationConverter = new DelegatingAuthenticationConverter();
+    private AuthenticationSuccessHandler successHandler = this::sendAccessTokenResponse;
+    /**
+     * 失败处理器
+     */
+    private AuthenticationFailureHandler failureHandler = this::sendErrorResponse;
 
-    private AuthenticationSuccessHandler successHandler;
 
-    private AuthenticationFailureHandler failureHandler;
+    private ApplicationContext context;
 
     /**
-     * 设置身份验证匹配器
+     * 添加请求匹配器
      *
      * @param requestMatcher
-     * @return
      */
-    public AbstractOauth2RequestFilter addAuthenticationRequestMatcher(RequestMatcher requestMatcher) {
+    public void addAuthenticationRequestMatcher(RequestMatcher requestMatcher) {
         this.requestMatcher = requestMatcher;
-        return this;
     }
 
     /**
@@ -64,9 +69,42 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
         return this;
     }
 
+    public void addApplicationContext(ApplicationContext context) {
+        this.context = context;
+    }
 
-    public AbstractOauth2RequestFilter addAuthenticationConverter(AuthenticationConverter authenticationConverter) {
-        ((DelegatingAuthenticationConverter) this.authenticationConverter).addAuthenticationConverter(authenticationConverter);
+    /**
+     * 添加身份验证转换器
+     *
+     * @param authenticationConverter
+     */
+    public void addAuthenticationConverter(AuthenticationConverter authenticationConverter) {
+        if (this.authenticationConverter instanceof DelegatingAuthenticationConverter) {
+            ((DelegatingAuthenticationConverter) this.authenticationConverter).addAuthenticationConverter(authenticationConverter);
+            return;
+        }
+        this.authenticationConverter = authenticationConverter;
+    }
+
+    /**
+     * 添加成功处理器
+     *
+     * @param successHandler
+     * @return
+     */
+    public AbstractOauth2RequestFilter addSuccessHandler(AuthenticationSuccessHandler successHandler) {
+        this.successHandler = successHandler;
+        return this;
+    }
+
+    /**
+     * 添加失败处理器
+     *
+     * @param failureHandler
+     * @return
+     */
+    public AbstractOauth2RequestFilter addFailureHandler(AuthenticationFailureHandler failureHandler) {
+        this.failureHandler = failureHandler;
         return this;
     }
 
@@ -97,13 +135,39 @@ public abstract class AbstractOauth2RequestFilter extends OncePerRequestFilter {
                 filterChain.doFilter(request, response);
                 return;
             }
-
+            sendSuccessResponse(request, response, authentication);
         } catch (AuthenticationException e) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            sendFailureResponse(request, response, e);
         }
 
     }
 
+    private void sendSuccessResponse(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
+        SecurityContextHolder.clearContext();
+        successHandler.onAuthenticationSuccess(request, response, authentication);
+    }
 
+
+    private void sendFailureResponse(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws ServletException, IOException {
+        failureHandler.onAuthenticationFailure(request, response, exception);
+    }
+
+    /**
+     * 认证成功处理
+     *
+     * @param request
+     * @param response
+     * @param authentication
+     */
+    protected abstract void sendAccessTokenResponse(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException;
+
+    /**
+     * 认证失败处理
+     *
+     * @param request
+     * @param response
+     * @param exception
+     */
+    protected abstract void sendErrorResponse(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws ServletException, IOException;
 }

@@ -9,6 +9,7 @@ import java.util.Collection;
  * 抽象的Oauth2身份认证令牌
  * <ui>
  * <li>
+ *
  * @see <a src='https://datatracker.ietf.org/doc/html/rfc6749#section-4.1'>参考文档
  * </li>
  * <li>
