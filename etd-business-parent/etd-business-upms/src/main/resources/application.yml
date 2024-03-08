@@ -1,6 +1,6 @@
 server:
   servlet:
-    context-path: /upms
+    context-path: /upms/apis
   port: 8100
 
 logging:

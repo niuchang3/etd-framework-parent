@@ -1,4 +1,4 @@
-package org.etd.framework.business.controller;
+package org.etd.framework.business.controller.permit;
 
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.core.model.ResultModel;
@@ -15,26 +15,15 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api")
-public class HelloController {
+@RequestMapping("/permit/hello")
+public class PermitHelloController {
 
 
     @AutoLog("Hello Controller")
     @PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
-    @GetMapping("/permit")
+    @GetMapping
     public ResultModel hello() {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//		Object userDetail = UserDetailUtils.getUserDetail();
-        return ResultModel.success("success");
-    }
-
-
-    //	@PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
-    @AutoLog("Hello Controller")
-    @GetMapping("/hello")
-    public ResultModel helloController() {
-        log.info("Hello Controller");
-        return ResultModel.success("Hello Controller");
+        return ResultModel.success("需要认证的接口");
     }
 
 }

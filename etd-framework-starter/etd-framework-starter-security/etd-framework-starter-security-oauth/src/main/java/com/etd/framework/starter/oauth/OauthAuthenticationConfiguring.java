@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.io.File;
@@ -32,13 +31,14 @@ public class OauthAuthenticationConfiguring {
         Oauth2AuthenticationServerConfigurer configurer = new Oauth2AuthenticationServerConfigurer();
         http.apply(configurer)
                 .and()
-                .csrf().ignoringRequestMatchers(configurer.getEndpointsMatcher())
+                .csrf().disable()
+                .requestMatchers().antMatchers("/**")
                 .and()
-                .requestMatcher(configurer.getEndpointsMatcher())
-                .authorizeRequests().anyRequest().authenticated();
+                .authorizeRequests()
+                .antMatchers("/public/**").permitAll()
+                .anyRequest().authenticated();
 
-        DefaultSecurityFilterChain build = http.build();
-        return build;
+        return http.build();
     }
 
     @Bean
