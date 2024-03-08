@@ -25,9 +25,16 @@
             <artifactId>etd-framework-starter-web</artifactId>
         </dependency>
 
+<!--        <dependency>-->
+<!--            <groupId>org.etd.framework</groupId>-->
+<!--            <artifactId>etd-framework-starter-mybatis</artifactId>-->
+<!--            <version>0.0.1-SNAPSHOT</version>-->
+<!--        </dependency>-->
+
+<!--        -->
         <dependency>
             <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-starter-oauth</artifactId>
+            <artifactId>etd-framework-starter-security-oauth</artifactId>
         </dependency>
 
         <dependency>

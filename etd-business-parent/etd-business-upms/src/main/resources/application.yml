@@ -1,8 +1,11 @@
 server:
   servlet:
     context-path: /upms
-  port: 8090
+  port: 8100
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
+spring:
+  profiles:
+    active: dev

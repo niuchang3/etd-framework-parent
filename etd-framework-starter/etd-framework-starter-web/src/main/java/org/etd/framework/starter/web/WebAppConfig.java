@@ -44,6 +44,8 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 	@Override
 	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
 		FastJsonHttpMessageConverter converter = new FastJsonHttpMessageConverter();
+
+
 		FastJsonConfig config = new FastJsonConfig();
 
 		//处理精度丢失的问题
@@ -101,6 +103,8 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 		converter.setSupportedMediaTypes(supportedMediaTypes);
 		converter.setFastJsonConfig(config);
 		converter.setDefaultCharset(Charset.forName("UTF-8"));
+
+
 		StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
 		converters.add(stringConverter);
 		converters.add(converter);

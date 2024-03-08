@@ -1,0 +1,33 @@
+#spring:
+#  datasource:
+#    druid:
+#      driver-class-name: com.alibaba.druid.proxy.DruidDriver
+#      url: jdbc:mysql://${MYSQL_HOST:113.200.89.198}:${MYSQL_PORT:6185}/seer-data-processing?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+#      username: siertest
+#      password: dd3WLw_dgAa3d23
+#      max-active: 20
+#      initial-size: 1
+#      max-wait: 6000
+#      min-idle: 1
+#      time-between-eviction-runs-millis: 60000
+#      min-evictable-idle-time-millis: 30000
+#      validation-query: SELECT 1 FROM DUAL
+#      test-while-idle: true
+#      test-on-borrow: false
+#      test-on-return: false
+#      pool-prepared-statements: true
+#      max-open-prepared-statements: 20
+#      async-init: true
+#      filters: wall,stat
+#      filter:
+#        stat:
+#          log-slow-sql: true
+#          slow-sql-millis: 2000
+#          merge-sql: false
+#      stat-view-servlet:
+#        enabled: true
+#        url-pattern: "/druid"
+#        allow: 127.0.0.1
+#        login-password: druid
+#        login-username: druid
+#

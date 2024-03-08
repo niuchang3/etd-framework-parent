@@ -9,7 +9,8 @@
     </parent>
     <packaging>pom</packaging>
     <modules>
-        <module>etd-framework-starter-oauth</module>
+        <module>etd-framework-starter-security-oauth</module>
+        <module>etd-framework-starter-security-client</module>
     </modules>
 
 

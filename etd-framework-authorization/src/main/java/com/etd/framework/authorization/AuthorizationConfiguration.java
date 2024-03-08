@@ -1,5 +1,6 @@
 package com.etd.framework.authorization;
 
+import org.apache.catalina.users.MemoryUser;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -8,4 +9,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AuthorizationConfiguration {
+
+
 }

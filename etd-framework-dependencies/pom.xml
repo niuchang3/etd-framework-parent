@@ -147,7 +147,7 @@
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
-                <artifactId>etd-framework-starter-oauth</artifactId>
+                <artifactId>etd-framework-starter-security-oauth</artifactId>
                 <version>${etd.framework.version}</version>
             </dependency>
 

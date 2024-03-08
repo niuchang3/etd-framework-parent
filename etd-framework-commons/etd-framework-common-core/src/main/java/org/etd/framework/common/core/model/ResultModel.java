@@ -72,6 +72,15 @@ public class ResultModel<T> implements Serializable {
     }
 
     /**
+     * 操作失败
+     *
+     * @param <T>
+     * @return
+     */
+    public static <T> ResultModel<T> failed(Integer requestCode, Throwable throwable, String message, String url) {
+        return new ResultModel(requestCode, getDevMessage(throwable), message, "", url);
+    }
+    /**
      * 开发环境会获取栈信息，方便开发人员调试异常
      *
      * @param throwable
