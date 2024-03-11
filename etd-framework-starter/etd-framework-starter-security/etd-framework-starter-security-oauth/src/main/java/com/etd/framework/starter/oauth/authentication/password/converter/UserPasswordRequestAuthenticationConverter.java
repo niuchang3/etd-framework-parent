@@ -1,7 +1,7 @@
 package com.etd.framework.starter.oauth.authentication.password.converter;
 
 import com.etd.framework.starter.client.core.token.UserPasswordAuthenticationRequestToken;
-import com.etd.framework.starter.oauth.constant.Oauth2ParameterConstant;
+import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 

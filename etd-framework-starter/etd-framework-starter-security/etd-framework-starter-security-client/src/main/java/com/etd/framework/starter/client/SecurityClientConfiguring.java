@@ -30,6 +30,7 @@ import java.security.interfaces.RSAPublicKey;
 public class SecurityClientConfiguring {
 
 
+    
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -109,6 +110,4 @@ public class SecurityClientConfiguring {
         service.register(userDetails2);
         return service;
     }
-
-
 }

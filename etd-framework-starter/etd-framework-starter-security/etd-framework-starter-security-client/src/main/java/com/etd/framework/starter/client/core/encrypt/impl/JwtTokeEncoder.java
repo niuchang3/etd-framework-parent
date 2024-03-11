@@ -1,13 +1,16 @@
 package com.etd.framework.starter.client.core.encrypt.impl;
 
+import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.token.TokenValue;
+import com.etd.framework.starter.client.core.token.UserPasswordAuthenticationRequestToken;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.Getter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 
 import java.security.PrivateKey;
@@ -26,6 +29,9 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, TokenValue> 
     @Getter
     private JWSSigner jwsSigner;
 
+    @Autowired
+    private SystemOauthProperties oauthProperties;
+
     /**
      * Token
      *
@@ -36,18 +42,21 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, TokenValue> 
     }
 
     @Override
-    public TokenValue encode(String issuer, SystemOauthProperties.Token tokenProperties, Authentication authentication) {
+    public TokenValue encode(Oauth2ParameterConstant.TokenType tokenType, Authentication authentication) {
+
         Calendar now = getNow();
         Date signTime = now.getTime();
         JWTClaimsSet build = new JWTClaimsSet.Builder()
-                .issuer(issuer)
+                .issuer(oauthProperties.getIssuer())
                 .issueTime(signTime)
                 .notBeforeTime(signTime)
-                .expirationTime(getExpireTime(tokenProperties))
-                .claim(Authentication.class.getName(), authentication)
+                .expirationTime(getExpireTime(tokenType))
+                .claim(Authentication.class.getName(), authentication.getDetails())
                 .build();
+
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .type(JOSEObjectType.JWT)
+                .customParam(tokenType.getClass().getName(), tokenType.name())
                 .build();
 
         SignedJWT signedJWT = new SignedJWT(header, build);
@@ -55,6 +64,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, TokenValue> 
         try {
             signedJWT.sign(jwsSigner);
             String token = signedJWT.serialize();
+
             return new TokenValue(token, build.getExpirationTime());
         } catch (JOSEException e) {
             throw new RuntimeException(e);
@@ -69,10 +79,18 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, TokenValue> 
     /**
      * 根据配置换算过期时间
      *
-     * @param token
+     * @param tokenType
      * @return
      */
-    private Date getExpireTime(SystemOauthProperties.Token token) {
+    private Date getExpireTime(Oauth2ParameterConstant.TokenType tokenType) {
+        SystemOauthProperties.Token token = null;
+        if (Oauth2ParameterConstant.TokenType.Access.equals(tokenType)) {
+            token = oauthProperties.getAccessToken();
+        }
+        if (Oauth2ParameterConstant.TokenType.Refresh.equals(tokenType)) {
+            token = oauthProperties.getRefreshToken();
+        }
+
         Duration duration = Duration.of(token.getExpired(), token.getTimeUnit());
         Instant startInstant = Instant.now();
         Instant instant = startInstant.plusMillis(duration.toMillis());

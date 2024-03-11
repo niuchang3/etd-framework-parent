@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrdinaryHelloController {
 
     @AutoLog("Hello Controller")
-    @PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
+//    @PreAuthorize("hasAnyAuthority('TEST_1') || hasAnyRole('ADMIN')")
     @GetMapping
     public ResultModel helloController() {
         return ResultModel.success("开放的接口");

@@ -3,7 +3,7 @@ package com.etd.framework.starter.oauth.authentication.password.configurer;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
-import com.etd.framework.starter.oauth.AbstractHttpSecurityConfigurer;
+import com.etd.framework.starter.client.core.AbstractHttpSecurityConfigurer;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.oauth.authentication.password.converter.UserPasswordRequestAuthenticationConverter;
@@ -24,6 +24,11 @@ import org.springframework.util.ObjectUtils;
 public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityConfigurer {
 
     private RequestMatcher authenticationEndpointMatcher;
+
+    public UserPasswordAuthenticationConfigurer() {
+        this(null);
+    }
+
 
     public UserPasswordAuthenticationConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
         super(objectPostProcessor);
@@ -60,7 +65,6 @@ public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityCo
                 .successHandler(successHandler)
                 .failureHandler(new EtdAuthenticationFailureHandler())
                 .build();
-
         builder.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
     }
 

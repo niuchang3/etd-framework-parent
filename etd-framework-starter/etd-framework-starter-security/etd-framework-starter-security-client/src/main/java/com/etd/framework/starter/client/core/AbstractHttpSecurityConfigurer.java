@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth;
+package com.etd.framework.starter.client.core;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -16,10 +16,14 @@ public abstract class AbstractHttpSecurityConfigurer {
     /**
      * 对象后置处理器
      */
-    private final ObjectPostProcessor<Object> objectPostProcessor;
+    private ObjectPostProcessor<Object> objectPostProcessor;
 
 
     public AbstractHttpSecurityConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
+        this.objectPostProcessor = objectPostProcessor;
+    }
+
+    protected void setObjectPostProcessor(ObjectPostProcessor<Object> objectPostProcessor){
         this.objectPostProcessor = objectPostProcessor;
     }
 

@@ -1,7 +1,5 @@
-package com.etd.framework.starter.oauth.authentication;
+package com.etd.framework.starter.client.core;
 
-import com.etd.framework.starter.oauth.AbstractHttpSecurityConfigurer;
-import com.etd.framework.starter.oauth.authentication.password.configurer.UserPasswordAuthenticationConfigurer;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,6 +7,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -17,10 +16,10 @@ import java.util.Map;
 /**
  * Oauth2 身份验证服务配置器
  */
-public class Oauth2AuthenticationServerConfigurer extends AbstractHttpConfigurer<Oauth2AuthenticationServerConfigurer, HttpSecurity> {
+public class Oauth2AuthenticationConfigurer extends AbstractHttpConfigurer<Oauth2AuthenticationConfigurer, HttpSecurity> {
 
 
-    private final Map<Class<? extends AbstractHttpSecurityConfigurer>, AbstractHttpSecurityConfigurer> configurers = defaultConfigurers();
+    private final Map<Class<? extends AbstractHttpSecurityConfigurer>, AbstractHttpSecurityConfigurer> configurers = Maps.newHashMap();
 
 
     private RequestMatcher endpointsMatcher;
@@ -43,6 +42,7 @@ public class Oauth2AuthenticationServerConfigurer extends AbstractHttpConfigurer
      * @param <T>
      */
     public <T extends AbstractHttpSecurityConfigurer> void addConfigurer(T bean) {
+        bean.setObjectPostProcessor(this::postProcess);
         configurers.put(bean.getClass(), bean);
     }
 
@@ -53,10 +53,13 @@ public class Oauth2AuthenticationServerConfigurer extends AbstractHttpConfigurer
         List<RequestMatcher> requestMatchers = Lists.newArrayList();
         configurers.forEach((key, configurer) -> {
             configurer.init(builder);
-            requestMatchers.add(configurer.getRequestMatcher());
-
+            if(!ObjectUtils.isEmpty(configurer.getRequestMatcher())){
+                requestMatchers.add(configurer.getRequestMatcher());
+            }
         });
         endpointsMatcher = new OrRequestMatcher(requestMatchers);
+
+
     }
 
     @Override
@@ -87,11 +90,5 @@ public class Oauth2AuthenticationServerConfigurer extends AbstractHttpConfigurer
         return (request) -> this.endpointsMatcher.matches(request);
     }
 
-
-    private Map<Class<? extends AbstractHttpSecurityConfigurer>, AbstractHttpSecurityConfigurer> defaultConfigurers() {
-        Map<Class<? extends AbstractHttpSecurityConfigurer>, AbstractHttpSecurityConfigurer> configurerMap = Maps.newHashMap();
-        configurerMap.put(UserPasswordAuthenticationConfigurer.class, new UserPasswordAuthenticationConfigurer(this::postProcess));
-        return configurerMap;
-    }
 
 }

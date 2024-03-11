@@ -8,13 +8,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 /**
- * Hello world!
+ * User Permissions Management System Application
  */
 @EnableWebSecurity
 @Import({WebAppConfig.class, SpringContextHelper.class})
 @SpringBootApplication
-public class UserPermissionsManagementSystemApplication {
+public class UPMSApplication {
     public static void main(String[] args) {
-        SpringApplication.run(UserPermissionsManagementSystemApplication.class, args);
+        SpringApplication.run(UPMSApplication.class, args);
     }
 }

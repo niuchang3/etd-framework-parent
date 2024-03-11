@@ -1,10 +1,10 @@
 package com.etd.framework.starter.oauth.authentication;
 
+import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.token.OauthToken;
 import com.etd.framework.starter.client.core.token.TokenValue;
-import com.etd.framework.starter.oauth.constant.Oauth2ParameterConstant;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -18,8 +18,7 @@ import java.io.IOException;
 public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandler implements AuthenticationSuccessHandler {
 
 
-    private TokenEncoder<Authentication,TokenValue> tokenEncoder;
-
+    private TokenEncoder<Authentication, TokenValue> tokenEncoder;
 
     private SystemOauthProperties oauthProperties;
 
@@ -36,11 +35,14 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 
-        TokenValue accessToken = tokenEncoder.encode(oauthProperties.getIssuer(), oauthProperties.getAccessToken(), authentication);
-        TokenValue refreshToken = tokenEncoder.encode(oauthProperties.getIssuer(), oauthProperties.getRefreshToken(), authentication);
-        //BearerTokenAuthenticationFilter
+        TokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.Access, authentication);
+        TokenValue refreshToken = null;
+        if (oauthProperties.getAccessToken().getEnabled()) {
+            refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.Refresh, authentication);
+        }
+
         OauthToken token = new OauthToken();
-        token.setTokenType(Oauth2ParameterConstant.TokenTpe.Bearer.name());
+        token.setTokenType(Oauth2ParameterConstant.TokenPrompt.Bearer.name());
         token.setAccessToken(accessToken);
         token.setRefreshToken(refreshToken);
         ResultModel<OauthToken> success = ResultModel.success(token);

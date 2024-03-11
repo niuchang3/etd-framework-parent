@@ -1,16 +1,12 @@
 package com.etd.framework.starter.client.core.properties;
 
-import cn.hutool.core.date.DateUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 
 @Data
 @ConfigurationProperties(prefix = "system.oauth")

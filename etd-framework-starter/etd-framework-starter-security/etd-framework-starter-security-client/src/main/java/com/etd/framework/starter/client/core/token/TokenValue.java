@@ -13,6 +13,7 @@ import java.util.Date;
 @Data
 public class TokenValue {
 
+
     private String value;
 
     private Date expires;

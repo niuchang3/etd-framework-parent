@@ -2,16 +2,19 @@ package com.etd.framework.starter.oauth;
 
 
 import cn.hutool.crypto.PemUtil;
+import com.etd.framework.starter.client.core.configurer.BearerAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
 import com.etd.framework.starter.oauth.authentication.AccessDeniedHandlerImpl;
 import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointImpl;
-import com.etd.framework.starter.oauth.authentication.Oauth2AuthenticationServerConfigurer;
+import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
+import com.etd.framework.starter.oauth.authentication.password.configurer.UserPasswordAuthenticationConfigurer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.io.File;
@@ -30,7 +33,11 @@ public class OauthAuthenticationConfiguring {
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain defaultAuthenticationServer(HttpSecurity http) throws Exception {
-        Oauth2AuthenticationServerConfigurer configurer = new Oauth2AuthenticationServerConfigurer();
+        Oauth2AuthenticationConfigurer configurer = new Oauth2AuthenticationConfigurer();
+        configurer.addConfigurer(new UserPasswordAuthenticationConfigurer());
+        configurer.addConfigurer(new BearerAuthenticationConfigurer());
+
+
         http.apply(configurer)
                 .and()
                 .csrf().disable()
@@ -43,8 +50,9 @@ public class OauthAuthenticationConfiguring {
                 .exceptionHandling()
                 .accessDeniedHandler( new AccessDeniedHandlerImpl())
                 .authenticationEntryPoint(new AuthenticationEntryPointImpl());
+        DefaultSecurityFilterChain build = http.build();
 
-        return http.build();
+        return build;
     }
 
     @Bean

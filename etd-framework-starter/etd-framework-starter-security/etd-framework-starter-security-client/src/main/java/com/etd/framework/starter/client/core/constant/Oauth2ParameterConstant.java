@@ -1,13 +1,20 @@
-package com.etd.framework.starter.oauth.constant;
+package com.etd.framework.starter.client.core.constant;
 
 /**
  * <a src="https://datatracker.ietf.org/doc/html/rfc6749#section-4.1">OAuth2 文档</a>
  */
 public interface Oauth2ParameterConstant {
 
-    enum TokenTpe{
+    enum TokenType{
+        Access,
+        Refresh
+    }
+
+    enum TokenPrompt{
+        //BearerTokenAuthenticationFilter
         Bearer
     }
+
 
     /**
      * 授权类型

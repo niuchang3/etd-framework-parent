@@ -68,7 +68,7 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
             Authentication authentication = authenticationManager.authenticate(requestToken);
             isAuthenticated(authentication);
             // 成功处理
-            onAuthenticationSuccess(request,response,requestToken);
+            onAuthenticationSuccess(request,response,authentication);
         } catch (AuthenticationException e) {
             //异常处理
             onAuthenticationFailure(request,response,e);
