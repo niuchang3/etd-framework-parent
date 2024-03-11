@@ -4,7 +4,7 @@ import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.token.OauthToken;
-import com.etd.framework.starter.client.core.token.TokenValue;
+import com.etd.framework.starter.client.core.token.OauthTokenValue;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -18,7 +18,7 @@ import java.io.IOException;
 public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandler implements AuthenticationSuccessHandler {
 
 
-    private TokenEncoder<Authentication, TokenValue> tokenEncoder;
+    private TokenEncoder<Authentication, OauthTokenValue> tokenEncoder;
 
     private SystemOauthProperties oauthProperties;
 
@@ -35,10 +35,10 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 
-        TokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.Access, authentication);
-        TokenValue refreshToken = null;
+        OauthTokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.access_token, authentication);
+        OauthTokenValue refreshToken = null;
         if (oauthProperties.getAccessToken().getEnabled()) {
-            refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.Refresh, authentication);
+            refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.refresh_token, authentication);
         }
 
         OauthToken token = new OauthToken();

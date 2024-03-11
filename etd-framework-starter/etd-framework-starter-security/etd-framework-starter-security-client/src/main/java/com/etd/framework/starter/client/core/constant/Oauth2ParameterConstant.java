@@ -5,9 +5,12 @@ package com.etd.framework.starter.client.core.constant;
  */
 public interface Oauth2ParameterConstant {
 
+
+    String GRANT_TYPE = "grant_type";
+
     enum TokenType{
-        Access,
-        Refresh
+        access_token,
+        refresh_token
     }
 
     enum TokenPrompt{

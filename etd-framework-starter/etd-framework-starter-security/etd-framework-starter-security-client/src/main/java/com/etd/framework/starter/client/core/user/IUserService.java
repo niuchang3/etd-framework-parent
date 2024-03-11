@@ -17,4 +17,7 @@ public interface IUserService {
      * @return
      */
     boolean register(UserDetails userDetails);
+
+
+    UserDetails loadUserById(Long id);
 }

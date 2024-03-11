@@ -7,6 +7,7 @@ import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
 import com.etd.framework.starter.oauth.authentication.AccessDeniedHandlerImpl;
 import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointImpl;
 import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
+import com.etd.framework.starter.oauth.authentication.password.configurer.RefreshTokenAuthenticationConfigurer;
 import com.etd.framework.starter.oauth.authentication.password.configurer.UserPasswordAuthenticationConfigurer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,12 +36,14 @@ public class OauthAuthenticationConfiguring {
     public SecurityFilterChain defaultAuthenticationServer(HttpSecurity http) throws Exception {
         Oauth2AuthenticationConfigurer configurer = new Oauth2AuthenticationConfigurer();
         configurer.addConfigurer(new UserPasswordAuthenticationConfigurer());
+        configurer.addConfigurer(new RefreshTokenAuthenticationConfigurer());
         configurer.addConfigurer(new BearerAuthenticationConfigurer());
 
 
         http.apply(configurer)
                 .and()
                 .csrf().disable()
+                .requestCache().disable()
                 .requestMatchers().antMatchers("/**")
                 .and()
                 .authorizeRequests()

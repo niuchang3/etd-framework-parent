@@ -17,10 +17,10 @@ public class OauthToken {
     /**
      * 访问Token
      */
-    private TokenValue accessToken;
+    private OauthTokenValue accessToken;
     /**
      * 刷新令牌
      */
-    private TokenValue refreshToken;
+    private OauthTokenValue refreshToken;
 
 }

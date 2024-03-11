@@ -5,6 +5,7 @@ import com.etd.framework.starter.client.core.user.UserDetails;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class MemoryUserServiceImpl implements IUserService {
 
@@ -19,6 +20,12 @@ public class MemoryUserServiceImpl implements IUserService {
     @Override
     public boolean register(UserDetails userDetails) {
         userDetailsMap.put(userDetails.getAccount(), userDetails);
+        userDetailsMap.put(userDetails.getId()+"", userDetails);
         return true;
+    }
+
+    @Override
+    public UserDetails loadUserById(Long id) {
+        return userDetailsMap.get(id+"");
     }
 }

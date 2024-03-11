@@ -11,7 +11,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Builder
 @Data
-public class TokenValue {
+public class OauthTokenValue {
 
 
     private String value;
