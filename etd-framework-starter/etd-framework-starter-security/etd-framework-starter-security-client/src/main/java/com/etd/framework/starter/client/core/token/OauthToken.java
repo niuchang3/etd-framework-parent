@@ -1,7 +1,13 @@
 package com.etd.framework.starter.client.core.token;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Data
 public class OauthToken {
     /**
@@ -11,19 +17,10 @@ public class OauthToken {
     /**
      * 访问Token
      */
-    private String accessToken;
-    /**
-     * 过期时间
-     */
-    private Long expires;
+    private TokenValue accessToken;
     /**
      * 刷新令牌
      */
-    private String refreshToken;
-    /**
-     * 刷新令牌过期时间
-     */
-    private String refreshExpires;
-
+    private TokenValue refreshToken;
 
 }

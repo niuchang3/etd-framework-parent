@@ -5,6 +5,9 @@ package com.etd.framework.starter.oauth.constant;
  */
 public interface Oauth2ParameterConstant {
 
+    enum TokenTpe{
+        Bearer
+    }
 
     /**
      * 授权类型

@@ -3,6 +3,8 @@ package com.etd.framework.starter.oauth;
 
 import cn.hutool.crypto.PemUtil;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
+import com.etd.framework.starter.oauth.authentication.AccessDeniedHandlerImpl;
+import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointImpl;
 import com.etd.framework.starter.oauth.authentication.Oauth2AuthenticationServerConfigurer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -36,7 +38,11 @@ public class OauthAuthenticationConfiguring {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/public/**").permitAll()
-                .anyRequest().authenticated();
+                .anyRequest().authenticated()
+                .and()
+                .exceptionHandling()
+                .accessDeniedHandler( new AccessDeniedHandlerImpl())
+                .authenticationEntryPoint(new AuthenticationEntryPointImpl());
 
         return http.build();
     }

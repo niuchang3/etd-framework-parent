@@ -9,3 +9,16 @@ logging:
 spring:
   profiles:
     active: dev
+
+
+
+
+system:
+  oauth:
+    access-token:
+      expired: 30
+      timeUnit: minutes
+
+    refresh-token:
+      expired: 60
+      timeUnit: minutes

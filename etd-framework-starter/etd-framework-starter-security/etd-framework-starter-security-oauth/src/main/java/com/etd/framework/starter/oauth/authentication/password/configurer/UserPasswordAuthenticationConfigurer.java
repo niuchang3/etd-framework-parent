@@ -1,10 +1,11 @@
 package com.etd.framework.starter.oauth.authentication.password.configurer;
 
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
+import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.oauth.AbstractHttpSecurityConfigurer;
-import com.etd.framework.starter.oauth.authentication.password.EtdAuthenticationFailureHandler;
-import com.etd.framework.starter.oauth.authentication.password.EtdAuthenticationSuccessHandler;
+import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
+import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.oauth.authentication.password.converter.UserPasswordRequestAuthenticationConverter;
 import com.etd.framework.starter.oauth.authentication.password.filter.UserPasswordAuthenticationRequestFilter;
 import com.etd.framework.starter.oauth.authentication.password.provider.UserPasswordAuthenticationProvider;
@@ -50,7 +51,8 @@ public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityCo
     public void configure(HttpSecurity builder) {
         ApplicationContext applicationContext = getApplicationContext(builder);
         TokenEncoder tokenEncoder = applicationContext.getBean(TokenEncoder.class);
-        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler(tokenEncoder);
+        SystemOauthProperties oauthProperties = applicationContext.getBean(SystemOauthProperties.class);
+        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler(tokenEncoder,oauthProperties);
         UserPasswordAuthenticationRequestFilter filter = UserPasswordAuthenticationRequestFilter.builder()
                 .authenticationEndpointMatcher(authenticationEndpointMatcher)
                 .authenticationManager(getAuthenticationManager(builder))

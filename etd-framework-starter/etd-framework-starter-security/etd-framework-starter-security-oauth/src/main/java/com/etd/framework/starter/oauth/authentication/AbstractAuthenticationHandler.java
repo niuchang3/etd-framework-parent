@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.authentication.password;
+package com.etd.framework.starter.oauth.authentication;
 
 import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
@@ -6,14 +6,22 @@ import com.alibaba.fastjson.serializer.ToStringSerializer;
 import com.alibaba.fastjson.serializer.ValueFilter;
 import com.alibaba.fastjson.support.config.FastJsonConfig;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
+import lombok.extern.slf4j.Slf4j;
+import org.etd.framework.common.core.model.ResultModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.server.ServletServerHttpResponse;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public abstract class AbstractAuthenticationHandler {
 
 
@@ -81,4 +89,39 @@ public abstract class AbstractAuthenticationHandler {
     protected HttpMessageConverter getConverter() {
         return converter;
     }
+
+
+    /**
+     * 异常信息返回
+     *
+     * @param status
+     * @param request
+     * @param response
+     * @param exception
+     * @throws IOException
+     */
+    protected void writeFailed(HttpStatus status, HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
+        if(log.isDebugEnabled()){
+            log.debug(exception.getMessage(),exception);
+        }
+        ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(response);
+        httpResponse.setStatusCode(status);
+        ResultModel<Object> failed = ResultModel.failed(org.springframework.http.HttpStatus.UNAUTHORIZED.value(), exception.getCause(), exception.getMessage(), request.getRequestURI());
+        getConverter().write(failed, MediaType.APPLICATION_JSON, httpResponse);
+    }
+
+    /**
+     * 成功信息返回
+     *
+     * @param response
+     * @param body
+     * @throws IOException
+     */
+    protected void writeSuccess(HttpServletResponse response, ResultModel<?> body) throws IOException {
+        ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(response);
+        httpResponse.setStatusCode(org.springframework.http.HttpStatus.OK);
+        getConverter().write(body, MediaType.APPLICATION_JSON, httpResponse);
+
+    }
+
 }

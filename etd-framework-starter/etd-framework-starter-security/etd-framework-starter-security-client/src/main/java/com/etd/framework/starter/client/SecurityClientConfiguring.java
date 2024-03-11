@@ -4,6 +4,7 @@ package com.etd.framework.starter.client;
 import cn.hutool.crypto.PemUtil;
 import com.etd.framework.starter.client.core.TenantAuthority;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokenDecode;
+import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.client.core.user.UserDetails;
 import com.etd.framework.starter.client.core.user.memory.MemoryUserServiceImpl;
@@ -25,7 +26,7 @@ import java.security.interfaces.RSAPublicKey;
 
 @Configuration
 @ComponentScan({"com.etd.framework.starter.client.core.*"})
-@EnableConfigurationProperties
+@EnableConfigurationProperties(value = SystemOauthProperties.class)
 public class SecurityClientConfiguring {
 
 

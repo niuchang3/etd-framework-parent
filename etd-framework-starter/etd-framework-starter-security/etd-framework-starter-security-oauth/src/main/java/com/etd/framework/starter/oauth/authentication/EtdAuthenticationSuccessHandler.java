@@ -1,0 +1,50 @@
+package com.etd.framework.starter.oauth.authentication;
+
+import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
+import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
+import com.etd.framework.starter.client.core.token.OauthToken;
+import com.etd.framework.starter.client.core.token.TokenValue;
+import com.etd.framework.starter.oauth.constant.Oauth2ParameterConstant;
+import org.etd.framework.common.core.model.ResultModel;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+
+public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandler implements AuthenticationSuccessHandler {
+
+
+    private TokenEncoder<Authentication,TokenValue> tokenEncoder;
+
+
+    private SystemOauthProperties oauthProperties;
+
+    /**
+     * Token编码器
+     *
+     * @param tokenEncoder
+     */
+    public EtdAuthenticationSuccessHandler(TokenEncoder tokenEncoder, SystemOauthProperties oauthProperties) {
+        this.tokenEncoder = tokenEncoder;
+        this.oauthProperties = oauthProperties;
+    }
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+
+        TokenValue accessToken = tokenEncoder.encode(oauthProperties.getIssuer(), oauthProperties.getAccessToken(), authentication);
+        TokenValue refreshToken = tokenEncoder.encode(oauthProperties.getIssuer(), oauthProperties.getRefreshToken(), authentication);
+        //BearerTokenAuthenticationFilter
+        OauthToken token = new OauthToken();
+        token.setTokenType(Oauth2ParameterConstant.TokenTpe.Bearer.name());
+        token.setAccessToken(accessToken);
+        token.setRefreshToken(refreshToken);
+        ResultModel<OauthToken> success = ResultModel.success(token);
+        writeSuccess(response, success);
+
+    }
+}
