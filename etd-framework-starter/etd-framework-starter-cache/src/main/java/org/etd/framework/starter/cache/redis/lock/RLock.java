@@ -1,4 +1,4 @@
-package org.etd.framework.starter.cache.redis;
+package org.etd.framework.starter.cache.redis.lock;
 
 /**
  * @author 牛昌

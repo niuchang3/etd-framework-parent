@@ -1,6 +1,6 @@
-package com.etd.framework.starter.oauth.authentication.password.filter;
+package com.etd.framework.starter.oauth.authentication.refresh.filter;
 
-import com.etd.framework.starter.oauth.authentication.password.converter.RefreshTokenRequestConverter;
+import com.etd.framework.starter.oauth.authentication.refresh.converter.RefreshTokenRequestConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.springframework.security.authentication.AuthenticationManager;

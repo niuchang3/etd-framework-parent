@@ -1,10 +1,10 @@
-package org.etd.framework.starter.cache.redis.impl;
+package org.etd.framework.starter.cache.redis.lock.impl;
 
 
 import lombok.extern.slf4j.Slf4j;
-import org.etd.framework.starter.cache.redis.RLock;
-import org.etd.framework.starter.cache.redis.RedisLockGuard;
-import org.etd.framework.starter.cache.redis.config.RedisLuaScripts;
+import org.etd.framework.starter.cache.redis.lock.RLock;
+import org.etd.framework.starter.cache.redis.lock.RedisLockGuard;
+import org.etd.framework.starter.cache.redis.lock.config.RedisLuaScripts;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.ArrayList;
@@ -102,28 +102,6 @@ public class RReentrantLock implements RLock {
         if (execute == null) {
             throw new RuntimeException("尝试解锁失败，Lock-key:" + key + " ,thread-id:" + Thread.currentThread().getId());
         }
-    }
-
-
-    public static void main(String[] args) {
-        int count = 0;
-//        for (int i = 0; i < 30; i++) {
-//            int sleep = (int) (1 + Math.random() * 100);
-//            count = count+sleep;
-//            System.out.println(sleep);
-//        }
-//        System.out.println("睡眠总时长："+count);
-
-
-        for (int i = 1; i < 51; i++) {
-            int sleep = 1 >>> i;
-            count = count + sleep;
-            System.out.println(sleep);
-        }
-
-        System.out.println("共计耗时："+count);
-
-        System.out.println(System.currentTimeMillis() - 1300000000000L);
     }
 
 

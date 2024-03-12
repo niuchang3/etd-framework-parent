@@ -1,4 +1,4 @@
-package org.etd.framework.starter.cache.redis;
+package org.etd.framework.starter.cache.redis.lock;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

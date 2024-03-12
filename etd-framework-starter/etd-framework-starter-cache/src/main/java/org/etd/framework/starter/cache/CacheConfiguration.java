@@ -1,20 +1,24 @@
 package org.etd.framework.starter.cache;
 
 
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
-import org.redisson.spring.cache.RedissonSpringCacheManager;
-import org.redisson.spring.data.connection.RedissonConnectionFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.CacheManager;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Young
@@ -22,30 +26,56 @@ import java.io.IOException;
  * @date 2020/7/25
  */
 @Configuration
+@ComponentScan("org.etd.framework.starter.cache.**")
 public class CacheConfiguration {
 
+
+    /**
+     * 配置RedisTemplate 序列化相关规则
+     *
+     * @param factory
+     * @return
+     */
     @Bean
+    @ConditionalOnMissingBean(RedisTemplate.class)
     public RedisTemplate redisTemplate(RedisConnectionFactory factory) {
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.registerModule(new JavaTimeModule());
+        jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
+
         RedisTemplate redisTemplate = new RedisTemplate();
         redisTemplate.setConnectionFactory(factory);
+        redisTemplate.setKeySerializer(stringRedisSerializer);
+        redisTemplate.setHashKeySerializer(stringRedisSerializer);
+
+        redisTemplate.setValueSerializer(jackson2JsonRedisSerializer);
+        redisTemplate.setHashValueSerializer(jackson2JsonRedisSerializer);
+        redisTemplate.afterPropertiesSet();
+
+
         return redisTemplate;
     }
 
-    @Bean
-    CacheManager cacheManager(RedissonClient redissonClient) {
-        return new RedissonSpringCacheManager(redissonClient);
-    }
-
 
     @Bean
-    public RedissonConnectionFactory redissonConnectionFactory(RedissonClient redisson) {
-        return new RedissonConnectionFactory(redisson);
+    @ConditionalOnMissingBean(Cache.class)
+    public Cache<String, Object> caffeineCache() {
+
+        return Caffeine.newBuilder()
+                .initialCapacity(128)//初始大小
+                .maximumSize(2048)//最大数量
+                .expireAfterWrite(60, TimeUnit.SECONDS)//过期时间
+                .build();
     }
 
-    @Bean(destroyMethod = "shutdown")
-    public RedissonClient redisson(@Value("classpath:/redisson.yaml") Resource configFile) throws IOException {
-        Config config = Config.fromYAML(configFile.getInputStream());
-        return Redisson.create(config);
+    @Bean
+    @ConditionalOnBean(RedisTemplate.class)
+    public RedisCache redisUtils(Cache<String, Object> caffeineCache, RedisTemplate redisTemplate, @Value("${spring.application.name}") String appName) {
+        return new RedisCache(caffeineCache, redisTemplate, appName);
     }
 
 }

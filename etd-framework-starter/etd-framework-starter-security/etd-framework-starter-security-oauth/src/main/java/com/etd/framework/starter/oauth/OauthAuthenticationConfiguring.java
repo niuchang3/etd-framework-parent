@@ -2,13 +2,13 @@ package com.etd.framework.starter.oauth;
 
 
 import cn.hutool.crypto.PemUtil;
+import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
 import com.etd.framework.starter.client.core.configurer.BearerAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
 import com.etd.framework.starter.oauth.authentication.AccessDeniedHandlerImpl;
 import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointImpl;
-import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
-import com.etd.framework.starter.oauth.authentication.password.configurer.RefreshTokenAuthenticationConfigurer;
 import com.etd.framework.starter.oauth.authentication.password.configurer.UserPasswordAuthenticationConfigurer;
+import com.etd.framework.starter.oauth.authentication.refresh.configurer.RefreshTokenAuthenticationConfigurer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -51,7 +51,7 @@ public class OauthAuthenticationConfiguring {
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling()
-                .accessDeniedHandler( new AccessDeniedHandlerImpl())
+                .accessDeniedHandler(new AccessDeniedHandlerImpl())
                 .authenticationEntryPoint(new AuthenticationEntryPointImpl());
         DefaultSecurityFilterChain build = http.build();
 
@@ -79,72 +79,5 @@ public class OauthAuthenticationConfiguring {
             throw new RuntimeException(e);
         }
     }
-
-
-/**
- * 默认的用户名密码Service
- *
- * @return
- *//*
-
-    @Bean
-    @ConditionalOnMissingBean(UserService.class)
-    public UserService defaultUserPasswordService() {
-        UserService userService = new MemoryUserPasswordServiceImpl();
-        Oauth2UserDetails build = Oauth2UserDetails.builder()
-                .id(1L)
-                .account("admin")
-                .password("123456")
-                .userName("牛昌")
-                .nickName("淡淡丶奶油味")
-                .gender(1)
-                .build();
-
-
-        userService.register(build);
-
-        return userService;
-    }
-
-    */
-/**
- * 默认的Oauth2客户端信息
- *
- * @return
- *//*
-
-    @Bean
-    @ConditionalOnMissingBean(Oauth2ClientService.class)
-    public Oauth2ClientService defaultOauth2Client() {
-        return new MemoryOauth2ClientServiceImpl();
-    }
-
-    */
-/**
- * 默认的授权信息服务
- *
- * @return
- *//*
-
-    @Bean
-    @ConditionalOnMissingBean(Oauth2AuthorizationService.class)
-    public Oauth2AuthorizationService defaultOauth2Authorization() {
-        return new MemoryOauth2AuthorizationServiceImpl();
-    }
-
-    */
-/**
- * 默认的授权同意接口服务
- *
- * @return
- *//*
-
-    @Bean
-    @ConditionalOnMissingBean(Oauth2AuthorizationConsentService.class)
-    public Oauth2AuthorizationConsentService defaultOauth2AuthorizationConsentService() {
-        return new MemoryOauth2AuthorizationConsentServiceImpl();
-    }
-*/
-
 
 }

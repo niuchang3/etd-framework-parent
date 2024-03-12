@@ -1,4 +1,4 @@
-package org.etd.framework.starter.cache.redis.config;
+package org.etd.framework.starter.cache.redis.lock.config;
 
 
 import org.springframework.core.io.ClassPathResource;

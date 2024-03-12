@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.authentication.password.provider;
+package com.etd.framework.starter.oauth.authentication.refresh.provider;
 
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;

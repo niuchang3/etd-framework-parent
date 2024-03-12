@@ -9,7 +9,21 @@ logging:
 spring:
   profiles:
     active: dev
-
+  application:
+    name: UPMS
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: 123456
+    connect-timeout: 3s
+    database: 4
+    lettuce:
+      pool:
+        enabled: true
+        min-idle: 10
+        max-idle: 20
+        max-active: 20
+        max-wait: 5s
 
 
 

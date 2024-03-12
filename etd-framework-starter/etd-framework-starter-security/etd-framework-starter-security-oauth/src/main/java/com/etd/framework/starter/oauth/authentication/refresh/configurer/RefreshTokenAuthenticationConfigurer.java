@@ -1,15 +1,15 @@
-package com.etd.framework.starter.oauth.authentication.password.configurer;
+package com.etd.framework.starter.oauth.authentication.refresh.configurer;
 
 import com.etd.framework.starter.client.core.AbstractHttpSecurityConfigurer;
-import com.etd.framework.starter.oauth.authentication.password.converter.RefreshTokenRequestConverter;
+import com.etd.framework.starter.oauth.authentication.refresh.converter.RefreshTokenRequestConverter;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
-import com.etd.framework.starter.oauth.authentication.password.filter.RefreshTokenRequestFilter;
-import com.etd.framework.starter.oauth.authentication.password.provider.RefreshTokenAuthenticationProvider;
+import com.etd.framework.starter.oauth.authentication.refresh.filter.RefreshTokenRequestFilter;
+import com.etd.framework.starter.oauth.authentication.refresh.provider.RefreshTokenAuthenticationProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;

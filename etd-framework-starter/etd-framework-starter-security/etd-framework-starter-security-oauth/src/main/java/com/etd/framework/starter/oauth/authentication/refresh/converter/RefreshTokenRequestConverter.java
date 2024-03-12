@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.authentication.password.converter;
+package com.etd.framework.starter.oauth.authentication.refresh.converter;
 
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.token.RefreshTokenRequestToken;
