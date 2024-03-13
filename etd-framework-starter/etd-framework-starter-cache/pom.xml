@@ -12,11 +12,11 @@
     <groupId>org.etd.framework</groupId>
     <artifactId>etd-framework-starter-cache</artifactId>
 
-
     <dependencies>
 
 
-        <dependency>
+
+    <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>

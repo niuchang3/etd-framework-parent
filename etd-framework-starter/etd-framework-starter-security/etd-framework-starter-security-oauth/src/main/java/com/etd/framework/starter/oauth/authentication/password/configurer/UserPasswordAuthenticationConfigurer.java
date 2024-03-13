@@ -1,9 +1,9 @@
 package com.etd.framework.starter.oauth.authentication.password.configurer;
 
+import com.etd.framework.starter.client.core.AbstractHttpSecurityConfigurer;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
-import com.etd.framework.starter.client.core.AbstractHttpSecurityConfigurer;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
 import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.oauth.authentication.password.converter.UserPasswordRequestAuthenticationConverter;
@@ -57,7 +57,7 @@ public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityCo
         ApplicationContext applicationContext = getApplicationContext(builder);
         TokenEncoder tokenEncoder = applicationContext.getBean(TokenEncoder.class);
         SystemOauthProperties oauthProperties = applicationContext.getBean(SystemOauthProperties.class);
-        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler(tokenEncoder,oauthProperties);
+        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler();
 
         UserPasswordAuthenticationRequestFilter filter = UserPasswordAuthenticationRequestFilter.builder()
                 .authenticationEndpointMatcher(authenticationEndpointMatcher)
@@ -65,6 +65,8 @@ public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityCo
                 .converter(new UserPasswordRequestAuthenticationConverter())
                 .successHandler(successHandler)
                 .failureHandler(new EtdAuthenticationFailureHandler())
+                .tokenEncoder(tokenEncoder)
+                .oauthProperties(oauthProperties)
                 .build();
         builder.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
     }

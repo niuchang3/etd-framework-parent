@@ -1,5 +1,7 @@
 package com.etd.framework.starter.client.core.encrypt.impl;
 
+import cn.hutool.core.lang.Snowflake;
+import cn.hutool.core.util.IdUtil;
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
@@ -31,6 +33,8 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
     @Autowired
     private SystemOauthProperties oauthProperties;
 
+    private Snowflake snowflake;
+
     /**
      * Token
      *
@@ -38,6 +42,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
      */
     public JwtTokeEncoder(PrivateKey privateKey) {
         this.jwsSigner = new RSASSASigner(privateKey);
+        this.snowflake = IdUtil.createSnowflake(1, 1);
     }
 
     @Override
@@ -46,6 +51,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
         Calendar now = getNow();
         Date signTime = now.getTime();
         JWTClaimsSet build = new JWTClaimsSet.Builder()
+                .jwtID(snowflake.nextIdStr())
                 .issuer(oauthProperties.getIssuer())
                 .issueTime(signTime)
                 .notBeforeTime(signTime)
@@ -59,12 +65,10 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
                 .build();
 
         SignedJWT signedJWT = new SignedJWT(header, build);
-
         try {
             signedJWT.sign(jwsSigner);
             String token = signedJWT.serialize();
-
-            return new OauthTokenValue(token, build.getExpirationTime());
+            return new OauthTokenValue(build.getJWTID(), token, build.getExpirationTime());
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }

@@ -8,7 +8,7 @@
     </parent>
     <artifactId>etd-framework-starter-security-oauth</artifactId>
     <packaging>jar</packaging>
-    <name>Maven Portlet Archetype</name>
+    <name>etd-framework-starter-security-oauth</name>
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -19,6 +19,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+
 
         <dependency>
             <groupId>org.etd.framework</groupId>

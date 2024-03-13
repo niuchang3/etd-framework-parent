@@ -3,6 +3,8 @@ package com.etd.framework.starter.client.core.filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +26,10 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private AuthenticationConverter converter;
 
+    private AuthenticationManager authenticationManager;
+
+
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
@@ -35,17 +41,14 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
                 filterChain.doFilter(request, response);
                 return;
             }
-            convert.setAuthenticated(true);
-            emptyContext.setAuthentication(convert);
-            SecurityContextHolder.setContext(emptyContext);
+            Authentication authenticate = authenticationManager.authenticate(convert);
+            if(!authenticate.isAuthenticated()){
+                throw new CredentialsExpiredException("Authentication failed token failure");
+            }
 
+            emptyContext.setAuthentication(authenticate);
+            SecurityContextHolder.setContext(emptyContext);
             filterChain.doFilter(request, response);
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (IOException e) {
-            throw e;
-        } catch (ServletException e) {
-            throw e;
         }finally {
             SecurityContextHolder.clearContext();
         }

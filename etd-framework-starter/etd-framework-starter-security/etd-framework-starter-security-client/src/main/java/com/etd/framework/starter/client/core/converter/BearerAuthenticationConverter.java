@@ -22,10 +22,9 @@ public class BearerAuthenticationConverter implements AuthenticationConverter {
     public static final String AUTHENTICATION_SCHEME_BEARER = "Bearer";
 
 
-    private TokenDecode<SignedJWT> tokenDecode;
 
-    public BearerAuthenticationConverter(TokenDecode<SignedJWT> tokenDecode) {
-        this.tokenDecode = tokenDecode;
+    public BearerAuthenticationConverter() {
+
     }
 
     @Override
@@ -44,25 +43,7 @@ public class BearerAuthenticationConverter implements AuthenticationConverter {
         }
         String token = header.substring(7);
 
-        try {
-            SignedJWT jwt = (SignedJWT) tokenDecode.decode(token);
-            Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
+        return new BearerTokenAuthentication(null,token);
 
-            Gson gson = new Gson();
-            String json = gson.toJson(user);
-            UserDetails userDetails = gson.fromJson(json, UserDetails.class);
-
-            BearerTokenAuthentication authentication = new BearerTokenAuthentication(userDetails.getAuthorities());
-            authentication.setDetails(userDetails);
-
-            return authentication;
-
-        } catch (JOSEException e) {
-            log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
-        } catch (ParseException e) {
-            log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
     }
 }

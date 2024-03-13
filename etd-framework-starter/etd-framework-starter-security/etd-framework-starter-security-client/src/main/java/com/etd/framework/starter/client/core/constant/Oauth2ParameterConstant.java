@@ -8,12 +8,18 @@ public interface Oauth2ParameterConstant {
 
     String GRANT_TYPE = "grant_type";
 
-    enum TokenType{
+
+    String OAUTH2_TOKEN_CACHE = "TOKEN";
+
+    String OAUTH2_CACHE_ACCESS_TOKEN = OAUTH2_TOKEN_CACHE +":"+ TokenType.access_token.name();
+    String OAUTH2_CACHE_REFRESH_TOKEN = OAUTH2_TOKEN_CACHE +":"+ TokenType.refresh_token.name();
+
+    enum TokenType {
         access_token,
         refresh_token
     }
 
-    enum TokenPrompt{
+    enum TokenPrompt {
         //BearerTokenAuthenticationFilter
         Bearer
     }

@@ -2,8 +2,10 @@ package com.etd.framework.starter.client.core.configurer;
 
 import com.etd.framework.starter.client.core.AbstractHttpSecurityConfigurer;
 import com.etd.framework.starter.client.core.converter.BearerAuthenticationConverter;
+import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokenDecode;
 import com.etd.framework.starter.client.core.filter.BearerTokenAuthenticationFilter;
+import com.etd.framework.starter.client.core.provider.BearerAuthenticationProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,17 +28,15 @@ public class BearerAuthenticationConfigurer extends AbstractHttpSecurityConfigur
 
     @Override
     public void init(HttpSecurity builder) {
-
+        TokenDecode tokenDecode = getApplicationContext(builder).getBean(TokenDecode.class);
+        BearerAuthenticationProvider provider = new BearerAuthenticationProvider(tokenDecode);
+        builder.authenticationProvider(provider);
     }
 
     @Override
     public void configure(HttpSecurity builder) {
-        ApplicationContext applicationContext = getApplicationContext(builder);
-        JwtTokenDecode JwtTokenDecode = applicationContext.getBean(JwtTokenDecode.class);
-
-
-        AuthenticationConverter converter = new BearerAuthenticationConverter(JwtTokenDecode);
-        BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter);
+        AuthenticationConverter converter = new BearerAuthenticationConverter();
+        BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter,getAuthenticationManager(builder));
         builder.addFilterBefore(filter, FilterSecurityInterceptor.class);
     }
 

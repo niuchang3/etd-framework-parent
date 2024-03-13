@@ -57,7 +57,9 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityCo
         ApplicationContext applicationContext = getApplicationContext(builder);
         TokenEncoder tokenEncoder = applicationContext.getBean(TokenEncoder.class);
         SystemOauthProperties oauthProperties = applicationContext.getBean(SystemOauthProperties.class);
-        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler(tokenEncoder,oauthProperties);
+
+
+        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler();
 
         RefreshTokenRequestFilter filter = RefreshTokenRequestFilter.builder()
                 .refreshTokenEndpointMatcher(authenticationEndpointMatcher)
