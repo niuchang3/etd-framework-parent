@@ -2,6 +2,7 @@ package com.etd.framework.starter.oauth.authentication.refresh.provider;
 
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.storage.TokenStorage;
 import com.etd.framework.starter.client.core.token.RefreshTokenRequestToken;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.client.core.user.UserDetails;
@@ -12,10 +13,8 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.LockedException;
+import org.etd.framework.starter.cache.RedisCache;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
@@ -51,6 +50,11 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
             Gson gson = new Gson();
             String json = gson.toJson(user);
             UserDetails userDetails = gson.fromJson(json, UserDetails.class);
+
+            boolean existRefreshToken = TokenStorage.isExistRefreshToken(String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
+            if(!existRefreshToken){
+                throw new CredentialsExpiredException("Token be revoked");
+            }
 
             UserDetails newUserDetails = userService.loadUserById(userDetails.getId());
             validata(newUserDetails);

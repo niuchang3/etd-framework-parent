@@ -11,8 +11,6 @@ public interface Oauth2ParameterConstant {
 
     String OAUTH2_TOKEN_CACHE = "TOKEN";
 
-    String OAUTH2_CACHE_ACCESS_TOKEN = OAUTH2_TOKEN_CACHE +":"+ TokenType.access_token.name();
-    String OAUTH2_CACHE_REFRESH_TOKEN = OAUTH2_TOKEN_CACHE +":"+ TokenType.refresh_token.name();
 
     enum TokenType {
         access_token,

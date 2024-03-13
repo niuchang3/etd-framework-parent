@@ -1,5 +1,12 @@
 package com.etd.framework.starter.oauth.authentication.refresh.filter;
 
+import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
+import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
+import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
+import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.token.OauthToken;
+import com.etd.framework.starter.client.core.token.OauthTokenValue;
+import com.etd.framework.starter.client.core.user.UserDetails;
 import com.etd.framework.starter.oauth.authentication.refresh.converter.RefreshTokenRequestConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,6 +49,12 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
 
     private AuthenticationFailureHandler failureHandler;
 
+
+    private TokenEncoder<Authentication, OauthTokenValue> tokenEncoder;
+
+    private SystemOauthProperties oauthProperties;
+
+
     public RefreshTokenRequestFilter() {
         this.converter = new RefreshTokenRequestConverter();
     }
@@ -78,7 +91,23 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
      */
     private void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                          Authentication authentication) throws ServletException, IOException {
-        successHandler.onAuthenticationSuccess(request, response, authentication);
+
+        OauthTokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.access_token, authentication);
+        OauthTokenValue refreshToken = null;
+        if (oauthProperties.getAccessToken().getEnabled()) {
+            refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.refresh_token, authentication);
+        }
+        UserDetails details = (UserDetails) authentication.getDetails();
+
+
+        OauthToken token = new OauthToken();
+        token.setTokenType(Oauth2ParameterConstant.TokenPrompt.Bearer.name());
+        token.setAccessToken(accessToken);
+        token.setRefreshToken(refreshToken);
+        token.setUserId(String.valueOf(details.getId()));
+        TokenStorage.delete(details.getId());
+        TokenStorage.storage(token);
+        successHandler.onAuthenticationSuccess(request, response, token);
     }
 
     /**

@@ -11,6 +11,11 @@ import java.util.Collection;
 
 
 public class OauthToken implements Authentication {
+
+    @Getter
+    @Setter
+    @JSONField(serialize = false)
+    private String userId;
     /**
      * Token类型
      */

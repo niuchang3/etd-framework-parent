@@ -1,20 +1,16 @@
 package com.etd.framework.starter.oauth.authentication.password.filter;
 
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
+import com.etd.framework.starter.client.core.storage.TokenStorage;
 import com.etd.framework.starter.client.core.token.OauthToken;
-import com.etd.framework.starter.client.core.token.OauthTokenCache;
 import com.etd.framework.starter.client.core.token.OauthTokenValue;
 import com.etd.framework.starter.client.core.token.UserPasswordAuthenticationRequestToken;
 import com.etd.framework.starter.client.core.user.UserDetails;
-import com.google.common.collect.Maps;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import org.etd.framework.starter.cache.RedisCache;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -24,7 +20,6 @@ import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -32,9 +27,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 用户密码身份验证请求过滤器
@@ -114,29 +106,17 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         if (oauthProperties.getAccessToken().getEnabled()) {
             refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenType.refresh_token, authentication);
         }
+        UserDetails details = (UserDetails) authentication.getDetails();
+
+
         OauthToken token = new OauthToken();
         token.setTokenType(Oauth2ParameterConstant.TokenPrompt.Bearer.name());
         token.setAccessToken(accessToken);
         token.setRefreshToken(refreshToken);
+        token.setUserId(String.valueOf(details.getId()));
 
-
-        String accessId = RedisCache.genKey(new String(Oauth2ParameterConstant.OAUTH2_CACHE_ACCESS_TOKEN), new String(accessToken.getId()));
-        OauthTokenCache oauthTokenCache = OauthTokenCache.builder().accessId(accessId).build();
-
-        Date now = new Date();
-
-        long accessExpires = DateUtil.between(now, accessToken.getExpires(), DateUnit.SECOND);
-        if(ObjectUtils.isEmpty(refreshToken)){
-            RedisCache.set(accessId,oauthTokenCache,accessExpires);
-            successHandler.onAuthenticationSuccess(request, response, token);
-            return;
-        }
-        long refreshExpires = DateUtil.between(now, refreshToken.getExpires(), DateUnit.SECOND);
-
-        String refreshId = RedisCache.genKey(Oauth2ParameterConstant.OAUTH2_CACHE_REFRESH_TOKEN, refreshToken.getId());
-        oauthTokenCache.setRefreshId(refreshId);
-        RedisCache.set(accessId,oauthTokenCache,accessExpires);
-        RedisCache.set(refreshId,oauthTokenCache,refreshExpires);
+        TokenStorage.delete(details.getId());
+        TokenStorage.storage(token);
         successHandler.onAuthenticationSuccess(request, response, token);
 
     }

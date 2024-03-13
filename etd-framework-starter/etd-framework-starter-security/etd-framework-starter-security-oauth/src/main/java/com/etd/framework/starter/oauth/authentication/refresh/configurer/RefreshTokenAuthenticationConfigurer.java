@@ -67,6 +67,8 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityCo
                 .successHandler(successHandler)
                 .converter(new RefreshTokenRequestConverter())
                 .authenticationManager(getAuthenticationManager(builder))
+                .tokenEncoder(tokenEncoder)
+                .oauthProperties(oauthProperties)
                 .build();
 
         builder.addFilterAfter(filter, UsernamePasswordAuthenticationFilter.class);

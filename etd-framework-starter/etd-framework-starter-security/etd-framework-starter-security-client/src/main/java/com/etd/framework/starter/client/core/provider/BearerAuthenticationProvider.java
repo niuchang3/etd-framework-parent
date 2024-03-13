@@ -2,6 +2,7 @@ package com.etd.framework.starter.client.core.provider;
 
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.storage.TokenStorage;
 import com.etd.framework.starter.client.core.token.BearerTokenAuthentication;
 import com.etd.framework.starter.client.core.user.UserDetails;
 import com.google.gson.Gson;
@@ -35,21 +36,20 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
         try {
             SignedJWT jwt = (SignedJWT) tokenDecode.decode(tokenAuthentication.getCredentials());
             verifyExpired(jwt);
-            String accessKey = RedisCache.genKey(Oauth2ParameterConstant.OAUTH2_CACHE_ACCESS_TOKEN, jwt.getJWTClaimsSet().getJWTID());
-            if (!RedisCache.hasKey(accessKey)) {
-                throw new CredentialsExpiredException("Token be revoked");
-            }
 
 
             Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
             Gson gson = new Gson();
             String json = gson.toJson(user);
             UserDetails userDetails = gson.fromJson(json, UserDetails.class);
+            boolean existAccessToken = TokenStorage.isExistAccessToken(String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
+            if (!existAccessToken) {
+                throw new CredentialsExpiredException("Token be revoked");
+            }
 
             BearerTokenAuthentication newAuthentication = new BearerTokenAuthentication(userDetails.getAuthorities());
             newAuthentication.setAuthenticated(true);
             newAuthentication.setDetails(userDetails);
-
             return newAuthentication;
 
         } catch (JOSEException | ParseException e) {
