@@ -13,7 +13,6 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import org.etd.framework.starter.cache.RedisCache;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -44,22 +43,26 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
             JWSHeader header = jwt.getHeader();
             String tokenType = (String) header.getCustomParam(Oauth2ParameterConstant.TokenType.class.getName());
             if(!Oauth2ParameterConstant.TokenType.refresh_token.name().equals(tokenType)){
-                throw new BadCredentialsException("wrong Token Type");
+                throw new BadCredentialsException("错误的令牌类型");
             }
             Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
+            String namespace = (String) jwt.getHeader().getCustomParam(Oauth2ParameterConstant.TokenNameSpace.class.getName());
+            Oauth2ParameterConstant.TokenNameSpace nameSpace = Oauth2ParameterConstant.TokenNameSpace.valueOf(namespace);
             Gson gson = new Gson();
             String json = gson.toJson(user);
             UserDetails userDetails = gson.fromJson(json, UserDetails.class);
 
-            boolean existRefreshToken = TokenStorage.isExistRefreshToken(String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
+            boolean existRefreshToken = TokenStorage.isExistRefreshToken(nameSpace.name(),String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
             if(!existRefreshToken){
-                throw new CredentialsExpiredException("Token be revoked");
+                throw new CredentialsExpiredException("令牌失效");
             }
 
             UserDetails newUserDetails = userService.loadUserById(userDetails.getId());
             validata(newUserDetails);
             newUserDetails.setAuthorities(userDetails.getAuthorities());
-            return converterAuthentication((String) authentication.getCredentials(), newUserDetails);
+            RefreshTokenRequestToken newAuthentication = (RefreshTokenRequestToken) converterAuthentication((String) authentication.getCredentials(), newUserDetails);
+            newAuthentication.setNamespace(namespace);
+            return newAuthentication;
 
         } catch (JOSEException | ParseException e) {
             throw new BadCredentialsException(e.getMessage(), e);

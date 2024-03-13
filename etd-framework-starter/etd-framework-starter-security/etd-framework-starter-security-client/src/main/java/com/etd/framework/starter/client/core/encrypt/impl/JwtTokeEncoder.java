@@ -46,7 +46,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
     }
 
     @Override
-    public OauthTokenValue encode(Oauth2ParameterConstant.TokenType tokenType, Authentication authentication) {
+    public OauthTokenValue encode(Oauth2ParameterConstant.TokenNameSpace nameSpace, Oauth2ParameterConstant.TokenType tokenType, Authentication authentication) {
 
         Calendar now = getNow();
         Date signTime = now.getTime();
@@ -62,6 +62,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .type(JOSEObjectType.JWT)
                 .customParam(Oauth2ParameterConstant.TokenType.class.getName(), tokenType.name())
+                .customParam(Oauth2ParameterConstant.TokenNameSpace.class.getName(), nameSpace.name())
                 .build();
 
         SignedJWT signedJWT = new SignedJWT(header, build);

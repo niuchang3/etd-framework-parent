@@ -18,6 +18,9 @@ public class RefreshTokenRequestToken extends AbstractAuthenticationToken {
     @Setter
     private String credentials;
 
+    @Getter
+    @Setter
+    private String namespace;
     /**
      * Creates a token with the supplied array of authorities.
      *

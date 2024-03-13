@@ -21,8 +21,8 @@ public class TokenStorage {
      * @param userId
      * @return
      */
-    public static String getTokenNamespace(String userId) {
-        return RedisCache.genKey(false, Oauth2ParameterConstant.OAUTH2_TOKEN_CACHE,namespace, userId,namespace);
+    public static String getTokenNamespace(String tokenNamespace,String userId) {
+        return RedisCache.genKey(false, Oauth2ParameterConstant.OAUTH2_TOKEN_CACHE,namespace, userId,tokenNamespace);
     }
 
     /**
@@ -31,8 +31,8 @@ public class TokenStorage {
      * @param userId
      * @return
      */
-    public static String getAccessTokenNamespace(String userId) {
-        String namespace = getTokenNamespace(userId);
+    public static String getAccessTokenNamespace(String tokenNamespace,String userId) {
+        String namespace = getTokenNamespace(tokenNamespace,userId);
         return RedisCache.genKey(false, namespace, Oauth2ParameterConstant.TokenType.access_token.name());
     }
 
@@ -42,8 +42,8 @@ public class TokenStorage {
      * @param userId
      * @return
      */
-    public static String getRefreshTokenNamespace(String userId) {
-        String namespace = getTokenNamespace(userId);
+    public static String getRefreshTokenNamespace(String tokenNamespace,String userId) {
+        String namespace = getTokenNamespace(tokenNamespace,userId);
         return RedisCache.genKey(false, namespace, Oauth2ParameterConstant.TokenType.refresh_token.name());
     }
 
@@ -52,10 +52,11 @@ public class TokenStorage {
      *
      * @param oauthToken
      */
-    public static void storage(OauthToken oauthToken) {
-        String tokenNamespace = getTokenNamespace(oauthToken.getUserId());
-        String accessTokenNamespace = getAccessTokenNamespace(oauthToken.getUserId());
-        String refreshTokenNamespace = getRefreshTokenNamespace(oauthToken.getUserId());
+    public static void storage(String tokenNameSpace,OauthToken oauthToken) {
+        delete(tokenNameSpace,oauthToken.getUserId());
+        String tokenNamespace = getTokenNamespace(tokenNameSpace,oauthToken.getUserId());
+        String accessTokenNamespace = getAccessTokenNamespace(tokenNameSpace,oauthToken.getUserId());
+        String refreshTokenNamespace = getRefreshTokenNamespace(tokenNameSpace,oauthToken.getUserId());
 
 
         OauthTokenValue accessToken = oauthToken.getAccessToken();
@@ -92,8 +93,8 @@ public class TokenStorage {
      * @param tokenId
      * @return
      */
-    public static boolean isExistAccessToken(String userId, String tokenId) {
-        String accessTokenNamespace = getAccessTokenNamespace(userId);
+    public static boolean isExistAccessToken(String tokenNameSpace,String userId, String tokenId) {
+        String accessTokenNamespace = getAccessTokenNamespace(tokenNameSpace,userId);
         String accessTokenId = RedisCache.genKey(true, accessTokenNamespace, tokenId);
         return RedisCache.hasKey(accessTokenId);
     }
@@ -105,22 +106,28 @@ public class TokenStorage {
      * @param tokenId
      * @return
      */
-    public static boolean isExistRefreshToken(String userId, String tokenId) {
-        String refreshTokenNamespace = getRefreshTokenNamespace(userId);
+    public static boolean isExistRefreshToken(String tokenNameSpace,String userId, String tokenId) {
+        String refreshTokenNamespace = getRefreshTokenNamespace(tokenNameSpace,userId);
         String refreshTokenId = RedisCache.genKey(true, refreshTokenNamespace, tokenId);
         return RedisCache.hasKey(refreshTokenId);
     }
 
 
-    public static void delete(Long userId) {
-        String namespace = getTokenNamespace(String.valueOf(userId));
-        namespace = RedisCache.genKey(true, namespace);
-        OauthTokenNamespace tokenNamespace = (OauthTokenNamespace) RedisCache.get(namespace);
-        if (ObjectUtils.isEmpty(tokenNamespace)) {
+    public static void delete(String tokenNamespace,Long userId) {
+        delete(tokenNamespace,String.valueOf(userId));
+    }
+
+    public static void delete(String tokenNamespace,String userId) {
+        String namespace = getTokenNamespace(tokenNamespace,userId);
+        namespace = RedisCache.genKey(true,namespace);
+
+        OauthTokenNamespace bean = (OauthTokenNamespace) RedisCache.get(namespace);
+
+        if (ObjectUtils.isEmpty(bean)) {
             return;
         }
-        RedisCache.del(tokenNamespace.getAccessId());
-        RedisCache.del(tokenNamespace.getRefreshId());
+        RedisCache.del(bean.getAccessId());
+        RedisCache.del(bean.getRefreshId());
         RedisCache.del(namespace);
     }
 }

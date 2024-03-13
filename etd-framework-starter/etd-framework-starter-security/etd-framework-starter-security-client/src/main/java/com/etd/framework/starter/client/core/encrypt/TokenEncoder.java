@@ -13,5 +13,5 @@ public interface TokenEncoder<T,R> {
      * 生成Token
      * @return
      */
-    R encode(Oauth2ParameterConstant.TokenType tokenType, T authentication);
+    R encode(Oauth2ParameterConstant.TokenNameSpace nameSpace, Oauth2ParameterConstant.TokenType tokenType, T authentication);
 }
