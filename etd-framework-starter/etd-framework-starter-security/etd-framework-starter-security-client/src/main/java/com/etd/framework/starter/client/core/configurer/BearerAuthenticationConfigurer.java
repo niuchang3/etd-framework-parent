@@ -10,7 +10,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 
@@ -37,7 +39,7 @@ public class BearerAuthenticationConfigurer extends AbstractHttpSecurityConfigur
     public void configure(HttpSecurity builder) {
         AuthenticationConverter converter = new BearerAuthenticationConverter();
         BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter,getAuthenticationManager(builder));
-        builder.addFilterBefore(filter, FilterSecurityInterceptor.class);
+        builder.addFilterAfter(filter, AnonymousAuthenticationFilter.class);
     }
 
     @Override

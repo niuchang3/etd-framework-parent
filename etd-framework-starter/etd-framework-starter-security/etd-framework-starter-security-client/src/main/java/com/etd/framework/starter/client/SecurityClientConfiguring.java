@@ -30,7 +30,7 @@ import java.security.interfaces.RSAPublicKey;
 public class SecurityClientConfiguring {
 
 
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -59,55 +59,5 @@ public class SecurityClientConfiguring {
     }
 
 
-    @Bean
-    @ConditionalOnMissingBean(IUserService.class)
-    public IUserService userService(PasswordEncoder passwordEncoder) {
 
-
-        TenantAuthority addUserAuthority = TenantAuthority
-                .builder()
-                .id(1L)
-                .tenantId(1L)
-                .authorityName("添加用户")
-                .authority("user:manager:add")
-                .build();
-
-
-        IUserService service = new MemoryUserServiceImpl();
-        UserDetails userDetails1 = UserDetails.builder()
-                .id(1L)
-                .account("admin")
-                .password(passwordEncoder.encode("admin"))
-                .userName("奶油味")
-                .nickName("淡淡丶奶油味")
-                .enabled(true)
-                .locked(false)
-                .authorities(Lists.newArrayList(addUserAuthority))
-                .build();
-
-
-        TenantAuthority updateUserAuthority = TenantAuthority
-                .builder()
-                .id(1L)
-                .tenantId(1L)
-                .authorityName("添加用户")
-                .authority("user:manager:update")
-                .build();
-
-
-        UserDetails userDetails2 = UserDetails.builder()
-                .id(2L)
-                .account("niuchang")
-                .password(passwordEncoder.encode("niuchang"))
-                .userName("草莓味")
-                .nickName("淡淡丶草莓味")
-                .enabled(true)
-                .locked(false)
-                .authorities(Lists.newArrayList(updateUserAuthority))
-                .build();
-
-        service.register(userDetails1);
-        service.register(userDetails2);
-        return service;
-    }
 }

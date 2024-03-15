@@ -29,7 +29,6 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
     private AuthenticationManager authenticationManager;
 
 
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
@@ -43,7 +42,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             }
             Authentication authenticate = authenticationManager.authenticate(convert);
             if(!authenticate.isAuthenticated()){
-                throw new CredentialsExpiredException("Authentication failed token failure");
+                throw new CredentialsExpiredException("错误的凭证");
             }
 
             emptyContext.setAuthentication(authenticate);

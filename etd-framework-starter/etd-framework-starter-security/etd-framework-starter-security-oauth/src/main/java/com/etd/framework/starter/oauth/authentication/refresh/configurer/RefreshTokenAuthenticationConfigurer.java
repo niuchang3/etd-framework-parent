@@ -71,7 +71,7 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityCo
                 .oauthProperties(oauthProperties)
                 .build();
 
-        builder.addFilterAfter(filter, UsernamePasswordAuthenticationFilter.class);
+        builder.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
     }
 
     @Override

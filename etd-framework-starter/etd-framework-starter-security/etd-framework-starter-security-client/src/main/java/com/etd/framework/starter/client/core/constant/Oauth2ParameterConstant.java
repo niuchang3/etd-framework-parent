@@ -12,8 +12,15 @@ public interface Oauth2ParameterConstant {
     String OAUTH2_TOKEN_CACHE = "TOKEN";
 
 
-    enum TokenNameSpace{
-        PASSWORD
+    enum CookieName {
+        REDIRECT_URL,
+        Authorization;
+    }
+
+
+    enum TokenNameSpace {
+        PASSWORD,
+        AUTHORIZE,
     }
 
 
@@ -56,7 +63,17 @@ public interface Oauth2ParameterConstant {
         client_id,
         redirect_uri,
         scope,
-        state
+        state;
+
+        public static boolean isParams(String paramName) {
+            for (AuthorizationCodeRequestAuthentication value : AuthorizationCodeRequestAuthentication.values()) {
+                if (value.name().equals(paramName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }
 
 
@@ -89,6 +106,12 @@ public interface Oauth2ParameterConstant {
         client_secret,
         grant_type,
         scope
+    }
+
+    enum STATUS {
+        Enable,
+        Deactivate,
+        Lock
     }
 }
 
