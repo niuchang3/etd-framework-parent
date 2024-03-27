@@ -1,5 +1,6 @@
 package com.etd.framework.starter.oauth.authentication;
 
+import cn.hutool.http.HttpStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -17,6 +18,7 @@ public class AccessDeniedHandlerImpl extends AbstractAuthenticationHandler imple
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) throws IOException, ServletException {
-        writeFailed(org.springframework.http.HttpStatus.OK, request, response, exception);
+        response.setStatus(HttpStatus.HTTP_FORBIDDEN);
+        writeFailed(request, response, exception);
     }
 }

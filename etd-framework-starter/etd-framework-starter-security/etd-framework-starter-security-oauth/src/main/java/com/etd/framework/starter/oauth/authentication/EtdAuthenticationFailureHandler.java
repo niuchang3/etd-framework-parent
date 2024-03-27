@@ -18,6 +18,6 @@ public class EtdAuthenticationFailureHandler extends AbstractAuthenticationHandl
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        writeFailed(org.springframework.http.HttpStatus.OK,request,response,exception);
+        writeFailed(request,response,exception);
     }
 }

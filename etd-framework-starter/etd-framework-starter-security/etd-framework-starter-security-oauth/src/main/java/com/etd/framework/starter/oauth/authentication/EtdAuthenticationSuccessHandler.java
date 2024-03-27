@@ -4,6 +4,7 @@ import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.util.ObjectUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -18,6 +19,10 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         ResultModel<Authentication> success = ResultModel.success(authentication);
+        if(ObjectUtils.isEmpty(request.getCookies())){
+            writeSuccess(response, success);
+            return;
+        }
         for (Cookie cookie : request.getCookies()) {
             if(Oauth2ParameterConstant.CookieName.REDIRECT_URL.name().equals(cookie.getName())){
                 Cookie responseCookie = new Cookie(Oauth2ParameterConstant.CookieName.REDIRECT_URL.name(),"");

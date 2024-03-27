@@ -17,6 +17,7 @@ public class AuthenticationEntryPointImpl extends AbstractAuthenticationHandler 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        writeFailed(HttpStatus.OK,request,response,authException);
+        response.setStatus(cn.hutool.http.HttpStatus.HTTP_UNAUTHORIZED);
+        writeFailed(request,response,authException);
     }
 }

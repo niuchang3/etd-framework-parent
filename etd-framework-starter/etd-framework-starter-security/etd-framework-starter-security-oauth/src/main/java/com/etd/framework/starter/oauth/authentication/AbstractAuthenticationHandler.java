@@ -94,19 +94,18 @@ public abstract class AbstractAuthenticationHandler {
     /**
      * 异常信息返回
      *
-     * @param status
      * @param request
      * @param response
      * @param exception
      * @throws IOException
      */
-    protected void writeFailed(HttpStatus status, HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
+    protected void writeFailed(HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
         if(log.isDebugEnabled()){
             log.debug(exception.getMessage(),exception);
         }
+
         ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(response);
-        httpResponse.setStatusCode(status);
-        ResultModel<Object> failed = ResultModel.failed(org.springframework.http.HttpStatus.UNAUTHORIZED.value(), exception.getCause(), exception.getMessage(), request.getRequestURI());
+        ResultModel<Object> failed = ResultModel.failed(response.getStatus(), exception.getCause(), exception.getMessage(), request.getRequestURI());
         getConverter().write(failed, MediaType.APPLICATION_JSON, httpResponse);
     }
 

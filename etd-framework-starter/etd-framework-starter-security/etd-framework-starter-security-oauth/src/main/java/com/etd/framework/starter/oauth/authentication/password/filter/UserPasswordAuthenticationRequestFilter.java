@@ -1,5 +1,6 @@
 package com.etd.framework.starter.oauth.authentication.password.filter;
 
+import cn.hutool.http.HttpStatus;
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
@@ -134,6 +135,7 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         this.logger.trace("Failed to process authentication request", exception);
         this.logger.trace("Cleared SecurityContextHolder");
         this.logger.trace("Handling authentication failure");
+        response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
         this.failureHandler.onAuthenticationFailure(request, response, exception);
     }
 
