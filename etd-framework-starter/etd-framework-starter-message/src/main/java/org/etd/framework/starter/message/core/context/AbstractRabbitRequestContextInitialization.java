@@ -2,7 +2,6 @@ package org.etd.framework.starter.message.core.context;
 
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
-import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.AbstractRequestContextInitialization;
 import org.etd.framework.common.core.context.ContextInitialization;
 import org.etd.framework.common.core.context.model.RequestContext;
@@ -40,7 +39,8 @@ public abstract class AbstractRabbitRequestContextInitialization extends Abstrac
 
     @Override
     protected String getRemoteIp(Message message) {
-        return (String) message.getMessageProperties().getHeaders().get(RequestContextConstant.REQUEST_IP.getCode());
+//        return (String) message.getMessageProperties().getHeaders().get(RequestContextConstant.REQUEST_IP.getCode());
+        return null;
     }
 
     @Override
@@ -58,8 +58,7 @@ public abstract class AbstractRabbitRequestContextInitialization extends Abstrac
         Map<String, String> contextMap = new HashMap<>();
         contextMap.put(LogConstant.LOG_TRACE_ID, RequestContext.getTraceId());
         MDC.setContextMap(contextMap);
-        RequestContext.setUserCode(getHeaderValue(message, RequestContextConstant.USER_CODE.getCode()));
-        RequestContext.setUserName(getHeaderValue(message, RequestContextConstant.USER_NAME.getCode()));
-        RequestContext.setUserRole(getHeaderValue(message, RequestContextConstant.USER_ROLE.getCode()));
+
+
     }
 }

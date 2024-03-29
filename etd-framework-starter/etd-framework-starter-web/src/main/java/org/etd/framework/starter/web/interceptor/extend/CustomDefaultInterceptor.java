@@ -1,6 +1,11 @@
 package org.etd.framework.starter.web.interceptor.extend;
 
+import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.starter.web.interceptor.CustomInterceptor;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.ObjectUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,7 +26,11 @@ public class CustomDefaultInterceptor extends CustomInterceptor {
 
     @Override
     protected void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-
+        SecurityContext context = SecurityContextHolder.getContext();
+        if(!ObjectUtils.isEmpty(context.getAuthentication()) && !ObjectUtils.isEmpty(context.getAuthentication().getDetails())){
+            UserDetails userDetails = (UserDetails) context.getAuthentication().getDetails();
+            RequestContext.setUser(userDetails);
+        }
     }
 
     /**

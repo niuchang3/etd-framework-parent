@@ -25,7 +25,7 @@ import java.nio.file.Paths;
 import java.security.interfaces.RSAPublicKey;
 
 @Configuration
-@ComponentScan({"com.etd.framework.starter.client.core.*"})
+@ComponentScan({"com.etd.framework.starter.client.**"})
 @EnableConfigurationProperties(value = SystemOauthProperties.class)
 public class SecurityClientConfiguring {
 

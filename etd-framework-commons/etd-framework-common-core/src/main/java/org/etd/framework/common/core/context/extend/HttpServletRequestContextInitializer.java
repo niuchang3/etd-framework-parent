@@ -1,6 +1,7 @@
 package org.etd.framework.common.core.context.extend;
 
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.etd.framework.common.core.context.AbstractRequestContextInitialization;
 import org.etd.framework.common.utils.request.RequestUtil;
@@ -24,17 +25,8 @@ public class HttpServletRequestContextInitializer extends AbstractRequestContext
 
     @Override
     protected Map<String, Object> getAttribute(HttpServletRequest request) {
-        String queryString = request.getQueryString();
-        if (StringUtils.isEmpty(queryString)) {
-            return null;
-        }
-        String[] queryUnit = queryString.split("&");
-        Map<String, Object> params = new HashMap<>();
-        for (String query : queryUnit) {
-            String[] keyValue = query.split("=");
-            params.put(keyValue[0], keyValue.length > 1 ? keyValue[1] : null);
-        }
-        return params;
+        //此处内容可以降请求参数放到存放进去
+        return Maps.newHashMap();
     }
 
     @Override

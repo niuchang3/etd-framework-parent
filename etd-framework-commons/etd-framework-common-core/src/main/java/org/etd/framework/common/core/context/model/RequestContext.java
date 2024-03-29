@@ -1,5 +1,6 @@
 package org.etd.framework.common.core.context.model;
 
+import com.etd.framework.starter.client.core.user.UserDetails;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.beans.BeanUtils;
@@ -79,13 +80,6 @@ public class RequestContext implements Serializable {
         getRequestContext().setTenantCode(tenantCode);
     }
 
-    public static String getProductCode() {
-        return getRequestContext().getProductCode();
-    }
-
-    public static void setProductCode(String productCode) {
-        getRequestContext().setProductCode(productCode);
-    }
 
     public static String getToken() {
         return getRequestContext().getToken();
@@ -95,29 +89,14 @@ public class RequestContext implements Serializable {
         getRequestContext().setToken(token);
     }
 
-    public static String getUserCode() {
-        return getRequestContext().getUserCode();
+    public static UserDetails getUser(){
+        return getRequestContext().getUserDetails();
     }
 
-    public static void setUserCode(String userCode) {
-        getRequestContext().setUserCode(userCode);
+    public static void setUser(UserDetails userDetails){
+        getRequestContext().setUserDetails(userDetails);
     }
 
-    public static String getUserName() {
-        return getRequestContext().getUserName();
-    }
-
-    public static void setUserName(String userName) {
-        getRequestContext().setUserName(userName);
-    }
-
-    public static String getUserRole() {
-        return getRequestContext().getUserRole();
-    }
-
-    public static void setUserRole(String userRole) {
-        getRequestContext().setUserRole(userRole);
-    }
 
     public static Object getAttribute(String key) {
         return getRequestContext().getAttribute(key);

@@ -101,7 +101,7 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
      */
     private void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                          Authentication authentication) throws ServletException, IOException {
-
+        
         OauthTokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenNameSpace.PASSWORD,Oauth2ParameterConstant.TokenType.access_token, authentication);
         OauthTokenValue refreshToken = null;
         if (oauthProperties.getAccessToken().getEnabled()) {

@@ -48,12 +48,7 @@ public class RabbitConfig extends AbstractRabbitRequestContextInitialization {
 
     public void setRabbitMqMessageHeads(Message message) {
         message.getMessageProperties().setHeader(RequestContextConstant.TRACE_ID.getCode(), RequestContext.getTraceId());
-        message.getMessageProperties().setHeader(RequestContextConstant.REQUEST_IP.getCode(), RequestContext.getRequestIP());
         message.getMessageProperties().setHeader(RequestContextConstant.TENANT_CODE.getCode(), RequestContext.getTenantCode());
-        message.getMessageProperties().setHeader(RequestContextConstant.PRODUCT_CODE.getCode(), RequestContext.getProductCode());
         message.getMessageProperties().setHeader(RequestContextConstant.TOKEN.getCode(), RequestContext.getTenantCode());
-        message.getMessageProperties().setHeader(RequestContextConstant.USER_CODE.getCode(), RequestContext.getUserCode());
-        message.getMessageProperties().setHeader(RequestContextConstant.USER_NAME.getCode(), RequestContext.getUserName());
-        message.getMessageProperties().setHeader(RequestContextConstant.USER_ROLE.getCode(), RequestContext.getUserRole());
     }
 }

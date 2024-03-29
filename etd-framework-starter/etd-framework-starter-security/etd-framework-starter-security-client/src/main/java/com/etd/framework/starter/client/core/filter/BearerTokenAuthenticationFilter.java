@@ -42,7 +42,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             }
             Authentication authenticate = authenticationManager.authenticate(convert);
             if(!authenticate.isAuthenticated()){
-                throw new CredentialsExpiredException("错误的凭证");
+                throw new CredentialsExpiredException("凭证错误");
             }
 
             emptyContext.setAuthentication(authenticate);

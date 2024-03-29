@@ -1,5 +1,6 @@
 package org.etd.framework.common.core.context.model;
 
+import com.etd.framework.starter.client.core.user.UserDetails;
 import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,26 +23,19 @@ public class RequestContextModel implements Serializable {
 
     private String tenantCode;
 
-    private String productCode;
-
     private String token;
 
-    private String userCode;
-
-    private String userName;
-
-    private String userRole;
+    private UserDetails userDetails;
 
     private Map<String, Object> attribute = Maps.newLinkedHashMap();
 
     public void clean() {
+
         this.traceId = null;
         this.requestIP = null;
         this.tenantCode = null;
-        this.productCode = null;
         this.token = null;
-        this.userCode = null;
-        this.userName = null;
+        this.userDetails = null;
         this.attribute = null;
     }
 

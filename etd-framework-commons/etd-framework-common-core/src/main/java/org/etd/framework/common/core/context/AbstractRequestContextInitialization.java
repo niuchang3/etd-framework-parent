@@ -44,12 +44,12 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
 
     @Override
     public void invoke(E e) {
+
         String traceId = getHeaderValue(e, RequestContextConstant.TRACE_ID.getCode());
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
-        RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setTenantCode(getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode()));
-        RequestContext.setProductCode(getHeaderValue(e, RequestContextConstant.PRODUCT_CODE.getCode()));
         RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
+        RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setAttribute(getAttribute(e));
     }
 

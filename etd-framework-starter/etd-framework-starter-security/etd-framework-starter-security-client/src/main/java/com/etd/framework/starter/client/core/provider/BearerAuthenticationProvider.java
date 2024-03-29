@@ -54,9 +54,9 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             newAuthentication.setDetails(userDetails);
             return newAuthentication;
 
-        } catch (JOSEException | ParseException e) {
+        } catch (JOSEException | ParseException e  ) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new CredentialsExpiredException(e.getMessage());
         }
     }
 

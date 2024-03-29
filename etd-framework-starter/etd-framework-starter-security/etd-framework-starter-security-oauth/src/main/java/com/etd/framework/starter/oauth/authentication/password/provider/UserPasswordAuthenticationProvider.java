@@ -54,12 +54,12 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
 
     private void validata(UserDetails userDetails, Authentication authentication) {
         if (ObjectUtils.isEmpty(userDetails)) {
-            throw new UsernameNotFoundException("错误的用户名。");
+            throw new UsernameNotFoundException("用户名错误。");
         }
 
         boolean matches = passwordEncoder.matches((CharSequence) authentication.getCredentials(), userDetails.getPassword());
         if (!matches) {
-            throw new BadCredentialsException("错误的密码凭证。");
+            throw new BadCredentialsException("密码错误。");
         }
         if (!userDetails.getEnabled()) {
             throw new DisabledException("账号已被禁用。");

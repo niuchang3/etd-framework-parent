@@ -13,7 +13,7 @@ public enum RequestCodeConstant implements RequestCodeConverter {
     SUCCESS(200, "接口请求成功。"),
 
 
-    NO_PERMISSION(4000, "请登录后在进行操作。"),
+    NO_PERMISSION(401, "请登录后在进行操作。"),
 
     /**
      * 请求资源权限不足。

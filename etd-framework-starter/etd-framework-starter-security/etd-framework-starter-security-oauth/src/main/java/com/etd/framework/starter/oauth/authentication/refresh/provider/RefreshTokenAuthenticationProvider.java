@@ -43,7 +43,7 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
             JWSHeader header = jwt.getHeader();
             String tokenType = (String) header.getCustomParam(Oauth2ParameterConstant.TokenType.class.getName());
             if(!Oauth2ParameterConstant.TokenType.refresh_token.name().equals(tokenType)){
-                throw new BadCredentialsException("错误的令牌类型");
+                throw new BadCredentialsException("令牌类型错误");
             }
             Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
             String namespace = (String) jwt.getHeader().getCustomParam(Oauth2ParameterConstant.TokenNameSpace.class.getName());
