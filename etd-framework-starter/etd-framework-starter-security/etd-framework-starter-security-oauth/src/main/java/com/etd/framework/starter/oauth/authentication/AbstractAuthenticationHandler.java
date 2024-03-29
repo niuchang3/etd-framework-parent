@@ -23,7 +23,7 @@ import java.util.List;
 
 @Slf4j
 public abstract class AbstractAuthenticationHandler {
-
+    
 
     private FastJsonHttpMessageConverter converter;
 
