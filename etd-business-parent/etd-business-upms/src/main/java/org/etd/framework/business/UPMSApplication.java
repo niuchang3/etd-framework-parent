@@ -16,5 +16,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 public class UPMSApplication {
     public static void main(String[] args) {
         SpringApplication.run(UPMSApplication.class, args);
+        System.out.println("-------------------------------------");
     }
 }

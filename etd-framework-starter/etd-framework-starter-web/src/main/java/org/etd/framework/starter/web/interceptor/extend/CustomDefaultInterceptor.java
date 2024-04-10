@@ -27,10 +27,15 @@ public class CustomDefaultInterceptor extends CustomInterceptor {
     @Override
     protected void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         SecurityContext context = SecurityContextHolder.getContext();
-        if(!ObjectUtils.isEmpty(context.getAuthentication()) && !ObjectUtils.isEmpty(context.getAuthentication().getDetails())){
-            UserDetails userDetails = (UserDetails) context.getAuthentication().getDetails();
-            RequestContext.setUser(userDetails);
+        if(ObjectUtils.isEmpty(context.getAuthentication()) || !ObjectUtils.isEmpty(context.getAuthentication().getDetails())){
+            return;
         }
+        if( context.getAuthentication().getDetails() instanceof UserDetails){
+            UserDetails details = (UserDetails) context.getAuthentication().getDetails();
+            RequestContext.setUser(details);
+        }
+
+
     }
 
     /**

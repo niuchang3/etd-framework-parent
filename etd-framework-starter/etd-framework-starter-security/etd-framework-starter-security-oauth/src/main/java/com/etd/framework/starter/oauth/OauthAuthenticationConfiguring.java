@@ -54,13 +54,17 @@ public class OauthAuthenticationConfiguring {
 
         http.apply(configurer)
                 .and()
+                .headers().frameOptions().sameOrigin()
+                .and()
                 .csrf().disable()
-                .anonymous().disable()
+//                .anonymous().disable()
                 .requestCache().disable()
                 .requestMatchers().antMatchers("/**")
                 .and()
                 .authorizeRequests()
-                .antMatchers("/public/**").permitAll()
+                .antMatchers("/public/**",
+                        "/druid/**",
+                        "h2-console/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling()

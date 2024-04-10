@@ -39,7 +39,7 @@ public class BearerAuthenticationConfigurer extends AbstractHttpSecurityConfigur
     public void configure(HttpSecurity builder) {
         AuthenticationConverter converter = new BearerAuthenticationConverter();
         BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter,getAuthenticationManager(builder));
-        builder.addFilterAfter(filter, AnonymousAuthenticationFilter.class);
+        builder.addFilterBefore(filter, AnonymousAuthenticationFilter.class);
     }
 
     @Override
