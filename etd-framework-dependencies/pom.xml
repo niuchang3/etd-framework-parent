@@ -51,7 +51,6 @@
 
         <guava.version>20.0</guava.version>
         <gson.version>2.8.6</gson.version>
-        <h2.version>1.4.200</h2.version>
 
         <druid.version>1.1.17</druid.version>
 
@@ -59,6 +58,8 @@
         <alibaba.oss.version>3.10.2</alibaba.oss.version>
 
         <drools.verson>7.73.0.Final</drools.verson>
+
+        <org.mapstruct.version>1.4.1.Final</org.mapstruct.version>
     </properties>
 
 
@@ -282,6 +283,19 @@
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>8.0.28</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${org.mapstruct.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.12</version>
             </dependency>
 
 

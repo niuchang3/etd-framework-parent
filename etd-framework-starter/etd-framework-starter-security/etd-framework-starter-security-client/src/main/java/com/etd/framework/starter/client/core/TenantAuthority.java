@@ -15,35 +15,17 @@ public class TenantAuthority implements GrantedAuthority {
 
     private static final long serialVersionUID = -1L;
     /**
-     * 权限id
-     */
-    private Long id;
-    /**
-     * 权限父级ID
-     */
-    private Long parentId;
-
-    /**
      * 租户ID
      */
     private Long tenantId;
+
     /**
-     * 租户名称
+     * 租户下角色Code
      */
-    private String tenantName;
-    /**
-     * 全险吗名称
-     */
-    private String authorityName;
+    private String roleCode;
     /**
      * 权限码CODE
      */
     private String authority;
-
-
-    @Override
-    public String getAuthority() {
-        return authority;
-    }
 
 }

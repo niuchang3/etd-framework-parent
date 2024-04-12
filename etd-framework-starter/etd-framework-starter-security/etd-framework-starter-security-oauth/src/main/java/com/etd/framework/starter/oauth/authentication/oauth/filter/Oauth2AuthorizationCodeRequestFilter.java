@@ -88,7 +88,9 @@ public class Oauth2AuthorizationCodeRequestFilter extends OncePerRequestFilter {
 
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            TokenStorage.storage(Oauth2ParameterConstant.TokenNameSpace.AUTHORIZE.name(), code, (String) authentication.getCredentials());
+
+
+            TokenStorage.storage(Oauth2ParameterConstant.TokenNameSpace.AUTHORIZE.name(), code, authentication.getCredentials());
             redirect(redirectUri.toString(), response);
 
         } catch (AuthenticationException e) {

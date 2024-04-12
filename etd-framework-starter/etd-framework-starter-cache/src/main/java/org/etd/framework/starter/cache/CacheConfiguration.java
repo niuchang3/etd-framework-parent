@@ -68,14 +68,14 @@ public class CacheConfiguration {
         return Caffeine.newBuilder()
                 .initialCapacity(128)//初始大小
                 .maximumSize(2048)//最大数量
-                .expireAfterWrite(60, TimeUnit.SECONDS)//过期时间
+                .expireAfterWrite(5, TimeUnit.SECONDS)//过期时间
                 .build();
     }
 
     @Bean
     @ConditionalOnBean(RedisTemplate.class)
-    public RedisCache redisUtils(Cache<String, Object> caffeineCache, RedisTemplate redisTemplate, @Value("${spring.application.name}") String appName) {
-        return new RedisCache(caffeineCache, redisTemplate, appName);
+    public RedisCache redisUtils(Cache<String, Object> caffeineCache, RedisTemplate redisTemplate) {
+        return new RedisCache(caffeineCache, redisTemplate);
     }
 
 }

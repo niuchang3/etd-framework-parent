@@ -1,0 +1,1 @@
+java -cp .\h2-2.2.224.jar org.h2.tools.Script -url jdbc:h2:file:D:/workspace/dataBase/h2/etd/db -user root -password root -script D:/workspace/dataBase/h2/etd/db.sql

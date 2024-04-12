@@ -43,10 +43,15 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             Gson gson = new Gson();
             String json = gson.toJson(user);
             UserDetails userDetails = gson.fromJson(json, UserDetails.class);
-            boolean existAccessToken = TokenStorage.isExistAccessToken(namespace,String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
+            boolean existAccessToken = TokenStorage.isExistAccessToken(namespace,String.valueOf(userDetails.getId()));
             if (!existAccessToken) {
-                throw new CredentialsExpiredException("Token已被撤销");
+                throw new CredentialsExpiredException("Token Has Been Revoked");
             }
+            boolean accessMatches = TokenStorage.accessMatches(namespace, String.valueOf(userDetails.getId()), tokenAuthentication.getCredentials());
+            if(!accessMatches){
+                throw new CredentialsExpiredException("Token Has Been Revoked");
+            }
+
 
             BearerTokenAuthentication newAuthentication = new BearerTokenAuthentication(userDetails.getAuthorities());
             newAuthentication.setCredentials(tokenAuthentication.getCredentials());

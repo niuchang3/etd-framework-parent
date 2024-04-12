@@ -2,11 +2,8 @@ package org.etd.framework.starter.mybaits;
 
 import com.google.common.collect.Lists;
 import lombok.Data;
-import org.etd.framework.starter.mybaits.permission.model.Tables;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
-
-import java.util.List;
 
 @ConfigurationProperties(prefix = "etd.mybatis")
 @Data
@@ -61,8 +58,8 @@ public class EtdMyBatisPlusProperties {
          */
         private String globalUserColumnName = "USER_ID";
 
-        @NestedConfigurationProperty
-        private List<Tables> tables = Lists.newArrayList();
+//        @NestedConfigurationProperty
+//        private List<Tables> tables = Lists.newArrayList();
 
     }
 

@@ -9,11 +9,9 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 public class UserDetails implements Serializable {
 
     private static final long serialVersionUID = -1L;
@@ -70,8 +68,10 @@ public class UserDetails implements Serializable {
      */
     private Boolean enabled;
 
+
     /**
      * 权限信息
      */
     private List<TenantAuthority> authorities;
+
 }

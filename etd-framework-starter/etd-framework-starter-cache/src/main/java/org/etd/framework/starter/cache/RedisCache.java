@@ -3,12 +3,13 @@ package org.etd.framework.starter.cache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.Prefix;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 
@@ -17,13 +18,10 @@ public class RedisCache {
 
     private static RedisTemplate<String, Object> redisTemplate;
 
-    private static String appName;
-
     private static Cache<String, Object> localCache;
 
-    public RedisCache(Cache<String, Object> localCache, RedisTemplate<String, Object> redisTemplate, String appName) {
+    public RedisCache(Cache<String, Object> localCache, RedisTemplate<String, Object> redisTemplate) {
         RedisCache.redisTemplate = redisTemplate;
-        RedisCache.appName = appName;
         RedisCache.localCache = localCache;
     }
 
@@ -31,13 +29,7 @@ public class RedisCache {
     public final static String VAR_SPLITOR = ":";
 
 
-    public static String genKey(boolean systemPrefix, String... keyMembers) {
-        if(systemPrefix){
-            String keyPrefix = StringUtils.isEmpty(appName) ? "" : appName;
-            List<String> strings = Lists.newArrayList(keyMembers);
-            strings.add(0,keyPrefix);
-            return StringUtils.join(strings, VAR_SPLITOR).toUpperCase();
-        }
+    public static String genKey(String... keyMembers) {
         return StringUtils.join(keyMembers, VAR_SPLITOR).toUpperCase();
     }
 
@@ -201,7 +193,7 @@ public class RedisCache {
      * @param item 项 不能为null
      */
     public static Object hget(String key, String item) {
-        final String cacheKey = genKey(true,key, item);
+        final String cacheKey = genKey(key, item);
         return localCache.get(cacheKey, k -> {
             return redisTemplate.opsForHash().get(key, item);
         });
@@ -283,7 +275,7 @@ public class RedisCache {
     public static void hdel(String key, String... item) {
         List<String> keys = Lists.newArrayList();
         for (String hkey : item) {
-            keys.add(genKey(true,key, hkey));
+            keys.add(genKey(key, hkey));
         }
         localCache.invalidateAll(keys);
         redisTemplate.opsForHash().delete(key, item);
@@ -514,6 +506,11 @@ public class RedisCache {
 
     public static long lRemove(String key, long count, Object value) {
         return redisTemplate.opsForList().remove(key, count, value);
+    }
+
+
+    public static Set<String> getKeys(String pattern){
+        return redisTemplate.keys(pattern);
     }
 
 }

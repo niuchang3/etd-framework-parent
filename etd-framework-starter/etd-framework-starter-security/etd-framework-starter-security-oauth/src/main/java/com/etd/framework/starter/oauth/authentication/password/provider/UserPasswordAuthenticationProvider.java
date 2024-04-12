@@ -56,7 +56,6 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
         if (ObjectUtils.isEmpty(userDetails)) {
             throw new UsernameNotFoundException("用户名错误。");
         }
-
         boolean matches = passwordEncoder.matches((CharSequence) authentication.getCredentials(), userDetails.getPassword());
         if (!matches) {
             throw new BadCredentialsException("密码错误。");

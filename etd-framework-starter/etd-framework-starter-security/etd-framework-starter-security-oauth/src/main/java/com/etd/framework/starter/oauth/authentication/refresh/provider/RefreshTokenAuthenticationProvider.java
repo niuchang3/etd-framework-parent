@@ -18,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
 import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
 
 @Builder
 @AllArgsConstructor
@@ -40,28 +42,24 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         try {
             SignedJWT jwt = tokenDecode.decode((String) authentication.getCredentials());
-            JWSHeader header = jwt.getHeader();
-            String tokenType = (String) header.getCustomParam(Oauth2ParameterConstant.TokenType.class.getName());
-            if(!Oauth2ParameterConstant.TokenType.refresh_token.name().equals(tokenType)){
-                throw new BadCredentialsException("令牌类型错误");
-            }
-            Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
-            String namespace = (String) jwt.getHeader().getCustomParam(Oauth2ParameterConstant.TokenNameSpace.class.getName());
-            Oauth2ParameterConstant.TokenNameSpace nameSpace = Oauth2ParameterConstant.TokenNameSpace.valueOf(namespace);
-            Gson gson = new Gson();
-            String json = gson.toJson(user);
-            UserDetails userDetails = gson.fromJson(json, UserDetails.class);
+            verifyExpired(jwt);
+            verifyTokenType(jwt);
+            UserDetails jwtUser = toUserDetails(jwt);
+            isExist(jwt, jwtUser.getId());
 
-            boolean existRefreshToken = TokenStorage.isExistRefreshToken(nameSpace.name(),String.valueOf(userDetails.getId()), jwt.getJWTClaimsSet().getJWTID());
-            if(!existRefreshToken){
-                throw new CredentialsExpiredException("令牌失效");
+            Oauth2ParameterConstant.TokenNameSpace nameSpace = getNameSpace(jwt);
+            boolean existRefreshToken = TokenStorage.isExistRefreshToken(nameSpace.name(), String.valueOf(jwtUser.getId()));
+            if (!existRefreshToken) {
+                throw new CredentialsExpiredException("Token Has Been Revoked");
             }
-
-            UserDetails newUserDetails = userService.loadUserById(userDetails.getId());
-            validata(newUserDetails);
-            newUserDetails.setAuthorities(userDetails.getAuthorities());
-            RefreshTokenRequestToken newAuthentication = (RefreshTokenRequestToken) converterAuthentication((String) authentication.getCredentials(), newUserDetails);
-            newAuthentication.setNamespace(namespace);
+            boolean accessMatches = TokenStorage.refreshMatches(nameSpace.name(), String.valueOf(jwtUser.getId()), (String) authentication.getCredentials());
+            if (!accessMatches) {
+                throw new CredentialsExpiredException("Token Has Been Revoked");
+            }
+            UserDetails userDetails = userService.loadUserById(jwtUser.getId());
+            validata(userDetails);
+            RefreshTokenRequestToken newAuthentication = converterAuthentication((String) authentication.getCredentials(), userDetails);
+            newAuthentication.setNamespace(nameSpace.name());
             return newAuthentication;
 
         } catch (JOSEException | ParseException e) {
@@ -80,18 +78,81 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     }
 
     /**
+     * 验证是否过期
+     *
+     * @param jwt
+     * @throws ParseException
+     */
+    private void verifyExpired(SignedJWT jwt) throws ParseException {
+        Date expirationTime = jwt.getJWTClaimsSet().getExpirationTime();
+        String tokenType = (String) jwt.getHeader().getCustomParam(Oauth2ParameterConstant.TokenType.class.getName());
+        long now = Calendar.getInstance().getTime().getTime();
+        long expired = expirationTime.getTime();
+        if (now >= expired) {
+            throw new CredentialsExpiredException(tokenType + "Token Credentials Expired");
+        }
+    }
+
+    /**
+     * 验证Token 类型
+     *
+     * @param jwt
+     */
+    private void verifyTokenType(SignedJWT jwt) {
+        JWSHeader header = jwt.getHeader();
+        String tokenType = (String) header.getCustomParam(Oauth2ParameterConstant.TokenType.class.getName());
+        if (!Oauth2ParameterConstant.TokenType.refresh_token.name().equals(tokenType)) {
+            throw new BadCredentialsException("令牌类型错误");
+        }
+
+    }
+
+    /**
+     * 验证Token是否被吊销
+     *
+     * @param jwt
+     * @param userId
+     */
+    private void isExist(SignedJWT jwt, Long userId) {
+
+        Oauth2ParameterConstant.TokenNameSpace nameSpace = getNameSpace(jwt);
+        boolean existRefreshToken = TokenStorage.isExistRefreshToken(nameSpace.name(), String.valueOf(userId));
+        if (!existRefreshToken) {
+            throw new CredentialsExpiredException("令牌失效");
+        }
+    }
+
+    /**
+     * 从JWT中获取命名空间
+     *
+     * @param jwt
+     * @return
+     */
+    private Oauth2ParameterConstant.TokenNameSpace getNameSpace(SignedJWT jwt) {
+        String customParam = (String) jwt.getHeader().getCustomParam(Oauth2ParameterConstant.TokenNameSpace.class.getName());
+        return Oauth2ParameterConstant.TokenNameSpace.valueOf(customParam);
+    }
+
+    /**
      * 用户详情转换为Authentication
      *
      * @param userDetails
      * @return
      */
-    private Authentication converterAuthentication(String tokenValue, UserDetails userDetails) {
+    private RefreshTokenRequestToken converterAuthentication(String tokenValue, UserDetails userDetails) {
         RefreshTokenRequestToken token = new RefreshTokenRequestToken(userDetails.getAuthorities());
         token.setGrantType(Oauth2ParameterConstant.TokenType.refresh_token.name());
         token.setCredentials(tokenValue);
         token.setDetails(userDetails);
         token.setAuthenticated(true);
         return token;
+    }
+
+    private UserDetails toUserDetails(SignedJWT jwt) throws ParseException {
+        Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
+        Gson gson = new Gson();
+        String json = gson.toJson(user);
+        return gson.fromJson(json, UserDetails.class);
     }
 
     @Override

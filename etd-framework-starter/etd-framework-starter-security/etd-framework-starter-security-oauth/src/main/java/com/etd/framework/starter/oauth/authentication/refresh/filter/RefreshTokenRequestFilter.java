@@ -1,5 +1,6 @@
 package com.etd.framework.starter.oauth.authentication.refresh.filter;
 
+import cn.hutool.http.HttpStatus;
 import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
@@ -127,6 +128,7 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
         this.logger.trace("Failed to process authentication request", exception);
         this.logger.trace("Cleared SecurityContextHolder");
         this.logger.trace("Handling authentication failure");
+        response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
         this.failureHandler.onAuthenticationFailure(request, response, exception);
     }
 

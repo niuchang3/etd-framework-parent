@@ -8,7 +8,7 @@ logging:
     root: DEBUG
 spring:
   profiles:
-    active: dev
+    active: local
   application:
     name: UPMS
   redis:

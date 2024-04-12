@@ -39,8 +39,4 @@ public class UserVO {
      */
     private String nickName;
 
-    /**
-     * 用户租户
-     */
-    private List<Tenant> tenant;
 }

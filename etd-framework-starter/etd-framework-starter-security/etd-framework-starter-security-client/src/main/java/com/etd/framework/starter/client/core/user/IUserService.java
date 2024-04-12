@@ -3,6 +3,14 @@ package com.etd.framework.starter.client.core.user;
 
 public interface IUserService {
     /**
+     * 根据用户ID查询用户详情
+     *
+     * @param id
+     * @return
+     */
+    UserDetails loadUserById(Long id);
+
+    /**
      * 根据用户名查询用户
      *
      * @param username
@@ -19,5 +27,4 @@ public interface IUserService {
     boolean register(UserDetails userDetails);
 
 
-    UserDetails loadUserById(Long id);
 }

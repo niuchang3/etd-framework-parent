@@ -2,14 +2,8 @@ package com.etd.framework.starter.client;
 
 
 import cn.hutool.crypto.PemUtil;
-import com.etd.framework.starter.client.core.TenantAuthority;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokenDecode;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
-import com.etd.framework.starter.client.core.user.IUserService;
-import com.etd.framework.starter.client.core.user.UserDetails;
-import com.etd.framework.starter.client.core.user.memory.MemoryUserServiceImpl;
-import com.google.common.collect.Lists;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -28,7 +22,6 @@ import java.security.interfaces.RSAPublicKey;
 @ComponentScan({"com.etd.framework.starter.client.**"})
 @EnableConfigurationProperties(value = SystemOauthProperties.class)
 public class SecurityClientConfiguring {
-
 
 
     @Bean
@@ -59,5 +52,10 @@ public class SecurityClientConfiguring {
     }
 
 
+    public static void main(String[] args) {
+        PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        String encode = encoder.encode("admin");
+        System.out.println(encode);
+    }
 
 }

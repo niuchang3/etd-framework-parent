@@ -69,7 +69,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
         try {
             signedJWT.sign(jwsSigner);
             String token = signedJWT.serialize();
-            return new OauthTokenValue(build.getJWTID(), token, build.getExpirationTime());
+            return new OauthTokenValue(token, build.getExpirationTime());
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }

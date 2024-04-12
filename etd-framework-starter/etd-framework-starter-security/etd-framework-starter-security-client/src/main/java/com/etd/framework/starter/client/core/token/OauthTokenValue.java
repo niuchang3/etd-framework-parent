@@ -1,6 +1,5 @@
 package com.etd.framework.starter.client.core.token;
 
-import com.alibaba.fastjson.annotation.JSONField;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,9 +12,6 @@ import java.util.Date;
 @Builder
 @Data
 public class OauthTokenValue {
-
-    @JSONField(serialize = false)
-    private String id;
 
     private String value;
 

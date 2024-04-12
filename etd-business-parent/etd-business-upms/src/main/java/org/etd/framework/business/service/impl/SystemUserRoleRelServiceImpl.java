@@ -1,0 +1,41 @@
+package org.etd.framework.business.service.impl;
+
+import com.etd.framework.starter.client.core.TenantAuthority;
+import com.google.common.collect.Lists;
+import org.etd.framework.business.converter.UserRoleConverter;
+import org.etd.framework.business.mapper.SystemUserRoleRelMapper;
+import org.etd.framework.business.service.SystemUserRoleRelService;
+import org.etd.framework.business.vo.UserRoleVo;
+import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
+
+@Service
+public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
+
+    @Autowired
+    private SystemUserRoleRelMapper userRoleRelMapper;
+
+    @Override
+    public List<UserRoleVo> selectByUserId(Long userId) {
+        return userRoleRelMapper.selectByUserId(userId);
+    }
+
+    /**
+     * 根据用户权限加载接口权限
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public List<TenantAuthority> loadPermissionsByUser(Long userId) {
+        List<UserRoleVo> roleVos = selectByUserId(userId);
+        if (CollectionUtils.isEmpty(roleVos)) {
+            return Lists.newArrayList();
+        }
+        return Mappers.getMapper(UserRoleConverter.class).toTenantAuthority(roleVos);
+    }
+}
