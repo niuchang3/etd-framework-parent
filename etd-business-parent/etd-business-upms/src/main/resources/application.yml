@@ -36,3 +36,12 @@ system:
     refresh-token:
       expired: 60
       timeUnit: minutes
+etd:
+  mybatis:
+    tenant:
+      enabled: true
+      column-name: TENANT_ID
+    fill:
+      enabled: true
+    permission:
+      enabled: true

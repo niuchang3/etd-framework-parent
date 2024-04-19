@@ -3,7 +3,7 @@ package org.etd.framework.business.service.impl;
 import com.etd.framework.starter.client.core.TenantAuthority;
 import com.etd.framework.starter.client.core.user.PermissionsService;
 import com.etd.framework.starter.client.core.user.UserDetails;
-import org.etd.framework.business.converter.UserConverter;
+import org.etd.framework.business.converter.SystemUserConverter;
 import org.etd.framework.business.entity.SystemUserEntity;
 import org.etd.framework.business.mapper.SystemUserMapper;
 import org.etd.framework.business.service.SystemUserService;
@@ -36,6 +36,7 @@ public class SystemUserServiceImpl implements SystemUserService {
     public boolean register(UserDetails userDetails) {
         return false;
     }
+
 
     @Override
     public UserDetails loadUserById(Long id) {
@@ -75,7 +76,7 @@ public class SystemUserServiceImpl implements SystemUserService {
      * @return
      */
     private UserDetails toUserDetails(SystemUserEntity systemUserEntity, List<TenantAuthority> authorities) {
-        UserDetails userDetails = Mappers.getMapper(UserConverter.class).toUserDetails(systemUserEntity);
+        UserDetails userDetails = Mappers.getMapper(SystemUserConverter.class).toUserDetails(systemUserEntity);
         userDetails.setAuthorities(authorities);
         return userDetails;
     }

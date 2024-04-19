@@ -72,11 +72,11 @@ public class RequestContext implements Serializable {
         getRequestContext().setRequestIP(requestIP);
     }
 
-    public static String getTenantCode() {
+    public static Long getTenantCode() {
         return getRequestContext().getTenantCode();
     }
 
-    public static void setTenantCode(String tenantCode) {
+    public static void setTenantCode(Long tenantCode) {
         getRequestContext().setTenantCode(tenantCode);
     }
 
@@ -89,12 +89,20 @@ public class RequestContext implements Serializable {
         getRequestContext().setToken(token);
     }
 
-    public static UserDetails getUser(){
+    public static UserDetails getUser() {
         return getRequestContext().getUserDetails();
     }
 
-    public static void setUser(UserDetails userDetails){
+    public static void setUser(UserDetails userDetails) {
         getRequestContext().setUserDetails(userDetails);
+    }
+
+    public static boolean getIgnoreTenant() {
+        return getRequestContext().getIgnoreTenant();
+    }
+
+    public static void setIgnoreTenant(Boolean ignore) {
+        getRequestContext().setIgnoreTenant(ignore);
     }
 
 

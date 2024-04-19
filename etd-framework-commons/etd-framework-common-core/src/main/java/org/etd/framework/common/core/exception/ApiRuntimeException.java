@@ -34,4 +34,10 @@ public class ApiRuntimeException extends RuntimeException {
         this.requestCode = requestCode;
     }
 
+
+    public ApiRuntimeException(String message) {
+        super(message);
+        this.requestCode = RequestCodeConstant.FAILED;
+    }
+
 }

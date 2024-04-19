@@ -68,7 +68,7 @@ public class CacheConfiguration {
         return Caffeine.newBuilder()
                 .initialCapacity(128)//初始大小
                 .maximumSize(2048)//最大数量
-                .expireAfterWrite(5, TimeUnit.SECONDS)//过期时间
+                .expireAfterWrite(2, TimeUnit.SECONDS)//过期时间
                 .build();
     }
 

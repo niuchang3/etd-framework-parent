@@ -2,11 +2,11 @@ package org.etd.framework.business.converter;
 
 import com.etd.framework.starter.client.core.user.UserDetails;
 import org.etd.framework.business.entity.SystemUserEntity;
-import org.etd.framework.business.vo.UserVO;
+import org.etd.framework.business.vo.SystemUserVO;
 import org.mapstruct.Mapper;
 
 @Mapper
-public interface UserConverter {
+public interface SystemUserConverter {
 
     /**
      *
@@ -20,5 +20,5 @@ public interface UserConverter {
      * @param userDetails
      * @return
      */
-    UserVO toUserVO(UserDetails userDetails);
+    SystemUserVO toUserVO(UserDetails userDetails);
 }

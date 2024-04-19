@@ -2,6 +2,14 @@ package org.etd.framework.common.core.constants;
 
 public interface BasicConstant {
 
+
+    enum  MessageHeader {
+        /**
+         * 租户ID
+         */
+        tenant_id;
+    }
+
     /**
      * 租户类型
      */

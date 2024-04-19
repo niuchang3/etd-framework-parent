@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.etd.framework.business.entity.SystemUserRoleRelEntity;
-import org.etd.framework.business.vo.UserRoleVo;
+import org.etd.framework.business.vo.SystemUserRoleVO;
 
 import java.util.List;
 
@@ -12,6 +12,5 @@ import java.util.List;
 public interface SystemUserRoleRelMapper extends BaseMapper<SystemUserRoleRelEntity> {
 
 
-
-    List<UserRoleVo> selectByUserId(@Param("userId")Long userId);
+    List<SystemUserRoleVO> selectByUserId(@Param("userId") Long userId);
 }

@@ -1,7 +1,8 @@
 package org.etd.framework.business.service;
 
 import com.etd.framework.starter.client.core.user.PermissionsService;
-import org.etd.framework.business.vo.UserRoleVo;
+import org.etd.framework.business.vo.SystemUserRoleVO;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 
 import java.util.List;
 
@@ -13,6 +14,8 @@ public interface SystemUserRoleRelService extends PermissionsService {
      * @param userId
      * @return
      */
-    List<UserRoleVo> selectByUserId(Long userId);
+    List<SystemUserRoleVO> selectByUser(Long userId);
+
+
 
 }

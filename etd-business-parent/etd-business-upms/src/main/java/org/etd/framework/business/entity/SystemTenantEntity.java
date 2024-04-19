@@ -13,6 +13,8 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 900389846923149037L;
 
+    @TableField("LOGO")
+    private String logo;
     /**
      * 父级租户ID
      */
@@ -23,6 +25,11 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
      */
     @TableField("TENANT_NAME")
     private String tenantName;
+    /**
+     * 描述
+     */
+    @TableField("DESCRIPTION")
+    private String description;
     /**
      * 统一社会信用代码
      */
@@ -38,13 +45,17 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
      * 企业超级管理员
      */
     @TableField("TENANT_ADMIN_USER")
-    private Boolean tenantAdminUser;
+    private Long tenantAdminUser;
 
     /**
      * 租户锁定
      */
     @TableField("LOCKED")
     private Boolean locked;
+
+
+    @TableField("MENUS")
+    private String menus;
 
 
 }

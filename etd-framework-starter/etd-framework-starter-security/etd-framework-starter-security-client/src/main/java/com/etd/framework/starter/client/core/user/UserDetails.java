@@ -1,15 +1,11 @@
 package com.etd.framework.starter.client.core.user;
 
 import com.etd.framework.starter.client.core.TenantAuthority;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class UserDetails implements Serializable {
@@ -68,10 +64,38 @@ public class UserDetails implements Serializable {
      */
     private Boolean enabled;
 
+    /**
+     * 平台管理员
+     */
+    private Boolean platformAdmin = false;
+    /**
+     * 租户管理员
+     */
+    private Boolean tenantAdmin = false;
+
 
     /**
      * 权限信息
      */
     private List<TenantAuthority> authorities;
+
+
+    /**
+     * 是否为平台管理员
+     *
+     * @return
+     */
+    public boolean isPlatformAdmin() {
+        return platformAdmin;
+    }
+
+    /**
+     * 是否租户管理员
+     *
+     * @return
+     */
+    public boolean isTenantAdmin() {
+        return tenantAdmin;
+    }
 
 }

@@ -21,11 +21,16 @@ public class RequestContextModel implements Serializable {
 
     private String requestIP;
 
-    private String tenantCode;
+    private Long tenantCode;
 
     private String token;
 
     private UserDetails userDetails;
+
+    /**
+     * 是否忽略租户化查询
+     */
+    private Boolean ignoreTenant = false;
 
     private Map<String, Object> attribute = Maps.newLinkedHashMap();
 

@@ -1,9 +1,9 @@
 /*==============================================================*/
 /* SYSTEM_TENANT: 系统租户表初始化                                 */
 /*==============================================================*/
-INSERT INTO SYSTEM_TENANT (ID, CREATE_TIME, DATA_STATUS, PARENT_ID, TENANT_NAME, CREDIT_CODE, TENANT_TYPE,
+INSERT INTO SYSTEM_TENANT (ID, CREATE_TIME, DATA_STATUS, PARENT_ID,LOGO, TENANT_NAME,DESCRIPTION, CREDIT_CODE, TENANT_TYPE,
                            TENANT_ADMIN_USER, PARENT_ID_PATH, LOCKED, ENABLED,MENUS)
-VALUES (1, '2024-04-11 16:38:46.000000', 1, null, '易开发演示平台', '1', 'System', 1, '1', 0, 1,null);
+VALUES (1, '2024-04-11 16:38:46.000000', 1, null,null, '易开发演示平台','Easy to Develop framework Functional Demo', '1', 'System', 1, '1', 0, 1,null);
 
 
 /*==============================================================*/

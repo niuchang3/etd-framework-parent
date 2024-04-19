@@ -3,10 +3,9 @@ package org.etd.framework.business.vo;
 import lombok.Data;
 
 import java.util.Date;
-import java.util.List;
 
 @Data
-public class UserVO {
+public class SystemUserVO {
 
     /**
      * 用户ID

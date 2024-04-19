@@ -34,7 +34,11 @@ public class TokenStorage {
      * @param oauthToken
      */
     public static void storage(String nameSpace, OauthToken oauthToken) {
+
+
         String tokenNamespace = getTokenNamespace(nameSpace, oauthToken.getUserId());
+        RedisCache.del(tokenNamespace);
+
         OauthTokenValue accessToken = oauthToken.getAccessToken();
         Date now = new Date();
         long accessExpires = DateUtil.between(now, accessToken.getExpires(), DateUnit.SECOND);

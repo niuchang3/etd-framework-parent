@@ -2,10 +2,10 @@ package org.etd.framework.business.service.impl;
 
 import com.etd.framework.starter.client.core.TenantAuthority;
 import com.google.common.collect.Lists;
-import org.etd.framework.business.converter.UserRoleConverter;
+import org.etd.framework.business.converter.SystemUserRoleConverter;
 import org.etd.framework.business.mapper.SystemUserRoleRelMapper;
 import org.etd.framework.business.service.SystemUserRoleRelService;
-import org.etd.framework.business.vo.UserRoleVo;
+import org.etd.framework.business.vo.SystemUserRoleVO;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
     private SystemUserRoleRelMapper userRoleRelMapper;
 
     @Override
-    public List<UserRoleVo> selectByUserId(Long userId) {
+    public List<SystemUserRoleVO> selectByUser(Long userId) {
         return userRoleRelMapper.selectByUserId(userId);
     }
 
@@ -32,10 +32,10 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
      */
     @Override
     public List<TenantAuthority> loadPermissionsByUser(Long userId) {
-        List<UserRoleVo> roleVos = selectByUserId(userId);
+        List<SystemUserRoleVO> roleVos = selectByUser(userId);
         if (CollectionUtils.isEmpty(roleVos)) {
             return Lists.newArrayList();
         }
-        return Mappers.getMapper(UserRoleConverter.class).toTenantAuthority(roleVos);
+        return Mappers.getMapper(SystemUserRoleConverter.class).toTenantAuthority(roleVos);
     }
 }

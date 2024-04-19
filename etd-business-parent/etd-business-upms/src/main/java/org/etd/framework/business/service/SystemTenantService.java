@@ -1,6 +1,7 @@
 package org.etd.framework.business.service;
 
 import org.etd.framework.business.entity.SystemTenantEntity;
+import org.etd.framework.business.vo.SystemTenantVO;
 
 import java.util.List;
 
@@ -12,5 +13,5 @@ public interface SystemTenantService {
      * @param userId
      * @return
      */
-    List<SystemTenantEntity> selectByUser(Long userId);
+    List<SystemTenantVO> selectByUser(Long userId);
 }
