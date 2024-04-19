@@ -8,6 +8,7 @@ import org.etd.framework.business.entity.SystemUserEntity;
 import org.etd.framework.business.mapper.SystemUserMapper;
 import org.etd.framework.business.service.SystemUserService;
 import org.etd.framework.starter.mybaits.core.EtdLambdaQueryWrapper;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class SystemUserServiceImpl implements SystemUserService {
     }
 
 
+    @IgnoreTenant
     @Override
     public UserDetails loadUserById(Long id) {
         SystemUserEntity systemUserEntity = selectByUserById(id);
@@ -47,7 +49,7 @@ public class SystemUserServiceImpl implements SystemUserService {
         return toUserDetails(systemUserEntity);
     }
 
-
+    @IgnoreTenant
     @Override
     public UserDetails loadUserByAccount(String account) {
         SystemUserEntity systemUserEntity = selectByAccount(account);

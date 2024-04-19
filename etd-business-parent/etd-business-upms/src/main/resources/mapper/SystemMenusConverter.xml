@@ -24,7 +24,8 @@
             t1.ROLE_ID,
             t2.ROLE_CODE,
             t2.ROLE_NAME,
-            t2.PERMISSION_TYPE
+            t2.PERMISSION_TYPE,
+            t2.MENUS
         from SYSTEM_USER_ROLE_REL as t1
         INNER JOIN SYSTEM_ROLE as t2 on t1.ROLE_ID = t2.ID
         WHERE t1.USER_ID = #{userId}

@@ -89,3 +89,23 @@ create table system_user_role_rel
 
 
 
+/*==============================================================*/
+/* Table: system_menus                                          */
+/*==============================================================*/
+create table system_menus
+(
+    ID                   bigint(32) not null comment '主键ID',
+    PARENT_ID            bigint(32) comment '父级菜单',
+    CREATE_TIME          datetime comment '创建时间',
+    DATA_STATUS          tinyint(1) comment '数据状态',
+    MENU_NAME            varchar(10) comment '菜单名称',
+    MENU_PATH          varchar(100) comment '菜单PATH',
+    MENU_ROUTER          varchar(100) comment '菜单路由',
+    MENU_ICON            varchar(200) comment '菜单图表',
+    MENU_TYPE            varchar(20) comment '菜单类型',
+    SORT                 int(11) comment '排序',
+    primary key (ID)
+);
+
+-- alter table system_menus comment '系统菜单';
+

@@ -37,10 +37,6 @@ public class CustomDefaultInterceptor extends CustomInterceptor {
     @Override
     protected void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         SecurityContext context = SecurityContextHolder.getContext();
-        RequestContext.setRequestIP(RequestUtil.getRemoteIp(request));
-        String tenantCode =  request.getHeader(BasicConstant.MessageHeader.tenant_id.name());
-        RequestContext.setTenantCode(Long.valueOf(tenantCode));
-        RequestContext.setTraceId(snowflake.nextIdStr());
 
         if (ObjectUtils.isEmpty(context.getAuthentication())) {
             return;
@@ -51,8 +47,6 @@ public class CustomDefaultInterceptor extends CustomInterceptor {
         if (context.getAuthentication().getDetails() instanceof UserDetails) {
             UserDetails details = (UserDetails) context.getAuthentication().getDetails();
             RequestContext.setUser(details);
-            RequestContext.setToken((String) context.getAuthentication().getCredentials());
-
 
             List<TenantAuthority> authorities = details.getAuthorities();
             for (TenantAuthority authority : authorities) {
@@ -61,9 +55,13 @@ public class CustomDefaultInterceptor extends CustomInterceptor {
                     return;
                 }
             }
-            Map<Long, List<TenantAuthority>> tenantAuthorityMap = authorities.stream().collect(Collectors.groupingBy(TenantAuthority::getTenantId));
-            List<TenantAuthority> tenantAuthority = tenantAuthorityMap.get(RequestContext.getTenantCode());
 
+            Map<Long, List<TenantAuthority>> tenantAuthorityMap = authorities.stream().collect(Collectors.groupingBy(TenantAuthority::getTenantId));
+            if(ObjectUtils.isEmpty(RequestContext.getTenantCode())){
+                RequestContext.setTenantCode(authorities.get(0).getTenantId());
+            }
+
+            List<TenantAuthority> tenantAuthority = tenantAuthorityMap.get(RequestContext.getTenantCode());
             for (TenantAuthority authority : tenantAuthority) {
                 if(BasicConstant.SystemRole.TenantAdmin.name().equals(authority.getRoleCode())){
                     details.setTenantAdmin(true);

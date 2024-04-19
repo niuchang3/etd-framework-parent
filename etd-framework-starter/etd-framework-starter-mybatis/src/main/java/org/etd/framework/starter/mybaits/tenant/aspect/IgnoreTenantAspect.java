@@ -1,5 +1,6 @@
 package org.etd.framework.starter.mybaits.tenant.aspect;
 
+import com.etd.framework.starter.client.core.user.UserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -11,13 +12,16 @@ import org.etd.framework.common.core.context.model.RequestContext;
 @Aspect
 public class IgnoreTenantAspect {
 
-
-    @Pointcut("@annotation(org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant)")
-    public void ignore() {
+    public IgnoreTenantAspect() {
+        System.out.println("2");
     }
 
-    @Around("ignore()")
-    public Object generateDataSnapshot(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Pointcut("@annotation(org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant)")
+    public void ignoreTenant() {
+    }
+
+    @Around("ignoreTenant()")
+    public Object ignoreTenant(ProceedingJoinPoint joinPoint) throws Throwable {
         try {
             RequestContext.setIgnoreTenant(true);
             return joinPoint.proceed();

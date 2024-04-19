@@ -20,6 +20,9 @@ public class SystemMenusEntity extends BaseEntity implements Serializable {
     @TableField("MENU_NAME")
     private String menuName;
 
+    @TableField("MENU_PATH")
+    private String menuPath;
+
     @TableField("MENU_ROUTER")
     private String menuRouter;
 

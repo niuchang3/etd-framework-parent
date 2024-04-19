@@ -47,7 +47,10 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
 
         String traceId = getHeaderValue(e, RequestContextConstant.TRACE_ID.getCode());
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
-        RequestContext.setTenantCode(getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode()));
+        String tenantCode = getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode());
+        if(!ObjectUtils.isEmpty(tenantCode)){
+            RequestContext.setTenantCode(Long.valueOf(tenantCode));
+        }
         RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
         RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setAttribute(getAttribute(e));

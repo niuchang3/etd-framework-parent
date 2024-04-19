@@ -42,3 +42,16 @@ spring:
       mode: always
 #      schema-locations: classpath:/sql/schema.sql
 
+etd:
+  mybatis:
+    tenant:
+      enabled: true
+      column-name: TENANT_ID
+      ignore-tables:
+        - system_tenant
+        - system_user
+        - system_menus
+    fill:
+      enabled: true
+    permission:
+      enabled: true

@@ -4,9 +4,11 @@ package org.etd.framework.business.controller;
 import com.etd.framework.starter.client.core.user.UserDetails;
 import com.google.common.collect.Lists;
 import org.etd.framework.business.converter.SystemUserConverter;
+import org.etd.framework.business.service.SystemMenusService;
 import org.etd.framework.business.service.SystemTenantService;
 import org.etd.framework.business.service.SystemUserRoleRelService;
 import org.etd.framework.business.vo.SystemTenantVO;
+import org.etd.framework.business.vo.SystemUserMenusVO;
 import org.etd.framework.business.vo.SystemUserRoleVO;
 import org.etd.framework.business.vo.SystemUserVO;
 import org.etd.framework.common.core.context.model.RequestContext;
@@ -32,11 +34,15 @@ public class SystemUserController {
     @Autowired
     private SystemUserRoleRelService userRoleRelService;
 
+    @Autowired
+    private SystemMenusService systemMenusService;
+
     /**
      * 获取当前登录人个人信息
      *
      * @return
      */
+    @IgnoreTenant
     @GetMapping(value = "/me")
     public ResultModel<SystemUserVO> me() {
         UserDetails user = RequestContext.getUser();
@@ -52,14 +58,7 @@ public class SystemUserController {
     @IgnoreTenant
     @GetMapping("/tenant")
     public ResultModel<List<SystemTenantVO>> currentUserTenant() {
-        UserDetails user = RequestContext.getUser();
-        List<SystemTenantVO> tenantVOS = tenantService.selectByUser(user.getId());
-        SystemTenantVO vo = new SystemTenantVO();
-        BeanUtils.copyProperties(tenantVOS.get(0),vo);
-        vo.setId(2L);
-        vo.setTenantName("测试租户切换");
-        tenantVOS.add(vo);
-
+        List<SystemTenantVO> tenantVOS = tenantService.selectByUser(RequestContext.getUser());
         return ResultModel.success(tenantVOS);
     }
 
@@ -82,10 +81,9 @@ public class SystemUserController {
      * @return
      */
     @GetMapping("/menus")
-    public ResultModel<List<SystemUserMenuVO>> currentUserMenus() {
-        UserDetails user = RequestContext.getUser();
-//        List<SystemUserRoleVO> systemUserRoleVOS = userRoleRelService.selectByUser(user.getId());
-        return ResultModel.success(Lists.newArrayList());
+    public ResultModel<List<SystemUserMenusVO>> currentUserMenus() {
+        List<SystemUserMenusVO> systemUserMenusVOS = systemMenusService.currentUserMenu();
+        return ResultModel.success(systemUserMenusVOS);
     }
 
 

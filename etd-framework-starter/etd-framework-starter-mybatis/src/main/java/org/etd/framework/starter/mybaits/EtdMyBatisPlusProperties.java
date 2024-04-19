@@ -1,8 +1,11 @@
 package org.etd.framework.starter.mybaits;
 
+import com.google.common.collect.Lists;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+
+import java.util.List;
 
 @ConfigurationProperties(prefix = "etd.mybatis")
 @Data
@@ -11,24 +14,24 @@ public class EtdMyBatisPlusProperties {
      * 租户相关配置
      */
     @NestedConfigurationProperty
-    private Tenant tenant;
+    private Tenant tenant = new Tenant();
     /**
      * 数据快照开关
      */
     @NestedConfigurationProperty
-    private Snapshot snapshot;
+    private Snapshot snapshot = new Snapshot();
 
     /**
      * 数据填充开关
      */
     @NestedConfigurationProperty
-    private Fill fill;
+    private Fill fill = new Fill();
 
     /**
      * 数据权限
      */
     @NestedConfigurationProperty
-    private Permission permission;
+    private Permission permission = new Permission();
 
     /**
      * 数据快照配置
@@ -73,6 +76,8 @@ public class EtdMyBatisPlusProperties {
         private Boolean enabled = false;
 
         private String columnName = "TENANT_ID";
+
+        private List<String> ignoreTables = Lists.newArrayList();
     }
 
 }

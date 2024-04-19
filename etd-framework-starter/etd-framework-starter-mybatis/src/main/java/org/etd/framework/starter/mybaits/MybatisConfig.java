@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import org.etd.framework.starter.mybaits.tenant.EtdTenantLineHandler;
+import org.etd.framework.starter.mybaits.tenant.aspect.IgnoreTenantAspect;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -22,6 +25,11 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(value = EtdMyBatisPlusProperties.class)
 public class MybatisConfig {
 
+    private final EtdMyBatisPlusProperties properties;
+
+    public MybatisConfig(EtdMyBatisPlusProperties properties) {
+        this.properties = properties;
+    }
 
     /**
      * MybatisPlus 拦截器配置
@@ -31,22 +39,25 @@ public class MybatisConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        TenantLineInnerInterceptor tenantLineInnerInterceptor = new TenantLineInnerInterceptor();
-        tenantLineInnerInterceptor.setTenantLineHandler(new EtdTenantLineHandler(""));
-//        tenantLineInnerInterceptor.setProperties();
-
+        if(properties.getTenant().getEnabled()){
+            TenantLineInnerInterceptor tenantLineInnerInterceptor = new TenantLineInnerInterceptor();
+            EtdTenantLineHandler etdTenantLineHandler = new EtdTenantLineHandler(properties.getTenant().getColumnName());
+            etdTenantLineHandler.addIgnoreTables(properties.getTenant().getIgnoreTables());
+            tenantLineInnerInterceptor.setTenantLineHandler(etdTenantLineHandler);
+            interceptor.addInnerInterceptor(tenantLineInnerInterceptor);
+        }
 
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
 
-//        tenantLineInnerInterceptor.setTenantLineHandler();
-        interceptor.addInnerInterceptor(tenantLineInnerInterceptor);
         return interceptor;
     }
-//
-//    @Bean
-//    public ConfigurationCustomizer configurationCustomizer() {
-//        return configuration -> configuration.setUsr
-//    }
+
+
+    @ConditionalOnProperty(prefix = "etd.mybatis.tenant", value = "enabled",matchIfMissing = true)
+    @Bean
+    public IgnoreTenantAspect ignoreTenantAspect(){
+        return new IgnoreTenantAspect();
+    }
 
 }

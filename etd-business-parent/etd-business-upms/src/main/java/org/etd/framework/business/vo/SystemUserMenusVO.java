@@ -10,6 +10,11 @@ public class SystemUserMenusVO {
     /**
      * 租户ID
      */
+    private Long tenantId;
+
+    /**
+     * 租户ID
+     */
     private Long id;
     /**
      * 创建时间
@@ -25,6 +30,10 @@ public class SystemUserMenusVO {
      */
     private String menuName;
 
+    /**
+     * 菜单PATH
+     */
+    private String menuPath;
     /**
      * 菜单路由
      */

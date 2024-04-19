@@ -23,6 +23,9 @@ import java.lang.reflect.Method;
 @Aspect
 public class DataSnapshotAspect {
 
+    public DataSnapshotAspect() {
+        System.out.println("2");
+    }
 
     @Pointcut("execution(* com.baomidou.mybatisplus.core.mapper.BaseMapper.insert(..)) || execution(* com.baomidou.mybatisplus.core.mapper.BaseMapper.updateById(..))")
     public void generateDataSnapshot() {
