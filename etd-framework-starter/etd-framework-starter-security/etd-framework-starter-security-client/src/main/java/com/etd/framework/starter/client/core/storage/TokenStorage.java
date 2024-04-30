@@ -27,6 +27,14 @@ public class TokenStorage {
         return RedisCache.genKey(Oauth2ParameterConstant.OAUTH2_TOKEN_CACHE, namespace, tokenNamespace, userId);
     }
 
+    public static String getAccessTokenNamespace(String tokenNamespace, String userId){
+        return RedisCache.genKey(Oauth2ParameterConstant.OAUTH2_TOKEN_CACHE, namespace, tokenNamespace, userId,Oauth2ParameterConstant.TokenType.access_token.name());
+    }
+
+    public static String getRefreshTokenNamespace(String tokenNamespace, String userId){
+        return RedisCache.genKey(Oauth2ParameterConstant.OAUTH2_TOKEN_CACHE, namespace, tokenNamespace, userId,Oauth2ParameterConstant.TokenType.refresh_token.name());
+    }
+
 
     /**
      * 存储
@@ -35,21 +43,27 @@ public class TokenStorage {
      */
     public static void storage(String nameSpace, OauthToken oauthToken) {
 
+        String accessTokenNamespace = getAccessTokenNamespace(nameSpace, oauthToken.getUserId());
+        String refreshTokenNamespace = getRefreshTokenNamespace(nameSpace, oauthToken.getUserId());
 
-        String tokenNamespace = getTokenNamespace(nameSpace, oauthToken.getUserId());
-        RedisCache.del(tokenNamespace);
+        delete(nameSpace,oauthToken.getUserId());
+
 
         OauthTokenValue accessToken = oauthToken.getAccessToken();
         Date now = new Date();
         long accessExpires = DateUtil.between(now, accessToken.getExpires(), DateUnit.SECOND);
-        RedisCache.hset(tokenNamespace, Oauth2ParameterConstant.TokenType.access_token.name(), accessToken, accessExpires);
+
+
+        RedisCache.set(accessTokenNamespace, accessToken, accessExpires);
+
 
         OauthTokenValue refreshToken = oauthToken.getRefreshToken();
         if (ObjectUtils.isEmpty(refreshToken)) {
             return;
         }
-        long refreshExpires = DateUtil.between(now, accessToken.getExpires(), DateUnit.SECOND);
-        RedisCache.hset(tokenNamespace, Oauth2ParameterConstant.TokenType.refresh_token.name(), refreshToken, refreshExpires);
+        long refreshExpires = DateUtil.between(now, refreshToken.getExpires(), DateUnit.SECOND);
+
+        RedisCache.set(refreshTokenNamespace, refreshToken, refreshExpires);
     }
 
 
@@ -66,8 +80,8 @@ public class TokenStorage {
      * @return
      */
     public static boolean isExistAccessToken(String nameSpace, String userId) {
-        String tokenNamespace = getTokenNamespace(nameSpace, userId);
-        return RedisCache.hHasKey(tokenNamespace, Oauth2ParameterConstant.TokenType.access_token.name());
+        String accessTokenNamespace = getAccessTokenNamespace(nameSpace, userId);
+        return RedisCache.hasKey(accessTokenNamespace);
     }
     /**
      * 判断AccessToken有效性
@@ -78,8 +92,8 @@ public class TokenStorage {
      * @return
      */
     public static boolean accessMatches(String nameSpace, String userId, String jwtToken) {
-        String tokenNamespace = getTokenNamespace(nameSpace, userId);
-        OauthTokenValue token = (OauthTokenValue) RedisCache.hget(tokenNamespace, Oauth2ParameterConstant.TokenType.access_token.name());
+        String tokenNamespace = getAccessTokenNamespace(nameSpace, userId);
+        OauthTokenValue token = (OauthTokenValue) RedisCache.get(tokenNamespace);
         if (ObjectUtils.isEmpty(token)) {
             return false;
         }
@@ -94,8 +108,8 @@ public class TokenStorage {
      * @return
      */
     public static boolean isExistRefreshToken(String nameSpace, String userId) {
-        String tokenNamespace = getTokenNamespace(nameSpace, userId);
-        return RedisCache.hHasKey(tokenNamespace, Oauth2ParameterConstant.TokenType.refresh_token.name());
+        String tokenNamespace = getRefreshTokenNamespace(nameSpace, userId);
+        return RedisCache.hasKey(tokenNamespace);
     }
 
     /**
@@ -107,8 +121,8 @@ public class TokenStorage {
      * @return
      */
     public static boolean refreshMatches(String nameSpace, String userId, String jwtToken) {
-        String tokenNamespace = getTokenNamespace(nameSpace, userId);
-        OauthTokenValue token = (OauthTokenValue) RedisCache.hget(tokenNamespace, Oauth2ParameterConstant.TokenType.refresh_token.name());
+        String tokenNamespace = getRefreshTokenNamespace(nameSpace, userId);
+        OauthTokenValue token = (OauthTokenValue) RedisCache.get(tokenNamespace);
         if (ObjectUtils.isEmpty(token)) {
             return false;
         }
@@ -122,8 +136,10 @@ public class TokenStorage {
      * @param userId
      */
     public static void delete(String tokenNamespace, String userId) {
-        String namespace = getTokenNamespace(tokenNamespace, String.valueOf(userId));
-        RedisCache.del(namespace);
+        String accessTokenNamespace = getAccessTokenNamespace(tokenNamespace, userId);
+        String refreshTokenNamespace = getRefreshTokenNamespace(tokenNamespace, userId);
+        RedisCache.del(accessTokenNamespace);
+        RedisCache.del(refreshTokenNamespace);
     }
 
 

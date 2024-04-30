@@ -46,6 +46,10 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
     protected void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
 
         isPlatformAdmin();
+        UserDetails user = RequestContext.getUser();
+        if(user.isPlatformAdmin()){
+            return;
+        }
 
         for (RequestMatcher matcher : whiteList) {
             if(matcher.matches(request)){
@@ -58,7 +62,7 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
         }
 
 
-        UserDetails user = RequestContext.getUser();
+
         List<TenantAuthority> authorities = user.getAuthorities();
         if(ObjectUtils.isEmpty(authorities)){
             throw new ApiRuntimeException("该用户无权限访问,请联系管理员。");
