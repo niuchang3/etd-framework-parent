@@ -1,7 +1,10 @@
 package org.etd.framework.common.core.context;
 
+import com.etd.framework.starter.client.core.user.UserDetails;
 import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ObjectUtils;
 
 import java.util.Map;
@@ -47,13 +50,27 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
 
         String traceId = getHeaderValue(e, RequestContextConstant.TRACE_ID.getCode());
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
+
         String tenantCode = getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode());
         if(!ObjectUtils.isEmpty(tenantCode)){
             RequestContext.setTenantCode(Long.valueOf(tenantCode));
         }
+
         RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
         RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setAttribute(getAttribute(e));
+
+        SecurityContext context = SecurityContextHolder.getContext();
+        if (ObjectUtils.isEmpty(context.getAuthentication())) {
+            return;
+        }
+        if (ObjectUtils.isEmpty(context.getAuthentication().getDetails())) {
+            return;
+        }
+        if (context.getAuthentication().getDetails() instanceof UserDetails) {
+            UserDetails details = (UserDetails) context.getAuthentication().getDetails();
+            RequestContext.setUser(details);
+        }
     }
 
     @Override

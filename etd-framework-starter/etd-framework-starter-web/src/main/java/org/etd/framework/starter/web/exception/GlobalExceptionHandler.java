@@ -6,6 +6,7 @@ import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -35,7 +36,7 @@ public class GlobalExceptionHandler {
      * @return
      */
     @ResponseBody
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(value = ApiRuntimeException.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, ApiRuntimeException e) {
         log.error(e.getMessage(), e);
@@ -44,11 +45,19 @@ public class GlobalExceptionHandler {
 
 
     @ResponseBody
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(value = HttpClientErrorException.Unauthorized.class)
     public ResultModel handle(HttpServletRequest request, HttpServletResponse response, HttpClientErrorException.Unauthorized e) {
         log.error(e.getMessage(), e);
         return ResultModel.failed(RequestCodeConstant.NO_PERMISSION, e, e.getMessage(), request.getRequestURI());
+    }
+
+    @ResponseBody
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(value = MissingServletRequestParameterException.class)
+    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, MissingServletRequestParameterException e) {
+        log.error(e.getMessage(), e);
+        return ResultModel.failed(RequestCodeConstant.VALIDATE_ERROR, e, "缺少请求参数", request.getRequestURI());
     }
 
 

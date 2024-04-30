@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 系统用户Service
@@ -92,6 +93,13 @@ public class SystemUserServiceImpl implements SystemUserService {
     @Override
     public SystemUserEntity selectByUserById(Long id) {
         return systemUserMapper.selectById(id);
+    }
+
+    @Override
+    public List<SystemUserEntity> selectByUserById(Set<Long> ids) {
+        EtdLambdaQueryWrapper<SystemUserEntity> wrapper = new EtdLambdaQueryWrapper<>();
+        wrapper.in(SystemUserEntity::getId,ids);
+        return systemUserMapper.selectList(wrapper);
     }
 
     /**

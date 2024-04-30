@@ -1,8 +1,8 @@
 package org.etd.framework.business.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.user.UserDetails;
 import org.etd.framework.business.vo.SystemTenantVO;
-import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 
 import java.util.List;
 
@@ -23,4 +23,15 @@ public interface SystemTenantService {
      * @return
      */
     SystemTenantVO selectCurrentTenant();
+
+
+    /**
+     * 分页查询租户信息
+     *
+     * @param page
+     * @param times
+     * @param keyword
+     * @return
+     */
+    IPage<SystemTenantVO> page(IPage page,List<String> times,String keyword);
 }

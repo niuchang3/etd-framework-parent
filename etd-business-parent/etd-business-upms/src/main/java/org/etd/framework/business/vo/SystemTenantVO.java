@@ -53,6 +53,10 @@ public class SystemTenantVO {
     private Long tenantAdminUser;
 
     /**
+     * 企业超级管理员
+     */
+    private String adminUser;
+    /**
      * 租户锁定
      */
     private Boolean locked;

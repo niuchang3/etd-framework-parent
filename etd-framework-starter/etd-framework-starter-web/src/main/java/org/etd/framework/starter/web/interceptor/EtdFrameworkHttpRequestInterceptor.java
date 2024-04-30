@@ -14,7 +14,7 @@ import java.util.List;
  * @date 2020/11/12
  */
 
-public abstract class CustomInterceptor extends HttpServletRequestContextInitializer implements HandlerInterceptor {
+public abstract class EtdFrameworkHttpRequestInterceptor extends HttpServletRequestContextInitializer implements HandlerInterceptor {
 
 
     /**
