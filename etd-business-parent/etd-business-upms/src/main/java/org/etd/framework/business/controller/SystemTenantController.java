@@ -19,10 +19,6 @@ public class SystemTenantController {
     private SystemTenantService tenantService;
 
 
-    @PostMapping
-    public ResultModel<Boolean> insert(){
-        return ResultModel.success(true);
-    }
 
     @GetMapping
     public ResultModel page(@RequestParam Long current,
@@ -31,5 +27,10 @@ public class SystemTenantController {
                             @RequestParam(required = false) String keyword){
         IPage<SystemTenantVO> page = tenantService.page(new Page(current, size),times , keyword);
         return ResultModel.success(page);
+    }
+
+    @PatchMapping("/{id}/{status}")
+    public ResultModel<Boolean> switchLocked(@PathVariable Long id,@PathVariable Boolean status){
+        return ResultModel.success(tenantService.switchLocked(id,status));
     }
 }

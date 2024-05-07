@@ -34,4 +34,15 @@ public interface SystemTenantService {
      * @return
      */
     IPage<SystemTenantVO> page(IPage page,List<String> times,String keyword);
+
+    /**
+     * 修改租户锁定状态
+     * @param id
+     * @param status
+     * @return
+     */
+    boolean switchLocked(Long id,Boolean status);
+
+
+    boolean insert();
 }

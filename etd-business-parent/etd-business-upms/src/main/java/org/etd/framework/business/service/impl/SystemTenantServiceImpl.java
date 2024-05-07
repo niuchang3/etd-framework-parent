@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.TenantAuthority;
 import com.etd.framework.starter.client.core.user.UserDetails;
+import org.apache.commons.lang3.StringUtils;
 import org.etd.framework.business.converter.SystemTenantConvert;
 import org.etd.framework.business.entity.SystemTenantEntity;
 import org.etd.framework.business.entity.SystemUserEntity;
@@ -92,18 +93,34 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         if(!ObjectUtils.isEmpty(times)){
             wrapper.between(SystemTenantEntity::getCreateTime,times.get(0),times.get(1));
         }
-        wrapper.and((queryWrapper) -> {
-            queryWrapper.like(SystemTenantEntity::getTenantName, keyword)
-                    .or()
-                    .like(SystemTenantEntity::getDescription, keyword);
-        });
-
+        if(!StringUtils.isEmpty(keyword)){
+            wrapper.and((queryWrapper) -> {
+                queryWrapper.like(SystemTenantEntity::getTenantName, keyword)
+                        .or()
+                        .like(SystemTenantEntity::getDescription, keyword)
+                        .or().
+                        like(SystemTenantEntity::getCreditCode,keyword);
+            });
+        }
 
         IPage iPage = systemTenantMapper.selectPage(page, wrapper);
         List<SystemTenantVO> vos = Mappers.getMapper(SystemTenantConvert.class).toVo(iPage.getRecords());
         populateUser(vos);
         iPage.setRecords(vos);
         return iPage;
+    }
+
+    @Override
+    public boolean switchLocked(Long id, Boolean status) {
+        SystemTenantEntity entity = new SystemTenantEntity();
+        entity.setId(id);
+        entity.setLocked(status);
+        return systemTenantMapper.updateById(entity) > 0;
+    }
+
+    @Override
+    public boolean insert() {
+        return false;
     }
 
     /**
