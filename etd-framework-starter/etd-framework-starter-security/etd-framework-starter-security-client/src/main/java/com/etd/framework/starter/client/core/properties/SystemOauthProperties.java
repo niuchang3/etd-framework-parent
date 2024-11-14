@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Data
 @ConfigurationProperties(prefix = "system.oauth")
@@ -29,7 +30,10 @@ public class SystemOauthProperties {
      */
     @NestedConfigurationProperty
     private Token refreshToken = new Token(ChronoUnit.MINUTES, 60L, true);
-    ;
+
+    @NestedConfigurationProperty
+    private Permissions permissions = new Permissions();
+
 
     /**
      * Token 相关配置
@@ -45,6 +49,17 @@ public class SystemOauthProperties {
         private Long expired;
 
         private Boolean enabled;
+    }
+
+    /**
+     * 权限
+     */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public class Permissions {
+
+        private List<String> ignore;
     }
 
 }

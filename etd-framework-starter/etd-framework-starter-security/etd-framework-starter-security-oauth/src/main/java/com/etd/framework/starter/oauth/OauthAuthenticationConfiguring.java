@@ -1,12 +1,15 @@
 package com.etd.framework.starter.oauth;
 
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.crypto.PemUtil;
 import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
 import com.etd.framework.starter.client.core.configurer.BearerAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
 import com.etd.framework.starter.client.core.oauth.OauthClientService;
 import com.etd.framework.starter.client.core.oauth.memory.OauthClientServiceImpl;
+import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.client.core.user.PermissionsService;
 import com.etd.framework.starter.client.core.user.memory.MemoryPermissionsServiceImpl;
@@ -16,6 +19,8 @@ import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointIm
 import com.etd.framework.starter.oauth.authentication.oauth.configurer.Oauth2AuthorizationCodeConfigurer;
 import com.etd.framework.starter.oauth.authentication.password.configurer.UserPasswordAuthenticationConfigurer;
 import com.etd.framework.starter.oauth.authentication.refresh.configurer.RefreshTokenAuthenticationConfigurer;
+import com.google.common.collect.Lists;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -32,11 +37,15 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.PrivateKey;
+import java.util.List;
 
 @Configuration
 @ComponentScan({"com.etd.framework.starter.oauth.*"})
 @EnableConfigurationProperties
 public class OauthAuthenticationConfiguring {
+
+    @Autowired
+    private SystemOauthProperties systemOauthProperties;
 
 
     @Bean
@@ -48,7 +57,8 @@ public class OauthAuthenticationConfiguring {
         configurer.addConfigurer(new BearerAuthenticationConfigurer());
         configurer.addConfigurer(new Oauth2AuthorizationCodeConfigurer());
 
-
+        List<String> ignorePermissions = systemOauthProperties.getPermissions().getIgnore();
+        String[] urls = ArrayUtil.toArray(CollectionUtil.isEmpty(ignorePermissions) ? Lists.newArrayList():ignorePermissions, String.class);
         http.apply(configurer)
                 .and()
                 .headers().frameOptions().sameOrigin()
@@ -59,9 +69,7 @@ public class OauthAuthenticationConfiguring {
                 .requestMatchers().antMatchers("/**")
                 .and()
                 .authorizeRequests()
-                .antMatchers("/public/**",
-                        "/druid/**",
-                        "/h2-console/**").permitAll()
+                .antMatchers(urls).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling()

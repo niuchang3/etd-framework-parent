@@ -36,6 +36,12 @@ system:
     refresh-token:
       expired: 60
       timeUnit: minutes
+
+    permissions:
+      ignore:
+        - /public/**
+        - /druid/**"
+        - /h2-console/**
 etd:
   mybatis:
     tenant:

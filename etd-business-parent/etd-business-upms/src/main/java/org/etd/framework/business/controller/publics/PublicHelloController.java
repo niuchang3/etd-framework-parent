@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/public/hello")
 public class PublicHelloController {
 
+
     @AutoLog("Hello Controller")
     @GetMapping
     public ResultModel helloController() {
