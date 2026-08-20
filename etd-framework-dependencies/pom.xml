@@ -32,7 +32,6 @@
         <!--德鲁伊-->
         <druid.version>1.2.27</druid.version>
         <!--缓存框架-->
-        <fasterxml.version>2.19.2</fasterxml.version>
         <fastjson.version>2.0.58</fastjson.version>
         <caffeine.version>3.2.2</caffeine.version>
         <commons.pool2.version>2.12.1</commons.pool2.version>
@@ -174,28 +173,6 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>druid</artifactId>
                 <version>${druid.version}</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${fasterxml.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-yaml</artifactId>
-                <version>${fasterxml.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${fasterxml.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${fasterxml.version}</version>
             </dependency>
 
 
