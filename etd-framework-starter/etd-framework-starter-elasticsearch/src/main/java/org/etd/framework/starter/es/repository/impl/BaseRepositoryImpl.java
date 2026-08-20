@@ -1,10 +1,6 @@
 package org.etd.framework.starter.es.repository.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import org.elasticsearch.index.query.AbstractQueryBuilder;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.etd.framework.starter.es.repository.BaseRepository;
 import org.etd.framework.starter.es.utils.PageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +8,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.Criteria;
+import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -21,8 +18,6 @@ import org.springframework.util.ObjectUtils;
 import java.lang.reflect.ParameterizedType;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 /**
  * @author Young
@@ -93,7 +88,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 			return Collections.emptyList();
 		}
 		PageRequest pageRequest = PageInfo.toPageRequest(0, Math.max(1, itemCount), getSort(orders));
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(matchAllQuery()).withPageable(pageRequest).build();
+		CriteriaQuery query = CriteriaQuery.builder(new Criteria()).withPageable(pageRequest).build();
 		SearchPage<T> page = select(query);
 		return toList(page);
 	}
@@ -108,7 +103,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	@Override
 	public PageInfo<T> findAll(PageInfo pageInfo, Sort.Order... orders) {
 		PageRequest pageRequest = pageInfo.toPageRequest(getSort(orders));
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(matchAllQuery()).withPageable(pageRequest).build();
+		CriteriaQuery query = CriteriaQuery.builder(new Criteria()).withPageable(pageRequest).build();
 		SearchPage<T> page = select(query);
 		pageInfo.setTotal(Long.valueOf(page.getTotalElements()).intValue());
 		pageInfo.setRecords(toList(page));
@@ -123,7 +118,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 */
 	@Override
 	public T findById(ID id) {
-		return operations.get(operations.stringIdRepresentation(id), getEntityClass(), getIndexCoordinates());
+		return operations.get(String.valueOf(id), getEntityClass(), getIndexCoordinates());
 	}
 
 	/**
@@ -135,8 +130,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	@Override
 	public List<T> findByEntity(T entity) {
 		Map<String, Object> maps = toMap(entity);
-		BoolQueryBuilder builders = boolQueryBuilder(toTermQuery(maps));
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(builders).build();
+		CriteriaQuery query = CriteriaQuery.builder(toTermCriteria(maps)).build();
 		SearchPage<T> page = select(query);
 		return toList(page);
 	}
@@ -151,8 +145,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	@Override
 	public List<T> findByEntity(T entity, Sort.Order... orders) {
 		Map<String, Object> maps = toMap(entity);
-		BoolQueryBuilder queryBuilder = boolQueryBuilder(toTermQuery(maps));
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(queryBuilder).build();
+		CriteriaQuery query = CriteriaQuery.builder(toTermCriteria(maps)).withSort(getSort(orders)).build();
 		SearchPage<T> page = select(query);
 		return toList(page);
 	}
@@ -169,8 +162,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	public PageInfo<T> findByEntity(PageInfo pageInfo, T entity, Sort.Order... orders) {
 		PageRequest pageRequest = pageInfo.toPageRequest(getSort(orders));
 		Map<String, Object> maps = toMap(entity);
-		BoolQueryBuilder queryBuilder = boolQueryBuilder(toTermQuery(maps));
-		NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(queryBuilder).withPageable(pageRequest).build();
+		CriteriaQuery searchQuery = CriteriaQuery.builder(toTermCriteria(maps)).withPageable(pageRequest).build();
 		SearchPage<T> page = select(searchQuery);
 		pageInfo.setTotal((int) page.getTotalElements());
 		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).collect(Collectors.toList()));
@@ -186,8 +178,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	@Override
 	public List<T> likeByEntity(T entity, String... likeFieldNames) {
 		Map<String, Object> map = toMap(entity);
-		BoolQueryBuilder queryBuilder = boolQueryBuilder(toMatchQuery(map, likeFieldNames));
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(queryBuilder).build();
+		CriteriaQuery query = CriteriaQuery.builder(toMatchCriteria(map, likeFieldNames)).build();
 		SearchPage<T> page = select(query);
 		return toList(page);
 	}
@@ -201,9 +192,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	public PageInfo<T> likeByEntity(PageInfo pageInfo, T entity, Sort sort, String... likeFieldNames) {
 		PageRequest pageRequest = pageInfo.toPageRequest(sort);
 		Map<String, Object> maps = toMap(entity);
-		BoolQueryBuilder queryBuilder = boolQueryBuilder(toMatchQuery(maps, likeFieldNames));
-
-		NativeSearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(queryBuilder).withPageable(pageRequest).build();
+		CriteriaQuery searchQuery = CriteriaQuery.builder(toMatchCriteria(maps, likeFieldNames)).withPageable(pageRequest).build();
 		SearchPage<T> page = select(searchQuery);
 		pageInfo.setTotal((int) page.getTotalElements());
 		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).collect(Collectors.toList()));
@@ -242,36 +231,38 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param id
 	 */
 	private void delete(ID id) {
-		operations.delete(Objects.requireNonNull(operations.stringIdRepresentation(id)), getIndexCoordinates());
+		operations.delete(Objects.requireNonNull(String.valueOf(id)), getIndexCoordinates());
 	}
 
 	/**
-	 * Map转QueryBuilder
+	 * Map转Criteria
 	 *
 	 * @param maps
 	 * @return
 	 */
-	private List<QueryBuilder> toTermQuery(Map<String, Object> maps) {
-		List<QueryBuilder> list = new ArrayList<>();
+	private Criteria toTermCriteria(Map<String, Object> maps) {
+		Criteria criteria = new Criteria();
 		for (Map.Entry<String, Object> entity : maps.entrySet()) {
+			if (ObjectUtils.isEmpty(entity.getValue())) {
+				continue;
+			}
 			if (entity.getValue() instanceof String) {
-				list.add(QueryBuilders.termQuery(entity.getKey() + ".keyword", entity.getValue()));
+				criteria.and(entity.getKey() + ".keyword").is(entity.getValue());
 			} else {
-				list.add(QueryBuilders.termQuery(entity.getKey(), entity.getValue()));
+				criteria.and(entity.getKey()).is(entity.getValue());
 			}
 		}
-		return list;
+		return criteria;
 	}
 
 	/**
-	 * Map转MatchQueryBuilder
+	 * Map转Match Criteria
 	 *
 	 * @param maps
 	 * @return
 	 */
-	private List<AbstractQueryBuilder> toMatchQuery(Map<String, Object> maps, String... likeFieldNames) {
-		List<AbstractQueryBuilder> list = new ArrayList<>();
-		List<AbstractQueryBuilder> shouldList = new ArrayList<>();
+	private Criteria toMatchCriteria(Map<String, Object> maps, String... likeFieldNames) {
+		Criteria criteria = new Criteria();
 		List<String> fieldNames = new ArrayList<>();
 		if (likeFieldNames != null) {
 			fieldNames = Arrays.asList(likeFieldNames);
@@ -284,22 +275,16 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 				}
 			}
 			if (fieldNames.contains(entity.getKey())) {
-				shouldList.add(QueryBuilders.matchQuery(entity.getKey(), entity.getValue()));
+				criteria.and(entity.getKey()).matches(entity.getValue());
 			} else {
 				if (entity.getValue() instanceof String) {
-					list.add(QueryBuilders.termQuery(entity.getKey() + ".keyword", entity.getValue()));
+					criteria.and(entity.getKey() + ".keyword").is(entity.getValue());
 				} else {
-					list.add(QueryBuilders.termQuery(entity.getKey(), entity.getValue()));
+					criteria.and(entity.getKey()).is(entity.getValue());
 				}
 			}
 		}
-		//拼接should 查询
-		if (!shouldList.isEmpty()) {
-			BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-			shouldList.forEach(t -> boolQueryBuilder.should(t));
-			list.add(boolQueryBuilder);
-		}
-		return list;
+		return criteria;
 	}
 
 
@@ -309,19 +294,9 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param searchQuery
 	 * @return
 	 */
-	private SearchPage<T> select(NativeSearchQuery searchQuery) {
+	private SearchPage<T> select(Query searchQuery) {
 		SearchHits<T> hits = operations.search(searchQuery, getEntityClass(), getIndexCoordinates());
 		return SearchHitSupport.searchPageFor(hits, searchQuery.getPageable());
-	}
-
-	/**
-	 * @param collection
-	 * @return
-	 */
-	private BoolQueryBuilder boolQueryBuilder(Collection collection) {
-		BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-		queryBuilder.must().addAll(collection);
-		return queryBuilder;
 	}
 
 	/**
@@ -340,7 +315,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 
 	@Override
 	public long count() {
-		NativeSearchQuery query = new NativeSearchQueryBuilder().withQuery(matchAllQuery()).build();
+		CriteriaQuery query = CriteriaQuery.builder(new Criteria()).build();
 		return operations.count(query, getEntityClass(), getIndexCoordinates());
 	}
 

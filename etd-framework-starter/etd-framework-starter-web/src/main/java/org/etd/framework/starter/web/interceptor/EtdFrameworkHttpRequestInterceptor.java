@@ -4,8 +4,8 @@ import org.etd.framework.common.core.context.extend.HttpServletRequestContextIni
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**

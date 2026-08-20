@@ -1,6 +1,6 @@
 package org.etd.framework.starter.storage.model.exdent;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.alibaba.fastjson2.annotation.JSONField;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import org.etd.framework.starter.storage.model.FileUploadModel;

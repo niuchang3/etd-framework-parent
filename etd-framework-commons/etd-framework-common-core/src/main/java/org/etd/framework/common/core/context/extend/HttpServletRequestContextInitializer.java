@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.etd.framework.common.core.context.AbstractRequestContextInitialization;
 import org.etd.framework.common.utils.request.RequestUtil;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -38,16 +38,15 @@ public class CacheConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(RedisTemplate.class)
-    public RedisTemplate redisTemplate(RedisConnectionFactory factory) {
+    public RedisTemplate<String,Object> redisTemplate(RedisConnectionFactory factory) {
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.registerModule(new JavaTimeModule());
-        jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
+        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
 
-        RedisTemplate redisTemplate = new RedisTemplate();
+        RedisTemplate<String,Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(factory);
         redisTemplate.setKeySerializer(stringRedisSerializer);
         redisTemplate.setHashKeySerializer(stringRedisSerializer);
@@ -74,7 +73,7 @@ public class CacheConfiguration {
 
     @Bean
     @ConditionalOnBean(RedisTemplate.class)
-    public RedisCache redisUtils(Cache<String, Object> caffeineCache, RedisTemplate redisTemplate) {
+    public RedisCache redisUtils(Cache<String, Object> caffeineCache, @Qualifier("redisTemplate") RedisTemplate<String,Object> redisTemplate) {
         return new RedisCache(caffeineCache, redisTemplate);
     }
 

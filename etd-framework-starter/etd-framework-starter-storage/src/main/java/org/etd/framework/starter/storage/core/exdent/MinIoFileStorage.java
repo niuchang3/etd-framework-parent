@@ -16,7 +16,7 @@ import org.etd.framework.starter.storage.model.exdent.MultipartFileUploadModel;
 import org.etd.framework.starter.storage.properties.StorageProperties;
 import org.springframework.util.ObjectUtils;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

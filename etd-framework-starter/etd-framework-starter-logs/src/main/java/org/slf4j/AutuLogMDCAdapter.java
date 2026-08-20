@@ -3,7 +3,10 @@ package org.slf4j;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import org.slf4j.spi.MDCAdapter;
 
+import java.lang.reflect.Field;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +19,7 @@ import java.util.Set;
 public class AutuLogMDCAdapter implements MDCAdapter {
 
 	private final ThreadLocal<Map<String, String>> copyOnInheritThreadLocal = new TransmittableThreadLocal<>();
+	private final ThreadLocal<Map<String, Deque<String>>> dequeThreadLocal = new TransmittableThreadLocal<>();
 
 	private static final int WRITE_OPERATION = 1;
 	private static final int MAP_COPY_OPERATION = 2;
@@ -29,11 +33,23 @@ public class AutuLogMDCAdapter implements MDCAdapter {
 
 	static {
 		autuLogMDCAdapter = new AutuLogMDCAdapter();
-		MDC.mdcAdapter = autuLogMDCAdapter;
+		installMdcAdapter(autuLogMDCAdapter);
 	}
 
 	public static MDCAdapter getInstance() {
 		return autuLogMDCAdapter;
+	}
+
+	private static void installMdcAdapter(MDCAdapter adapter) {
+		for (String fieldName : new String[]{"MDC_ADAPTER", "mdcAdapter"}) {
+			try {
+				Field field = MDC.class.getDeclaredField(fieldName);
+				field.setAccessible(true);
+				field.set(null, adapter);
+				return;
+			} catch (ReflectiveOperationException ignored) {
+			}
+		}
 	}
 
 	private Integer getAndSetLastOperation(int op) {
@@ -179,9 +195,57 @@ public class AutuLogMDCAdapter implements MDCAdapter {
 		lastOperation.set(WRITE_OPERATION);
 
 		Map<String, String> newMap = Collections.synchronizedMap(new HashMap<>());
-		newMap.putAll(contextMap);
+		if (contextMap != null) {
+			newMap.putAll(contextMap);
+		}
 
 		// the newMap replaces the old one for serialisation's sake
 		copyOnInheritThreadLocal.set(newMap);
+	}
+
+	@Override
+	public void pushByKey(String key, String value) {
+		if (key == null) {
+			return;
+		}
+		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();
+		if (dequeMap == null) {
+			dequeMap = new HashMap<>();
+			dequeThreadLocal.set(dequeMap);
+		}
+		dequeMap.computeIfAbsent(key, ignored -> new ArrayDeque<>()).push(value);
+	}
+
+	@Override
+	public String popByKey(String key) {
+		if (key == null) {
+			return null;
+		}
+		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();
+		if (dequeMap == null) {
+			return null;
+		}
+		Deque<String> deque = dequeMap.get(key);
+		if (deque == null || deque.isEmpty()) {
+			return null;
+		}
+		return deque.pop();
+	}
+
+	@Override
+	public Deque<String> getCopyOfDequeByKey(String key) {
+		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();
+		if (dequeMap == null || key == null || dequeMap.get(key) == null) {
+			return null;
+		}
+		return new ArrayDeque<>(dequeMap.get(key));
+	}
+
+	@Override
+	public void clearDequeByKey(String key) {
+		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();
+		if (dequeMap != null && key != null) {
+			dequeMap.remove(key);
+		}
 	}
 }

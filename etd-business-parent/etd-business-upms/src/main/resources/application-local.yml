@@ -2,7 +2,7 @@ spring:
   datasource:
     druid:
       driver-class-name: org.h2.Driver
-      url: jdbc:h2:file:D:/workspace/dataBase/h2/etd/db;MODE=MYSQL;FILE_LOCK=SOCKET;NON_KEYWORDS=SYSTEM_USER,USER
+      url: jdbc:h2:mem:etd;MODE=MYSQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=SYSTEM_USER,USER
       username: root
       password: root
       max-active: 20
@@ -11,7 +11,7 @@ spring:
       min-idle: 1
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 30000
-      validation-query: SELECT 1 FROM DUAL
+      validation-query: SELECT 1
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
@@ -40,7 +40,8 @@ spring:
   sql:
     init:
       mode: always
-#      schema-locations: classpath:/sql/schema.sql
+      schema-locations: classpath:/sql/schema.sql
+      data-locations: classpath:/sql/data.sql
 
 etd:
   mybatis:

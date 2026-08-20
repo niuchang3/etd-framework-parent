@@ -1,0 +1,3 @@
+org.etd.framework.starter.mybaits.MybatisConfig
+org.etd.framework.starter.mybaits.snapshot.SnapshotAutoConfiguration
+org.etd.framework.starter.mybaits.fill.DataFillAutoConfiguration

@@ -5,7 +5,7 @@ import com.etd.framework.starter.client.core.constant.Oauth2ParameterConstant;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 用户名密码请求转换器

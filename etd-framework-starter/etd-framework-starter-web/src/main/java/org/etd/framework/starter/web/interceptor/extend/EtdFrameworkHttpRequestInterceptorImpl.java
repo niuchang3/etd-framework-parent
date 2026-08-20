@@ -12,8 +12,8 @@ import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestIntercep
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +45,21 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
     @Override
     protected void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
 
-        isPlatformAdmin();
-        UserDetails user = RequestContext.getUser();
-        if(user.isPlatformAdmin()){
-            return;
-        }
-
         for (RequestMatcher matcher : whiteList) {
             if(matcher.matches(request)){
                 return;
             }
         }
+
+        isPlatformAdmin();
+        UserDetails user = RequestContext.getUser();
+        if (ObjectUtils.isEmpty(user)) {
+            return;
+        }
+        if(user.isPlatformAdmin()){
+            return;
+        }
+
         Long tenantCode = RequestContext.getTenantCode();
         if(ObjectUtils.isEmpty(RequestContext.getTenantCode())){
             throw new ApiRuntimeException("非法的租户信息。");

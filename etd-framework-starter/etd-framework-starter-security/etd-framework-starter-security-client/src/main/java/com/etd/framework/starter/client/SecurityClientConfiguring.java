@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.interfaces.RSAPublicKey;
 
@@ -43,12 +43,23 @@ public class SecurityClientConfiguring {
      */
 
     private RSAPublicKey publicKey() {
-        String rsaPublicKeyPath = System.getProperty("user.dir") + File.separator + "conf" + File.separator + "rsaPublicKey.pem";
-        try (InputStream inputStream = Files.newInputStream(Paths.get(rsaPublicKeyPath))) {
+        try (InputStream inputStream = Files.newInputStream(resolveConfFile("rsaPublicKey.pem"))) {
             return (RSAPublicKey) PemUtil.readPemPublicKey(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Path resolveConfFile(String filename) throws IOException {
+        Path current = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+        while (current != null) {
+            Path candidate = current.resolve("conf").resolve(filename);
+            if (Files.exists(candidate)) {
+                return candidate;
+            }
+            current = current.getParent();
+        }
+        throw new IOException("Cannot find conf/" + filename + " from " + System.getProperty("user.dir"));
     }
 
 

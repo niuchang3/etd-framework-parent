@@ -1,7 +1,6 @@
 package org.etd.framework.starter.log.dto;
 
 import cn.hutool.core.util.URLUtil;
-import cn.hutool.extra.servlet.ServletUtil;
 import cn.hutool.http.useragent.UserAgent;
 import cn.hutool.http.useragent.UserAgentUtil;
 import lombok.Data;
@@ -16,7 +15,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -150,7 +149,7 @@ public class LogInfo {
 					logInfo.setApplicationVersion(request.getHeader(LogConstant.APPLICATION_VERSION_HEADER));
 					logInfo.setUrl(URLUtil.getPath(request.getRequestURL().toString()));
 					logInfo.setUrlMethod(request.getMethod());
-					logInfo.setIp(ServletUtil.getClientIP(request));
+					logInfo.setIp(getClientIp(request));
 					UserAgent parse = UserAgentUtil.parse(request.getHeader(LogConstant.USER_AGENT));
 					logInfo.setMobile(parse.isMobile());
 					logInfo.setBrowser(parse.getBrowser().toString());
@@ -164,6 +163,18 @@ public class LogInfo {
 		}
 		logInfo.setOperation(autoLog.value());
 		return logInfo;
+	}
+
+	private static String getClientIp(HttpServletRequest request) {
+		String[] headers = {"X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", "WL-Proxy-Client-IP"};
+		for (String header : headers) {
+			String value = request.getHeader(header);
+			if (!ObjectUtils.isEmpty(value) && !"unknown".equalsIgnoreCase(value)) {
+				int commaIndex = value.indexOf(',');
+				return commaIndex > -1 ? value.substring(0, commaIndex).trim() : value.trim();
+			}
+		}
+		return request.getRemoteAddr();
 	}
 
 

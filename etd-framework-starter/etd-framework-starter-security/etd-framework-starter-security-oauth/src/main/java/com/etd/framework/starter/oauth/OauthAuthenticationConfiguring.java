@@ -27,14 +27,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.util.List;
@@ -59,22 +60,19 @@ public class OauthAuthenticationConfiguring {
 
         List<String> ignorePermissions = systemOauthProperties.getPermissions().getIgnore();
         String[] urls = ArrayUtil.toArray(CollectionUtil.isEmpty(ignorePermissions) ? Lists.newArrayList():ignorePermissions, String.class);
-        http.apply(configurer)
-                .and()
-                .headers().frameOptions().sameOrigin()
-                .and()
-                .csrf().disable()
-//                .anonymous().disable()
-                .requestCache().disable()
-                .requestMatchers().antMatchers("/**")
-                .and()
-                .authorizeRequests()
-                .antMatchers(urls).permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .exceptionHandling()
-                .accessDeniedHandler(new AccessDeniedHandlerImpl())
-                .authenticationEntryPoint(new AuthenticationEntryPointImpl());
+        http.apply(configurer);
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .requestCache(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(authorize -> {
+                    if (urls.length > 0) {
+                        authorize.requestMatchers(urls).permitAll();
+                    }
+                    authorize.anyRequest().authenticated();
+                })
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler(new AccessDeniedHandlerImpl())
+                        .authenticationEntryPoint(new AuthenticationEntryPointImpl()));
 
         DefaultSecurityFilterChain build = http.build();
         return build;
@@ -93,13 +91,23 @@ public class OauthAuthenticationConfiguring {
      */
 
     private PrivateKey privateKey() {
-        // 此处最终需要替换到yaml文件内进行配置
-        String privateKeyPath = System.getProperty("user.dir") + File.separator + "conf" + File.separator + "rsaPrivateKey.pem";
-        try (InputStream inputStream = Files.newInputStream(Paths.get(privateKeyPath))) {
+        try (InputStream inputStream = Files.newInputStream(resolveConfFile("rsaPrivateKey.pem"))) {
             return PemUtil.readPemPrivateKey(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Path resolveConfFile(String filename) throws IOException {
+        Path current = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+        while (current != null) {
+            Path candidate = current.resolve("conf").resolve(filename);
+            if (Files.exists(candidate)) {
+                return candidate;
+            }
+            current = current.getParent();
+        }
+        throw new IOException("Cannot find conf/" + filename + " from " + System.getProperty("user.dir"));
     }
 
     @Bean

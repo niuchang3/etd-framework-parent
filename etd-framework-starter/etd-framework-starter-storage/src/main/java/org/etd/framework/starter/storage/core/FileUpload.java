@@ -5,7 +5,7 @@ import org.etd.framework.starter.storage.model.exdent.ByteUploadModel;
 import org.etd.framework.starter.storage.model.exdent.InputStreamUpload;
 import org.etd.framework.starter.storage.model.exdent.MultipartFileUploadModel;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.util.List;
 
