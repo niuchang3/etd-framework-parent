@@ -1,7 +1,5 @@
 package com.etd.framework.starter.oauth.authentication;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 

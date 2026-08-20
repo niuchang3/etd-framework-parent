@@ -58,7 +58,7 @@ public class RReentrantLock implements RLock {
     }
 
     private List<String> getKeys() {
-        String threadId = "thread:" + Thread.currentThread().getId();
+        String threadId = "thread:" + Thread.currentThread().threadId();
         String currentKey = prefix + key;
         List<String> keys = new ArrayList<>(Arrays.asList(currentKey));
         keys.add(threadId);
@@ -100,7 +100,7 @@ public class RReentrantLock implements RLock {
         List<String> keys = getKeys();
         Long execute = (Long) redisTemplate.execute(RedisLuaScripts.unLock(), keys, expire);
         if (execute == null) {
-            throw new RuntimeException("尝试解锁失败，Lock-key:" + key + " ,thread-id:" + Thread.currentThread().getId());
+            throw new RuntimeException("尝试解锁失败，Lock-key:" + key + " ,thread-id:" + Thread.currentThread().threadId());
         }
     }
 

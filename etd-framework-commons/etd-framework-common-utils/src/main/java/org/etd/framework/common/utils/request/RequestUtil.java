@@ -8,7 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 
 /**
@@ -55,7 +55,7 @@ public class RequestUtil {
             return null;
         }
         for (Cookie ck : cookies) {
-            if (StringUtils.equalsIgnoreCase(name, ck.getName())) {
+            if (equalsIgnoreCase(name, ck.getName())) {
                 return ck;
             }
         }
@@ -71,7 +71,7 @@ public class RequestUtil {
             return null;
         }
         for (Cookie ck : cookies) {
-            if (StringUtils.equalsIgnoreCase(name, ck.getName())) {
+            if (equalsIgnoreCase(name, ck.getName())) {
                 return ck.getValue();
             }
         }
@@ -174,10 +174,14 @@ public class RequestUtil {
      */
     public static int getHttpPort(HttpServletRequest req) {
         try {
-            return new URL(req.getRequestURL().toString()).getPort();
-        } catch (MalformedURLException excp) {
+            return URI.create(req.getRequestURL().toString()).toURL().getPort();
+        } catch (IllegalArgumentException | MalformedURLException excp) {
             return 80;
         }
+    }
+
+    private static boolean equalsIgnoreCase(String source, String target) {
+        return source == null ? target == null : source.equalsIgnoreCase(target);
     }
 
     /**

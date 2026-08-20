@@ -5,7 +5,6 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.constants.RequestCodeConverter;
 import org.etd.framework.common.core.spring.SpringContextHelper;
@@ -95,7 +94,7 @@ public class ResultModel<T> implements Serializable {
         if (ObjectUtils.isEmpty(activeProfiles)) {
             return null;
         }
-        if (StringUtils.equals("dev", activeProfiles[0])) {
+        if ("dev".equals(activeProfiles[0])) {
             return ExceptionUtil.stacktraceToString(throwable);
         }
         return null;

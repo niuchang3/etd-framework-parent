@@ -1,6 +1,7 @@
 package org.etd.framework.common.core.exception;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.etd.framework.common.core.constants.RequestCodeConstant;
 
 /**
@@ -9,6 +10,7 @@ import org.etd.framework.common.core.constants.RequestCodeConstant;
  * @date 2020/11/12
  */
 @Data
+@EqualsAndHashCode(callSuper = false)
 public class ApiRuntimeException extends RuntimeException {
 
     private RequestCodeConstant requestCode;

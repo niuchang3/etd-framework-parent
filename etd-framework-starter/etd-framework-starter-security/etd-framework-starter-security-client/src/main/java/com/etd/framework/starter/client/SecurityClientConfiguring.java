@@ -2,8 +2,10 @@ package com.etd.framework.starter.client;
 
 
 import cn.hutool.crypto.PemUtil;
+import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokenDecode;
 import com.etd.framework.starter.client.core.properties.SystemOauthProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -25,12 +27,14 @@ public class SecurityClientConfiguring {
 
 
     @Bean
+    @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
     @Bean
-    public JwtTokenDecode tokenDecode() {
+    @ConditionalOnMissingBean(TokenDecode.class)
+    public TokenDecode tokenDecode() {
         RSAPublicKey rsaPublicKey = publicKey();
         return new JwtTokenDecode(rsaPublicKey);
     }

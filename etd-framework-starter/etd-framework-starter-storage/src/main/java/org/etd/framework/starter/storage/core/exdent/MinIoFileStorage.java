@@ -6,7 +6,6 @@ import io.minio.errors.*;
 import io.minio.http.Method;
 import io.minio.messages.DeleteObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.compress.utils.Lists;
 import org.etd.framework.starter.storage.core.FileStorage;
 import org.etd.framework.starter.storage.model.UploadResModel;
@@ -195,7 +194,7 @@ public class MinIoFileStorage extends FileStorage<MinioClient> {
         try (InputStream fileInputStream = getClient().getObject(GetObjectArgs.builder().bucket(bucketName).object(fileName).build());
              OutputStream outStream = outputStream
         ) {
-            IOUtils.copy(fileInputStream, outStream);
+            fileInputStream.transferTo(outStream);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

@@ -42,7 +42,7 @@ public class JwtTokeEncoder implements TokenEncoder<Authentication, OauthTokenVa
      */
     public JwtTokeEncoder(PrivateKey privateKey) {
         this.jwsSigner = new RSASSASigner(privateKey);
-        this.snowflake = IdUtil.createSnowflake(1, 1);
+        this.snowflake = IdUtil.getSnowflake(1, 1);
     }
 
     @Override

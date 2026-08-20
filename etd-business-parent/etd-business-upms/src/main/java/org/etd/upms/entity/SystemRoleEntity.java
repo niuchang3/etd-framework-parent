@@ -9,6 +9,7 @@ import org.etd.framework.starter.mybaits.core.BaseEntity;
 import java.io.Serializable;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 @TableName("system_role")
 public class SystemRoleEntity extends BaseEntity implements Serializable {
 

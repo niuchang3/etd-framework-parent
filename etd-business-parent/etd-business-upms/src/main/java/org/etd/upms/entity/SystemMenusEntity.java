@@ -4,11 +4,13 @@ package org.etd.upms.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
 import java.io.Serializable;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 @TableName("system_menus")
 public class SystemMenusEntity extends BaseEntity implements Serializable {
 

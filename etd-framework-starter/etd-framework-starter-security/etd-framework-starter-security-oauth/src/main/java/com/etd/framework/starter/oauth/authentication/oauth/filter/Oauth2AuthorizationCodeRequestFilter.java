@@ -7,6 +7,7 @@ import com.etd.framework.starter.client.core.token.Oauth2AuthorizationCodeReques
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
@@ -33,6 +34,7 @@ import java.util.Map;
  * Oauth 授权验证码过滤器
  */
 @Data
+@EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

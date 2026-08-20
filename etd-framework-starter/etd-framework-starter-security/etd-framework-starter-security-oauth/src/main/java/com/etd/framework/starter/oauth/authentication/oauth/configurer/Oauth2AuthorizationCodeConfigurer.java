@@ -7,27 +7,20 @@ import com.etd.framework.starter.oauth.authentication.oauth.converter.Oauth2Auth
 import com.etd.framework.starter.oauth.authentication.oauth.filter.Oauth2AuthorizationCodeRequestFilter;
 import com.etd.framework.starter.oauth.authentication.oauth.provider.Oauth2AuthorizationCodeProvider;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
 
 public class Oauth2AuthorizationCodeConfigurer extends AbstractHttpSecurityConfigurer {
 
+    private static final PathPatternRequestMatcher.Builder PATH_MATCHER = PathPatternRequestMatcher.withDefaults();
+
     private RequestMatcher authenticationEndpointMatcher;
 
 
     private String loginRedirect;
-
-    public Oauth2AuthorizationCodeConfigurer() {
-        this(null);
-    }
-
-    public Oauth2AuthorizationCodeConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
-        super(objectPostProcessor);
-    }
 
     /**
      * 外部 添加请求匹配端点
@@ -55,7 +48,8 @@ public class Oauth2AuthorizationCodeConfigurer extends AbstractHttpSecurityConfi
         builder.authenticationProvider(provider);
 
         if (ObjectUtils.isEmpty(authenticationEndpointMatcher)) {
-            authenticationEndpointMatcher = new AntPathRequestMatcher("/oauth2/authorize", HttpMethod.GET.name());
+            // 默认授权码登录端点。
+            authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.GET, "/oauth2/authorize");
         }
         if(ObjectUtils.isEmpty(loginRedirect)){
             loginRedirect = "http://127.0.0.1:7000/login";
@@ -69,7 +63,7 @@ public class Oauth2AuthorizationCodeConfigurer extends AbstractHttpSecurityConfi
         filter.setLoginRedirect(loginRedirect);
         filter.setConverter(new Oauth2AuthorizationCodeRequestConverter());
         filter.setAuthenticationManager(getAuthenticationManager(builder));
-        builder.addFilterBefore(filter, FilterSecurityInterceptor.class);
+        builder.addFilterBefore(filter, AuthorizationFilter.class);
 
     }
 

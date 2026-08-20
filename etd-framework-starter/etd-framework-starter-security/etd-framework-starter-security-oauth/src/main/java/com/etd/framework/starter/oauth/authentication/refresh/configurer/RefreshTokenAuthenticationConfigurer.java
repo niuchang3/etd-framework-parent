@@ -13,26 +13,17 @@ import com.etd.framework.starter.oauth.authentication.refresh.provider.RefreshTo
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
 
 public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityConfigurer {
 
+    private static final PathPatternRequestMatcher.Builder PATH_MATCHER = PathPatternRequestMatcher.withDefaults();
+
     private RequestMatcher authenticationEndpointMatcher;
-
-
-    public RefreshTokenAuthenticationConfigurer() {
-        this(null);
-    }
-
-    public RefreshTokenAuthenticationConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
-        super(objectPostProcessor);
-    }
-
 
     /**
      * 外部 添加请求匹配端点
@@ -47,7 +38,8 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityCo
     public void init(HttpSecurity builder) {
         AuthenticationProvider provider = getAuthenticationProvider(builder);
         if (ObjectUtils.isEmpty(authenticationEndpointMatcher)) {
-            authenticationEndpointMatcher = new AntPathRequestMatcher("/oauth2/refresh", HttpMethod.POST.name());
+            // 默认刷新 token 端点。
+            authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.POST, "/oauth2/refresh");
         }
         builder.authenticationProvider(provider);
     }
@@ -76,7 +68,7 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractHttpSecurityCo
 
     @Override
     public RequestMatcher getRequestMatcher() {
-        return null;
+        return authenticationEndpointMatcher;
     }
 
     private AuthenticationProvider getAuthenticationProvider(HttpSecurity httpSecurity) {

@@ -9,7 +9,6 @@ import com.aliyun.oss.model.PutObjectRequest;
 import io.minio.errors.*;
 import io.minio.messages.DeleteObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.compress.utils.Lists;
 import org.etd.framework.starter.storage.core.FileStorage;
 import org.etd.framework.starter.storage.model.UploadResModel;
@@ -189,7 +188,7 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
              InputStream inputStream = ossObject.getObjectContent();
              OutputStream outStream = outputStream
         ) {
-            IOUtils.copy(inputStream, outStream);
+            inputStream.transferTo(outStream);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw e;

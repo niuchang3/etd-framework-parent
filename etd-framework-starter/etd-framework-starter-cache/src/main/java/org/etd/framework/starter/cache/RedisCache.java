@@ -278,7 +278,7 @@ public class RedisCache {
             keys.add(genKey(key, hkey));
         }
         localCache.invalidateAll(keys);
-        redisTemplate.opsForHash().delete(key, item);
+        redisTemplate.opsForHash().delete(key, (Object[]) item);
     }
 
 

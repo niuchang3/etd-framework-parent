@@ -5,7 +5,7 @@
     <!--服务器信息-->
     <springProperty name="appName" scope="context" source="spring.application.name"/>
     <conversionRule conversionWord="ip"
-                    converterClass="org.etd.framework.starter.log.converter.LogIpConverter"/>
+                    class="org.etd.framework.starter.log.converter.LogIpConverter"/>
     <springProperty name="port" scope="context" source="server.port" defaultValue="0000"/>
 
     <!--日志输出路径-->
@@ -27,9 +27,9 @@
 
     <!-- 彩色日志 -->
     <!-- 彩色日志依赖的渲染类 -->
-    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
     <conversionRule conversionWord="wEx"
-                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+                    class="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
 
 
     <!-- 彩色日志格式 -->
@@ -43,7 +43,7 @@
 
     <!-- 控制台日志 -->
     <appender name="consoleLog" class="ch.qos.logback.core.ConsoleAppender">
-        <withJansi>true</withJansi>
+        <withJansi>false</withJansi>
         <encoder>
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>

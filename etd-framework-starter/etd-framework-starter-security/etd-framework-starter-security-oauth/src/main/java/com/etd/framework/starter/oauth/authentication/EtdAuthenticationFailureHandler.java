@@ -1,8 +1,5 @@
 package com.etd.framework.starter.oauth.authentication;
 
-import org.etd.framework.common.core.model.ResultModel;
-import org.springframework.http.MediaType;
-import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 

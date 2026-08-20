@@ -42,7 +42,7 @@ public abstract class AbstractAuthenticationHandler {
      */
     protected void writeFailed(HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
         if(log.isDebugEnabled()){
-            log.debug(exception.getMessage(),exception);
+            log.debug("认证失败：{}", exception.getMessage());
         }
 
         ResultModel<Object> failed = ResultModel.failed(response.getStatus(), exception.getCause(), exception.getMessage(), request.getRequestURI());

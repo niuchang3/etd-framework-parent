@@ -86,7 +86,6 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         } catch (AuthenticationException e) {
             //异常处理
             onAuthenticationFailure(request, response, e);
-            throw e;
         }
     }
 
@@ -104,7 +103,7 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         
         OauthTokenValue accessToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenNameSpace.PASSWORD,Oauth2ParameterConstant.TokenType.access_token, authentication);
         OauthTokenValue refreshToken = null;
-        if (oauthProperties.getAccessToken().getEnabled()) {
+        if (oauthProperties.getRefreshToken().getEnabled()) {
             refreshToken = tokenEncoder.encode(Oauth2ParameterConstant.TokenNameSpace.PASSWORD,Oauth2ParameterConstant.TokenType.refresh_token, authentication);
         }
         UserDetails details = (UserDetails) authentication.getDetails();

@@ -6,6 +6,7 @@ import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.crypto.PemUtil;
 import com.etd.framework.starter.client.core.Oauth2AuthenticationConfigurer;
 import com.etd.framework.starter.client.core.configurer.BearerAuthenticationConfigurer;
+import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokeEncoder;
 import com.etd.framework.starter.client.core.oauth.OauthClientService;
 import com.etd.framework.starter.client.core.oauth.memory.OauthClientServiceImpl;
@@ -26,8 +27,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
@@ -60,7 +63,7 @@ public class OauthAuthenticationConfiguring {
 
         List<String> ignorePermissions = systemOauthProperties.getPermissions().getIgnore();
         String[] urls = ArrayUtil.toArray(CollectionUtil.isEmpty(ignorePermissions) ? Lists.newArrayList():ignorePermissions, String.class);
-        http.apply(configurer);
+        http.with(configurer, Customizer.withDefaults());
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .requestCache(AbstractHttpConfigurer::disable)
@@ -79,7 +82,8 @@ public class OauthAuthenticationConfiguring {
     }
 
     @Bean
-    public JwtTokeEncoder tokeEncoder() {
+    @ConditionalOnMissingBean(TokenEncoder.class)
+    public TokenEncoder<Authentication, ?> tokeEncoder() {
         PrivateKey privateKey = privateKey();
         return new JwtTokeEncoder(privateKey);
     }

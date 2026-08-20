@@ -3,9 +3,10 @@ package com.etd.framework.starter.client.core;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+
+import java.util.function.Function;
 
 /**
  * 抽象的HTTP 安全配置器
@@ -16,19 +17,14 @@ public abstract class AbstractHttpSecurityConfigurer {
     /**
      * 对象后置处理器
      */
-    private ObjectPostProcessor<Object> objectPostProcessor;
+    private Function<Object, Object> objectPostProcessor = Function.identity();
 
-
-    public AbstractHttpSecurityConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
-        this.objectPostProcessor = objectPostProcessor;
-    }
-
-    protected void setObjectPostProcessor(ObjectPostProcessor<Object> objectPostProcessor){
+    protected void setObjectPostProcessor(Function<Object, Object> objectPostProcessor){
         this.objectPostProcessor = objectPostProcessor;
     }
 
     protected final <T> T postProcess(T object) {
-        return (T) this.objectPostProcessor.postProcess(object);
+        return (T) this.objectPostProcessor.apply(object);
     }
 
     /**

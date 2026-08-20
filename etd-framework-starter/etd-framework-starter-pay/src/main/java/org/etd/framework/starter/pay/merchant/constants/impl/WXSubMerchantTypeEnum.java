@@ -45,7 +45,6 @@ public enum WXSubMerchantTypeEnum implements SubMerchantTypeEnum {
 	@Getter
 	private String name;
 
-	@Getter
 	private String description;
 
 	WXSubMerchantTypeEnum(String code, String name, String description) {

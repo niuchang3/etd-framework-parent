@@ -78,7 +78,6 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
         } catch (AuthenticationException e) {
             //异常处理
             onAuthenticationFailure(request, response, e);
-            throw e;
         }
     }
 
@@ -101,7 +100,7 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
 
         OauthTokenValue accessToken = tokenEncoder.encode(nameSpace,Oauth2ParameterConstant.TokenType.access_token, authentication);
         OauthTokenValue refreshToken = null;
-        if (oauthProperties.getAccessToken().getEnabled()) {
+        if (oauthProperties.getRefreshToken().getEnabled()) {
             refreshToken = tokenEncoder.encode(nameSpace,Oauth2ParameterConstant.TokenType.refresh_token, authentication);
         }
         UserDetails details = (UserDetails) authentication.getDetails();

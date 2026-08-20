@@ -75,7 +75,7 @@ public class DataSnapshotAspect {
         Object oldEntity = selectById.invoke(mapper, oldSequence);
 
 
-        Object newEntity = dataSnapshot.snapshotClass().newInstance();
+        Object newEntity = dataSnapshot.snapshotClass().getDeclaredConstructor().newInstance();
         BeanUtils.copyProperties(oldEntity, newEntity);
 
         //将原始表的物理主键映射快照中

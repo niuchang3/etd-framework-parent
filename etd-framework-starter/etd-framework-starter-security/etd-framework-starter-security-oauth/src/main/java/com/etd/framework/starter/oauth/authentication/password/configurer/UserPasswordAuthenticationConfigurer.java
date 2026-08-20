@@ -12,27 +12,19 @@ import com.etd.framework.starter.oauth.authentication.password.provider.UserPass
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
 
 
 public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityConfigurer {
 
+    private static final PathPatternRequestMatcher.Builder PATH_MATCHER = PathPatternRequestMatcher.withDefaults();
+
     private RequestMatcher authenticationEndpointMatcher;
-
-    public UserPasswordAuthenticationConfigurer() {
-        this(null);
-    }
-
-
-    public UserPasswordAuthenticationConfigurer(ObjectPostProcessor<Object> objectPostProcessor) {
-        super(objectPostProcessor);
-    }
 
     /**
      * 外部 添加请求匹配端点
@@ -47,7 +39,8 @@ public class UserPasswordAuthenticationConfigurer extends AbstractHttpSecurityCo
     public void init(HttpSecurity builder) {
         AuthenticationProvider provider = getAuthenticationProvider(builder);
         if (ObjectUtils.isEmpty(authenticationEndpointMatcher)) {
-            authenticationEndpointMatcher = new AntPathRequestMatcher("/oauth2/login", HttpMethod.POST.name());
+            // 默认密码登录端点。
+            authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.POST, "/oauth2/login");
         }
         builder.authenticationProvider(provider);
     }
