@@ -25,6 +25,22 @@ spring:
           max-active: 20
           max-wait: 5s
 
+jetcache:
+  statIntervalMinutes: 15
+  areaInCacheName: false
+  local:
+    default:
+      type: caffeine
+      keyConvertor: fastjson2
+      limit: 1000
+  remote:
+    default:
+      type: redis.springdata
+      keyPrefix: "${spring.application.name}:"
+      keyConvertor: fastjson2
+      valueEncoder: bean:jetCacheFastjson2ValueEncoder
+      valueDecoder: bean:jetCacheFastjson2ValueDecoder
+
 
 
 system:

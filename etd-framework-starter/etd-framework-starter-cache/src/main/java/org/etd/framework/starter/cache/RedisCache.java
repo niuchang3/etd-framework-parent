@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,8 +102,9 @@ public class RedisCache {
             redisTemplate.delete(key[0]);
             return;
         }
-        localCache.invalidateAll(CollectionUtils.arrayToList(key));
-        redisTemplate.delete(String.valueOf(CollectionUtils.arrayToList(key)));
+        List<String> keys = Arrays.asList(key);
+        localCache.invalidateAll(keys);
+        redisTemplate.delete(keys);
     }
 
 

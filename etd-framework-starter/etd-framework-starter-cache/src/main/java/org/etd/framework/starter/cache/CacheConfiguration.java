@@ -1,6 +1,9 @@
 package org.etd.framework.starter.cache;
 
 
+import com.alicp.jetcache.anno.config.EnableMethodCache;
+import com.alicp.jetcache.support.Fastjson2ValueDecoder;
+import com.alicp.jetcache.support.Fastjson2ValueEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -19,6 +22,7 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * @author Young
@@ -27,6 +31,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Configuration
 @ComponentScan("org.etd.framework.starter.cache.**")
+@EnableMethodCache(basePackages = "org.etd")
 public class CacheConfiguration {
 
 
@@ -69,6 +74,18 @@ public class CacheConfiguration {
                 .maximumSize(2048)//最大数量
                 .expireAfterWrite(2, TimeUnit.SECONDS)//过期时间
                 .build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "jetCacheFastjson2ValueEncoder")
+    public Function<Object, byte[]> jetCacheFastjson2ValueEncoder() {
+        return Fastjson2ValueEncoder.INSTANCE;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "jetCacheFastjson2ValueDecoder")
+    public Function<byte[], Object> jetCacheFastjson2ValueDecoder() {
+        return Fastjson2ValueDecoder.INSTANCE;
     }
 
     @Bean
