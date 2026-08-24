@@ -36,7 +36,7 @@ spring:
       enabled: false
   sql:
     init:
-      mode: always
+      mode: never
       schema-locations: classpath:/sql/postgresql/schema.sql
       data-locations: classpath:/sql/postgresql/data.sql
   data:
@@ -49,7 +49,7 @@ etd:
   mybatis:
     tenant:
       enabled: true
-      column-name: TENANT_ID
+      column-name: tenant_id
       ignore-tables:
         - system_tenant
         - system_user
@@ -57,4 +57,4 @@ etd:
     fill:
       enabled: true
     permission:
-      enabled: true
+      enabled: false

@@ -66,11 +66,11 @@ public class EtdMyBatisPlusProperties {
         /**
          * 全局化配置，数据库表，表示部门ID的字段名称
          */
-        private String globalDeptColumnName = "DEPT_ID";
+        private String globalDeptColumnName = "dept_id";
         /**
          * 全局化配置， 数据库表，表示用户ID的字段名称
          */
-        private String globalUserColumnName = "USER_ID";
+        private String globalUserColumnName = "user_id";
 
 //        @NestedConfigurationProperty
 //        private List<Tables> tables = Lists.newArrayList();
@@ -82,7 +82,7 @@ public class EtdMyBatisPlusProperties {
 
         private Boolean enabled = false;
 
-        private String columnName = "TENANT_ID";
+        private String columnName = "tenant_id";
 
         private List<String> ignoreTables = Lists.newArrayList();
     }
