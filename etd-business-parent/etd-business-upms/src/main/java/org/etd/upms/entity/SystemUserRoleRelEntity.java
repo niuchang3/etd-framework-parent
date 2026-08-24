@@ -14,17 +14,17 @@ public class SystemUserRoleRelEntity extends BaseEntity {
     /**
      * 租户ID
      */
-    @TableField("TENANT_ID")
+    @TableField("tenant_id")
     private String tenantId;
     /**
      * 用户ID
      */
-    @TableField("USER_ID")
+    @TableField("user_id")
     private Long userId;
     /**
      * 角色ID
      */
-    @TableField("ROLE_ID")
+    @TableField("role_id")
     private Long roleId;
 
 

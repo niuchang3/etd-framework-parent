@@ -13,7 +13,7 @@ import java.util.Date;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("system_user")
+@TableName("\"system_user\"")
 public class SystemUserEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1181085804651495813L;
@@ -21,57 +21,57 @@ public class SystemUserEntity extends BaseEntity implements Serializable {
     /**
      * 登录账号
      */
-    @TableField("ACCOUNT")
+    @TableField("account")
     private String account;
     /**
      * 手机号码
      */
-    @TableField("MOBILE")
+    @TableField("mobile")
     private String mobile;
 
     /**
      * 密码信息
      */
-    @TableField("PASSWORD")
+    @TableField("password")
     private String password;
 
     /**
      * 用户名称
      */
-    @TableField("USER_NAME")
+    @TableField("user_name")
     private String userName;
     /**
      * 生日
      */
-    @TableField("BIRTHDAY")
+    @TableField("birthday")
     private Date birthday;
     /**
      * 性别
      */
-    @TableField("GENDER")
+    @TableField("gender")
     private Integer gender;
     /**
      * 头像
      */
-    @TableField("AVATAR")
+    @TableField("avatar")
     private String avatar;
 
     /**
      * 昵称
      */
-    @TableField("NICK_NAME")
+    @TableField("nick_name")
     private String nickName;
 
     /**
      * 账号是否锁定
      */
-    @TableField("LOCKED")
+    @TableField("locked")
     private Boolean locked;
 
     /**
      * 账号是否启用
      */
-    @TableField("ENABLED")
+    @TableField("enabled")
     private Boolean enabled;
 
 

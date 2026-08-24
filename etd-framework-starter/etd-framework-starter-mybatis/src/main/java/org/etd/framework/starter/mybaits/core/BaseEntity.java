@@ -14,16 +14,16 @@ public class BaseEntity {
     /**
      * 租户ID
      */
-    @TableId(value = "ID", type = IdType.ASSIGN_ID)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
     /**
      * 创建时间
      */
-    @TableField("CREATE_TIME")
+    @TableField("create_time")
     private Date createTime;
     /**
      * 数据状态
      */
-    @TableField("DATA_STATUS")
+    @TableField("data_status")
     private Boolean dataStatus;
 }

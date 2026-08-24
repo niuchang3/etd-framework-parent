@@ -1,10 +1,10 @@
 spring:
   datasource:
     druid:
-      driver-class-name: org.h2.Driver
-      url: jdbc:h2:mem:etd;MODE=MYSQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=SYSTEM_USER,USER
-      username: root
-      password: root
+      driver-class-name: org.postgresql.Driver
+      url: jdbc:postgresql://${UPMS_DB_HOST:127.0.0.1}:${UPMS_DB_PORT:30432}/${UPMS_DB_NAME:upms}
+      username: ${UPMS_DB_USERNAME:root}
+      password: ${UPMS_DB_PASSWORD:123456}
       max-active: 20
       initial-size: 1
       max-wait: 6000
@@ -33,15 +33,17 @@ spring:
           merge-sql: false
   h2:
     console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
+      enabled: false
   sql:
     init:
       mode: always
-      schema-locations: classpath:/sql/schema.sql
-      data-locations: classpath:/sql/data.sql
+      schema-locations: classpath:/sql/postgresql/schema.sql
+      data-locations: classpath:/sql/postgresql/data.sql
+  data:
+    redis:
+      host: ${UPMS_REDIS_HOST:127.0.0.1}
+      port: ${UPMS_REDIS_PORT:30637}
+      password: ${UPMS_REDIS_PASSWORD:123456}
 
 etd:
   mybatis:

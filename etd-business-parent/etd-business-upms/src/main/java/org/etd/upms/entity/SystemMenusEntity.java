@@ -16,22 +16,22 @@ public class SystemMenusEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = -4312600779837990536L;
 
-    @TableField("PARENT_ID")
+    @TableField("parent_id")
     private Long parentId;
 
-    @TableField("MENU_NAME")
+    @TableField("menu_name")
     private String menuName;
 
-    @TableField("MENU_PATH")
+    @TableField("menu_path")
     private String menuPath;
 
-    @TableField("MENU_ROUTER")
+    @TableField("menu_router")
     private String menuRouter;
 
-    @TableField("MENU_ICON")
+    @TableField("menu_icon")
     private String menuIcon;
 
-    @TableField("SORT")
+    @TableField("sort")
     private Integer sort;
 
 }

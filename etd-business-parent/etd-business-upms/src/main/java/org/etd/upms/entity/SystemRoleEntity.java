@@ -19,39 +19,39 @@ public class SystemRoleEntity extends BaseEntity implements Serializable {
     /**
      * 租户ID
      */
-    @TableField("TENANT_ID")
+    @TableField("tenant_id")
     private Long tenantId;
     /**
      * 是否为内置角色
      */
-    @TableField("BUILT_IN")
+    @TableField("built_in")
     private Boolean builtIn;
     /**
      * 角色名称
      */
-    @TableField("ROLE_NAME")
+    @TableField("role_name")
     private String roleName;
     /**
      * 角色CODE
      */
-    @TableField("ROLE_CODE")
+    @TableField("role_code")
     private String roleCode;
     /**
      * 角色描述
      */
-    @TableField("ROLE_DESC")
+    @TableField("role_desc")
     private String roleDesc;
 
     /**
      * 权限类型
      */
-    @TableField("PERMISSION_TYPE")
+    @TableField("permission_type")
     private String permissionType;
 
     /**
      * 菜单权限
      */
-    @TableField("MENUS")
+    @TableField("menus")
     private String menus;
 
 }

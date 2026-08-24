@@ -5,30 +5,30 @@
 <mapper namespace="org.etd.upms.mapper.user.SystemUserRoleRelMapper">
 
     <resultMap id="systemUserRoleVo" type="org.etd.upms.controller.user.vo.SystemUserRoleVO">
-        <id property="id" column="ID"/>
-        <result property="tenantId" column="TENANT_ID"/>
-        <result property="userId" column="USER_ID"/>
-        <result property="roleId" column="ROLE_ID"/>
-        <result property="roleCode" column="ROLE_CODE"/>
-        <result property="roleName" column="ROLE_NAME"/>
-        <result property="permissionType" column="PERMISSION_TYPE"/>
-        <result property="menus" column="MENUS"/>
+        <id property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="roleId" column="role_id"/>
+        <result property="roleCode" column="role_code"/>
+        <result property="roleName" column="role_name"/>
+        <result property="permissionType" column="permission_type"/>
+        <result property="menus" column="menus"/>
     </resultMap>
 
 
     <select id="selectByUserId" resultMap="systemUserRoleVo">
         select
-            t1.ID,
-            t1.TENANT_ID,
-            t1.USER_ID,
-            t1.ROLE_ID,
-            t2.ROLE_CODE,
-            t2.ROLE_NAME,
-            t2.PERMISSION_TYPE,
-            t2.MENUS
-        from SYSTEM_USER_ROLE_REL as t1
-        INNER JOIN SYSTEM_ROLE as t2 on t1.ROLE_ID = t2.ID
-        WHERE t1.USER_ID = #{userId}
+            t1.id,
+            t1.tenant_id,
+            t1.user_id,
+            t1.role_id,
+            t2.role_code,
+            t2.role_name,
+            t2.permission_type,
+            t2.menus
+        from system_user_role_rel as t1
+        inner join system_role as t2 on t1.role_id = t2.id
+        where t1.user_id = #{userId}
     </select>
 
 </mapper>
