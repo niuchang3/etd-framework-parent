@@ -18,8 +18,6 @@
     <properties>
         <!--   SpringCloud相关依赖     -->
         <spring.boot.version>3.5.16</spring.boot.version>
-        <spring.cloud.version>2025.0.3</spring.cloud.version>
-
         <java.version>21</java.version>
 
         <!--第三方工具类-->
@@ -29,6 +27,8 @@
 
         <!--Mybatis-->
         <mybatis.version>3.5.14</mybatis.version>
+        <!--分库分表-->
+        <shardingsphere.version>5.5.3</shardingsphere.version>
         <!--德鲁伊-->
         <druid.version>1.2.27</druid.version>
         <!--缓存框架-->
@@ -68,14 +68,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring.cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -176,6 +168,12 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-jsqlparser</artifactId>
                 <version>${mybatis.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.shardingsphere</groupId>
+                <artifactId>shardingsphere-jdbc</artifactId>
+                <version>${shardingsphere.version}</version>
             </dependency>
 
             <dependency>

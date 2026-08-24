@@ -1,0 +1,30 @@
+databaseName: demo_sharding_db
+
+dataSources:
+  ds_0:
+    dataSourceClassName: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://$${MYSQL_HOST::127.0.0.1}:$${MYSQL_PORT::3306}/$${MYSQL_DATABASE::test}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+    username: $${MYSQL_USERNAME::root}
+    password: $${MYSQL_PASSWORD::root}
+    initialSize: 2
+    minIdle: 1
+    maxActive: 20
+
+rules:
+  - !SHARDING
+    tables:
+      classs:
+        actualDataNodes: ds_0.classs_$->{0..1}
+        tableStrategy:
+          standard:
+            shardingColumn: id
+            shardingAlgorithmName: classs_inline
+    shardingAlgorithms:
+      classs_inline:
+        type: INLINE
+        props:
+          algorithm-expression: classs_$->{id % 2}
+
+props:
+  sql-show: true
