@@ -12,7 +12,7 @@ import java.util.Date;
 public class BaseEntity {
 
     /**
-     * 租户ID
+     * 主键ID
      */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;

@@ -10,6 +10,12 @@ import java.util.List;
 @ConfigurationProperties(prefix = "etd.mybatis")
 @Data
 public class EtdMyBatisPlusProperties {
+
+    /**
+     * 雪花 ID 生成器
+     */
+    @NestedConfigurationProperty
+    private IdGeneratorProperties idGenerator = new IdGeneratorProperties();
     /**
      * 租户相关配置
      */
@@ -32,6 +38,7 @@ public class EtdMyBatisPlusProperties {
      */
     @NestedConfigurationProperty
     private Permission permission = new Permission();
+
 
     /**
      * 数据快照配置
@@ -78,6 +85,23 @@ public class EtdMyBatisPlusProperties {
         private String columnName = "TENANT_ID";
 
         private List<String> ignoreTables = Lists.newArrayList();
+    }
+
+
+    @Data
+    public class IdGeneratorProperties{
+        /**
+         * 是否启用
+         */
+        private Boolean enabled = false;
+        /**
+         * 机器 ID
+         */
+        private Integer workerId = 1;
+        /**
+         * 数据中心 ID
+         */
+        private Integer datacenterId =1;
     }
 
 }

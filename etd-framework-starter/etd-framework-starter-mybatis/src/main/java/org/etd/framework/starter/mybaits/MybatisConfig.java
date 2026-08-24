@@ -1,6 +1,8 @@
 package org.etd.framework.starter.mybaits;
 
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
+import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
@@ -8,6 +10,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerIntercept
 import org.etd.framework.starter.mybaits.tenant.EtdTenantLineHandler;
 import org.etd.framework.starter.mybaits.tenant.aspect.IgnoreTenantAspect;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -60,4 +63,14 @@ public class MybatisConfig {
         return new IgnoreTenantAspect();
     }
 
+
+    @Bean
+    @ConditionalOnProperty(prefix = "etd.mybatis.idGenerator", value = "enabled",matchIfMissing = true)
+    public IdentifierGenerator identifierGenerator(EtdMyBatisPlusProperties properties) {
+        EtdMyBatisPlusProperties.IdGeneratorProperties idGenerator = properties.getIdGenerator();
+        return new DefaultIdentifierGenerator(
+                idGenerator.getWorkerId(),
+                idGenerator.getDatacenterId()
+        );
+    }
 }
