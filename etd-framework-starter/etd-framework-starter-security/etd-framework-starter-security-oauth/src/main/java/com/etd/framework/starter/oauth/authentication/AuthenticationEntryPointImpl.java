@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +14,7 @@ import java.io.IOException;
 /**
  * 未认证或认证凭证无效的入口处理器。
  */
+@Component
 public class AuthenticationEntryPointImpl extends AbstractAuthenticationHandler implements AuthenticationEntryPoint {
 
     public AuthenticationEntryPointImpl(ObjectMapper objectMapper) {

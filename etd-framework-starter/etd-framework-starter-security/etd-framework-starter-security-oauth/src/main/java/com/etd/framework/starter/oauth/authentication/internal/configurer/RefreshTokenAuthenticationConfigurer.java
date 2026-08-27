@@ -2,22 +2,15 @@ package com.etd.framework.starter.oauth.authentication.internal.configurer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
-import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
-import com.etd.framework.starter.client.core.properties.SecurityProperties;
-import com.etd.framework.starter.client.core.token.TokenValue;
 import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.client.core.configurer.AbstractSecurityEndpointConfigurer;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
-import com.etd.framework.starter.oauth.authentication.internal.converter.RefreshTokenRequestConverter;
+import com.etd.framework.starter.oauth.authentication.internal.factory.RefreshTokenAuthenticationFilterFactory;
 import com.etd.framework.starter.oauth.authentication.internal.filter.RefreshTokenRequestFilter;
 import com.etd.framework.starter.oauth.authentication.internal.provider.RefreshTokenAuthenticationProvider;
 import com.nimbusds.jwt.SignedJWT;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -46,7 +39,7 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
 
     @Override
     public void init(HttpSecurity builder) {
-        AuthenticationProvider provider = getAuthenticationProvider(builder);
+        AuthenticationProvider provider = getAuthenticationProvider();
         if (ObjectUtils.isEmpty(authenticationEndpointMatcher)) {
             // 默认刷新 token 端点。
             authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.POST, "/internal/refresh");
@@ -55,26 +48,10 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void configure(HttpSecurity builder) {
-        ApplicationContext applicationContext = getApplicationContext(builder);
-        TokenEncoder<Authentication, TokenValue> tokenEncoder = applicationContext.getBean(TokenEncoder.class);
-        SecurityProperties securityProperties = applicationContext.getBean(SecurityProperties.class);
-        ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);
-
-
-        EtdAuthenticationSuccessHandler successHandler = new EtdAuthenticationSuccessHandler(objectMapper);
-
-        RefreshTokenRequestFilter filter = RefreshTokenRequestFilter.builder()
-                .refreshTokenEndpointMatcher(authenticationEndpointMatcher)
-                .failureHandler(new EtdAuthenticationFailureHandler(objectMapper))
-                .successHandler(successHandler)
-                .converter(new RefreshTokenRequestConverter(objectMapper))
-                .authenticationManager(getAuthenticationManager(builder))
-                .tokenEncoder(tokenEncoder)
-                .securityProperties(securityProperties)
-                .build();
-
+        RefreshTokenAuthenticationFilterFactory factory = getApplicationContext(builder)
+                .getBean(RefreshTokenAuthenticationFilterFactory.class);
+        RefreshTokenRequestFilter filter = factory.create(authenticationEndpointMatcher, getAuthenticationManager(builder));
         builder.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
     }
 
@@ -91,19 +68,10 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
     /**
      * 创建刷新令牌认证提供者。
      *
-     * @param httpSecurity HTTP 安全构建器
      * @return 认证提供者
      */
-    @SuppressWarnings("unchecked")
-    private AuthenticationProvider getAuthenticationProvider(HttpSecurity httpSecurity) {
-
-        TokenDecode<SignedJWT> tokenDecode = getApplicationContext(httpSecurity).getBean(TokenDecode.class);
-        IUserService userService = getApplicationContext(httpSecurity).getBean(IUserService.class);
-        ObjectMapper objectMapper = getApplicationContext(httpSecurity).getBean(ObjectMapper.class);
-        return RefreshTokenAuthenticationProvider.builder()
-                .tokenDecode(tokenDecode)
-                .userService(userService)
-                .objectMapper(objectMapper)
-                .build();
+    private AuthenticationProvider getAuthenticationProvider() {
+        RefreshTokenAuthenticationProvider provider = RefreshTokenAuthenticationProvider.builder().build();
+        return postProcess(provider);
     }
 }

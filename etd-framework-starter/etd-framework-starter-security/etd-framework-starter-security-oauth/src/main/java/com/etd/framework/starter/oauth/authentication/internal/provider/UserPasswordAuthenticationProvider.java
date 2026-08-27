@@ -6,6 +6,8 @@ import com.etd.framework.starter.client.core.user.UserDetails;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -28,8 +30,11 @@ import org.springframework.util.ObjectUtils;
 public class UserPasswordAuthenticationProvider implements AuthenticationProvider {
 
 
+
+    @Setter(onMethod_ = @Autowired)
     private IUserService userService;
 
+    @Setter(onMethod_ = @Autowired)
     private PasswordEncoder passwordEncoder;
 
 

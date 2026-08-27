@@ -12,6 +12,8 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -33,10 +35,13 @@ import java.util.Date;
 public class RefreshTokenAuthenticationProvider implements AuthenticationProvider {
 
 
+    @Setter(onMethod_ = @Autowired)
     private IUserService userService;
 
+    @Setter(onMethod_ = @Autowired)
     private TokenDecode<SignedJWT> tokenDecode;
 
+    @Setter(onMethod_ = @Autowired)
     private ObjectMapper objectMapper;
 
     @Override
