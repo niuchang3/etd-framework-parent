@@ -1,6 +1,8 @@
 package com.etd.framework.starter.oauth.autoconfigure;
 
 
+import com.etd.framework.starter.client.core.authentication.AccessDeniedHandlerImpl;
+import com.etd.framework.starter.client.core.authentication.AuthenticationEntryPointImpl;
 import com.etd.framework.starter.client.core.configurer.SecurityAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.SecurityKeyLoader;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
@@ -10,15 +12,13 @@ import com.etd.framework.starter.client.core.user.IUserService;
 import com.etd.framework.starter.client.core.user.PermissionsService;
 import com.etd.framework.starter.client.core.user.memory.MemoryPermissionsServiceImpl;
 import com.etd.framework.starter.client.core.user.memory.MemoryUserServiceImpl;
-import com.etd.framework.starter.oauth.authentication.AccessDeniedHandlerImpl;
-import com.etd.framework.starter.oauth.authentication.AuthenticationEntryPointImpl;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
+import com.etd.framework.starter.oauth.authentication.internal.configurer.LogoutAuthenticationConfigurer;
+import com.etd.framework.starter.oauth.authentication.internal.configurer.RefreshTokenAuthenticationConfigurer;
+import com.etd.framework.starter.oauth.authentication.internal.configurer.UserPasswordAuthenticationConfigurer;
 import com.etd.framework.starter.oauth.authentication.internal.factory.AuthenticationFilterSupport;
+import com.etd.framework.starter.oauth.authentication.internal.factory.LogoutAuthenticationFilterFactory;
 import com.etd.framework.starter.oauth.authentication.internal.factory.RefreshTokenAuthenticationFilterFactory;
 import com.etd.framework.starter.oauth.authentication.internal.factory.UserPasswordAuthenticationFilterFactory;
-import com.etd.framework.starter.oauth.authentication.internal.configurer.UserPasswordAuthenticationConfigurer;
-import com.etd.framework.starter.oauth.authentication.internal.configurer.RefreshTokenAuthenticationConfigurer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,6 +31,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.util.ObjectUtils;
 
 import java.security.PrivateKey;
 
@@ -42,13 +43,10 @@ import java.security.PrivateKey;
 @AutoConfiguration
 @EnableConfigurationProperties(SecurityProperties.class)
 @Import({
-        AccessDeniedHandlerImpl.class,
-        AuthenticationEntryPointImpl.class,
-        EtdAuthenticationFailureHandler.class,
-        EtdAuthenticationSuccessHandler.class,
         AuthenticationFilterSupport.class,
         UserPasswordAuthenticationFilterFactory.class,
-        RefreshTokenAuthenticationFilterFactory.class
+        RefreshTokenAuthenticationFilterFactory.class,
+        LogoutAuthenticationFilterFactory.class
 })
 public class SecurityAuthenticationAutoConfiguration {
 
@@ -70,6 +68,9 @@ public class SecurityAuthenticationAutoConfiguration {
         SecurityAuthenticationConfigurer configurer = new SecurityAuthenticationConfigurer();
         configurer.addConfigurer(new UserPasswordAuthenticationConfigurer().addEndpointMatcher(securityProperties.getAccessToken().getEndpoint()));
         configurer.addConfigurer(new RefreshTokenAuthenticationConfigurer().addEndpointMatcher(securityProperties.getRefreshToken().getEndpoint()));
+        if (isLogoutEnabled(securityProperties)) {
+            configurer.addConfigurer(new LogoutAuthenticationConfigurer().addEndpointMatcher(securityProperties.getLogout().getEndpoint()));
+        }
 
         http.securityMatcher(configurer.getEndpointsMatcher());
         http.with(configurer, Customizer.withDefaults());
@@ -82,6 +83,17 @@ public class SecurityAuthenticationAutoConfiguration {
                         .authenticationEntryPoint(authenticationEntryPoint));
 
         return http.build();
+    }
+
+    /**
+     * 判断内部退出登录端点是否启用。
+     *
+     * @param securityProperties 安全配置
+     * @return 是否启用
+     */
+    private boolean isLogoutEnabled(SecurityProperties securityProperties) {
+        return !ObjectUtils.isEmpty(securityProperties.getLogout())
+                && Boolean.TRUE.equals(securityProperties.getLogout().getEnabled());
     }
 
     /**

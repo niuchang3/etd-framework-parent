@@ -82,7 +82,7 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             newAuthentication.setDetails(userDetails);
             return newAuthentication;
 
-        } catch (JOSEException | ParseException e) {
+        } catch (JOSEException | IllegalArgumentException | ParseException e) {
             // 不打印令牌原文，避免认证失败日志泄露敏感凭证。
             log.debug("令牌解析失败：{}", e.getMessage());
             throw new CredentialsExpiredException("令牌解析失败。");

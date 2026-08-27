@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.authentication;
+package com.etd.framework.starter.client.core.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;

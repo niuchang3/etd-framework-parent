@@ -26,7 +26,7 @@ import java.util.List;
  */
 @Order(0)
 @Configuration
-@ComponentScan({"org.etd.framework.starter.web.**"})
+@ComponentScan({"org.etd.framework.starter.web"})
 public class WebAppConfig implements WebMvcConfigurer {
 
 

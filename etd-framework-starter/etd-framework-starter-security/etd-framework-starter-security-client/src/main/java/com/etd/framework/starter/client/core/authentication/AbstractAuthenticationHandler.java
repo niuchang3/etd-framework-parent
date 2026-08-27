@@ -1,8 +1,7 @@
-package com.etd.framework.starter.oauth.authentication;
+package com.etd.framework.starter.client.core.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
@@ -11,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 认证响应处理器基类。
@@ -40,7 +41,7 @@ public abstract class AbstractAuthenticationHandler {
             log.debug("认证失败：{}", exception.getMessage());
         }
 
-        ResultModel<Object> failed = ResultModel.failed(response.getStatus(), exception, exception.getMessage(), request.getRequestURI());
+        Map<String, Object> failed = responseBody(response.getStatus(), null, exception.getMessage(), null, request.getRequestURI());
         writeJson(response, failed);
     }
 
@@ -51,10 +52,30 @@ public abstract class AbstractAuthenticationHandler {
      * @param body 响应体
      * @throws IOException
      */
-    protected void writeSuccess(HttpServletResponse response, ResultModel<?> body) throws IOException {
+    protected void writeSuccess(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpStatus.OK.value());
         writeJson(response, body);
 
+    }
+
+    /**
+     * 构建统一响应体。
+     *
+     * @param code 响应码
+     * @param devMessage 开发提示
+     * @param message 用户提示
+     * @param data 响应数据
+     * @param url 请求地址
+     * @return 统一响应体
+     */
+    protected Map<String, Object> responseBody(Integer code, String devMessage, String message, Object data, String url) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("code", code);
+        body.put("devMessage", devMessage);
+        body.put("message", message);
+        body.put("data", data);
+        body.put("url", url);
+        return body;
     }
 
     /**

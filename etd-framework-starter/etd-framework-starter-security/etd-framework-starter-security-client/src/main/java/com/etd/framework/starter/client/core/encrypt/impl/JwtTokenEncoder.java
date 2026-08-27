@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 
 
 /**
@@ -69,7 +70,7 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
                 .notBeforeTime(signTime)
                 .expirationTime(getExpireTime(tokenType))
                 .subject(String.valueOf(getUserDetails(authentication).getId()))
-                .claim(Authentication.class.getName(), copySafeUserDetails(authentication))
+                .claim(Authentication.class.getName(), copySafeUserDetailsClaim(authentication))
                 .build();
 
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
@@ -128,6 +129,32 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         target.setTenantAdmin(source.getTenantAdmin());
         target.setAuthorities(source.getAuthorities());
         return target;
+    }
+
+    /**
+     * 复制可写入 JWT 的用户信息 Claim。
+     *
+     * @param authentication 认证结果
+     * @return 可安全写入令牌的用户信息 Claim
+     */
+    private Map<String, Object> copySafeUserDetailsClaim(Authentication authentication) {
+        UserDetails userDetails = copySafeUserDetails(authentication);
+        Map<String, Object> claim = new java.util.LinkedHashMap<>();
+        claim.put("id", userDetails.getId());
+        claim.put("account", userDetails.getAccount());
+        claim.put("mobile", userDetails.getMobile());
+        claim.put("userName", userDetails.getUserName());
+        // JWT Claim 中业务日期统一写毫秒时间戳，避免 Nimbus 转成 Locale 相关字符串后无法反序列化。
+        claim.put("birthday", userDetails.getBirthday() == null ? null : userDetails.getBirthday().getTime());
+        claim.put("gender", userDetails.getGender());
+        claim.put("avatar", userDetails.getAvatar());
+        claim.put("nickName", userDetails.getNickName());
+        claim.put("locked", userDetails.getLocked());
+        claim.put("enabled", userDetails.getEnabled());
+        claim.put("platformAdmin", userDetails.getPlatformAdmin());
+        claim.put("tenantAdmin", userDetails.getTenantAdmin());
+        claim.put("authorities", userDetails.getAuthorities());
+        return claim;
     }
 
     /**

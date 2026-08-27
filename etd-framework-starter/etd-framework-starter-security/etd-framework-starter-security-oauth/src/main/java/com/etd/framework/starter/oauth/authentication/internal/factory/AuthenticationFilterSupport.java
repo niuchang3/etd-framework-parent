@@ -1,11 +1,11 @@
 package com.etd.framework.starter.oauth.authentication.internal.factory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.etd.framework.starter.client.core.authentication.EtdAuthenticationFailureHandler;
+import com.etd.framework.starter.client.core.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
 import com.etd.framework.starter.client.core.token.TokenValue;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationFailureHandler;
-import com.etd.framework.starter.oauth.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.oauth.authentication.internal.converter.RefreshTokenRequestConverter;
 import com.etd.framework.starter.oauth.authentication.internal.converter.UserPasswordRequestAuthenticationConverter;
 import lombok.RequiredArgsConstructor;

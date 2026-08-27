@@ -10,21 +10,7 @@ public enum RequestCodeConstant implements RequestCodeConverter {
     /**
      * 调用成功
      */
-    SUCCESS(200, "接口请求成功。"),
-
-
-    NO_PERMISSION(401, "请登录后在进行操作。"),
-
-    /**
-     * 请求资源权限不足。
-     */
-    NO_URL_PERMISSION(403, "请求资源权限不足。"),
-
-
-    /**
-     * 服务器代码报错
-     */
-    INTERNAL_SERVER_ERROR(500, "服务器异常。"),
+    SUCCESS(2000, "接口请求成功。"),
     /**
      * 业务状态码：5000
      */

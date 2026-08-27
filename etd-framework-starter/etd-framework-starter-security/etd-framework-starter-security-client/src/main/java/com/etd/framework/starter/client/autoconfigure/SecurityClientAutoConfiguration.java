@@ -1,6 +1,8 @@
 package com.etd.framework.starter.client.autoconfigure;
 
 
+import com.etd.framework.starter.client.core.authentication.AccessDeniedHandlerImpl;
+import com.etd.framework.starter.client.core.authentication.AuthenticationEntryPointImpl;
 import com.etd.framework.starter.client.core.authentication.bearer.BearerAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.SecurityKeyLoader;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
@@ -47,7 +49,9 @@ public class SecurityClientAutoConfiguration {
     @Order(Ordered.LOWEST_PRECEDENCE)
     @ConditionalOnMissingBean(name = "bearerAuthenticationSecurityFilterChain")
     public SecurityFilterChain bearerAuthenticationSecurityFilterChain(HttpSecurity http,
-                                                                       SecurityProperties securityProperties) throws Exception {
+                                                                       SecurityProperties securityProperties,
+                                                                       AccessDeniedHandlerImpl accessDeniedHandler,
+                                                                       AuthenticationEntryPointImpl authenticationEntryPoint) throws Exception {
         List<String> ignorePermissions = securityProperties.getPermissions() == null ? null : securityProperties.getPermissions().getIgnore();
         String[] urls = CollectionUtils.isEmpty(ignorePermissions) ? new String[0] : ignorePermissions.toArray(String[]::new);
         http.with(new BearerAuthenticationConfigurer(), Customizer.withDefaults());
@@ -59,7 +63,10 @@ public class SecurityClientAutoConfiguration {
                         authorize.requestMatchers(urls).permitAll();
                     }
                     authorize.anyRequest().authenticated();
-                });
+                })
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler(accessDeniedHandler)
+                        .authenticationEntryPoint(authenticationEntryPoint));
         return http.build();
     }
 

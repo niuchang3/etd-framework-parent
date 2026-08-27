@@ -11,6 +11,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -41,6 +42,11 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
      */
     private AuthenticationManager authenticationManager;
 
+    /**
+     * 认证失败响应处理器。
+     */
+    private AuthenticationFailureHandler failureHandler;
+
 
     /**
      * 解析并认证 Bearer 令牌。
@@ -70,7 +76,8 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (AuthenticationException exception) {
             SecurityContextHolder.clearContext();
-            response.sendError(HttpStatus.UNAUTHORIZED.value(), exception.getMessage());
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            failureHandler.onAuthenticationFailure(request, response, exception);
         } finally {
             // 令牌认证的身份只在当前请求内有效，请求链结束后清理线程上下文。
             if (contextSet) {

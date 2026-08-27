@@ -1,6 +1,7 @@
 package com.etd.framework.starter.client.core.authentication.bearer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.etd.framework.starter.client.core.authentication.EtdAuthenticationFailureHandler;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.context.ApplicationContext;
@@ -41,7 +42,9 @@ public class BearerAuthenticationConfigurer extends AbstractHttpConfigurer<Beare
     public void configure(HttpSecurity builder) {
         AuthenticationConverter converter = new BearerAuthenticationConverter();
         AuthenticationManager authenticationManager = builder.getSharedObject(AuthenticationManager.class);
-        BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter, authenticationManager);
+        EtdAuthenticationFailureHandler failureHandler = builder.getSharedObject(ApplicationContext.class)
+                .getBean(EtdAuthenticationFailureHandler.class);
+        BearerTokenAuthenticationFilter filter = new BearerTokenAuthenticationFilter(converter, authenticationManager, failureHandler);
         builder.addFilterBefore(filter, AnonymousAuthenticationFilter.class);
     }
 }

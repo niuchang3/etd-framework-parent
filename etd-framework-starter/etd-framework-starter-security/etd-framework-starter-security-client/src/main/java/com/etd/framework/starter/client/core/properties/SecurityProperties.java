@@ -34,6 +34,12 @@ public class SecurityProperties {
     private Token refreshToken = new Token("/internal/refresh",ChronoUnit.DAYS, 7L, true);
 
     /**
+     * 退出登录配置。
+     */
+    @NestedConfigurationProperty
+    private Endpoint logout = new Endpoint("/internal/logout", true);
+
+    /**
      * 权限相关配置。
      */
     @NestedConfigurationProperty
@@ -67,6 +73,25 @@ public class SecurityProperties {
          * 过期时长。
          */
         private Long expired;
+
+        /**
+         * 是否启用。
+         */
+        private Boolean enabled;
+    }
+
+    /**
+     * 内部安全端点配置。
+     */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Endpoint {
+
+        /**
+         * 请求地址。
+         */
+        private String endpoint;
 
         /**
          * 是否启用。

@@ -1,7 +1,6 @@
-package com.etd.framework.starter.oauth.authentication;
+package com.etd.framework.starter.client.core.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -32,7 +31,7 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
      */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        ResultModel<Authentication> success = ResultModel.success(authentication);
+        Object success = responseBody(200, "接口请求成功。", "", authentication, "");
         writeSuccess(response, success);
     }
 
@@ -45,7 +44,7 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
      * @param body 响应数据
      */
     public void writeBody(HttpServletResponse response, Object body) throws IOException {
-        ResultModel<Object> success = ResultModel.success(body);
+        Object success = responseBody(200, "接口请求成功。", "", body, "");
         writeSuccess(response, success);
     }
 }
