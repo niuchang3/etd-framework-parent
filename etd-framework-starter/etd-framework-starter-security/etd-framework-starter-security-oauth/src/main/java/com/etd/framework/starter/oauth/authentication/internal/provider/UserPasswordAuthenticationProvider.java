@@ -1,5 +1,6 @@
 package com.etd.framework.starter.oauth.authentication.internal.provider;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.oauth.authentication.internal.token.UserPasswordAuthenticationRequestToken;
 import com.etd.framework.starter.client.core.user.IUserService;
 import org.etd.framework.common.core.user.UserDetails;
@@ -57,10 +58,10 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
      */
     private void validate(Authentication authentication) {
         if (ObjectUtils.isEmpty(authentication.getPrincipal())) {
-            throw new UsernameNotFoundException("用户名不能为空。");
+            throw new UsernameNotFoundException(SecurityMessageCode.USER_NOT_FOUND);
         }
         if (ObjectUtils.isEmpty(authentication.getCredentials())) {
-            throw new BadCredentialsException("密码不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.PASSWORD_INVALID);
         }
     }
 
@@ -72,20 +73,20 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
      */
     private void validate(UserDetails userDetails, Authentication authentication) {
         if (ObjectUtils.isEmpty(userDetails)) {
-            throw new UsernameNotFoundException("用户名错误。");
+            throw new UsernameNotFoundException(SecurityMessageCode.USER_NOT_FOUND);
         }
         if (ObjectUtils.isEmpty(userDetails.getPassword())) {
-            throw new BadCredentialsException("用户密码未初始化。");
+            throw new BadCredentialsException(SecurityMessageCode.PASSWORD_INVALID);
         }
         boolean matches = passwordEncoder.matches((CharSequence) authentication.getCredentials(), userDetails.getPassword());
         if (!matches) {
-            throw new BadCredentialsException("密码错误。");
+            throw new BadCredentialsException(SecurityMessageCode.PASSWORD_INVALID);
         }
         if (!Boolean.TRUE.equals(userDetails.getEnabled())) {
-            throw new DisabledException("账号已被禁用。");
+            throw new DisabledException(SecurityMessageCode.ACCOUNT_DISABLED);
         }
         if (Boolean.TRUE.equals(userDetails.getLocked())) {
-            throw new LockedException("账号已被锁定，请联系管理员解锁。");
+            throw new LockedException(SecurityMessageCode.ACCOUNT_LOCKED);
         }
     }
 

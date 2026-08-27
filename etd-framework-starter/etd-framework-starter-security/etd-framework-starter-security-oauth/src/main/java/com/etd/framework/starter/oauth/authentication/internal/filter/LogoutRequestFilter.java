@@ -1,6 +1,7 @@
 package com.etd.framework.starter.oauth.authentication.internal.filter;
 
 import com.etd.framework.starter.client.core.authentication.EtdAuthenticationSuccessHandler;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -73,7 +74,7 @@ public class LogoutRequestFilter extends OncePerRequestFilter {
         try {
             Authentication logoutToken = converter.convert(request);
             if (ObjectUtils.isEmpty(logoutToken)) {
-                throw new BadCredentialsException("退出登录令牌不能为空。");
+                throw new BadCredentialsException(SecurityMessageCode.TOKEN_EMPTY);
             }
             Authentication authentication = authenticationManager.authenticate(logoutToken);
             onAuthenticationSuccess(response, authentication);
@@ -91,7 +92,7 @@ public class LogoutRequestFilter extends OncePerRequestFilter {
     private void onAuthenticationSuccess(HttpServletResponse response, Authentication authentication) throws IOException {
         Object principal = authentication.getPrincipal();
         if (ObjectUtils.isEmpty(principal) || !StringUtils.hasText(String.valueOf(principal))) {
-            throw new BadCredentialsException("退出登录用户标识不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID);
         }
         String userId = String.valueOf(principal);
         // 删除访问令牌和刷新令牌，使当前登录态立即失效。

@@ -1,5 +1,6 @@
 package com.etd.framework.starter.client.core.authentication.bearer;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -38,7 +39,7 @@ public class BearerAuthenticationConverter implements AuthenticationConverter {
         // 只允许 Bearer 后面携带非空令牌，避免把空字符串交给 JWT 解析器。
         String token = header.substring(bearerPrefix.length()).trim();
         if (!StringUtils.hasText(token)) {
-            throw new BadCredentialsException("认证头令牌不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_EMPTY);
         }
 
         return new BearerTokenAuthentication(null, token);

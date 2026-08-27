@@ -1,5 +1,6 @@
 package com.etd.framework.starter.client.core.authentication;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
@@ -11,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-
 /**
  * 认证失败响应处理器。
  * <p>
@@ -20,8 +20,8 @@ import java.io.IOException;
 @Component
 public class EtdAuthenticationFailureHandler extends AbstractAuthenticationHandler implements AuthenticationFailureHandler {
 
-    public EtdAuthenticationFailureHandler(ObjectMapper objectMapper) {
-        super(objectMapper);
+    public EtdAuthenticationFailureHandler(ObjectMapper objectMapper, SecurityMessageResolver securityMessageResolver) {
+        super(objectMapper, securityMessageResolver);
     }
 
     /**

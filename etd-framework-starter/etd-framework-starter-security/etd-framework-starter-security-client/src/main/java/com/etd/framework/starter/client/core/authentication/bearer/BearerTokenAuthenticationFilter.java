@@ -1,5 +1,6 @@
 package com.etd.framework.starter.client.core.authentication.bearer;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
@@ -66,7 +67,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             }
             Authentication authenticate = authenticationManager.authenticate(convert);
             if (!authenticate.isAuthenticated()) {
-                throw new CredentialsExpiredException("凭证错误");
+                throw new CredentialsExpiredException(SecurityMessageCode.CREDENTIALS_INVALID);
             }
 
             SecurityContext context = SecurityContextHolder.createEmptyContext();

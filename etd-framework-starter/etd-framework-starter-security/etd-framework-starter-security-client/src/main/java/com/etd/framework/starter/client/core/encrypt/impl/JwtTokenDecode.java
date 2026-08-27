@@ -1,6 +1,7 @@
 package com.etd.framework.starter.client.core.encrypt.impl;
 
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
@@ -40,7 +41,7 @@ public class JwtTokenDecode implements TokenDecode<SignedJWT> {
     public SignedJWT decode(String token) throws JOSEException, ParseException {
         SignedJWT parse = SignedJWT.parse(token);
         if (!parse.verify(verifier)) {
-            throw new BadCredentialsException("令牌校验失败。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_PARSE_FAILED);
         }
         return parse;
     }

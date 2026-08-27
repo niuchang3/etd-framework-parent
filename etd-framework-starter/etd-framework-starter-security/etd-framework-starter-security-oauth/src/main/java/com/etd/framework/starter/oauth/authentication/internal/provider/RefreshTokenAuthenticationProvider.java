@@ -2,6 +2,7 @@ package com.etd.framework.starter.oauth.authentication.internal.provider;
 
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
 import com.etd.framework.starter.client.core.user.IUserService;
 import org.etd.framework.common.core.user.UserDetails;
@@ -57,7 +58,7 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
             return converterAuthentication((String) requestToken.getCredentials(), userDetails);
 
         } catch (JOSEException | ParseException e) {
-            throw new BadCredentialsException("令牌解析失败。", e);
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_PARSE_FAILED, e);
         }
     }
 
@@ -68,7 +69,7 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      */
     private void validateRequest(RefreshTokenRequestToken requestToken) {
         if (ObjectUtils.isEmpty(requestToken.getCredentials())) {
-            throw new BadCredentialsException("刷新令牌不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_EMPTY);
         }
     }
 
@@ -79,13 +80,13 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      */
     private void validate(UserDetails userDetails) {
         if (ObjectUtils.isEmpty(userDetails)) {
-            throw new BadCredentialsException("令牌用户不存在。");
+            throw new BadCredentialsException(SecurityMessageCode.USER_NOT_FOUND);
         }
         if (!Boolean.TRUE.equals(userDetails.getEnabled())) {
-            throw new DisabledException("账号已被禁用。");
+            throw new DisabledException(SecurityMessageCode.ACCOUNT_DISABLED);
         }
         if (Boolean.TRUE.equals(userDetails.getLocked())) {
-            throw new LockedException("账号已被锁定，请联系管理员解锁。");
+            throw new LockedException(SecurityMessageCode.ACCOUNT_LOCKED);
         }
     }
 
@@ -97,11 +98,10 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      */
     private void verifyExpired(SignedJWT jwt) throws ParseException {
         Date expirationTime = jwt.getJWTClaimsSet().getExpirationTime();
-        String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
         long now = Calendar.getInstance().getTime().getTime();
         long expired = expirationTime.getTime();
         if (now >= expired) {
-            throw new CredentialsExpiredException(getTokenTypeName(tokenType) + "已过期。");
+            throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_EXPIRED);
         }
     }
 
@@ -113,7 +113,7 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     private void verifyTokenType(SignedJWT jwt) {
         String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
         if (!SecurityParameterConstant.TokenType.refresh_token.name().equals(tokenType)) {
-            throw new BadCredentialsException("令牌类型错误");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_TYPE_INVALID);
         }
 
     }
@@ -127,11 +127,11 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     private void verifyStorage(Long userId, String tokenValue) {
         boolean existRefreshToken = TokenStorage.isExistRefreshToken(String.valueOf(userId));
         if (!existRefreshToken) {
-            throw new CredentialsExpiredException("令牌已被撤销。");
+            throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
         }
         boolean refreshMatches = TokenStorage.refreshMatches(String.valueOf(userId), tokenValue);
         if (!refreshMatches) {
-            throw new CredentialsExpiredException("令牌已被撤销。");
+            throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
         }
     }
 
@@ -160,27 +160,16 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     private UserDetails toUserDetails(SignedJWT jwt) throws ParseException {
         String subject = jwt.getJWTClaimsSet().getSubject();
         if (ObjectUtils.isEmpty(subject)) {
-            throw new BadCredentialsException("令牌用户标识不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID);
         }
         try {
             UserDetails userDetails = new UserDetails();
             userDetails.setId(Long.valueOf(subject));
             return userDetails;
         } catch (NumberFormatException e) {
-            throw new BadCredentialsException("令牌用户标识格式错误。", e);
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID, e);
         }
     }
-
-    private String getTokenTypeName(String tokenType) {
-        if (SecurityParameterConstant.TokenType.access_token.name().equals(tokenType)) {
-            return "访问令牌";
-        }
-        if (SecurityParameterConstant.TokenType.refresh_token.name().equals(tokenType)) {
-            return "刷新令牌";
-        }
-        return "令牌";
-    }
-
     @Override
     public boolean supports(Class<?> authentication) {
         return RefreshTokenRequestToken.class.isAssignableFrom(authentication);

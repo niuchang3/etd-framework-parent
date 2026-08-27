@@ -7,12 +7,17 @@ import com.etd.framework.starter.client.core.authentication.bearer.BearerAuthent
 import com.etd.framework.starter.client.core.encrypt.SecurityKeyLoader;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.encrypt.impl.JwtTokenDecode;
+import com.etd.framework.starter.client.core.i18n.MessageSourceSecurityMessageResolver;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageResolver;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
@@ -95,4 +100,32 @@ public class SecurityClientAutoConfiguration {
         return new JwtTokenDecode(rsaPublicKey);
     }
 
+    /**
+     * 提供 Security 专用默认消息源。
+     *
+     * @return Security 消息源
+     */
+    @Bean("securityMessageSource")
+    @ConditionalOnMissingBean(name = "securityMessageSource")
+    public MessageSource securityMessageSource() {
+        ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+        messageSource.setBasename("i18n/security-messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setFallbackToSystemLocale(false);
+        return messageSource;
+    }
+
+    /**
+     * 提供默认 Security 消息解析器。
+     *
+     * @param messageSource Security 专用消息源
+     * @return Security 消息解析器
+     */
+    @Bean
+    @ConditionalOnMissingBean(SecurityMessageResolver.class)
+    public SecurityMessageResolver securityMessageResolver(@Qualifier("securityMessageSource") MessageSource messageSource) {
+        return new MessageSourceSecurityMessageResolver(messageSource);
+    }
+
 }
+

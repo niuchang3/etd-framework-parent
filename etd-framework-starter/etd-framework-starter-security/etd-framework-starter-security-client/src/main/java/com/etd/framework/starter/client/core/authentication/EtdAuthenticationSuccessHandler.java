@@ -1,12 +1,12 @@
 package com.etd.framework.starter.client.core.authentication;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -19,8 +19,8 @@ import java.io.IOException;
 @Component
 public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandler implements AuthenticationSuccessHandler {
 
-    public EtdAuthenticationSuccessHandler(ObjectMapper objectMapper) {
-        super(objectMapper);
+    public EtdAuthenticationSuccessHandler(ObjectMapper objectMapper, SecurityMessageResolver securityMessageResolver) {
+        super(objectMapper, securityMessageResolver);
     }
 
     /**
@@ -32,7 +32,6 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
      */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
-        ResultModel.success(authentication);
         writeSuccess(response, ResultModel.success(authentication));
     }
 

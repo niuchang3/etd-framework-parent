@@ -1,6 +1,7 @@
 package com.etd.framework.starter.oauth.authentication.internal.converter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -49,12 +50,12 @@ public class RefreshTokenRequestConverter implements AuthenticationConverter {
      */
     private <T> T readJson(HttpServletRequest request, Class<T> targetType) {
         if (!isJsonRequest(request)) {
-            throw new AuthenticationServiceException("刷新接口只支持 JSON 请求体。");
+            throw new AuthenticationServiceException(SecurityMessageCode.REQUEST_CONTENT_TYPE_INVALID);
         }
         try {
             return objectMapper.readValue(request.getInputStream(), targetType);
         } catch (IOException exception) {
-            throw new AuthenticationServiceException("刷新请求体解析失败。", exception);
+            throw new AuthenticationServiceException(SecurityMessageCode.REQUEST_BODY_PARSE_FAILED, exception);
         }
     }
 

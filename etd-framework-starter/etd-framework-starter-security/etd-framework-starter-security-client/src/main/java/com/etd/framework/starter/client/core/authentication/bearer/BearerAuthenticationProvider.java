@@ -2,6 +2,7 @@ package com.etd.framework.starter.client.core.authentication.bearer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
 import org.etd.framework.common.core.user.UserDetails;
@@ -67,11 +68,11 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             // Redis 中不存在或值不一致，都视为令牌已被后续登录或退出操作撤销。
             boolean existAccessToken = TokenStorage.isExistAccessToken(String.valueOf(userDetails.getId()));
             if (!existAccessToken) {
-                throw new CredentialsExpiredException("令牌已被撤销。");
+                throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
             }
             boolean accessMatches = TokenStorage.accessMatches(String.valueOf(userDetails.getId()), tokenAuthentication.getCredentials());
             if (!accessMatches) {
-                throw new CredentialsExpiredException("令牌已被撤销。");
+                throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
             }
 
 
@@ -85,7 +86,7 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
         } catch (JOSEException | IllegalArgumentException | ParseException e) {
             // 不打印令牌原文，避免认证失败日志泄露敏感凭证。
             log.debug("令牌解析失败：{}", e.getMessage());
-            throw new CredentialsExpiredException("令牌解析失败。");
+            throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_PARSE_FAILED);
         }
     }
 
@@ -101,11 +102,10 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
      */
     private void verifyExpired(SignedJWT jwt) throws ParseException {
         Date expirationTime = jwt.getJWTClaimsSet().getExpirationTime();
-        String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
         long now = Calendar.getInstance().getTime().getTime();
         long expired = expirationTime.getTime();
         if (now >= expired) {
-            throw new CredentialsExpiredException(getTokenTypeName(tokenType) + "已过期。");
+            throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_EXPIRED);
         }
     }
 
@@ -117,7 +117,7 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
     private void verifyAccessToken(SignedJWT jwt) {
         String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
         if (!SecurityParameterConstant.TokenType.access_token.name().equals(tokenType)) {
-            throw new BadCredentialsException("令牌类型错误");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_TYPE_INVALID);
         }
     }
 
@@ -130,22 +130,12 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
     private UserDetails toUserDetails(SignedJWT jwt) throws ParseException {
         Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
         if (user == null) {
-            throw new BadCredentialsException("令牌用户信息不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID);
         }
         UserDetails userDetails = objectMapper.convertValue(user, UserDetails.class);
         if (userDetails == null || userDetails.getId() == null) {
-            throw new BadCredentialsException("令牌用户标识不能为空。");
+            throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID);
         }
         return userDetails;
-    }
-
-    private String getTokenTypeName(String tokenType) {
-        if (SecurityParameterConstant.TokenType.access_token.name().equals(tokenType)) {
-            return "访问令牌";
-        }
-        if (SecurityParameterConstant.TokenType.refresh_token.name().equals(tokenType)) {
-            return "刷新令牌";
-        }
-        return "令牌";
     }
 }

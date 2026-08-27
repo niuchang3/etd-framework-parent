@@ -1,5 +1,7 @@
 package com.etd.framework.starter.client.core.authentication;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,8 +19,8 @@ import java.io.IOException;
 @Component
 public class AccessDeniedHandlerImpl extends AbstractAuthenticationHandler implements AccessDeniedHandler {
 
-    public AccessDeniedHandlerImpl(ObjectMapper objectMapper) {
-        super(objectMapper);
+    public AccessDeniedHandlerImpl(ObjectMapper objectMapper, SecurityMessageResolver securityMessageResolver) {
+        super(objectMapper, securityMessageResolver);
     }
 
     /**
@@ -31,6 +33,10 @@ public class AccessDeniedHandlerImpl extends AbstractAuthenticationHandler imple
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) throws IOException, ServletException {
         response.setStatus(HttpStatus.FORBIDDEN.value());
-        writeFailed(request, response, exception);
+        AccessDeniedException ex = exception;
+        if (ex == null || ex.getMessage() == null || "Access is denied".equals(ex.getMessage())) {
+            ex = new AccessDeniedException(SecurityMessageCode.ACCESS_DENIED, exception);
+        }
+        writeFailed(request, response, ex);
     }
 }

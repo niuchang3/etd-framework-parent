@@ -1,7 +1,10 @@
 package com.etd.framework.starter.client.core.authentication;
 
+import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
+import com.etd.framework.starter.client.core.i18n.SecurityMessageResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -17,8 +20,8 @@ import java.io.IOException;
 @Component
 public class AuthenticationEntryPointImpl extends AbstractAuthenticationHandler implements AuthenticationEntryPoint {
 
-    public AuthenticationEntryPointImpl(ObjectMapper objectMapper) {
-        super(objectMapper);
+    public AuthenticationEntryPointImpl(ObjectMapper objectMapper, SecurityMessageResolver securityMessageResolver) {
+        super(objectMapper, securityMessageResolver);
     }
 
     /**
@@ -31,6 +34,10 @@ public class AuthenticationEntryPointImpl extends AbstractAuthenticationHandler 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
-        writeFailed(request, response, authException);
+        AuthenticationException ex = authException;
+        if (ex == null || ex.getMessage() == null || ex.getMessage().startsWith("Full authentication is required")) {
+            ex = new InsufficientAuthenticationException(SecurityMessageCode.UNAUTHORIZED, authException);
+        }
+        writeFailed(request, response, ex);
     }
 }
