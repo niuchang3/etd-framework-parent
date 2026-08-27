@@ -1,6 +1,6 @@
 package org.etd.framework.common.core.context.model;
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -1,6 +1,6 @@
 package org.etd.framework.starter.mybaits.tenant.aspect;
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

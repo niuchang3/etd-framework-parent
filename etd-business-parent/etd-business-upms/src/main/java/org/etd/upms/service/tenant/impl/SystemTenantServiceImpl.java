@@ -2,8 +2,8 @@ package org.etd.upms.service.tenant.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.etd.framework.starter.client.core.TenantAuthority;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.TenantAuthority;
+import org.etd.framework.common.core.user.UserDetails;
 import org.apache.commons.lang3.StringUtils;
 import org.etd.upms.converter.SystemTenantConvert;
 import org.etd.upms.entity.SystemTenantEntity;

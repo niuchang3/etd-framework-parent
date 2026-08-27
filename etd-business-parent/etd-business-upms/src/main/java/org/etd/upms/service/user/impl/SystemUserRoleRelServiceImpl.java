@@ -1,6 +1,6 @@
 package org.etd.upms.service.user.impl;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
+import org.etd.framework.common.core.user.TenantAuthority;
 import com.google.common.collect.Lists;
 import org.etd.upms.converter.SystemUserRoleConverter;
 import org.etd.upms.mapper.user.SystemUserRoleRelMapper;

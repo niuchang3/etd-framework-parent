@@ -1,7 +1,7 @@
 package org.etd.framework.starter.mybaits.tenant;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import com.google.common.collect.Sets;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;

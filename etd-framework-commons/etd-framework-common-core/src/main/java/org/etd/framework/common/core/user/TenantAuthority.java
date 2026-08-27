@@ -1,4 +1,4 @@
-package com.etd.framework.starter.client.core;
+package org.etd.framework.common.core.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +16,6 @@ import org.springframework.security.core.GrantedAuthority;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TenantAuthority implements GrantedAuthority {
-
 
     private static final long serialVersionUID = -1L;
     /**

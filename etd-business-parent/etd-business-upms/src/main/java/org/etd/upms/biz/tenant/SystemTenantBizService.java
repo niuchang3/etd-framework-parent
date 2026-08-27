@@ -1,7 +1,7 @@
 package org.etd.upms.biz.tenant;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.upms.controller.tenant.vo.SystemTenantVO;
 import org.etd.upms.controller.user.vo.SystemUserRoleVO;

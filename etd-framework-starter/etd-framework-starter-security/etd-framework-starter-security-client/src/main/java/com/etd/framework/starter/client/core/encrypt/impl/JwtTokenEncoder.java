@@ -6,7 +6,7 @@ import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
 import com.etd.framework.starter.client.core.token.TokenValue;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;

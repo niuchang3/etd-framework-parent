@@ -1,6 +1,6 @@
 package org.etd.framework.common.core.context;
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.constants.RequestContextConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.springframework.security.core.context.SecurityContext;

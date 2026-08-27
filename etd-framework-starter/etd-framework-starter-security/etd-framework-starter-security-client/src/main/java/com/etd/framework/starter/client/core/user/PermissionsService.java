@@ -1,6 +1,6 @@
 package com.etd.framework.starter.client.core.user;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
+import org.etd.framework.common.core.user.TenantAuthority;
 
 import java.util.List;
 

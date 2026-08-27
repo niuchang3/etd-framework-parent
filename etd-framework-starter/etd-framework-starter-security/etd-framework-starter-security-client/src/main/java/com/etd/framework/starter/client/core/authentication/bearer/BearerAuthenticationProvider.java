@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.extern.slf4j.Slf4j;

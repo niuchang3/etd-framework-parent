@@ -1,8 +1,8 @@
 package org.etd.upms.service.user.impl;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
+import org.etd.framework.common.core.user.TenantAuthority;
 import com.etd.framework.starter.client.core.user.PermissionsService;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.upms.converter.SystemUserConverter;
 import org.etd.upms.entity.SystemUserEntity;
 import org.etd.upms.mapper.user.SystemUserMapper;

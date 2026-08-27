@@ -1,7 +1,7 @@
 package org.etd.upms.controller.user;
 
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.TenantAuthority;
 import org.etd.upms.converter.SystemUserConverter;
 import org.etd.upms.service.user.SystemUserRoleRelService;
 import org.etd.upms.controller.user.vo.SystemUserVO;

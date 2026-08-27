@@ -1,6 +1,6 @@
 package org.etd.upms.converter;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
+import org.etd.framework.common.core.user.TenantAuthority;
 import org.etd.upms.controller.user.vo.SystemUserRoleVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

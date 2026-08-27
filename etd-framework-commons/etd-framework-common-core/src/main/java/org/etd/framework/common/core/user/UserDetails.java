@@ -1,6 +1,5 @@
-package com.etd.framework.starter.client.core.user;
+package org.etd.framework.common.core.user;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -16,7 +15,6 @@ import java.util.List;
 public class UserDetails implements Serializable {
 
     private static final long serialVersionUID = -1L;
-
 
     /**
      * 用户标识。
@@ -77,12 +75,10 @@ public class UserDetails implements Serializable {
      */
     private Boolean tenantAdmin = false;
 
-
     /**
      * 权限信息。
      */
     private List<TenantAuthority> authorities;
-
 
     /**
      * 是否为平台管理员。

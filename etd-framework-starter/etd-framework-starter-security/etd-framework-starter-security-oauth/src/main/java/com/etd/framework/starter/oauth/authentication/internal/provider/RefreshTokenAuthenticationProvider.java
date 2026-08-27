@@ -4,7 +4,7 @@ import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
 import com.etd.framework.starter.client.core.user.IUserService;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import com.etd.framework.starter.oauth.authentication.internal.token.RefreshTokenRequestToken;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;

@@ -1,6 +1,6 @@
 package org.etd.upms.converter;
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.upms.entity.SystemUserEntity;
 import org.etd.upms.controller.user.vo.SystemUserVO;
 import org.mapstruct.Mapper;

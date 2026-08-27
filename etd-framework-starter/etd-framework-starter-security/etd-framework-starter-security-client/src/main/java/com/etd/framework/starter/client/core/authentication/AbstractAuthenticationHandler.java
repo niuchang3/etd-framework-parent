@@ -2,6 +2,7 @@ package com.etd.framework.starter.client.core.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
@@ -40,8 +41,7 @@ public abstract class AbstractAuthenticationHandler {
         if (log.isDebugEnabled()) {
             log.debug("认证失败：{}", exception.getMessage());
         }
-
-        Map<String, Object> failed = responseBody(response.getStatus(), null, exception.getMessage(), null, request.getRequestURI());
+        ResultModel<Object> failed = ResultModel.failed(response.getStatus(), exception, exception.getMessage(), request.getRequestURI());
         writeJson(response, failed);
     }
 
@@ -56,26 +56,6 @@ public abstract class AbstractAuthenticationHandler {
         response.setStatus(HttpStatus.OK.value());
         writeJson(response, body);
 
-    }
-
-    /**
-     * 构建统一响应体。
-     *
-     * @param code 响应码
-     * @param devMessage 开发提示
-     * @param message 用户提示
-     * @param data 响应数据
-     * @param url 请求地址
-     * @return 统一响应体
-     */
-    protected Map<String, Object> responseBody(Integer code, String devMessage, String message, Object data, String url) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("code", code);
-        body.put("devMessage", devMessage);
-        body.put("message", message);
-        body.put("data", data);
-        body.put("url", url);
-        return body;
     }
 
     /**

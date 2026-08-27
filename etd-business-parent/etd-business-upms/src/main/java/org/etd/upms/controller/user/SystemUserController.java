@@ -1,7 +1,7 @@
 package org.etd.upms.controller.user;
 
 
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.upms.biz.tenant.SystemTenantBizService;
 import org.etd.upms.biz.user.SystemUserBizService;
 import org.etd.upms.converter.SystemUserConverter;

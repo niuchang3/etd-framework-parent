@@ -1,5 +1,7 @@
 package com.etd.framework.starter.client.core.user;
 
+import org.etd.framework.common.core.user.UserDetails;
+
 /**
  * 用户信息加载服务。
  * <p>

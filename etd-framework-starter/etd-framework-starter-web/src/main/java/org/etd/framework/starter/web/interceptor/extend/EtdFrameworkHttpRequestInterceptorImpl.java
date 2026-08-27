@@ -2,8 +2,8 @@ package org.etd.framework.starter.web.interceptor.extend;
 
 import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.IdUtil;
-import com.etd.framework.starter.client.core.TenantAuthority;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.TenantAuthority;
+import org.etd.framework.common.core.user.UserDetails;
 import com.google.common.collect.Lists;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.context.model.RequestContext;

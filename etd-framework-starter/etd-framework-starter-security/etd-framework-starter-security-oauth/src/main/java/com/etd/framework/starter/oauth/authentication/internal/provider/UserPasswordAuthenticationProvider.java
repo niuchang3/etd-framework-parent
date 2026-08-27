@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.internal.provider;
 
 import com.etd.framework.starter.oauth.authentication.internal.token.UserPasswordAuthenticationRequestToken;
 import com.etd.framework.starter.client.core.user.IUserService;
-import com.etd.framework.starter.client.core.user.UserDetails;
+import org.etd.framework.common.core.user.UserDetails;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;

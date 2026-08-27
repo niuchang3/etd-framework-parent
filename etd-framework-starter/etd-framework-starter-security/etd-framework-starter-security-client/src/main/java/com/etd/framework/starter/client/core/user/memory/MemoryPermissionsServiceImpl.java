@@ -1,6 +1,6 @@
 package com.etd.framework.starter.client.core.user.memory;
 
-import com.etd.framework.starter.client.core.TenantAuthority;
+import org.etd.framework.common.core.user.TenantAuthority;
 import com.etd.framework.starter.client.core.user.PermissionsService;
 
 import java.util.Collections;

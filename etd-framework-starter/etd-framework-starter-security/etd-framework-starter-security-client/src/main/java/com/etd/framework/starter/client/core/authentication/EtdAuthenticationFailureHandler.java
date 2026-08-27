@@ -33,7 +33,6 @@ public class EtdAuthenticationFailureHandler extends AbstractAuthenticationHandl
      */
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        // Spring Security 的失败处理器可能被不同入口复用，未设置状态码时默认按 401 处理。
         if (response.getStatus() < HttpStatus.BAD_REQUEST.value()) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
         }
