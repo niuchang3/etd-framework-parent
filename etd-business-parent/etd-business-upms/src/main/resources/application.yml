@@ -44,7 +44,7 @@ jetcache:
 
 
 system:
-  oauth:
+  security:
     access-token:
       expired: 30
       timeUnit: minutes

@@ -1,1 +1,1 @@
-com.etd.framework.starter.oauth.OauthAuthenticationConfiguring
+com.etd.framework.starter.oauth.autoconfigure.SecurityAuthenticationAutoConfiguration

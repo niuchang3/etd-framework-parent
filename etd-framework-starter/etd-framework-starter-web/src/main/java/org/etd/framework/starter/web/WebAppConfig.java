@@ -8,6 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.etd.framework.starter.log.lnterceptor.TraceInterceptor;
 import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -38,11 +40,14 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 	@Autowired
 	private EtdFrameworkHttpRequestInterceptor etdFrameworkHttpRequestInterceptor;
 
+	@Autowired
+	private ObjectMapper objectMapper;
+
 
 
 	@Override
 	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-		MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper());
+		MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
 		List<MediaType> supportedMediaTypes = new ArrayList<>();
 		supportedMediaTypes.add(MediaType.APPLICATION_JSON);
 		supportedMediaTypes.add(MediaType.APPLICATION_ATOM_XML);
@@ -70,7 +75,16 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 		converters.add(converter);
 	}
 
-	private ObjectMapper objectMapper() {
+	/**
+	 * 提供全局 JSON 映射器。
+	 * <p>
+	 * 所有 Web 层请求响应、认证 JSON 解析和框架内部 JSON 转换都优先复用该 Bean。
+	 *
+	 * @return JSON 映射器
+	 */
+	@Bean
+	@ConditionalOnMissingBean(ObjectMapper.class)
+	public ObjectMapper objectMapper() {
 		SimpleModule simpleModule = new SimpleModule();
 		simpleModule.addSerializer(BigInteger.class, ToStringSerializer.instance);
 		simpleModule.addSerializer(Long.class, ToStringSerializer.instance);

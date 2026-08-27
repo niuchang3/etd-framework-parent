@@ -2,19 +2,25 @@ package com.etd.framework.starter.client.core.user.memory;
 
 import com.etd.framework.starter.client.core.TenantAuthority;
 import com.etd.framework.starter.client.core.user.PermissionsService;
-import com.etd.framework.starter.client.core.user.UserDetails;
-import com.google.common.collect.Maps;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-public class MemoryPermissionsServiceImpl  implements PermissionsService {
+/**
+ * 内存权限服务兜底实现。
+ * <p>
+ * 业务系统没有提供 {@link PermissionsService} Bean 时使用，默认不返回任何权限。
+ */
+public class MemoryPermissionsServiceImpl implements PermissionsService {
 
-
-    private Map<String, List<TenantAuthority>> userDetailsMap = Maps.newConcurrentMap();
-
+    /**
+     * 加载用户权限。
+     *
+     * @param userId 用户标识
+     * @return 兜底实现不提供权限，返回空集合
+     */
     @Override
     public List<TenantAuthority> loadPermissionsByUser(Long userId) {
-        return null;
+        return Collections.emptyList();
     }
 }
