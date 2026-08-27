@@ -1,6 +1,5 @@
 package com.etd.framework.starter.oauth.authentication.internal.provider;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.storage.TokenStorage;
@@ -41,14 +40,10 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     @Setter(onMethod_ = @Autowired)
     private TokenDecode<SignedJWT> tokenDecode;
 
-    @Setter(onMethod_ = @Autowired)
-    private ObjectMapper objectMapper;
-
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         Assert.notNull(userService, "用户服务不能为空。");
         Assert.notNull(tokenDecode, "令牌解码器不能为空。");
-        Assert.notNull(objectMapper, "JSON 映射器不能为空。");
         RefreshTokenRequestToken requestToken = (RefreshTokenRequestToken) authentication;
         validateRequest(requestToken);
         try {
@@ -163,15 +158,17 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      * @return JWT 中的用户信息
      */
     private UserDetails toUserDetails(SignedJWT jwt) throws ParseException {
-        Object user = jwt.getJWTClaimsSet().getClaim(Authentication.class.getName());
-        if (user == null) {
-            throw new BadCredentialsException("令牌用户信息不能为空。");
-        }
-        UserDetails userDetails = objectMapper.convertValue(user, UserDetails.class);
-        if (userDetails == null || userDetails.getId() == null) {
+        String subject = jwt.getJWTClaimsSet().getSubject();
+        if (ObjectUtils.isEmpty(subject)) {
             throw new BadCredentialsException("令牌用户标识不能为空。");
         }
-        return userDetails;
+        try {
+            UserDetails userDetails = new UserDetails();
+            userDetails.setId(Long.valueOf(subject));
+            return userDetails;
+        } catch (NumberFormatException e) {
+            throw new BadCredentialsException("令牌用户标识格式错误。", e);
+        }
     }
 
     private String getTokenTypeName(String tokenType) {

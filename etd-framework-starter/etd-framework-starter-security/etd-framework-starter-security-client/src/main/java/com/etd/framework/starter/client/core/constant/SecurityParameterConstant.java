@@ -25,13 +25,4 @@ public interface SecurityParameterConstant {
     enum TokenPrompt {
         Bearer
     }
-
-
-    /**
-     * 密码登录
-     */
-    enum UserPasswordAuthentication {
-        username,
-        password
-    }
 }

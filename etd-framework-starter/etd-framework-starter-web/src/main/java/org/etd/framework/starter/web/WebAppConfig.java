@@ -1,15 +1,9 @@
 package org.etd.framework.starter.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.etd.framework.starter.log.lnterceptor.TraceInterceptor;
 import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -19,9 +13,8 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +27,7 @@ import java.util.List;
 @Order(0)
 @Configuration
 @ComponentScan({"org.etd.framework.starter.web.**"})
-public class WebAppConfig extends WebMvcConfigurationSupport {
+public class WebAppConfig implements WebMvcConfigurer {
 
 
 	@Autowired
@@ -76,28 +69,6 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 	}
 
 	/**
-	 * 提供全局 JSON 映射器。
-	 * <p>
-	 * 所有 Web 层请求响应、认证 JSON 解析和框架内部 JSON 转换都优先复用该 Bean。
-	 *
-	 * @return JSON 映射器
-	 */
-	@Bean
-	@ConditionalOnMissingBean(ObjectMapper.class)
-	public ObjectMapper objectMapper() {
-		SimpleModule simpleModule = new SimpleModule();
-		simpleModule.addSerializer(BigInteger.class, ToStringSerializer.instance);
-		simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
-		simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
-
-		ObjectMapper objectMapper = new ObjectMapper();
-		objectMapper.registerModule(new JavaTimeModule());
-		objectMapper.registerModule(simpleModule);
-		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-		return objectMapper;
-	}
-
-	/**
 	 * 自行注册拦截器
 	 *
 	 * @param registry
@@ -109,12 +80,10 @@ public class WebAppConfig extends WebMvcConfigurationSupport {
 
 		registry.addInterceptor(etdFrameworkHttpRequestInterceptor)
 				.addPathPatterns(etdFrameworkHttpRequestInterceptor.getInterceptorsPath());
-		super.addInterceptors(registry);
 	}
 
 	@Override
-	protected void addResourceHandlers(ResourceHandlerRegistry registry) {
-		super.addResourceHandlers(registry);
+	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 		registry.addResourceHandler("/**")
 				.addResourceLocations("classpath:/static/");
 

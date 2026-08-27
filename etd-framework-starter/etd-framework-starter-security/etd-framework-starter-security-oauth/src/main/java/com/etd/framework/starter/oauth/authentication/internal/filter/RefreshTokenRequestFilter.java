@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -84,8 +85,8 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        Authentication refreshToken = converter.convert(request);
         try {
+            Authentication refreshToken = converter.convert(request);
             Authentication authentication = authenticationManager.authenticate(refreshToken);
             onAuthenticationSuccess(response, authentication);
         } catch (AuthenticationException e) {
@@ -133,7 +134,11 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
     private void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws ServletException, IOException {
         this.logger.trace("认证请求处理失败。", exception);
         this.logger.trace("开始处理认证失败响应。");
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        if (exception instanceof AuthenticationServiceException) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+        } else {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        }
         this.failureHandler.onAuthenticationFailure(request, response, exception);
     }
 }

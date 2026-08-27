@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * 用户名密码登录配置器。
@@ -29,6 +30,9 @@ public class UserPasswordAuthenticationConfigurer extends AbstractSecurityEndpoi
      * @param endpoint 登录端点匹配器
      */
     public UserPasswordAuthenticationConfigurer addEndpointMatcher(String endpoint) {
+        if (!StringUtils.hasText(endpoint)) {
+            return this;
+        }
         this.authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.POST, endpoint);
         return this;
     }

@@ -46,12 +46,12 @@ jetcache:
 system:
   security:
     access-token:
-      expired: 30
+      expired: 60
       timeUnit: minutes
 
     refresh-token:
-      expired: 60
-      timeUnit: minutes
+      expired: 7
+      timeUnit: days
 
     permissions:
       ignore:

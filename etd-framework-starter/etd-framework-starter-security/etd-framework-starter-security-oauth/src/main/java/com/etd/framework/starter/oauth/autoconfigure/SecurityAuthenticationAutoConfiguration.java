@@ -1,7 +1,6 @@
 package com.etd.framework.starter.oauth.autoconfigure;
 
 
-import com.etd.framework.starter.client.core.authentication.bearer.BearerAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.configurer.SecurityAuthenticationConfigurer;
 import com.etd.framework.starter.client.core.encrypt.SecurityKeyLoader;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
@@ -25,20 +24,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.util.CollectionUtils;
 
 import java.security.PrivateKey;
-import java.util.List;
 
 /**
  * 内部登录认证自动配置。
  * <p>
- * 默认注册登录、刷新令牌和 Bearer 访问令牌认证能力，业务系统可以通过自定义 Bean 覆盖默认实现。
+ * 默认注册登录和刷新令牌认证能力，业务系统可以通过自定义 Bean 覆盖默认实现。
  */
 @AutoConfiguration
 @EnableConfigurationProperties(SecurityProperties.class)
@@ -54,34 +53,30 @@ import java.util.List;
 public class SecurityAuthenticationAutoConfiguration {
 
     /**
-     * 默认安全过滤器链。
+     * 内部认证服务过滤器链。
+     * <p>
+     * 只处理登录、刷新令牌等内部认证端点，普通业务请求交给客户端侧 Bearer 资源链处理。
      *
      * @param http HTTP 安全构建器
      * @param securityProperties 安全配置
-     * @return 安全过滤器链
+     * @return 内部认证服务过滤器链
      */
     @Bean
-    @ConditionalOnMissingBean(SecurityFilterChain.class)
-    public SecurityFilterChain defaultAuthenticationServer(HttpSecurity http, SecurityProperties securityProperties,
-                                                           AccessDeniedHandlerImpl accessDeniedHandler,
-                                                           AuthenticationEntryPointImpl authenticationEntryPoint) throws Exception {
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    @ConditionalOnMissingBean(name = "internalAuthenticationServer")
+    public SecurityFilterChain internalAuthenticationServer(HttpSecurity http, SecurityProperties securityProperties,
+                                                            AccessDeniedHandlerImpl accessDeniedHandler,
+                                                            AuthenticationEntryPointImpl authenticationEntryPoint) throws Exception {
         SecurityAuthenticationConfigurer configurer = new SecurityAuthenticationConfigurer();
         configurer.addConfigurer(new UserPasswordAuthenticationConfigurer().addEndpointMatcher(securityProperties.getAccessToken().getEndpoint()));
         configurer.addConfigurer(new RefreshTokenAuthenticationConfigurer().addEndpointMatcher(securityProperties.getRefreshToken().getEndpoint()));
-        configurer.addConfigurer(new BearerAuthenticationConfigurer());
 
-        List<String> ignorePermissions = securityProperties.getPermissions() == null ? null : securityProperties.getPermissions().getIgnore();
-        String[] urls = CollectionUtils.isEmpty(ignorePermissions) ? new String[0] : ignorePermissions.toArray(String[]::new);
+        http.securityMatcher(configurer.getEndpointsMatcher());
         http.with(configurer, Customizer.withDefaults());
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .requestCache(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize -> {
-                    if (urls.length > 0) {
-                        authorize.requestMatchers(urls).permitAll();
-                    }
-                    authorize.anyRequest().authenticated();
-                })
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .accessDeniedHandler(accessDeniedHandler)
                         .authenticationEntryPoint(authenticationEntryPoint));

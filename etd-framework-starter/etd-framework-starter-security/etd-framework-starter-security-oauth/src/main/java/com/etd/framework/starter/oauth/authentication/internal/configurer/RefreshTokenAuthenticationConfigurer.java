@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * 刷新令牌认证配置器。
@@ -33,7 +34,10 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
      * @param endpoint 刷新令牌端点匹配器
      */
     public RefreshTokenAuthenticationConfigurer addEndpointMatcher(String endpoint) {
-        this.authenticationEndpointMatcher = PATH_MATCHER.matcher(endpoint);
+        if (!StringUtils.hasText(endpoint)) {
+            return this;
+        }
+        this.authenticationEndpointMatcher = PATH_MATCHER.matcher(HttpMethod.POST, endpoint);
         return this;
     }
 
