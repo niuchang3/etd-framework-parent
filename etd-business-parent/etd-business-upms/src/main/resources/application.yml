@@ -58,6 +58,11 @@ system:
         - /public/**
         - /druid/**
         - /h2-console/**
+
+    oauth2:
+      authorization-server:
+        enabled: "${UPMS_OAUTH2_AUTHORIZATION_SERVER_ENABLED:false}"
+        issuer: "${UPMS_OAUTH2_ISSUER:http://127.0.0.1:${server.port}}"
 etd:
   mybatis:
     tenant:

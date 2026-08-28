@@ -1,4 +1,4 @@
-package com.etd.framework.starter.oauth.autoconfigure;
+package com.etd.framework.starter.oauth.authentication;
 
 
 import com.etd.framework.starter.client.core.authentication.AccessDeniedHandlerImpl;

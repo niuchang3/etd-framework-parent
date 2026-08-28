@@ -103,6 +103,74 @@ comment on column sys_role.permission_type is '权限类型';
 comment on column sys_role.menus is '角色菜单';
 
 /*==============================================================*/
+/* table: sys_app                                               */
+/*==============================================================*/
+create table if not exists sys_app
+(
+    id            bigint not null,
+    create_time   timestamp(6),
+    data_status   int,
+    app_code      varchar(100) not null,
+    app_name      varchar(100) not null,
+    app_type      varchar(50),
+    app_icon      varchar(200),
+    app_home_path varchar(200),
+    built_in      boolean default false,
+    trusted       boolean default false,
+    enabled       boolean default true,
+    sort          int,
+    primary key (id)
+);
+
+comment on table sys_app is '系统应用表';
+comment on column sys_app.id is '主键id';
+comment on column sys_app.create_time is '创建时间';
+comment on column sys_app.data_status is '数据状态';
+comment on column sys_app.app_code is '应用编码';
+comment on column sys_app.app_name is '应用名称';
+comment on column sys_app.app_type is '应用类型';
+comment on column sys_app.app_icon is '应用图标';
+comment on column sys_app.app_home_path is '应用首页路径';
+comment on column sys_app.built_in is '是否系统内置应用';
+comment on column sys_app.trusted is '是否平台可信应用';
+comment on column sys_app.enabled is '是否启用';
+comment on column sys_app.sort is '排序';
+
+create unique index if not exists uk_sys_app_code
+    on sys_app (app_code);
+
+/*==============================================================*/
+/* table: sys_tenant_app                                        */
+/*==============================================================*/
+create table if not exists sys_tenant_app
+(
+    id           bigint not null,
+    create_time  timestamp(6),
+    data_status  int,
+    tenant_id    bigint not null,
+    app_id       bigint not null,
+    enabled      boolean default true,
+    start_time   timestamp(6),
+    expire_time  timestamp(6),
+    package_code varchar(100),
+    primary key (id)
+);
+
+comment on table sys_tenant_app is '租户应用开通关系表';
+comment on column sys_tenant_app.id is '主键id';
+comment on column sys_tenant_app.create_time is '创建时间';
+comment on column sys_tenant_app.data_status is '数据状态';
+comment on column sys_tenant_app.tenant_id is '租户id';
+comment on column sys_tenant_app.app_id is '应用id';
+comment on column sys_tenant_app.enabled is '是否启用';
+comment on column sys_tenant_app.start_time is '开通时间';
+comment on column sys_tenant_app.expire_time is '过期时间';
+comment on column sys_tenant_app.package_code is '套餐编码';
+
+create unique index if not exists uk_sys_tenant_app
+    on sys_tenant_app (tenant_id, app_id);
+
+/*==============================================================*/
 /* table: sys_user_role_rel                                     */
 /*==============================================================*/
 create table if not exists sys_user_role_rel
@@ -130,6 +198,7 @@ comment on column sys_user_role_rel.role_id is '角色id';
 create table if not exists sys_menus
 (
     id          bigint not null,
+    app_id      bigint,
     parent_id   bigint,
     create_time timestamp(6),
     data_status int,
@@ -144,6 +213,7 @@ create table if not exists sys_menus
 
 comment on table sys_menus is '系统菜单';
 comment on column sys_menus.id is '主键id';
+comment on column sys_menus.app_id is '所属应用id';
 comment on column sys_menus.parent_id is '父级菜单';
 comment on column sys_menus.create_time is '创建时间';
 comment on column sys_menus.data_status is '数据状态';
@@ -153,3 +223,6 @@ comment on column sys_menus.menu_router is '菜单路由';
 comment on column sys_menus.menu_icon is '菜单图标';
 comment on column sys_menus.menu_type is '菜单类型';
 comment on column sys_menus.sort is '排序';
+
+create index if not exists idx_sys_menus_app_id
+    on sys_menus (app_id);

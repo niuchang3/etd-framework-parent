@@ -44,6 +44,15 @@ values (2, '2024-04-12 09:46:50.000000', 1, 2, false, '租户管理员', 'tenant
 on conflict (id) do nothing;
 
 /*==============================================================*/
+/* sys_app: 系统应用初始化                                      */
+/*==============================================================*/
+insert into sys_app (id, create_time, data_status, app_code, app_name, app_type, app_icon, app_home_path,
+                     built_in, trusted, enabled, sort)
+values (1, '2024-04-19 11:30:00.000000', 1, 'platform', '基础平台', 'platform', 'settingoutlined', '/',
+        true, true, true, 1)
+on conflict (id) do nothing;
+
+/*==============================================================*/
 /* sys_user_role_rel: 系统用户与角色关系初始化                    */
 /*==============================================================*/
 insert into sys_user_role_rel (id, create_time, data_status, tenant_id, user_id, role_id)
@@ -57,30 +66,30 @@ on conflict (id) do nothing;
 /*==============================================================*/
 /* sys_menus: 系统菜单初始化                                     */
 /*==============================================================*/
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (1, null, '2024-04-19 11:31:19.000000', 1, 'etd-后端演示平台', '@/views/index.vue', null, 'menu', 1, '/')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (1, 1, null, '2024-04-19 11:31:19.000000', 1, 'etd-后端演示平台', '@/views/index.vue', null, 'menu', 1, '/')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (2, 1, '2024-04-19 11:32:19.000000', 1, '首页', '@/views/home.vue', 'homeoutlined', 'menu', 1, '/home')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (2, 1, 1, '2024-04-19 11:32:19.000000', 1, '首页', '@/views/home.vue', 'homeoutlined', 'menu', 1, '/home')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (3, 1, '2024-04-19 11:33:26.000000', 1, '系统管理', null, 'settingoutlined', 'menu', 2, '/system')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (3, 1, 1, '2024-04-19 11:33:26.000000', 1, '系统管理', null, 'settingoutlined', 'menu', 2, '/system')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (4, 3, '2024-04-19 11:34:15.000000', 1, '租户管理', '@/views/tenant/index.vue', null, 'menu', 1, '/system/tenant')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (4, 1, 3, '2024-04-19 11:34:15.000000', 1, '租户管理', '@/views/tenant/index.vue', null, 'menu', 1, '/system/tenant')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (5, 3, '2024-04-19 11:35:19.000000', 1, '用户管理', '@/views/user/index.vue', 'useroutlined', 'menu', 2, '/system/user')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (5, 1, 3, '2024-04-19 11:35:19.000000', 1, '用户管理', '@/views/user/index.vue', 'useroutlined', 'menu', 2, '/system/user')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (6, 3, '2024-04-19 11:36:02.000000', 1, '角色管理', '@/views/role/index.vue', null, 'menu', 3, '/system/role')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (6, 1, 3, '2024-04-19 11:36:02.000000', 1, '角色管理', '@/views/role/index.vue', null, 'menu', 3, '/system/role')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
-values (7, 3, '2024-04-19 11:36:43.000000', 1, '部门管理', '@/views/department/index.vue', null, 'menu', 4, '/system/department')
+insert into sys_menus (id, app_id, parent_id, create_time, data_status, menu_name, menu_router, menu_icon, menu_type, sort, menu_path)
+values (7, 1, 3, '2024-04-19 11:36:43.000000', 1, '部门管理', '@/views/department/index.vue', null, 'menu', 4, '/system/department')
 on conflict (id) do nothing;

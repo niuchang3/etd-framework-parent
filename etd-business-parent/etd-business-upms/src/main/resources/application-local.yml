@@ -37,8 +37,11 @@ spring:
   sql:
     init:
       mode: never
-      schema-locations: classpath:/sql/postgresql/schema.sql
-      data-locations: classpath:/sql/postgresql/data.sql
+      schema-locations:
+        - classpath:/sql/oauth2/postgresql/schema.sql
+        - classpath:/sql/postgresql/schema.sql
+      data-locations:
+        - classpath:/sql/postgresql/data.sql
   data:
     redis:
       host: ${UPMS_REDIS_HOST:127.0.0.1}
@@ -54,6 +57,12 @@ etd:
         - sys_tenant
         - sys_user
         - sys_menus
+        - sys_app
+        - oauth2_client
+        - oauth2_scope
+        - oauth2_client_scope
+        - oauth2_authorization
+        - oauth2_authorization_consent
     fill:
       enabled: true
     permission:
