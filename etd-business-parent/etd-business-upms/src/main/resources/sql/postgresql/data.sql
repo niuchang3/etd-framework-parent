@@ -19,14 +19,14 @@ on conflict (id) do nothing;
 insert into sys_user (id, create_time, data_status, account, mobile, password, user_name, birthday, gender, avatar,
                       nick_name, locked, enabled)
 values (1, '2024-04-11 15:05:51.000000', 1, 'admin', '17719540702',
-        '{bcrypt}$2a$10$nf3xdan421ebntwyfleet.byx5fyz592zfawnx10proemdkft52t.', '牛昌', '1990-02-02', 1, null,
+        '{bcrypt}$2a$10$t0nmxVeITKheVbLw9OvjC.sIYh62XpRP78NaB3mEiqKOdFa0FcC5S', '牛昌', '1990-02-02', 1, null,
         '淡淡丶奶油味', false, true)
 on conflict (id) do nothing;
 
 insert into sys_user (id, create_time, data_status, account, mobile, password, user_name, birthday, gender, avatar,
                       nick_name, locked, enabled)
 values (2, '2024-04-11 15:05:51.000000', 1, 'testtenant', '17719540802',
-        '{bcrypt}$2a$10$nf3xdan421ebntwyfleet.byx5fyz592zfawnx10proemdkft52t.', '牛昌', '1990-02-02', 1, null,
+        '{bcrypt}$2a$10$t0nmxVeITKheVbLw9OvjC.sIYh62XpRP78NaB3mEiqKOdFa0FcC5S', '牛昌', '1990-02-02', 1, null,
         '测试租户', false, true)
 on conflict (id) do nothing;
 
