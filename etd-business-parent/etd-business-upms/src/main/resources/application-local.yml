@@ -51,9 +51,9 @@ etd:
       enabled: true
       column-name: tenant_id
       ignore-tables:
-        - system_tenant
-        - system_user
-        - system_menus
+        - sys_tenant
+        - sys_user
+        - sys_menus
     fill:
       enabled: true
     permission:

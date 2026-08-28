@@ -25,5 +25,5 @@ public class BaseEntity {
      * 数据状态
      */
     @TableField("data_status")
-    private Boolean dataStatus;
+    private Integer dataStatus;
 }

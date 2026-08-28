@@ -11,7 +11,7 @@ import java.io.Serializable;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("system_menus")
+@TableName("sys_menus")
 public class SystemMenusEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = -4312600779837990536L;

@@ -19,7 +19,7 @@ public class SystemTenantVO {
     /**
      * 数据状态
      */
-    private Boolean dataStatus;
+    private Integer dataStatus;
     /**
      * logo地址
      */

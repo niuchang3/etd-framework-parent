@@ -26,8 +26,8 @@
             t2.role_name,
             t2.permission_type,
             t2.menus
-        from system_user_role_rel as t1
-        inner join system_role as t2 on t1.role_id = t2.id
+        from sys_user_role_rel as t1
+        inner join sys_role as t2 on t1.role_id = t2.id
         where t1.user_id = #{userId}
     </select>
 

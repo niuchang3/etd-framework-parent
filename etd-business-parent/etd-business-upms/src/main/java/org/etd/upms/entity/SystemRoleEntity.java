@@ -10,7 +10,7 @@ import java.io.Serializable;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("system_role")
+@TableName("sys_role")
 public class SystemRoleEntity extends BaseEntity implements Serializable {
 
 

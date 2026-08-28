@@ -13,7 +13,7 @@ import java.util.Date;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("\"system_user\"")
+@TableName("sys_user")
 public class SystemUserEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 1181085804651495813L;

@@ -10,7 +10,7 @@ import java.io.Serializable;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("system_tenant")
+@TableName("sys_tenant")
 public class SystemTenantEntity extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = 900389846923149037L;
