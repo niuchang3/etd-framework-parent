@@ -34,6 +34,9 @@ public class UserPasswordAuthenticationFilterFactory {
                 .failureHandler(support.failureHandler())
                 .tokenEncoder(support.tokenEncoder())
                 .securityProperties(support.securityProperties())
+                .tokenStorage(support.tokenStorage())
+                .securityContextRepository(support.securityContextRepository())
+                .oauth2LoginRedirectResolver(support.oauth2LoginRedirectResolver())
                 .build();
     }
 }

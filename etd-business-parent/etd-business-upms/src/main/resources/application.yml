@@ -63,6 +63,14 @@ system:
       authorization-server:
         enabled: "${UPMS_OAUTH2_AUTHORIZATION_SERVER_ENABLED:false}"
         issuer: "${UPMS_OAUTH2_ISSUER:http://127.0.0.1:${server.port}}"
+      session:
+        enabled: "${ETD_JSESSIONID_ENABLED:true}"
+        timeout: "${ETD_JSESSIONID_TIMEOUT:30m}"
+        namespace: "${ETD_JSESSIONID_NAMESPACE:etd:upms:oauth2:session}"
+        cookie-name: "${ETD_JSESSIONID_COOKIE_NAME:ETD_JSESSIONID}"
+        login-page: "${UPMS_OAUTH2_LOGIN_PAGE:/login}"
+        consent-page: "${UPMS_OAUTH2_CONSENT_PAGE:/consent}"
+        redirect-parameter: "${UPMS_OAUTH2_REDIRECT_PARAMETER:redirect}"
 etd:
   mybatis:
     tenant:

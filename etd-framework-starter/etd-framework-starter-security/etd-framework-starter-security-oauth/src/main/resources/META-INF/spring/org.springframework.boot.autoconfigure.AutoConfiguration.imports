@@ -1,2 +1,3 @@
 com.etd.framework.starter.oauth.authentication.SecurityAuthenticationAutoConfiguration
+com.etd.framework.starter.oauth.authentication.OAuth2RedisSessionAutoConfiguration
 com.etd.framework.starter.oauth.authentication.OAuth2AuthorizationServerAutoConfiguration

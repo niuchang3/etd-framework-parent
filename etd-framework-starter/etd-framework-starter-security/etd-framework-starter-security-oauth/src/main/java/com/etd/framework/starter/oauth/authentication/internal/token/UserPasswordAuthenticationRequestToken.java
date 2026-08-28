@@ -25,6 +25,12 @@ public class UserPasswordAuthenticationRequestToken extends AbstractAuthenticati
     @Setter
     private String password;
 
+    /**
+     * OAuth2授权流程登录成功后的回跳地址。
+     */
+    @Setter
+    private String redirect;
+
 
     /**
      * 创建认证对象。
@@ -43,5 +49,14 @@ public class UserPasswordAuthenticationRequestToken extends AbstractAuthenticati
     @Override
     public Object getPrincipal() {
         return username;
+    }
+
+    /**
+     * 获取OAuth2授权流程登录成功后的回跳地址。
+     *
+     * @return 回跳地址
+     */
+    public String getRedirect() {
+        return redirect;
     }
 }

@@ -4,7 +4,7 @@ import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
-import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import com.etd.framework.starter.client.core.token.LoginToken;
 import com.etd.framework.starter.client.core.token.TokenValue;
 import org.etd.framework.common.core.user.UserDetails;
@@ -72,6 +72,11 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
     private SecurityProperties securityProperties;
 
     /**
+     * 用户登录令牌存储。
+     */
+    private UserLoginTokenStorage tokenStorage;
+
+    /**
      * 处理刷新令牌请求。
      *
      * @param request 当前请求
@@ -118,7 +123,7 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
         token.setRefreshToken(refreshToken);
         token.setUserId(String.valueOf(details.getId()));
         // 覆盖服务端存储，旧访问令牌和旧刷新令牌会立即失效。
-        TokenStorage.storage(token);
+        tokenStorage.store(token);
         successHandler.writeBody(response, token);
     }
 

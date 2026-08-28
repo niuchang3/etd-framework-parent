@@ -39,6 +39,7 @@ public class UserPasswordRequestAuthenticationConverter implements Authenticatio
         UserPasswordAuthenticationRequestToken token = new UserPasswordAuthenticationRequestToken(null);
         token.setUsername(loginRequest.getUsername());
         token.setPassword(loginRequest.getPassword());
+        token.setRedirect(loginRequest.getRedirect());
         return token;
     }
 

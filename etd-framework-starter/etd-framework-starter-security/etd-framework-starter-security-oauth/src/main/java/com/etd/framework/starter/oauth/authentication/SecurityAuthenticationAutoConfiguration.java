@@ -31,6 +31,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.util.ObjectUtils;
 
 import java.security.PrivateKey;
@@ -107,6 +109,19 @@ public class SecurityAuthenticationAutoConfiguration {
     public TokenEncoder<Authentication, ?> tokenEncoder(SecurityProperties securityProperties) {
         PrivateKey privateKey = SecurityKeyLoader.loadPrivateKey(securityProperties);
         return new JwtTokenEncoder(privateKey, securityProperties);
+    }
+
+    /**
+     * 默认安全上下文仓储。
+     * <p>
+     * OAuth2授权码登录成功后会把认证状态保存到HttpSession，Spring Session存在时底层会落到Redis。
+     *
+     * @return 安全上下文仓储
+     */
+    @Bean
+    @ConditionalOnMissingBean(SecurityContextRepository.class)
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
     }
 
     /**

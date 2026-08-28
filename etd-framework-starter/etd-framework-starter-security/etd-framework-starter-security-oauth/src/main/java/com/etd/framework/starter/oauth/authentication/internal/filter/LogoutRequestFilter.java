@@ -2,7 +2,7 @@ package com.etd.framework.starter.oauth.authentication.internal.filter;
 
 import com.etd.framework.starter.client.core.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
-import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.springframework.http.HttpStatus;
@@ -59,6 +59,11 @@ public class LogoutRequestFilter extends OncePerRequestFilter {
     private AuthenticationFailureHandler failureHandler;
 
     /**
+     * 用户登录令牌存储。
+     */
+    private UserLoginTokenStorage tokenStorage;
+
+    /**
      * 处理退出登录请求。
      *
      * @param request 当前请求
@@ -96,7 +101,7 @@ public class LogoutRequestFilter extends OncePerRequestFilter {
         }
         String userId = String.valueOf(principal);
         // 删除访问令牌和刷新令牌，使当前登录态立即失效。
-        TokenStorage.deleteAll(userId);
+        tokenStorage.deleteAll(userId);
         successHandler.writeBody(response, true);
     }
 

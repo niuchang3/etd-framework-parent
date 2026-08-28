@@ -4,9 +4,10 @@ import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.authentication.EtdAuthenticationSuccessHandler;
 import com.etd.framework.starter.client.core.encrypt.TokenEncoder;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
-import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import com.etd.framework.starter.client.core.token.LoginToken;
 import com.etd.framework.starter.client.core.token.TokenValue;
+import com.etd.framework.starter.oauth.authentication.oauth2.session.OAuth2LoginRedirectResolver;
 import org.etd.framework.common.core.user.UserDetails;
 import com.etd.framework.starter.oauth.authentication.internal.token.UserPasswordAuthenticationRequestToken;
 import lombok.AllArgsConstructor;
@@ -17,8 +18,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -27,6 +31,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * 用户密码登录请求过滤器。
@@ -72,6 +77,21 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
     private SecurityProperties securityProperties;
 
     /**
+     * 用户登录令牌存储。
+     */
+    private UserLoginTokenStorage tokenStorage;
+
+    /**
+     * 安全上下文仓储。
+     */
+    private SecurityContextRepository securityContextRepository;
+
+    /**
+     * OAuth2登录回跳地址解析器。
+     */
+    private OAuth2LoginRedirectResolver oauth2LoginRedirectResolver;
+
+    /**
      * 处理用户密码登录请求。
      *
      * @param request 当前请求
@@ -89,7 +109,7 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         try {
             UserPasswordAuthenticationRequestToken requestToken = (UserPasswordAuthenticationRequestToken) converter.convert(request);
             Authentication authentication = authenticationManager.authenticate(requestToken);
-            onAuthenticationSuccess(response, authentication);
+            onAuthenticationSuccess(request, response, authentication, requestToken.getRedirect());
         } catch (AuthenticationException e) {
             onAuthenticationFailure(request, response, e);
         }
@@ -98,12 +118,25 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
     /**
      * 登录成功后签发访问令牌和刷新令牌。
      *
+     * @param request 当前请求
      * @param response 当前响应
      * @param authentication 认证结果
+     * @param redirect OAuth2授权流程回跳地址
      * @throws ServletException
      * @throws IOException
      */
-    private void onAuthenticationSuccess(HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
+    private void onAuthenticationSuccess(HttpServletRequest request,
+                                         HttpServletResponse response,
+                                         Authentication authentication,
+                                         String redirect) throws ServletException, IOException {
+        Optional<String> oauth2Redirect = resolveOAuth2Redirect(request, redirect);
+        if (oauth2Redirect.isPresent()) {
+            // OAuth2授权码流程只建立授权中心网页登录态，业务令牌由/oauth2/token后续签发。
+            saveSecurityContext(request, response, authentication);
+            response.sendRedirect(oauth2Redirect.get());
+            return;
+        }
+
 
         TokenValue accessToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.access_token, authentication);
         TokenValue refreshToken = null;
@@ -121,9 +154,37 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         token.setUserId(String.valueOf(details.getId()));
 
         // 写入服务端存储，用于后续令牌撤销和单用户登录态覆盖。
-        TokenStorage.storage(token);
+        tokenStorage.store(token);
         successHandler.writeBody(response, token);
 
+    }
+
+    /**
+     * 解析OAuth2授权流程回跳地址。
+     *
+     * @param request 当前请求
+     * @param redirect 请求体中的回跳地址
+     * @return 合法的OAuth2回跳地址
+     */
+    private Optional<String> resolveOAuth2Redirect(HttpServletRequest request, String redirect) {
+        if (oauth2LoginRedirectResolver == null) {
+            return Optional.empty();
+        }
+        return oauth2LoginRedirectResolver.resolveLoginRedirect(request, redirect);
+    }
+
+    /**
+     * 保存认证结果到SecurityContext。
+     *
+     * @param request 当前请求
+     * @param response 当前响应
+     * @param authentication 认证结果
+     */
+    private void saveSecurityContext(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, request, response);
     }
 
     /**

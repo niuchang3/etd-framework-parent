@@ -33,6 +33,7 @@ public class LogoutAuthenticationFilterFactory {
                 .converter(new BearerAuthenticationConverter())
                 .successHandler(support.successHandler())
                 .failureHandler(support.failureHandler())
+                .tokenStorage(support.tokenStorage())
                 .build();
     }
 }

@@ -3,6 +3,7 @@ package com.etd.framework.starter.oauth.authentication.internal.configurer;
 import com.etd.framework.starter.client.core.authentication.bearer.BearerAuthenticationProvider;
 import com.etd.framework.starter.client.core.configurer.AbstractSecurityEndpointConfigurer;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import com.etd.framework.starter.oauth.authentication.internal.factory.LogoutAuthenticationFilterFactory;
 import com.etd.framework.starter.oauth.authentication.internal.filter.LogoutRequestFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,7 +80,8 @@ public class LogoutAuthenticationConfigurer extends AbstractSecurityEndpointConf
     private AuthenticationProvider getAuthenticationProvider(HttpSecurity builder) {
         TokenDecode<SignedJWT> tokenDecode = getApplicationContext(builder).getBean(TokenDecode.class);
         ObjectMapper objectMapper = getApplicationContext(builder).getBean(ObjectMapper.class);
-        BearerAuthenticationProvider provider = new BearerAuthenticationProvider(tokenDecode, objectMapper);
+        UserLoginTokenStorage tokenStorage = getApplicationContext(builder).getBean(UserLoginTokenStorage.class);
+        BearerAuthenticationProvider provider = new BearerAuthenticationProvider(tokenDecode, objectMapper, tokenStorage);
         return postProcess(provider);
     }
 }

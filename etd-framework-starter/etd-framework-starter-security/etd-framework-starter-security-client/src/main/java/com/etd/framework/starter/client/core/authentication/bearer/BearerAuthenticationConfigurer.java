@@ -3,6 +3,7 @@ package com.etd.framework.starter.client.core.authentication.bearer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.authentication.EtdAuthenticationFailureHandler;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,7 +30,8 @@ public class BearerAuthenticationConfigurer extends AbstractHttpConfigurer<Beare
         ApplicationContext applicationContext = builder.getSharedObject(ApplicationContext.class);
         TokenDecode<SignedJWT> tokenDecode = applicationContext.getBean(TokenDecode.class);
         ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);
-        BearerAuthenticationProvider provider = new BearerAuthenticationProvider(tokenDecode, objectMapper);
+        UserLoginTokenStorage tokenStorage = applicationContext.getBean(UserLoginTokenStorage.class);
+        BearerAuthenticationProvider provider = new BearerAuthenticationProvider(tokenDecode, objectMapper, tokenStorage);
         builder.authenticationProvider(provider);
     }
 

@@ -34,6 +34,7 @@ public class RefreshTokenAuthenticationFilterFactory {
                 .failureHandler(support.failureHandler())
                 .tokenEncoder(support.tokenEncoder())
                 .securityProperties(support.securityProperties())
+                .tokenStorage(support.tokenStorage())
                 .build();
     }
 }

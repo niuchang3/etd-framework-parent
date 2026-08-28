@@ -1,12 +1,14 @@
 package com.etd.framework.starter.oauth.authentication;
 
 import com.etd.framework.starter.client.core.authentication.AccessDeniedHandlerImpl;
-import com.etd.framework.starter.client.core.authentication.AuthenticationEntryPointImpl;
 import com.etd.framework.starter.client.core.encrypt.SecurityKeyLoader;
 import com.etd.framework.starter.client.core.properties.SecurityProperties;
 import com.etd.framework.starter.oauth.authentication.oauth2.client.OAuth2ClientRepository;
 import com.etd.framework.starter.oauth.authentication.oauth2.client.OAuth2RegisteredClientRepository;
 import com.etd.framework.starter.oauth.authentication.oauth2.properties.OAuth2AuthorizationServerProperties;
+import com.etd.framework.starter.oauth.authentication.oauth2.properties.OAuth2SessionProperties;
+import com.etd.framework.starter.oauth.authentication.oauth2.session.OAuth2LoginAuthenticationEntryPoint;
+import com.etd.framework.starter.oauth.authentication.oauth2.session.OAuth2LoginRedirectResolver;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -32,6 +34,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 
@@ -45,7 +48,7 @@ import java.security.interfaces.RSAPublicKey;
 @AutoConfiguration
 @ConditionalOnClass(OAuth2AuthorizationServerConfigurer.class)
 @ConditionalOnProperty(prefix = "system.security.oauth2.authorization-server", name = "enabled", havingValue = "true")
-@EnableConfigurationProperties({SecurityProperties.class, OAuth2AuthorizationServerProperties.class})
+@EnableConfigurationProperties({SecurityProperties.class, OAuth2AuthorizationServerProperties.class, OAuth2SessionProperties.class})
 public class OAuth2AuthorizationServerAutoConfiguration {
 
     /**
@@ -53,7 +56,9 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      *
      * @param http HTTP安全构建器
      * @param accessDeniedHandler 访问拒绝处理器
-     * @param authenticationEntryPoint 认证入口处理器
+     * @param authenticationEntryPoint OAuth2未登录重定向入口
+     * @param securityContextRepository 安全上下文仓储
+     * @param sessionProperties OAuth2网页登录态配置
      * @return OAuth2授权服务器过滤器链
      */
     @Bean
@@ -69,7 +74,9 @@ public class OAuth2AuthorizationServerAutoConfiguration {
                                                                             OAuth2AuthorizationService authorizationService,
                                                                             OAuth2AuthorizationConsentService authorizationConsentService,
                                                                             AccessDeniedHandlerImpl accessDeniedHandler,
-                                                                            AuthenticationEntryPointImpl authenticationEntryPoint) throws Exception {
+                                                                            OAuth2LoginAuthenticationEntryPoint authenticationEntryPoint,
+                                                                            SecurityContextRepository securityContextRepository,
+                                                                            OAuth2SessionProperties sessionProperties) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
@@ -79,14 +86,16 @@ public class OAuth2AuthorizationServerAutoConfiguration {
                         .registeredClientRepository(registeredClientRepository)
                         .authorizationService(authorizationService)
                         .authorizationConsentService(authorizationConsentService)
+                        // 仅客户端要求授权确认时，才会跳转到前端授权确认页。
+                        .authorizationEndpoint(endpoint -> endpoint.consentPage(sessionProperties.getConsentPage()))
                         .oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
+                .securityContext(securityContext -> securityContext.securityContextRepository(securityContextRepository))
                 .requestCache(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .accessDeniedHandler(accessDeniedHandler)
-                        .authenticationEntryPoint(authenticationEntryPoint))
-                .formLogin(Customizer.withDefaults());
+                        .authenticationEntryPoint(authenticationEntryPoint));
 
         return http.build();
     }
@@ -102,6 +111,30 @@ public class OAuth2AuthorizationServerAutoConfiguration {
     @ConditionalOnMissingBean(RegisteredClientRepository.class)
     public RegisteredClientRepository registeredClientRepository(OAuth2ClientRepository clientRepository) {
         return new OAuth2RegisteredClientRepository(clientRepository);
+    }
+
+    /**
+     * OAuth2登录回跳地址解析器。
+     *
+     * @param properties OAuth2网页登录态配置
+     * @return 登录回跳地址解析器
+     */
+    @Bean
+    @ConditionalOnMissingBean(OAuth2LoginRedirectResolver.class)
+    public OAuth2LoginRedirectResolver oauth2LoginRedirectResolver(OAuth2SessionProperties properties) {
+        return new OAuth2LoginRedirectResolver(properties);
+    }
+
+    /**
+     * OAuth2授权端点未登录入口。
+     *
+     * @param redirectResolver 登录回跳地址解析器
+     * @return 未登录入口
+     */
+    @Bean
+    @ConditionalOnMissingBean(OAuth2LoginAuthenticationEntryPoint.class)
+    public OAuth2LoginAuthenticationEntryPoint oauth2LoginAuthenticationEntryPoint(OAuth2LoginRedirectResolver redirectResolver) {
+        return new OAuth2LoginAuthenticationEntryPoint(redirectResolver);
     }
 
     /**

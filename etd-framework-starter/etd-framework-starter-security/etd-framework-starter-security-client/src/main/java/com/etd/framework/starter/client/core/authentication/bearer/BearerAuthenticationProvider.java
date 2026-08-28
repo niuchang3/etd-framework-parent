@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
-import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import org.etd.framework.common.core.user.UserDetails;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;
@@ -36,18 +36,28 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
      */
     private final ObjectMapper objectMapper;
 
+    /**
+     * 用户登录令牌存储。
+     */
+    private final UserLoginTokenStorage tokenStorage;
+
 
     /**
      * 创建 Bearer 认证提供者。
      *
      * @param tokenDecode 令牌解码器
      * @param objectMapper 全局 JSON 映射器
+     * @param tokenStorage 用户登录令牌存储
      */
-    public BearerAuthenticationProvider(TokenDecode<SignedJWT> tokenDecode, ObjectMapper objectMapper) {
+    public BearerAuthenticationProvider(TokenDecode<SignedJWT> tokenDecode,
+                                        ObjectMapper objectMapper,
+                                        UserLoginTokenStorage tokenStorage) {
         Assert.notNull(tokenDecode, "令牌解码器不能为空。");
         Assert.notNull(objectMapper, "JSON 映射器不能为空。");
+        Assert.notNull(tokenStorage, "用户登录令牌存储不能为空。");
         this.tokenDecode = tokenDecode;
         this.objectMapper = objectMapper;
+        this.tokenStorage = tokenStorage;
     }
 
     /**
@@ -66,11 +76,11 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
 
             UserDetails userDetails = toUserDetails(jwt);
             // Redis 中不存在或值不一致，都视为令牌已被后续登录或退出操作撤销。
-            boolean existAccessToken = TokenStorage.isExistAccessToken(String.valueOf(userDetails.getId()));
+            boolean existAccessToken = tokenStorage.isAccessTokenPresent(String.valueOf(userDetails.getId()));
             if (!existAccessToken) {
                 throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
             }
-            boolean accessMatches = TokenStorage.accessMatches(String.valueOf(userDetails.getId()), tokenAuthentication.getCredentials());
+            boolean accessMatches = tokenStorage.accessTokenMatches(String.valueOf(userDetails.getId()), tokenAuthentication.getCredentials());
             if (!accessMatches) {
                 throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
             }

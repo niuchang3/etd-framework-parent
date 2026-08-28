@@ -19,4 +19,9 @@ public class UserPasswordLoginRequest {
      * 登录密码。
      */
     private String password;
+
+    /**
+     * OAuth2授权流程登录成功后的回跳地址。
+     */
+    private String redirect;
 }

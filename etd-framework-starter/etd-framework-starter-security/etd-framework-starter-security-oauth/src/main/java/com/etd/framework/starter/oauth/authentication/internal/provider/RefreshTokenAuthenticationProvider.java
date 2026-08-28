@@ -3,7 +3,7 @@ package com.etd.framework.starter.oauth.authentication.internal.provider;
 import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
-import com.etd.framework.starter.client.core.storage.TokenStorage;
+import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import com.etd.framework.starter.client.core.user.IUserService;
 import org.etd.framework.common.core.user.UserDetails;
 import com.etd.framework.starter.oauth.authentication.internal.token.RefreshTokenRequestToken;
@@ -41,10 +41,14 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     @Setter(onMethod_ = @Autowired)
     private TokenDecode<SignedJWT> tokenDecode;
 
+    @Setter(onMethod_ = @Autowired)
+    private UserLoginTokenStorage tokenStorage;
+
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         Assert.notNull(userService, "用户服务不能为空。");
         Assert.notNull(tokenDecode, "令牌解码器不能为空。");
+        Assert.notNull(tokenStorage, "用户登录令牌存储不能为空。");
         RefreshTokenRequestToken requestToken = (RefreshTokenRequestToken) authentication;
         validateRequest(requestToken);
         try {
@@ -125,11 +129,11 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      * @param tokenValue 刷新令牌
      */
     private void verifyStorage(Long userId, String tokenValue) {
-        boolean existRefreshToken = TokenStorage.isExistRefreshToken(String.valueOf(userId));
+        boolean existRefreshToken = tokenStorage.isRefreshTokenPresent(String.valueOf(userId));
         if (!existRefreshToken) {
             throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
         }
-        boolean refreshMatches = TokenStorage.refreshMatches(String.valueOf(userId), tokenValue);
+        boolean refreshMatches = tokenStorage.refreshTokenMatches(String.valueOf(userId), tokenValue);
         if (!refreshMatches) {
             throw new CredentialsExpiredException(SecurityMessageCode.TOKEN_REVOKED);
         }
