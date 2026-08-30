@@ -9,11 +9,6 @@ public class SystemTenantInsertVO {
      */
     private String logo;
     /**
-     * 父级租户ID
-     */
-
-    private Long parentId;
-    /**
      * 租户名称
      */
     private String tenantName;

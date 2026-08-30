@@ -1,10 +1,12 @@
 package org.etd.framework.starter.mybaits.core;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
+import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
 import java.util.Date;
 
@@ -20,18 +22,43 @@ public class BaseEntity {
     /**
      * 创建时间
      */
-    @TableField("create_time")
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @TableFieldExtend("new java.util.Date()")
     private Date createTime;
+
+    /**
+     * 创建人
+     */
+    @TableField(value = "create_by", fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.framework.common.core.context.model.RequestContext).getUser()?.id")
+    private Long createBy;
+
+    /**
+     * 修改时间
+     */
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableFieldExtend("new java.util.Date()")
+    private Date updateTime;
+
+    /**
+     * 修改人
+     */
+    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
+    @TableFieldExtend("T(org.etd.framework.common.core.context.model.RequestContext).getUser()?.id")
+    private Long updateBy;
+
     /**
      * 数据状态
      */
-    @TableField("data_status")
+    @TableField(value = "data_status", fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.framework.common.core.constants.BasicConstant$DataStatus).ENABLED.getCode()")
     private Integer dataStatus;
 
     /**
      * 租户标识
      */
-    @TableField("tenant_id")
+    @TableField(value = "tenant_id", fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.framework.common.core.context.model.RequestContext).getTenantCode()")
     private Long tenantId;
 
     /**

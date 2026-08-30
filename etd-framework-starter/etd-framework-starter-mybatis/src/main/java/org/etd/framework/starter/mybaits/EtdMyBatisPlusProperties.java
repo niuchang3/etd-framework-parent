@@ -34,13 +34,6 @@ public class EtdMyBatisPlusProperties {
     private Fill fill = new Fill();
 
     /**
-     * 数据权限
-     */
-    @NestedConfigurationProperty
-    private Permission permission = new Permission();
-
-
-    /**
      * 数据快照配置
      */
     @Data
@@ -56,26 +49,6 @@ public class EtdMyBatisPlusProperties {
         private Boolean enabled = false;
     }
 
-
-    @Data
-    public class Permission {
-        /**
-         * 全局性配置
-         */
-        private Boolean enabled = true;
-        /**
-         * 全局化配置，数据库表，表示部门ID的字段名称
-         */
-        private String globalDeptColumnName = "dept_id";
-        /**
-         * 全局化配置， 数据库表，表示用户ID的字段名称
-         */
-        private String globalUserColumnName = "user_id";
-
-//        @NestedConfigurationProperty
-//        private List<Tables> tables = Lists.newArrayList();
-
-    }
 
     @Data
     public class Tenant {

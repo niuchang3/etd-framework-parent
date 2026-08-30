@@ -30,6 +30,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 @Slf4j
 public abstract class DataFillHandler implements MetaObjectHandler, ApplicationContextAware {
 
+    private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
 
     private ApplicationContext applicationContext;
 
@@ -49,7 +50,7 @@ public abstract class DataFillHandler implements MetaObjectHandler, ApplicationC
             if (value == null) {
                 continue;
             }
-            this.setFieldValByName(fieldInfo.getField().getName(), value, metaObject);
+            fillFieldIfAbsent(fieldInfo, value, metaObject);
         }
     }
 
@@ -63,8 +64,19 @@ public abstract class DataFillHandler implements MetaObjectHandler, ApplicationC
             if (value == null) {
                 continue;
             }
-            this.setFieldValByName(fieldInfo.getField().getName(), value, metaObject);
+            fillFieldIfAbsent(fieldInfo, value, metaObject);
         }
+    }
+
+    /**
+     * 仅在字段未赋值时自动填充，避免覆盖调用方显式设置的审计信息。
+     */
+    private void fillFieldIfAbsent(TableFieldInfo fieldInfo, Object value, MetaObject metaObject) {
+        String fieldName = fieldInfo.getField().getName();
+        if (getFieldValByName(fieldName, metaObject) != null) {
+            return;
+        }
+        setFieldValByName(fieldName, value, metaObject);
     }
 
     /**
@@ -111,24 +123,22 @@ public abstract class DataFillHandler implements MetaObjectHandler, ApplicationC
      * @param fieldInfo
      */
     private Object getFillValu(TableFieldInfo fieldInfo) {
-        ExpressionParser parser = new SpelExpressionParser();
+        String expression = null;
         try {
-
             StandardEvaluationContext context = new StandardEvaluationContext();
             context.setBeanResolver(new BeanFactoryResolver(applicationContext.getAutowireCapableBeanFactory()));
             TableFieldExtend extend = fieldInfo.getField().getAnnotation(TableFieldExtend.class);
-            String expression = extend.value();
+            expression = extend.value();
             if (StringUtils.isEmpty(expression)) {
                 expression = extend.expression();
             }
             if (StringUtils.isEmpty(expression)) {
                 return null;
             }
-            return parser.parseExpression(expression).getValue(context, fieldInfo.getField().getType());
-        } catch (EvaluationException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
+            return EXPRESSION_PARSER.parseExpression(expression).getValue(context, fieldInfo.getField().getType());
+        } catch (EvaluationException | ParseException exception) {
+            log.warn("自动填充字段解析失败，字段名：{}，表达式：{}",
+                    fieldInfo.getField().getName(), expression, exception);
         }
         return null;
     }

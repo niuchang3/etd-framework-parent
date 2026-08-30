@@ -58,11 +58,11 @@ public interface BasicConstant {
         /**
          * 租户管理员
          */
-        TENANT_ADMIN("tenantadmin"),
+        TENANT_ADMIN("tenantAdmin"),
         /**
          * 平台管理员
          */
-        PLATFORM_ADMIN("platformadmin");
+        PLATFORM_ADMIN("platformAdmin");
 
         private final String code;
 
@@ -77,30 +77,40 @@ public interface BasicConstant {
 
     enum PermissionType {
         /**
-         * 所有数据权限
+         * 不限制数据权限
          */
-        ALL("all"),
+        ALL("1", "不限制数据权限"),
         /**
-         * 用户级数据权限
+         * 仅本人数据权限
          */
-        USER("user"),
+        SELF("2", "仅本人数据权限"),
         /**
-         * 部门级数据权限
+         * 仅当前组织数据权限
          */
-        DEPARTMENT("department"),
+        ORGANIZATION("3", "仅组织数据权限"),
         /**
-         * 部门及下级部门数据权限
+         * 当前组织及下级组织数据权限
          */
-        DEPARTMENT_AND_SUBORDINATE("department_and_subordinate");
+        ORGANIZATION_AND_SUBORDINATE("4", "组织及下级组织数据权限"),
+        /**
+         * 自定义跨组织数据权限
+         */
+        CUSTOM_ORGANIZATION("5", "自定义跨组织数据权限");
 
         private final String code;
+        private final String description;
 
-        PermissionType(String code) {
+        PermissionType(String code, String description) {
             this.code = code;
+            this.description = description;
         }
 
         public String getCode() {
             return code;
+        }
+
+        public String getDescription() {
+            return description;
         }
     }
 }

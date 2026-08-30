@@ -1,75 +1,154 @@
 /*==============================================================*/
 /* sys_tenant: 系统租户表初始化                                  */
 /*==============================================================*/
-insert into sys_tenant (id, create_time, data_status, parent_id, logo, tenant_name, description, credit_code, tenant_type,
-                        tenant_admin_user, parent_id_path, locked, enabled, menus)
-values (1, '2024-04-11 16:38:46.000000', 1, null, null, '易开发演示平台', 'easy to develop framework functional demo', '1',
-        'system', 1, '1', false, true, '1000001,1000002,1000003,1000004,1000005,1000006,1000007,1000008,1000009')
+insert into sys_tenant (id, create_time, create_by, update_time, update_by, data_status, logo, tenant_name,
+                        description, credit_code, tenant_type, tenant_admin_user, locked, enabled)
+values (1, '2024-04-11 16:38:46.000000', 1, '2024-04-11 16:38:46.000000', 1, 1, null,
+        '易开发演示平台', 'easy to develop framework functional demo', '1', 'system', 1, false, true)
 on conflict (id) do nothing;
 
 /*==============================================================*/
 /* sys_user: 系统用户初始化                                      */
 /*==============================================================*/
-insert into sys_user (id, create_time, data_status, tenant_id, account, mobile, password, user_name, birthday, gender, avatar,
-                      nick_name, locked, enabled)
-values (1, '2024-04-11 15:05:51.000000', 1, 1, 'admin', '17719540702',
+insert into sys_user (id, create_time, create_by, update_time, update_by, data_status, tenant_id, account, mobile,
+                      password, user_name, birthday, gender, avatar, nick_name, locked, enabled)
+values (1, '2024-04-11 15:05:51.000000', 1, '2024-04-11 15:05:51.000000', 1, 1, 1, 'admin', '17719540702',
         '{bcrypt}$2a$10$ltbQNkrjY/tcqP8ytOVSOerYvPMxfNjYgfwv.HaslRAqV/jOyYkSS', '牛昌', '1990-02-02', 1, null,
         '淡淡丶奶油味', false, true)
 on conflict (id) do nothing;
 
-
 /*==============================================================*/
 /* sys_role: 系统角色初始化                                      */
 /*==============================================================*/
-insert into sys_role (id, create_time, data_status, tenant_id, built_in, role_name, role_code, role_desc, permission_type)
-values (1, '2024-04-12 09:46:50.000000', 1, 1, true, '平台管理员', 'platformadmin', '平台管理员,拥有系统最高权限', 'all')
+insert into sys_role (id, create_time, create_by, update_time, update_by, data_status, tenant_id, built_in,
+                      role_name, role_code, role_desc, permission_type)
+values (1, '2024-04-12 09:46:50.000000', 1, '2024-04-12 09:46:50.000000', 1, 1, 1, true,
+        '平台管理员', 'platformAdmin', '平台管理员，拥有系统最高权限', '1')
 on conflict (id) do nothing;
-
-
 
 /*==============================================================*/
 /* sys_user_role_rel: 系统用户与角色关系初始化                    */
 /*==============================================================*/
-insert into sys_user_role_rel (id, create_time, data_status, tenant_id, user_id, role_id)
-values (1, '2024-04-12 09:48:30.000000', 1, 1, 1, 1)
+insert into sys_user_role_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id,
+                               user_id, role_id)
+values (1, '2024-04-12 09:48:30.000000', 1, '2024-04-12 09:48:30.000000', 1, 1, 1, 1, 1)
 on conflict (id) do nothing;
-
 
 /*==============================================================*/
 /* sys_menus: 系统菜单初始化                                     */
 /*==============================================================*/
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000001, null, '2026-08-30 04:57:41.475264', 1, '首页', '/dashboard', '/dashboard', 'AppstoreOutlined', 'MENU', 10)
+insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
+                       menu_path, menu_router, menu_icon, menu_type, sort)
+values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '首页', '/dashboard', '/dashboard', 'AppstoreOutlined', 'MENU', 10),
+       (1000002, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '租户管理', '/tenants', '/tenants', 'TeamOutlined', 'MENU', 20),
+       (1000003, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '用户中心', '/users', '/users', 'UserOutlined', 'MENU', 30),
+       (1000004, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '系统管理', '/system', '/system', 'SettingOutlined', 'DIRECTORY', 40),
+       (1000005, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '系统字典', '/system/dictionaries', '/system/dictionaries', 'DatabaseOutlined', 'MENU', 10),
+       (1000006, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '角色管理', '/system/roles', '/system/roles', 'SafetyCertificateOutlined', 'MENU', 20),
+       (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '菜单管理', '/system/menus', '/system/menus', 'MenuOutlined', 'MENU', 30),
+       (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '部门管理', '/system/departments', '/system/departments', 'ApartmentOutlined', 'MENU', 40),
+       (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
+        '系统参数', '/system/parameters', '/system/parameters', 'SettingOutlined', 'MENU', 50)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000002, null, '2026-08-30 04:57:41.475264', 1, '租户管理', '/tenants', '/tenants', 'TeamOutlined', 'MENU', 20)
+/*==============================================================*/
+/* sys_role_menu_rel: 系统角色与菜单关系初始化                    */
+/*==============================================================*/
+insert into sys_role_menu_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id,
+                               role_id, menu_id)
+values (1100001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000001),
+       (1100002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000002),
+       (1100003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000003),
+       (1100004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000004),
+       (1100005, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000005),
+       (1100006, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000006),
+       (1100007, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000007),
+       (1100008, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000008),
+       (1100009, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000009)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000003, null, '2026-08-30 04:57:41.475264', 1, '用户中心', '/users', '/users', 'UserOutlined', 'MENU', 30)
+/*==============================================================*/
+/* sys_tenant_menu_rel: 系统租户与菜单关系初始化                  */
+/*==============================================================*/
+insert into sys_tenant_menu_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id, menu_id)
+values (1200001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000001),
+       (1200002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000002),
+       (1200003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000003),
+       (1200004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000004),
+       (1200005, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000005),
+       (1200006, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000006),
+       (1200007, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000007),
+       (1200008, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000008),
+       (1200009, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1000009)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000004, null, '2026-08-30 04:57:41.475264', 1, '系统管理', '/system', '/system', 'SettingOutlined', 'DIRECTORY', 40)
+/*==============================================================*/
+/* sys_dict_type: 系统字典类型初始化                              */
+/*==============================================================*/
+insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, tenant_id, type_code,
+                           type_name, built_in, enabled, remark)
+values (2000001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
+        'sys_data_status', '数据状态', true, true, '系统基础数据状态'),
+       (2000002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
+        'sys_gender', '性别', true, true, '系统用户性别'),
+       (2000003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
+        'sys_org_type', '组织类型', true, true, '系统组织架构类型')
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000005, 1000004, '2026-08-30 04:57:41.475264', 1, '系统字典', '/system/dictionaries', '/system/dictionaries', 'DatabaseOutlined', 'MENU', 10)
+/*==============================================================*/
+/* sys_dict_data: 系统字典数据初始化                              */
+/*==============================================================*/
+insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, tenant_id, dict_type_id,
+                           dict_code, dict_label, dict_value, sort, enabled, remark)
+values (2100001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000001,
+        'DISABLED', '禁用', '0', 10, true, null),
+       (2100002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000001,
+        'ENABLED', '启用', '1', 20, true, null),
+       (2100003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
+        'UNKNOWN', '未知', '0', 10, true, null),
+       (2100004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
+        'MALE', '男', '1', 20, true, null),
+       (2100005, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
+        'FEMALE', '女', '2', 30, true, null),
+       (2100006, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
+        'COMPANY', '公司', 'company', 10, true, null),
+       (2100007, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
+        'DEPARTMENT', '部门', 'department', 20, true, null),
+       (2100008, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
+        'TEAM', '团队', 'team', 30, true, null)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000006, 1000004, '2026-08-30 04:57:41.475264', 1, '角色管理', '/system/roles', '/system/roles', 'SafetyCertificateOutlined', 'MENU', 20)
+/*==============================================================*/
+/* sys_organization: 系统组织架构初始化                            */
+/*==============================================================*/
+insert into sys_organization (id, create_time, create_by, update_time, update_by, data_status, tenant_id, parent_id,
+                              parent_id_path, org_code, org_name, org_type, leader_user_id, sort, enabled)
+values (3000001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, null,
+        '3000001', 'ETD', '易开发演示平台', 'company', 1, 10, true)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '菜单管理', '/system/menus', '/system/menus', 'MenuOutlined', 'MENU', 30)
+/*==============================================================*/
+/* sys_user_org_rel: 系统用户与组织关系初始化                     */
+/*==============================================================*/
+insert into sys_user_org_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id,
+                              user_id, org_id, primary_org)
+values (1300001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
+        1, 3000001, true)
 on conflict (id) do nothing;
 
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '部门管理', '/system/departments', '/system/departments', 'ApartmentOutlined', 'MENU', 40)
-on conflict (id) do nothing;
-
-insert into sys_menus (id, parent_id, create_time, data_status, menu_name, menu_path, menu_router, menu_icon, menu_type, sort)
-values (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '系统参数', '/system/parameters', '/system/parameters', 'SettingOutlined', 'MENU', 50)
+/*==============================================================*/
+/* sys_config: 系统参数初始化                                    */
+/*==============================================================*/
+insert into sys_config (id, create_time, create_by, update_time, update_by, data_status, tenant_id, parameter_key,
+                        parameter_name, parameter_value, value_type, built_in, enabled, remark)
+values (4000001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
+        'system.name', '系统名称', '易开发演示平台', 'string', true, true, '系统展示名称')
 on conflict (id) do nothing;

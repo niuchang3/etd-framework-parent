@@ -18,11 +18,6 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
     @TableField("logo")
     private String logo;
     /**
-     * 父级租户ID
-     */
-    @TableField("parent_id")
-    private Long parentId;
-    /**
      * 租户名称
      */
     @TableField("tenant_name")
