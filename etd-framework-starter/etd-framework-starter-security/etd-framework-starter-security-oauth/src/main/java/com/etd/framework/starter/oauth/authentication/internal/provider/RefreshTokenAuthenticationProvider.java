@@ -116,7 +116,7 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
      */
     private void verifyTokenType(SignedJWT jwt) {
         String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
-        if (!SecurityParameterConstant.TokenType.refresh_token.name().equals(tokenType)) {
+        if (!SecurityParameterConstant.TokenType.REFRESH_TOKEN.getCode().equals(tokenType)) {
             throw new BadCredentialsException(SecurityMessageCode.TOKEN_TYPE_INVALID);
         }
 

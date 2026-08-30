@@ -75,7 +75,7 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
 
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .type(JOSEObjectType.JWT)
-                .customParam(SecurityParameterConstant.TokenType.class.getName(), tokenType.name())
+                .customParam(SecurityParameterConstant.TokenType.class.getName(), tokenType.getCode())
                 .build();
 
         SignedJWT signedJWT = new SignedJWT(header, build);
@@ -125,6 +125,8 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         target.setNickName(source.getNickName());
         target.setLocked(source.getLocked());
         target.setEnabled(source.getEnabled());
+        target.setTenantId(source.getTenantId());
+        target.setRoleCodes(source.getRoleCodes());
         target.setPlatformAdmin(source.getPlatformAdmin());
         target.setTenantAdmin(source.getTenantAdmin());
         target.setAuthorities(source.getAuthorities());
@@ -140,20 +142,23 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
     private Map<String, Object> copySafeUserDetailsClaim(Authentication authentication) {
         UserDetails userDetails = copySafeUserDetails(authentication);
         Map<String, Object> claim = new java.util.LinkedHashMap<>();
-        claim.put("id", userDetails.getId());
-        claim.put("account", userDetails.getAccount());
-        claim.put("mobile", userDetails.getMobile());
-        claim.put("userName", userDetails.getUserName());
+        claim.put(SecurityParameterConstant.UserClaim.ID, userDetails.getId());
+        claim.put(SecurityParameterConstant.UserClaim.ACCOUNT, userDetails.getAccount());
+        claim.put(SecurityParameterConstant.UserClaim.MOBILE, userDetails.getMobile());
+        claim.put(SecurityParameterConstant.UserClaim.USER_NAME, userDetails.getUserName());
         // JWT Claim 中业务日期统一写毫秒时间戳，避免 Nimbus 转成 Locale 相关字符串后无法反序列化。
-        claim.put("birthday", userDetails.getBirthday() == null ? null : userDetails.getBirthday().getTime());
-        claim.put("gender", userDetails.getGender());
-        claim.put("avatar", userDetails.getAvatar());
-        claim.put("nickName", userDetails.getNickName());
-        claim.put("locked", userDetails.getLocked());
-        claim.put("enabled", userDetails.getEnabled());
-        claim.put("platformAdmin", userDetails.getPlatformAdmin());
-        claim.put("tenantAdmin", userDetails.getTenantAdmin());
-        claim.put("authorities", userDetails.getAuthorities());
+        claim.put(SecurityParameterConstant.UserClaim.BIRTHDAY,
+                userDetails.getBirthday() == null ? null : userDetails.getBirthday().getTime());
+        claim.put(SecurityParameterConstant.UserClaim.GENDER, userDetails.getGender());
+        claim.put(SecurityParameterConstant.UserClaim.AVATAR, userDetails.getAvatar());
+        claim.put(SecurityParameterConstant.UserClaim.NICK_NAME, userDetails.getNickName());
+        claim.put(SecurityParameterConstant.UserClaim.LOCKED, userDetails.getLocked());
+        claim.put(SecurityParameterConstant.UserClaim.ENABLED, userDetails.getEnabled());
+        claim.put(SecurityParameterConstant.UserClaim.TENANT_ID, userDetails.getTenantId());
+        claim.put(SecurityParameterConstant.UserClaim.ROLE_CODES, userDetails.getRoleCodes());
+        claim.put(SecurityParameterConstant.UserClaim.PLATFORM_ADMIN, userDetails.getPlatformAdmin());
+        claim.put(SecurityParameterConstant.UserClaim.TENANT_ADMIN, userDetails.getTenantAdmin());
+        claim.put(SecurityParameterConstant.UserClaim.AUTHORITIES, userDetails.getAuthorities());
         return claim;
     }
 
@@ -165,10 +170,10 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
      */
     private Date getExpireTime(SecurityParameterConstant.TokenType tokenType) {
         SecurityProperties.Token token = null;
-        if (SecurityParameterConstant.TokenType.access_token.equals(tokenType)) {
+        if (SecurityParameterConstant.TokenType.ACCESS_TOKEN.equals(tokenType)) {
             token = securityProperties.getAccessToken();
         }
-        if (SecurityParameterConstant.TokenType.refresh_token.equals(tokenType)) {
+        if (SecurityParameterConstant.TokenType.REFRESH_TOKEN.equals(tokenType)) {
             token = securityProperties.getRefreshToken();
         }
         if (token == null || token.getExpired() == null || token.getTimeUnit() == null) {

@@ -1,8 +1,6 @@
 package com.etd.framework.starter.client.core.user;
 
-import org.etd.framework.common.core.user.TenantAuthority;
-
-import java.util.List;
+import org.etd.framework.common.core.user.UserPermissions;
 
 /**
  * 用户权限加载服务。
@@ -15,9 +13,9 @@ public interface PermissionsService {
      * 根据用户标识加载权限。
      *
      * @param userId 用户标识
-     * @return 用户权限集合
+     * @return 用户唯一租户及全部角色权限码的聚合结果
      */
-    List<TenantAuthority> loadPermissionsByUser(Long userId);
+    UserPermissions loadPermissionsByUser(Long userId);
 
 
 }

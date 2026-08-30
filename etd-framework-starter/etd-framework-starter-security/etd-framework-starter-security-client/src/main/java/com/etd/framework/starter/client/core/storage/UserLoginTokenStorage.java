@@ -134,12 +134,12 @@ public class UserLoginTokenStorage {
 
     private String getAccessTokenKey(String userId) {
         return RedisCache.genKey(SecurityParameterConstant.TOKEN_CACHE, userId,
-                SecurityParameterConstant.TokenType.access_token.name());
+                SecurityParameterConstant.TokenType.ACCESS_TOKEN.getCode());
     }
 
     private String getRefreshTokenKey(String userId) {
         return RedisCache.genKey(SecurityParameterConstant.TOKEN_CACHE, userId,
-                SecurityParameterConstant.TokenType.refresh_token.name());
+                SecurityParameterConstant.TokenType.REFRESH_TOKEN.getCode());
     }
 
     private String getUserTokenPattern(String userId) {

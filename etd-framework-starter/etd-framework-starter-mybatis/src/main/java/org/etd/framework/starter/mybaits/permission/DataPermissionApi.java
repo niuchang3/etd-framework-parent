@@ -8,7 +8,7 @@ public interface DataPermissionApi<DeptPK extends Serializable, UserPk extends S
 
     /**
      * 获取部门Ids
-     * size 为 1  并且值 为 -1,则不添加权限
+     * 仅包含 {@code DataPermissionConstant.EMPTY_SCOPE_ID} 时不添加权限
      *
      * @return
      */
@@ -16,7 +16,7 @@ public interface DataPermissionApi<DeptPK extends Serializable, UserPk extends S
 
     /**
      * 获取用户ID
-     * -1的情况下，不添加权限
+     * 返回 {@code DataPermissionConstant.EMPTY_SCOPE_ID} 时不添加权限
      *
      * @return
      */

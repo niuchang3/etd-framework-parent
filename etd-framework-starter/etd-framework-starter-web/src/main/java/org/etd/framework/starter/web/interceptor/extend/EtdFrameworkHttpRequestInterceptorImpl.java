@@ -2,10 +2,8 @@ package org.etd.framework.starter.web.interceptor.extend;
 
 import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.IdUtil;
-import org.etd.framework.common.core.user.TenantAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import com.google.common.collect.Lists;
-import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestInterceptor;
@@ -16,8 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author Young
@@ -25,8 +21,6 @@ import java.util.stream.Collectors;
  * @date 2020/11/12
  */
 public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequestInterceptor {
-
-    private final Snowflake snowflake = IdUtil.getSnowflake(1, 1);
 
     private List<RequestMatcher> whiteList = Lists.newArrayList();
 
@@ -51,62 +45,21 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
             }
         }
 
-        isPlatformAdmin();
         UserDetails user = RequestContext.getUser();
         if (ObjectUtils.isEmpty(user)) {
             return;
         }
-        if(user.isPlatformAdmin()){
-            return;
+        if (ObjectUtils.isEmpty(user.getTenantId())) {
+            throw new ApiRuntimeException("登录用户未绑定租户。");
         }
-
         Long tenantCode = RequestContext.getTenantCode();
-        if(ObjectUtils.isEmpty(RequestContext.getTenantCode())){
-            throw new ApiRuntimeException("非法的租户信息。");
-        }
-
-
-
-        List<TenantAuthority> authorities = user.getAuthorities();
-        if(ObjectUtils.isEmpty(authorities)){
-            throw new ApiRuntimeException("该用户无权限访问,请联系管理员。");
-        }
-
-        Map<Long, List<TenantAuthority>> tenants = authorities.stream().collect(Collectors.groupingBy(TenantAuthority::getTenantId));
-        if(!tenants.containsKey(tenantCode)){
-            throw new ApiRuntimeException("该用户无权限访问该租户。");
-        }
-
-
-
-        List<TenantAuthority> tenantAuthorities = tenants.get(tenantCode);
-        String roleCode = tenantAuthorities.get(0).getRoleCode();
-        if(BasicConstant.SystemRole.TenantAdmin.name().equals(roleCode)){
-            user.setPlatformAdmin(false);
-            user.setTenantAdmin(true);
-            RequestContext.setUser(user);
-        }
-    }
-
-    private void isPlatformAdmin(){
-        UserDetails user = RequestContext.getUser();
-        if(ObjectUtils.isEmpty(user)){
+        if (ObjectUtils.isEmpty(tenantCode)) {
+            RequestContext.setTenantCode(user.getTenantId());
             return;
         }
-        List<TenantAuthority> authorities = user.getAuthorities();
-        if(ObjectUtils.isEmpty(authorities)){
-            return;
+        if (!user.getTenantId().equals(tenantCode)) {
+            throw new ApiRuntimeException("用户无权切换到其他租户。");
         }
-
-        for (TenantAuthority authority : authorities) {
-            if(BasicConstant.SystemRole.PlatformAdmin.name().equals(authority.getRoleCode())){
-                user.setPlatformAdmin(true);
-                user.setTenantAdmin(true);
-                RequestContext.setUser(user);
-                return;
-            }
-        }
-
     }
 
     /**

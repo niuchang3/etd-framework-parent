@@ -5,6 +5,7 @@ import com.etd.framework.starter.client.core.constant.SecurityParameterConstant;
 import com.etd.framework.starter.client.core.i18n.SecurityMessageCode;
 import com.etd.framework.starter.client.core.encrypt.TokenDecode;
 import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
+import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserDetails;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;
@@ -75,6 +76,8 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             verifyAccessToken(jwt);
 
             UserDetails userDetails = toUserDetails(jwt);
+            // 认证用户只归属一个租户，忽略客户端伪造的租户请求头。
+            RequestContext.setTenantCode(userDetails.getTenantId());
             // Redis 中不存在或值不一致，都视为令牌已被后续登录或退出操作撤销。
             boolean existAccessToken = tokenStorage.isAccessTokenPresent(String.valueOf(userDetails.getId()));
             if (!existAccessToken) {
@@ -126,7 +129,7 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
      */
     private void verifyAccessToken(SignedJWT jwt) {
         String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
-        if (!SecurityParameterConstant.TokenType.access_token.name().equals(tokenType)) {
+        if (!SecurityParameterConstant.TokenType.ACCESS_TOKEN.getCode().equals(tokenType)) {
             throw new BadCredentialsException(SecurityMessageCode.TOKEN_TYPE_INVALID);
         }
     }

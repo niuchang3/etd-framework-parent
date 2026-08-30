@@ -110,11 +110,11 @@ public class RefreshTokenRequestFilter extends OncePerRequestFilter {
     private void onAuthenticationSuccess(HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
 
 
-        TokenValue accessToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.access_token, authentication);
+        TokenValue accessToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.ACCESS_TOKEN, authentication);
         TokenValue refreshToken = null;
         // 刷新令牌开启时采用轮换策略，新的刷新令牌会覆盖旧刷新令牌。
         if (securityProperties.getRefreshToken() != null && Boolean.TRUE.equals(securityProperties.getRefreshToken().getEnabled())) {
-            refreshToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.refresh_token, authentication);
+            refreshToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.REFRESH_TOKEN, authentication);
         }
         UserDetails details = (UserDetails) authentication.getDetails();
         LoginToken token = new LoginToken();

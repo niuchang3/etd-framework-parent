@@ -138,11 +138,11 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
         }
 
 
-        TokenValue accessToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.access_token, authentication);
+        TokenValue accessToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.ACCESS_TOKEN, authentication);
         TokenValue refreshToken = null;
         // 刷新令牌可通过配置关闭，适用于只允许短会话的内部系统。
         if (securityProperties.getRefreshToken() != null && Boolean.TRUE.equals(securityProperties.getRefreshToken().getEnabled())) {
-            refreshToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.refresh_token, authentication);
+            refreshToken = tokenEncoder.encode(SecurityParameterConstant.TokenType.REFRESH_TOKEN, authentication);
         }
         UserDetails details = (UserDetails) authentication.getDetails();
 

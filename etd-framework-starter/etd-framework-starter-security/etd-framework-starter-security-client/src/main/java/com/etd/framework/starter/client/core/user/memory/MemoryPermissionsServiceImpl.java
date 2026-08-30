@@ -1,10 +1,7 @@
 package com.etd.framework.starter.client.core.user.memory;
 
-import org.etd.framework.common.core.user.TenantAuthority;
 import com.etd.framework.starter.client.core.user.PermissionsService;
-
-import java.util.Collections;
-import java.util.List;
+import org.etd.framework.common.core.user.UserPermissions;
 
 /**
  * 内存权限服务兜底实现。
@@ -17,10 +14,10 @@ public class MemoryPermissionsServiceImpl implements PermissionsService {
      * 加载用户权限。
      *
      * @param userId 用户标识
-     * @return 兜底实现不提供权限，返回空集合
+     * @return 兜底实现不提供权限，返回空聚合结果
      */
     @Override
-    public List<TenantAuthority> loadPermissionsByUser(Long userId) {
-        return Collections.emptyList();
+    public UserPermissions loadPermissionsByUser(Long userId) {
+        return new UserPermissions();
     }
 }

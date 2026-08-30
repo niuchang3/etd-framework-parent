@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 框架内部登录用户详情。
@@ -67,6 +68,16 @@ public class UserDetails implements Serializable {
     private Boolean enabled;
 
     /**
+     * 用户唯一归属的租户标识。
+     */
+    private Long tenantId;
+
+    /**
+     * 用户拥有的全部角色权限码。
+     */
+    private Set<String> roleCodes;
+
+    /**
      * 是否平台管理员。
      */
     private Boolean platformAdmin = false;
@@ -78,7 +89,7 @@ public class UserDetails implements Serializable {
     /**
      * 权限信息。
      */
-    private List<TenantAuthority> authorities;
+    private List<RoleAuthority> authorities;
 
     /**
      * 是否为平台管理员。
@@ -96,6 +107,10 @@ public class UserDetails implements Serializable {
      */
     public boolean isTenantAdmin() {
         return Boolean.TRUE.equals(tenantAdmin);
+    }
+
+    public boolean isAdmin(){
+        return isPlatformAdmin() || isTenantAdmin();
     }
 
 }

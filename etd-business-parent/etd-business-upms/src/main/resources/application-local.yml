@@ -55,9 +55,7 @@ etd:
       column-name: tenant_id
       ignore-tables:
         - sys_tenant
-        - sys_user
         - sys_menus
-        - sys_app
         - oauth2_client
         - oauth2_scope
         - oauth2_client_scope

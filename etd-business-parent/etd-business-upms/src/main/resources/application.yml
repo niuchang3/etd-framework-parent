@@ -76,6 +76,14 @@ etd:
     tenant:
       enabled: true
       column-name: TENANT_ID
+      ignore-tables:
+        - sys_tenant
+        - sys_menus
+        - oauth2_client
+        - oauth2_scope
+        - oauth2_client_scope
+        - oauth2_authorization
+        - oauth2_authorization_consent
     fill:
       enabled: true
     permission:

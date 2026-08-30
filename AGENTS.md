@@ -73,12 +73,28 @@
 ## 代码风格
 
 - 遵循项目现有包名、类名和代码组织风格。
+- Java 代码中禁止直接散落具有业务含义的魔法值。状态码、类型码、角色码、权限码、请求头名称等必须引用语义明确的常量或枚举。
+- 全局常量和枚举统一放在 `etd-framework-common-core` 的 `org.etd.framework.common.core.constants` 包：
+  - 跨模块通用的基础状态优先定义在 `BasicConstant` 中，例如 `BasicConstant.DataStatus`；
+  - 具有独立语义、字段较多或需要实现接口的常量应使用独立枚举类，不要持续向 `BasicConstant` 堆积不相关内容；
+  - 常量名称使用大写字母和下划线，枚举类型使用大驼峰，枚举项使用大写字母和下划线；
+  - 有数据库存储值或接口传输值的枚举必须显式定义 `code`，禁止依赖 `ordinal()`；
+  - 业务判断、查询条件、默认赋值和校验边界必须引用同一个枚举或常量定义，不能在不同位置重复写字面量；
+  - SQL、YAML 等无法直接引用 Java 枚举的文件可以保留必要字面量，但字段注释、默认值和 Java 枚举语义必须一致。
+- 只在单个业务模块或单个功能域使用的常量应放在对应功能域的 `constant` 包，例如 `org.etd.order.refund.constant`，不要上提为全局常量。
+- 不要创建无边界的 `Constant`、`Constants`、`CommonEnum` 类；常量类或枚举名必须表达具体业务或技术语义。
 - 包命名必须遵循项目现有根命名空间：
   - 框架公共模块使用 `org.etd.framework.common.*`；
   - 框架 starter 模块使用 `org.etd.framework.starter.*`；
-  - 业务模块使用 `org.etd.<业务模块名>.*`，例如 UPMS 使用 `org.etd.upms.*`；
+  - 业务模块使用 `org.etd.<业务模块名>.<功能域>.<技术分层>`，例如用户管理 Controller 使用 `org.etd.upms.user.controller`，订单退款 Service 使用 `org.etd.order.refund.service`；
   - 业务模块包路径不要包含 `framework`、`business` 这类框架层级，例如不要使用 `org.etd.framework.business.upms.controller`；
   - 已存在的历史包名在未重构前保持兼容，不要为了统一命名擅自搬迁。
+- 业务模块必须采用“业务模块优先、功能域其次、技术分层最后”的纵向切片结构：
+  - 第一层是业务模块，例如 `upms`、`order`、`product`；
+  - 第二层是具体功能域，例如 `user`、`role`、`menu`、`tenant`、`refund`、`payment`；
+  - 第三层才是 `controller`、`biz`、`service`、`entity`、`mapper`、`converter` 等技术分层；
+  - 不要使用 `org.etd.upms.controller.user`、`org.etd.upms.service.user` 这类技术分层优先的包路径；
+  - 功能域名称应直接表达业务概念，优先使用 `user`、`role`，不要使用含义宽泛的 `usermanage`、`rolemanage`。
 - 新增包名前必须先检查同模块是否已有相同职责的包，优先放入已有包结构，不要随意创造 `utils`、`helper`、`common`、`config2`、`new`、`test` 等含义模糊的包。
 - 包名只使用小写字母和点号，不使用大写、下划线、中划线、拼音缩写或无意义缩写。
 - 包层级要表达业务或技术职责，不要过深。业务模块根包之后的业务层级一般不超过 4 层；超过时必须确认确实能提升边界清晰度。
@@ -86,22 +102,22 @@
 - 新增类时，包路径必须和模块职责一致。例如：
   - 通用工具放在 `etd-framework-commons` 下合适的 `common` 包；
   - 自动配置放在对应 starter 的 `config` 或 `autoconfigure` 包；
-  - 业务控制器、服务、实体、转换器放在业务模块已有的 `controller`、`service`、`entity`、`converter` 等包下。
-- 业务模块的 Controller 层按页面或功能入口组织子包，不要把一个业务对象的所有接口都堆进同一个大 Controller。
-- Controller 子包应表达它服务的页面或功能，例如 `controller.user`、`controller.role`、`controller.menu`、`controller.tenant`；页面进一步复杂时，可以继续拆成更具体的功能入口。
-- Controller 层使用的请求 DTO、响应 VO 应优先放在对应 Controller 子包下，例如：
-  - `controller.user.dto`
-  - `controller.user.vo`
-  - `controller.role.dto`
-  - `controller.role.vo`
+  - 业务控制器、服务、实体、转换器放在对应功能域下，例如 `org.etd.upms.user.controller`、`org.etd.upms.user.service`、`org.etd.upms.user.entity`、`org.etd.upms.user.converter`。
+- 业务模块的 Controller 层按页面或功能入口组织，不要把一个功能域的所有接口都堆进同一个大 Controller。
+- Controller 位于对应功能域内部，例如 `user.controller`、`role.controller`、`menu.controller`、`tenant.controller`；页面进一步复杂时，可以在 `controller` 下继续拆分更具体的功能入口。
+- Controller 层使用的请求 DTO、响应 VO 应放在对应功能域的 Controller 包下，例如：
+  - `user.controller.dto`
+  - `user.controller.vo`
+  - `role.controller.dto`
+  - `role.controller.vo`
 - DTO/VO 以接口场景为边界，不要为了复用制造字段过多的全局大 DTO 或大 VO。
 - Controller 只负责接口入口、参数校验、DTO/VO 转换和调用 biz/service，不要直接调用 mapper，不要直接写数据库、Redis、MQ 或复杂业务规则。
-- 业务模块可以单独设置 `biz` 包作为业务编排层，例如 `biz.user`、`biz.role`、`biz.menu`、`biz.tenant`。
+- 每个功能域可以设置 `biz` 包作为业务编排层，例如 `user.biz`、`role.biz`、`menu.biz`、`tenant.biz`。
 - `biz` 层负责完整业务用例编排，例如创建用户并分配角色、角色授权菜单、初始化租户、导入用户、删除菜单并清理关系。
 - `biz` 层可以控制事务，可以调用多个 service，但不直接调用 mapper，不写 SQL 细节，不放 Controller DTO/VO。
 - 跨多个 Service 的业务组装必须放在 `biz` 包，不要塞进某个大 Service。
 - `biz` 层命名使用 `XxxBizService`；复杂到需要独立表达场景时，可以使用 `XxxActionBizService`，例如 `UserImportBizService`、`TenantInitBizService`、`RoleAuthorizeBizService`。
-- 业务模块的 Service 层按业务类型组织子包，例如 `service.user`、`service.role`、`service.menu`、`service.tenant`。
+- Service 必须位于对应功能域内部，例如 `user.service`、`role.service`、`menu.service`、`tenant.service`。
 - Service 类按业务能力或业务关系拆分，不要把同一业务类型下的所有能力都塞进一个大 Service。
 - 允许使用类似 `UserService` 的基础能力 Service，但它只应承载用户基础信息相关能力，例如新增、修改、详情、启用、禁用；关系绑定、密码、安全、日志、导出等独立能力应拆成单独 Service。
 - 业务关系应使用明确的 Service 表达，例如 `UserRoleService`、`RoleMenuService`、`TenantPackageService`。不要机械拼接表名，类名必须表达真实业务语义。
@@ -114,13 +130,13 @@
 - `biz` 层不直接添加 JetCache 缓存注解，mapper 层不添加缓存注解。缓存应围绕稳定业务能力，而不是围绕 SQL 细节或编排流程。
 - 涉及用户权限、用户角色、角色菜单、菜单树等关联缓存时，必须明确失效范围，不能只加缓存不处理失效。
 - Controller 可以调用同一业务类型下的多个 Service 来完成简单页面功能；涉及多个 Service 的写流程或复杂业务组装时，应调用 `biz` 层。
-- 业务模块的 Mapper 层按数据类型或关系类型组织子包和类，例如 `mapper.user`、`mapper.role`、`mapper.menu`、`mapper.tenant`。
+- Mapper 必须位于对应功能域内部，例如 `user.mapper`、`role.mapper`、`menu.mapper`、`tenant.mapper`。
 - Mapper 保持简单，负责对应表或关系表的数据访问，例如 `UserMapper`、`UserRoleMapper`、`RoleMapper`、`RoleMenuMapper`。
 - Mapper XML 必须和 Java Mapper 一一对应。Java Mapper 如何拆，XML 就如何拆。
-- Mapper XML 目录结构应和 Java Mapper 包结构保持一致，例如：
-  - `mapper/user/UserMapper.java` 对应 `resources/mapper/user/UserMapper.xml`
-  - `mapper/user/UserRoleMapper.java` 对应 `resources/mapper/user/UserRoleMapper.xml`
-  - `mapper/role/RoleMapper.java` 对应 `resources/mapper/role/RoleMapper.xml`
+- Mapper XML 按功能域放在 `resources/mapper/<功能域>`，并与 Java Mapper 一一对应，例如：
+  - `user/mapper/UserMapper.java` 对应 `resources/mapper/user/UserMapper.xml`
+  - `user/mapper/UserRoleMapper.java` 对应 `resources/mapper/user/UserRoleMapper.xml`
+  - `role/mapper/RoleMapper.java` 对应 `resources/mapper/role/RoleMapper.xml`
 - 不允许多个 Mapper 共用一个大 XML，不允许一个 XML 中混写多个不同业务类型或关系类型的 SQL。
 - 不要提前为了可能存在的复杂查询创建大量 QueryMapper。复杂查询真实出现，且明显不适合放入基础 Mapper 时，再按查询场景新增对应的 `XxxQueryMapper.java` 和 `XxxQueryMapper.xml`。
 - Mapper 不写业务规则，不做业务编排，不直接返回 Controller VO。

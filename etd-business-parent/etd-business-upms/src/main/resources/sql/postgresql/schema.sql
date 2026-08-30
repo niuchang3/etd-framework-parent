@@ -6,6 +6,7 @@ create table if not exists sys_tenant
     id                bigint not null,
     create_time       timestamp(6),
     data_status       int,
+    del_flag          smallint not null default 0,
     parent_id         bigint,
     logo              varchar(200),
     tenant_name       varchar(100),
@@ -24,6 +25,7 @@ comment on table sys_tenant is '系统租户表';
 comment on column sys_tenant.id is '主键id';
 comment on column sys_tenant.create_time is '创建时间';
 comment on column sys_tenant.data_status is '数据状态';
+comment on column sys_tenant.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_tenant.parent_id is '父级租户id';
 comment on column sys_tenant.logo is 'logo地址';
 comment on column sys_tenant.tenant_name is '租户名称';
@@ -44,6 +46,8 @@ create table if not exists sys_user
     id          bigint not null,
     create_time timestamp(6),
     data_status int,
+    del_flag    smallint not null default 0,
+    tenant_id   bigint not null,
     account     varchar(32),
     mobile      varchar(20),
     password    varchar(100),
@@ -61,6 +65,8 @@ comment on table sys_user is '系统用户表';
 comment on column sys_user.id is '主键id';
 comment on column sys_user.create_time is '创建时间';
 comment on column sys_user.data_status is '数据状态';
+comment on column sys_user.del_flag is '逻辑删除标识：0未删除，1已删除';
+comment on column sys_user.tenant_id is '租户id';
 comment on column sys_user.account is '账号';
 comment on column sys_user.mobile is '手机号码';
 comment on column sys_user.password is '密码';
@@ -80,7 +86,8 @@ create table if not exists sys_role
     id              bigint not null,
     create_time     timestamp(6),
     data_status     int,
-    tenant_id       bigint,
+    del_flag        smallint not null default 0,
+    tenant_id       bigint not null,
     built_in        boolean,
     role_name       varchar(20),
     role_code       varchar(50),
@@ -94,6 +101,7 @@ comment on table sys_role is '系统角色表';
 comment on column sys_role.id is '主键id';
 comment on column sys_role.create_time is '创建时间';
 comment on column sys_role.data_status is '数据状态';
+comment on column sys_role.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_role.tenant_id is '租户id';
 comment on column sys_role.built_in is '是否内置';
 comment on column sys_role.role_name is '角色名称';
@@ -110,6 +118,8 @@ create table if not exists sys_app
     id            bigint not null,
     create_time   timestamp(6),
     data_status   int,
+    del_flag      smallint not null default 0,
+    tenant_id     bigint not null,
     app_code      varchar(100) not null,
     app_name      varchar(100) not null,
     app_type      varchar(50),
@@ -126,6 +136,8 @@ comment on table sys_app is '系统应用表';
 comment on column sys_app.id is '主键id';
 comment on column sys_app.create_time is '创建时间';
 comment on column sys_app.data_status is '数据状态';
+comment on column sys_app.del_flag is '逻辑删除标识：0未删除，1已删除';
+comment on column sys_app.tenant_id is '租户id';
 comment on column sys_app.app_code is '应用编码';
 comment on column sys_app.app_name is '应用名称';
 comment on column sys_app.app_type is '应用类型';
@@ -147,6 +159,7 @@ create table if not exists sys_tenant_app
     id           bigint not null,
     create_time  timestamp(6),
     data_status  int,
+    del_flag     smallint not null default 0,
     tenant_id    bigint not null,
     app_id       bigint not null,
     enabled      boolean default true,
@@ -160,6 +173,7 @@ comment on table sys_tenant_app is '租户应用开通关系表';
 comment on column sys_tenant_app.id is '主键id';
 comment on column sys_tenant_app.create_time is '创建时间';
 comment on column sys_tenant_app.data_status is '数据状态';
+comment on column sys_tenant_app.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_tenant_app.tenant_id is '租户id';
 comment on column sys_tenant_app.app_id is '应用id';
 comment on column sys_tenant_app.enabled is '是否启用';
@@ -178,7 +192,8 @@ create table if not exists sys_user_role_rel
     id          bigint not null,
     create_time timestamp(6),
     data_status int,
-    tenant_id   bigint,
+    del_flag    smallint not null default 0,
+    tenant_id   bigint not null,
     user_id     bigint,
     role_id     bigint,
     primary key (id)
@@ -188,6 +203,7 @@ comment on table sys_user_role_rel is '系统用户与角色的关系表';
 comment on column sys_user_role_rel.id is '主键id';
 comment on column sys_user_role_rel.create_time is '创建时间';
 comment on column sys_user_role_rel.data_status is '数据状态';
+comment on column sys_user_role_rel.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_user_role_rel.tenant_id is '租户id';
 comment on column sys_user_role_rel.user_id is '用户id';
 comment on column sys_user_role_rel.role_id is '角色id';
@@ -202,6 +218,7 @@ create table if not exists sys_menus
     parent_id   bigint,
     create_time timestamp(6),
     data_status int,
+    del_flag    smallint not null default 0,
     menu_name   varchar(10),
     menu_path   varchar(100),
     menu_router varchar(100),
@@ -217,6 +234,7 @@ comment on column sys_menus.app_id is '所属应用id';
 comment on column sys_menus.parent_id is '父级菜单';
 comment on column sys_menus.create_time is '创建时间';
 comment on column sys_menus.data_status is '数据状态';
+comment on column sys_menus.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_menus.menu_name is '菜单名称';
 comment on column sys_menus.menu_path is '菜单path';
 comment on column sys_menus.menu_router is '菜单路由';

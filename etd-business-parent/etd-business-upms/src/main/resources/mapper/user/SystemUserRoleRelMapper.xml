@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.etd.upms.mapper.user.SystemUserRoleRelMapper">
+<mapper namespace="org.etd.upms.user.mapper.SystemUserRoleRelMapper">
 
-    <resultMap id="systemUserRoleVo" type="org.etd.upms.controller.user.vo.SystemUserRoleVO">
+    <resultMap id="systemUserRoleVo" type="org.etd.upms.user.controller.vo.SystemUserRoleVO">
         <id property="id" column="id"/>
         <result property="tenantId" column="tenant_id"/>
         <result property="userId" column="user_id"/>
