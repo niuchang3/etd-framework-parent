@@ -200,6 +200,7 @@ create table if not exists sys_role_menu_rel
     tenant_id   bigint not null,
     role_id     bigint,
     menu_id     bigint,
+    access_level     smallint not null default 1,
     primary key (id)
 );
 
@@ -214,6 +215,7 @@ comment on column sys_role_menu_rel.del_flag is '逻辑删除标识：0未删除
 comment on column sys_role_menu_rel.tenant_id is '租户id';
 comment on column sys_role_menu_rel.role_id is '角色id';
 comment on column sys_role_menu_rel.menu_id is '菜单id';
+comment on column sys_role_menu_rel.access_level is '角色菜单访问级别：1只读，2读写';
 
 /*==============================================================*/
 /* table: sys_role_org_rel                                      */
@@ -278,6 +280,77 @@ comment on column sys_tenant_menu_rel.menu_id is '菜单id';
 
 create index if not exists idx_sys_tenant_menu_rel_tenant_menu
     on sys_tenant_menu_rel (tenant_id, menu_id);
+
+/*==============================================================*/
+/* table: sys_api                                               */
+/*==============================================================*/
+create table if not exists sys_api
+(
+    id             bigint not null,
+    create_time    timestamp(6),
+    create_by      bigint,
+    update_time    timestamp(6),
+    update_by      bigint,
+    data_status    int,
+    del_flag       smallint not null default 0,
+    api_name       varchar(100) not null,
+    request_method varchar(10) not null,
+    request_path   varchar(200) not null,
+    access_level   smallint not null default 1,
+    enabled        boolean default true,
+    primary key (id)
+);
+
+comment on table sys_api is '系统接口权限资源表';
+comment on column sys_api.id is '主键id';
+comment on column sys_api.create_time is '创建时间';
+comment on column sys_api.create_by is '创建人';
+comment on column sys_api.update_time is '修改时间';
+comment on column sys_api.update_by is '修改人';
+comment on column sys_api.data_status is '数据状态';
+comment on column sys_api.del_flag is '逻辑删除标识：0未删除，1已删除';
+comment on column sys_api.api_name is '接口名称';
+comment on column sys_api.request_method is 'HTTP请求方法';
+comment on column sys_api.request_path is 'Spring请求路径模式';
+comment on column sys_api.access_level is '接口要求访问级别：1读取，2写入';
+comment on column sys_api.enabled is '是否启用';
+
+create index if not exists idx_sys_api_request
+    on sys_api (request_method, request_path);
+
+/*==============================================================*/
+/* table: sys_menu_api_rel                                      */
+/*==============================================================*/
+create table if not exists sys_menu_api_rel
+(
+    id          bigint not null,
+    create_time timestamp(6),
+    create_by   bigint,
+    update_time timestamp(6),
+    update_by   bigint,
+    data_status int,
+    del_flag    smallint not null default 0,
+    menu_id     bigint not null,
+    api_id      bigint not null,
+    primary key (id)
+);
+
+comment on table sys_menu_api_rel is '系统菜单与接口的关系表';
+comment on column sys_menu_api_rel.id is '主键id';
+comment on column sys_menu_api_rel.create_time is '创建时间';
+comment on column sys_menu_api_rel.create_by is '创建人';
+comment on column sys_menu_api_rel.update_time is '修改时间';
+comment on column sys_menu_api_rel.update_by is '修改人';
+comment on column sys_menu_api_rel.data_status is '数据状态';
+comment on column sys_menu_api_rel.del_flag is '逻辑删除标识：0未删除，1已删除';
+comment on column sys_menu_api_rel.menu_id is '菜单id';
+comment on column sys_menu_api_rel.api_id is '接口id';
+
+create index if not exists idx_sys_menu_api_rel_menu
+    on sys_menu_api_rel (menu_id);
+
+create index if not exists idx_sys_menu_api_rel_api
+    on sys_menu_api_rel (api_id);
 
 /*==============================================================*/
 /* table: sys_menus                                             */

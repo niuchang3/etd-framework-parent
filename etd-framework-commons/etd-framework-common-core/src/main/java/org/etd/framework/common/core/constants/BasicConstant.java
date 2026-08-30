@@ -113,4 +113,34 @@ public interface BasicConstant {
             return description;
         }
     }
+
+    /**
+     * 功能访问级别
+     */
+    enum AccessLevel {
+        /**
+         * 只读
+         */
+        READ(1, "只读"),
+        /**
+         * 读写
+         */
+        WRITE(2, "读写");
+
+        private final int code;
+        private final String description;
+
+        AccessLevel(int code, String description) {
+            this.code = code;
+            this.description = description;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
 }
