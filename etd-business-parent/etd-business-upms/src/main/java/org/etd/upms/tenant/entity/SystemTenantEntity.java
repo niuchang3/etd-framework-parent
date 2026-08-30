@@ -51,8 +51,4 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
     private Boolean locked;
 
 
-    @TableField("menus")
-    private String menus;
-
-
 }

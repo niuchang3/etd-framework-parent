@@ -1,7 +1,6 @@
 package org.etd.upms.tenant.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.framework.common.core.user.UserDetails;
 import org.apache.commons.lang3.StringUtils;
@@ -18,10 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class SystemTenantServiceImpl implements SystemTenantService {
@@ -84,53 +80,6 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         entity.setId(id);
         entity.setLocked(status);
         return systemTenantMapper.updateById(entity) > 0;
-    }
-
-    @Override
-    public boolean appendMenu(Long tenantId, Long menuId) {
-        SystemTenantEntity tenant = selectTenantForUpdate(tenantId);
-        if (tenant == null) {
-            return false;
-        }
-        Set<String> menuIds = parseMenuIds(tenant.getMenus());
-        menuIds.add(menuId.toString());
-        LambdaUpdateWrapper<SystemTenantEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(SystemTenantEntity::getId, tenantId)
-                .set(SystemTenantEntity::getMenus, String.join(",", menuIds));
-        return systemTenantMapper.update(null, updateWrapper) > 0;
-    }
-
-    @Override
-    public boolean removeMenus(Long tenantId, Set<Long> menuIds) {
-        SystemTenantEntity tenant = selectTenantForUpdate(tenantId);
-        if (tenant == null) {
-            return false;
-        }
-        Set<String> retainedMenuIds = parseMenuIds(tenant.getMenus());
-        Set<String> removedMenuIds = menuIds.stream()
-                .map(String::valueOf)
-                .collect(Collectors.toSet());
-        retainedMenuIds.removeAll(removedMenuIds);
-        LambdaUpdateWrapper<SystemTenantEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(SystemTenantEntity::getId, tenantId)
-                .set(SystemTenantEntity::getMenus, String.join(",", retainedMenuIds));
-        return systemTenantMapper.update(null, updateWrapper) > 0;
-    }
-
-    private SystemTenantEntity selectTenantForUpdate(Long tenantId) {
-        EtdLambdaQueryWrapper<SystemTenantEntity> wrapper = new EtdLambdaQueryWrapper<>();
-        wrapper.eq(SystemTenantEntity::getId, tenantId).last("FOR UPDATE");
-        return systemTenantMapper.selectOne(wrapper);
-    }
-
-    private Set<String> parseMenuIds(String menus) {
-        if (StringUtils.isBlank(menus)) {
-            return new LinkedHashSet<>();
-        }
-        return Arrays.stream(menus.split(","))
-                .map(String::trim)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override

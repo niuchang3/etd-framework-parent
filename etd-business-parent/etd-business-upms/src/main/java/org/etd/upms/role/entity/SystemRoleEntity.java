@@ -43,10 +43,4 @@ public class SystemRoleEntity extends BaseEntity implements Serializable {
     @TableField("permission_type")
     private String permissionType;
 
-    /**
-     * 菜单权限
-     */
-    @TableField("menus")
-    private String menus;
-
 }

@@ -21,8 +21,6 @@ public interface SystemMenusService {
 
     boolean switchStatus(Long id, Integer status);
 
-    List<SystemUserMenusVO> filterMenu(String menuIds, Long tenantId);
-
-    List<SystemUserMenusVO> filterMenu(List<SystemUserMenusVO> systemAllMenus, String menuIds, Long tenantId);
+    List<SystemUserMenusVO> selectEnabledByIds(Set<Long> menuIds, Long tenantId);
 
 }

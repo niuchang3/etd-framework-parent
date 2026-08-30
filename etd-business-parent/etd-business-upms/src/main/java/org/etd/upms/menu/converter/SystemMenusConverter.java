@@ -15,6 +15,9 @@ public interface SystemMenusConverter {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
     @Mapping(target = "dataStatus", ignore = true)
     @Mapping(target = "delFlag", ignore = true)
     @Mapping(target = "tenantId", ignore = true)
@@ -23,6 +26,7 @@ public interface SystemMenusConverter {
     SystemMenuVO toMenuVO(SystemMenusEntity entity);
 
     @Mapping(target = "tenantId", ignore = true)
+    @Mapping(target = "accessLevel", ignore = true)
     SystemUserMenusVO toUserMenu(SystemMenusEntity entity);
 
     List<SystemUserMenusVO> toUserMenu(List<SystemMenusEntity> entity);

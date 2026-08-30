@@ -55,8 +55,4 @@ public class SystemTenantVO {
      * 租户锁定
      */
     private Boolean locked;
-    /**
-     * 租户下的菜单
-     */
-    private String menus;
 }

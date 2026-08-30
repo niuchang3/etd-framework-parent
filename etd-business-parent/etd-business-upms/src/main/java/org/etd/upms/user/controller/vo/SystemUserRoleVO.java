@@ -40,8 +40,4 @@ public class SystemUserRoleVO implements Serializable {
      * 权限类型
      */
     private String permissionType;
-    /**
-     * 角色菜单
-     */
-    private String menus;
 }

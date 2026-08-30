@@ -3,8 +3,10 @@ package org.etd.upms.menu.biz;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.upms.menu.controller.dto.SystemMenuSaveDTO;
+import org.etd.upms.menu.service.SystemMenuApiService;
 import org.etd.upms.menu.service.SystemMenusService;
-import org.etd.upms.tenant.service.SystemTenantService;
+import org.etd.upms.role.service.SystemRoleMenuService;
+import org.etd.upms.tenant.service.SystemTenantMenuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +21,13 @@ public class SystemMenuBizService {
     private SystemMenusService menusService;
 
     @Autowired
-    private SystemTenantService tenantService;
+    private SystemTenantMenuService tenantMenuService;
+
+    @Autowired
+    private SystemRoleMenuService roleMenuService;
+
+    @Autowired
+    private SystemMenuApiService menuApiService;
 
     /**
      * 新菜单必须同时加入当前租户权限，任一步失败都回滚。
@@ -28,7 +36,7 @@ public class SystemMenuBizService {
     public Long insert(SystemMenuSaveDTO dto) {
         Long tenantId = requireTenantId();
         Long menuId = menusService.insert(dto);
-        if (!tenantService.appendMenu(tenantId, menuId)) {
+        if (!tenantMenuService.appendMenu(tenantId, menuId)) {
             throw new ApiRuntimeException("菜单写入租户权限失败。");
         }
         return menuId;
@@ -44,9 +52,10 @@ public class SystemMenuBizService {
         if (menuIds.isEmpty()) {
             return false;
         }
-        if (!tenantService.removeMenus(tenantId, menuIds)) {
-            throw new ApiRuntimeException("租户菜单权限清理失败。");
-        }
+        // 菜单是全局资源，删除前必须清理所有租户、角色和接口关联，避免遗留无效关系。
+        tenantMenuService.removeByMenuIds(menuIds);
+        roleMenuService.removeByMenuIds(menuIds);
+        menuApiService.removeByMenuIds(menuIds);
         if (!menusService.deleteByIds(menuIds)) {
             throw new ApiRuntimeException("菜单级联删除失败。");
         }

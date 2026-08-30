@@ -53,7 +53,7 @@ spring:
             multi-statement-allow: true
 
 mybatis-plus:
-    mapper-locations: classpath*:/mapper/*.xml
+    mapper-locations: classpath*:/mapper/**/*.xml
     configuration:
       log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
@@ -68,4 +68,3 @@ etd:
       enabled: false
     permission:
       enabled: true
-
