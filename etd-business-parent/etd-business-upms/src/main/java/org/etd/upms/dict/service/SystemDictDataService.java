@@ -1,0 +1,26 @@
+package org.etd.upms.dict.service;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.etd.upms.dict.controller.dto.SystemDictDataSaveDTO;
+import org.etd.upms.dict.controller.vo.SystemDictDataVO;
+
+import java.util.List;
+
+public interface SystemDictDataService {
+
+    IPage<SystemDictDataVO> page(long current, long size, Long dictTypeId, String keyword, Boolean enabled);
+
+    SystemDictDataVO selectById(Long id);
+
+    List<SystemDictDataVO> selectEnabledByTypeId(Long dictTypeId);
+
+    boolean existsByTypeId(Long dictTypeId);
+
+    Long insert(SystemDictDataSaveDTO dto);
+
+    boolean update(Long id, SystemDictDataSaveDTO dto);
+
+    boolean delete(Long id);
+
+    boolean switchEnabled(Long id, Boolean enabled);
+}

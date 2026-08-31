@@ -48,15 +48,15 @@ values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475
        (1000004, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '系统管理', '/system', null, 'SettingOutlined', 'DIRECTORY', 40),
        (1000005, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统字典', '/system/dictionaries', '@/views/404.vue', 'DatabaseOutlined', 'MENU', 10),
+        '系统字典', '/system/dictionaries', '@/views/system/dictionaries/index.vue', 'DatabaseOutlined', 'MENU', 10),
        (1000006, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '角色管理', '/system/roles', '@/views/404.vue', 'SafetyCertificateOutlined', 'MENU', 20),
+        '角色管理', '/system/roles', '@/views/system/roles/index.vue', 'SafetyCertificateOutlined', 'MENU', 20),
        (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '菜单管理', '/system/menus', '@/views/menu/index.vue', 'MenuOutlined', 'MENU', 30),
+        '菜单管理', '/system/menus', '@/views/system/menus/index.vue', 'MenuOutlined', 'MENU', 30),
        (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '部门管理', '/system/departments', '@/views/404.vue', 'ApartmentOutlined', 'MENU', 40),
        (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统参数', '/system/parameters', '@/views/404.vue', 'SettingOutlined', 'MENU', 50)
+        '系统参数', '/system/parameters', '@/views/system/parameters/index.vue', 'SettingOutlined', 'MENU', 50)
 on conflict (id) do update
 set menu_router = excluded.menu_router;
 

@@ -14,6 +14,7 @@ public interface SystemUserRoleRelService extends PermissionsService {
      */
     List<SystemUserRoleVO> selectByUser(Long userId);
 
+    boolean existsByRoleId(Long roleId);
 
 
 }

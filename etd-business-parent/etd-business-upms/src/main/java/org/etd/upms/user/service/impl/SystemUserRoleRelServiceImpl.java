@@ -1,10 +1,12 @@
 package org.etd.upms.user.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import org.etd.upms.user.mapper.SystemUserRoleRelMapper;
+import org.etd.upms.user.entity.SystemUserRoleRelEntity;
 import org.etd.upms.user.service.SystemUserRoleRelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,13 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
     @Override
     public List<SystemUserRoleVO> selectByUser(Long userId) {
         return userRoleRelMapper.selectByUserId(userId);
+    }
+
+    @Override
+    public boolean existsByRoleId(Long roleId) {
+        LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SystemUserRoleRelEntity::getRoleId, roleId);
+        return userRoleRelMapper.selectCount(wrapper) > 0;
     }
 
     /**
