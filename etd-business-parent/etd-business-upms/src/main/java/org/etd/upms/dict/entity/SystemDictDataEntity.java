@@ -26,6 +26,9 @@ public class SystemDictDataEntity extends BaseEntity {
     @TableField("sort")
     private Integer sort;
 
+    @TableField("built_in")
+    private Boolean builtIn;
+
     @TableField("enabled")
     private Boolean enabled;
 

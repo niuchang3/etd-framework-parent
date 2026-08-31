@@ -444,6 +444,7 @@ create table if not exists sys_dict_data
     dict_label   varchar(100) not null,
     dict_value   varchar(200) not null,
     sort         int not null default 0,
+    built_in     boolean not null default false,
     enabled      boolean not null default true,
     remark       varchar(500),
     primary key (id)
@@ -462,6 +463,7 @@ comment on column sys_dict_data.dict_code is '字典项编码';
 comment on column sys_dict_data.dict_label is '字典项标签';
 comment on column sys_dict_data.dict_value is '字典项值';
 comment on column sys_dict_data.sort is '排序';
+comment on column sys_dict_data.built_in is '是否系统内置';
 comment on column sys_dict_data.enabled is '是否启用';
 comment on column sys_dict_data.remark is '备注';
 

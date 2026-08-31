@@ -76,23 +76,6 @@ values (1100001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 
 on conflict (id) do nothing;
 
 /*==============================================================*/
-/* sys_role_menu_rel: 平台管理员菜单权限初始化                   */
-/*==============================================================*/
-insert into sys_role_menu_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id, role_id,
-                               menu_id, access_level)
-values (1200001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000001, 2),
-       (1200002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000002, 2),
-       (1200003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000003, 2),
-       (1200004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000004, 2),
-       (1200005, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000005, 2),
-       (1200006, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000006, 2),
-       (1200007, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000007, 2),
-       (1200008, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000008, 2),
-       (1200009, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 1, 1000009, 2)
-on conflict (id) do nothing;
-
-
-/*==============================================================*/
 /* sys_dict_type: 系统字典类型初始化                              */
 /*==============================================================*/
 insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
@@ -117,45 +100,45 @@ on conflict (id) do nothing;
 /* sys_dict_data: 系统字典数据初始化                              */
 /*==============================================================*/
 insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
-                           dict_type_id, dict_code, dict_label, dict_value, sort, enabled, remark)
+                           dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
 values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200001, 'ENABLED', '启用', '1', 10, true, null),
+        2200001, 'ENABLED', '启用', '1', 10, true, true, null),
        (2300002, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200001, 'DISABLED', '禁用', '0', 20, true, null),
+        2200001, 'DISABLED', '禁用', '0', 20, true, true, null),
        (2300003, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200002, 'BUILT_IN', '内置', 'true', 10, true, null),
+        2200002, 'BUILT_IN', '内置', 'true', 10, true, true, null),
        (2300004, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200002, 'CUSTOM', '自定义', 'false', 20, true, null),
+        2200002, 'CUSTOM', '自定义', 'false', 20, true, true, null),
        (2300005, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200003, 'STRING', '字符串', 'string', 10, true, null),
+        2200003, 'STRING', '字符串', 'string', 10, true, true, null),
        (2300006, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200003, 'NUMBER', '数字', 'number', 20, true, null),
+        2200003, 'NUMBER', '数字', 'number', 20, true, true, null),
        (2300007, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200003, 'BOOLEAN', '布尔值', 'boolean', 30, true, null),
+        2200003, 'BOOLEAN', '布尔值', 'boolean', 30, true, true, null),
        (2300008, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200003, 'JSON', 'JSON', 'json', 40, true, null),
+        2200003, 'JSON', 'JSON', 'json', 40, true, true, null),
        (2300009, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200004, 'UNLIMITED', '不限制', '1', 10, true, null),
+        2200004, 'UNLIMITED', '不限制', '1', 10, true, true, null),
        (2300010, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200004, 'SELF', '仅本人', '2', 20, true, null),
+        2200004, 'SELF', '仅本人', '2', 20, true, true, null),
        (2300011, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200004, 'CURRENT_ORG', '仅当前组织', '3', 30, true, null),
+        2200004, 'CURRENT_ORG', '仅当前组织', '3', 30, true, true, null),
        (2300012, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200004, 'CURRENT_AND_CHILD_ORG', '当前组织及下级组织', '4', 40, true, null),
+        2200004, 'CURRENT_AND_CHILD_ORG', '当前组织及下级组织', '4', 40, true, true, null),
        (2300013, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200004, 'CUSTOM_ORG', '自定义跨组织', '5', 50, true, null),
+        2200004, 'CUSTOM_ORG', '自定义跨组织', '5', 50, true, true, null),
        (2300014, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200005, 'READ_ONLY', '只读', '1', 10, true, null),
+        2200005, 'READ_ONLY', '只读', '1', 10, true, true, null),
        (2300015, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200005, 'READ_WRITE', '读写', '2', 20, true, null),
+        2200005, 'READ_WRITE', '读写', '2', 20, true, true, null),
        (2300016, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200006, 'DIRECTORY', '目录', 'DIRECTORY', 10, true, null),
+        2200006, 'DIRECTORY', '目录', 'DIRECTORY', 10, true, true, null),
        (2300017, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200006, 'MENU', '菜单', 'MENU', 20, true, null),
+        2200006, 'MENU', '菜单', 'MENU', 20, true, true, null),
        (2300018, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200007, 'COMPANY', '公司', 'COMPANY', 10, true, null),
+        2200007, 'COMPANY', '公司', 'COMPANY', 10, true, true, null),
        (2300019, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, null)
+        2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, true, null)
 on conflict (id) do nothing;
 
 

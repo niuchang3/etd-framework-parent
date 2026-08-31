@@ -67,6 +67,7 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
     public Long insert(SystemDictDataSaveDTO dto) {
         ensureCodeAvailable(dto.getDictTypeId(), dto.getDictCode(), null);
         SystemDictDataEntity entity = toEntity(dto);
+        entity.setBuiltIn(false);
         entity.setEnabled(true);
         dictDataMapper.insert(entity);
         return entity.getId();
@@ -74,7 +75,8 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
 
     @Override
     public boolean update(Long id, SystemDictDataSaveDTO dto) {
-        requireData(id);
+        SystemDictDataEntity existing = requireData(id);
+        requireWritable(existing, "内置字典项不允许修改。");
         ensureCodeAvailable(dto.getDictTypeId(), dto.getDictCode(), id);
         SystemDictDataEntity entity = toEntity(dto);
         entity.setId(id);
@@ -83,13 +85,15 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
 
     @Override
     public boolean delete(Long id) {
-        requireData(id);
+        SystemDictDataEntity existing = requireData(id);
+        requireWritable(existing, "内置字典项不允许删除。");
         return dictDataMapper.deleteById(id) > 0;
     }
 
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
-        requireData(id);
+        SystemDictDataEntity existing = requireData(id);
+        requireWritable(existing, "内置字典项不允许修改启用状态。");
         SystemDictDataEntity entity = new SystemDictDataEntity();
         entity.setId(id);
         entity.setEnabled(enabled);
@@ -119,9 +123,17 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         }
     }
 
-    private void requireData(Long id) {
-        if (dictDataMapper.selectById(id) == null) {
+    private SystemDictDataEntity requireData(Long id) {
+        SystemDictDataEntity entity = dictDataMapper.selectById(id);
+        if (entity == null) {
             throw new ApiRuntimeException("字典项不存在。");
+        }
+        return entity;
+    }
+
+    private void requireWritable(SystemDictDataEntity entity, String message) {
+        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
+            throw new ApiRuntimeException(message);
         }
     }
 
@@ -149,6 +161,7 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         vo.setDictLabel(entity.getDictLabel());
         vo.setDictValue(entity.getDictValue());
         vo.setSort(entity.getSort());
+        vo.setBuiltIn(entity.getBuiltIn());
         vo.setEnabled(entity.getEnabled());
         vo.setRemark(entity.getRemark());
         return vo;

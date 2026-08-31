@@ -15,6 +15,7 @@ public class SystemDictDataVO {
     private String dictLabel;
     private String dictValue;
     private Integer sort;
+    private Boolean builtIn;
     private Boolean enabled;
     private String remark;
 }
