@@ -149,5 +149,21 @@ on conflict (id) do nothing;
 insert into sys_config (id, create_time, create_by, update_time, update_by, data_status, tenant_id, parameter_key,
                         parameter_name, parameter_value, value_type, built_in, enabled, remark)
 values (4000001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
-        'system.name', '系统名称', 'ETD Console', 'string', true, true, '系统展示名称')
+        'system.name', '系统名称', 'ETD Console', 'string', true, true, '系统展示名称'),
+       (4000002, current_timestamp, 1, current_timestamp, 1, 1, 1,
+        'system.branding', '系统视觉与版权信息',
+        '{"name":"ETD 后台管理系统","logo":"/assets/images/logo.png","favicon":"/favicon.ico","copyright":"Copyright © 2026 ETD. All Rights Reserved.","watermark":{"enabled":false,"opacity":0.15,"fontSize":14}}',
+        'json', true, true, '全局品牌名、Logo链接、水印配置'),
+       (4000003, current_timestamp, 1, current_timestamp, 1, 1, 1,
+        'security.policy', '登录验证码与密码策略',
+        '{"captcha":{"triggerOnFailCount":5},"password":{"minLength":8,"regexp":"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$","defaultPassword":"Etd@123456"}}',
+        'json', true, true, '纯前端登录失败验证码控制、密码正则及默认初始密码'),
+       (4000004, current_timestamp, 1, current_timestamp, 1, 1, 1,
+        'system.resource.limit', '业务资源与树形层级限制',
+        '{"upload":{"maxSizeMb":10,"allowedExtensions":[".png",".jpg",".jpeg",".pdf",".xlsx",".zip",".docx"]},"organization":{"maxDepth":6,"exportLimit":5000},"menu":{"maxDepth":4},"pagination":{"defaultSize":10,"maxSize":200}}',
+        'json', true, true, '上传大小限制、组织树和菜单树的最大深度控制、分页限制'),
+       (4000005, current_timestamp, 1, current_timestamp, 1, 1, 1,
+        'system.network.policy', '网络通信与缓存策略',
+        '{"request":{"timeoutMs":5000,"retryTimes":3},"cache":{"dictTtlSeconds":600,"userMenuTtlSeconds":1800}}',
+        'json', true, true, '前端超时时间、请求重试次数及字典等数据缓存时效')
 on conflict (id) do nothing;
