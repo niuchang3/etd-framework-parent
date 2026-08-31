@@ -61,11 +61,11 @@ public class SystemDictDataController {
 
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
-        return ResultModel.success(dictDataService.delete(id));
+        return ResultModel.success(dictBizService.deleteData(id));
     }
 
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
-        return ResultModel.success(dictDataService.switchEnabled(id, enabled));
+        return ResultModel.success(dictBizService.switchDataEnabled(id, enabled));
     }
 }

@@ -57,9 +57,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     @Override
     public boolean update(Long id, SystemConfigSaveDTO dto) {
         SystemConfigEntity existing = requireConfig(id);
-        if (Boolean.TRUE.equals(existing.getBuiltIn()) && !existing.getParameterKey().equals(dto.getParameterKey())) {
-            throw new ApiRuntimeException("内置参数不允许修改参数键。");
-        }
+        ensureWritable(existing, "内置系统参数不允许修改");
         ensureKeyAvailable(dto.getParameterKey(), id);
         SystemConfigEntity entity = toEntity(dto);
         entity.setId(id);
@@ -69,15 +67,14 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     @Override
     public boolean delete(Long id) {
         SystemConfigEntity entity = requireConfig(id);
-        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
-            throw new ApiRuntimeException("内置参数不允许删除。");
-        }
+        ensureWritable(entity, "内置系统参数不允许删除");
         return configMapper.deleteById(id) > 0;
     }
 
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
-        requireConfig(id);
+        SystemConfigEntity existing = requireConfig(id);
+        ensureWritable(existing, "内置系统参数不允许修改启用状态");
         SystemConfigEntity entity = new SystemConfigEntity();
         entity.setId(id);
         entity.setEnabled(enabled);
@@ -99,6 +96,12 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             throw new ApiRuntimeException("系统参数不存在。");
         }
         return entity;
+    }
+
+    private void ensureWritable(SystemConfigEntity entity, String message) {
+        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
+            throw new ApiRuntimeException(message);
+        }
     }
 
     private SystemConfigEntity toEntity(SystemConfigSaveDTO dto) {

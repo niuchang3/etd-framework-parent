@@ -402,11 +402,10 @@ create table if not exists sys_dict_type
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
-    tenant_id   bigint not null,
     type_code   varchar(100) not null,
     type_name   varchar(100) not null,
-    built_in    boolean default false,
-    enabled     boolean default true,
+    built_in    boolean not null default false,
+    enabled     boolean not null default true,
     remark      varchar(500),
     primary key (id)
 );
@@ -419,15 +418,14 @@ comment on column sys_dict_type.update_time is '修改时间';
 comment on column sys_dict_type.update_by is '修改人';
 comment on column sys_dict_type.data_status is '数据状态';
 comment on column sys_dict_type.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column sys_dict_type.tenant_id is '租户id';
 comment on column sys_dict_type.type_code is '字典类型编码';
 comment on column sys_dict_type.type_name is '字典类型名称';
 comment on column sys_dict_type.built_in is '是否系统内置';
 comment on column sys_dict_type.enabled is '是否启用';
 comment on column sys_dict_type.remark is '备注';
 
-create index if not exists idx_sys_dict_type_tenant_code
-    on sys_dict_type (tenant_id, type_code);
+create unique index if not exists uk_sys_dict_type_code
+    on sys_dict_type (type_code);
 
 /*==============================================================*/
 /* table: sys_dict_data                                         */
@@ -441,13 +439,12 @@ create table if not exists sys_dict_data
     update_by    bigint,
     data_status  int,
     del_flag     smallint not null default 0,
-    tenant_id    bigint not null,
-    dict_type_id bigint not null,
+    dict_type_id bigint not null references sys_dict_type (id),
     dict_code    varchar(100) not null,
     dict_label   varchar(100) not null,
     dict_value   varchar(200) not null,
-    sort         int,
-    enabled      boolean default true,
+    sort         int not null default 0,
+    enabled      boolean not null default true,
     remark       varchar(500),
     primary key (id)
 );
@@ -460,7 +457,6 @@ comment on column sys_dict_data.update_time is '修改时间';
 comment on column sys_dict_data.update_by is '修改人';
 comment on column sys_dict_data.data_status is '数据状态';
 comment on column sys_dict_data.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column sys_dict_data.tenant_id is '租户id';
 comment on column sys_dict_data.dict_type_id is '字典类型id';
 comment on column sys_dict_data.dict_code is '字典项编码';
 comment on column sys_dict_data.dict_label is '字典项标签';
@@ -469,8 +465,14 @@ comment on column sys_dict_data.sort is '排序';
 comment on column sys_dict_data.enabled is '是否启用';
 comment on column sys_dict_data.remark is '备注';
 
-create index if not exists idx_sys_dict_data_type
-    on sys_dict_data (tenant_id, dict_type_id);
+create unique index if not exists uk_sys_dict_data_type_code
+    on sys_dict_data (dict_type_id, dict_code);
+
+create unique index if not exists uk_sys_dict_data_type_value
+    on sys_dict_data (dict_type_id, dict_value);
+
+create index if not exists idx_sys_dict_data_type_enabled_sort
+    on sys_dict_data (dict_type_id, enabled, sort, id);
 
 /*==============================================================*/
 /* table: sys_organization                                      */

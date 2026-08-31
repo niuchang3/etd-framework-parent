@@ -35,7 +35,7 @@ public class SystemRoleBizService {
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceMenus(Long roleId, List<SystemRoleMenuGrantDTO> menus) {
-        roleService.requireExists(roleId);
+        roleService.requireWritable(roleId, "内置角色不允许修改菜单权限");
         ensureNoDuplicateMenus(menus);
         Set<Long> tenantMenuIds = tenantMenuService.selectMenuIds(requireTenantId());
         Set<Long> requestedMenuIds = menus.stream().map(SystemRoleMenuGrantDTO::getMenuId).collect(Collectors.toSet());
@@ -50,7 +50,7 @@ public class SystemRoleBizService {
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long roleId) {
-        roleService.requireExists(roleId);
+        roleService.requireWritable(roleId, "内置角色不允许删除");
         if (userRoleRelService.existsByRoleId(roleId)) {
             throw new ApiRuntimeException("角色已分配给用户，不能删除。");
         }

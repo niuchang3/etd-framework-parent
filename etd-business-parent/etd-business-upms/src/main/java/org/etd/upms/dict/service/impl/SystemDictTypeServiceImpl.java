@@ -50,6 +50,14 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
     }
 
     @Override
+    public void requireWritable(Long id) {
+        SystemDictTypeEntity entity = requireType(id);
+        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
+            throw new ApiRuntimeException("内置字典不允许修改");
+        }
+    }
+
+    @Override
     public Long insert(SystemDictTypeSaveDTO dto) {
         ensureCodeAvailable(dto.getTypeCode(), null);
         SystemDictTypeEntity entity = toEntity(dto);
@@ -61,10 +69,7 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
 
     @Override
     public boolean update(Long id, SystemDictTypeSaveDTO dto) {
-        SystemDictTypeEntity existing = requireType(id);
-        if (Boolean.TRUE.equals(existing.getBuiltIn()) && !existing.getTypeCode().equals(dto.getTypeCode())) {
-            throw new ApiRuntimeException("内置字典类型不允许修改编码。");
-        }
+        requireWritable(id);
         ensureCodeAvailable(dto.getTypeCode(), id);
         SystemDictTypeEntity entity = toEntity(dto);
         entity.setId(id);
@@ -73,16 +78,13 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
 
     @Override
     public boolean delete(Long id) {
-        SystemDictTypeEntity entity = requireType(id);
-        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
-            throw new ApiRuntimeException("内置字典类型不允许删除。");
-        }
+        requireWritable(id);
         return dictTypeMapper.deleteById(id) > 0;
     }
 
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
-        requireType(id);
+        requireWritable(id);
         SystemDictTypeEntity entity = new SystemDictTypeEntity();
         entity.setId(id);
         entity.setEnabled(enabled);
@@ -94,7 +96,7 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         wrapper.eq(SystemDictTypeEntity::getTypeCode, typeCode)
                 .ne(excludedId != null, SystemDictTypeEntity::getId, excludedId);
         if (dictTypeMapper.selectCount(wrapper) > 0) {
-            throw new ApiRuntimeException("当前租户下字典类型编码已存在。");
+            throw new ApiRuntimeException("字典类型编码已存在。");
         }
     }
 

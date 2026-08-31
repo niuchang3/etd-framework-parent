@@ -8,7 +8,7 @@ import org.etd.framework.starter.mybaits.core.BaseEntity;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("sys_dict_data")
+@TableName(value = "sys_dict_data", excludeProperty = "tenantId")
 public class SystemDictDataEntity extends BaseEntity {
 
     @TableField("dict_type_id")

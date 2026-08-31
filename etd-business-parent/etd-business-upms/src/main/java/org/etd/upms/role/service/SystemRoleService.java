@@ -12,6 +12,8 @@ public interface SystemRoleService {
 
     void requireExists(Long id);
 
+    void requireWritable(Long id, String message);
+
     Long insert(SystemRoleSaveDTO dto);
 
     boolean update(Long id, SystemRoleSaveDTO dto);

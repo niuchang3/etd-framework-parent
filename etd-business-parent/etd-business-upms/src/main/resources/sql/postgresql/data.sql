@@ -54,7 +54,7 @@ values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475
        (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '菜单管理', '/system/menus', '@/views/system/menus/index.vue', 'MenuOutlined', 'MENU', 30),
        (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '部门管理', '/system/departments', '@/views/404.vue', 'ApartmentOutlined', 'MENU', 40),
+        '组织架构', '/system/departments', '@/views/404.vue', 'ApartmentOutlined', 'MENU', 40),
        (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '系统参数', '/system/parameters', '@/views/system/parameters/index.vue', 'SettingOutlined', 'MENU', 50)
 on conflict (id) do update
@@ -92,42 +92,67 @@ values (1200001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 
 on conflict (id) do nothing;
 
 
-
 /*==============================================================*/
 /* sys_dict_type: 系统字典类型初始化                              */
 /*==============================================================*/
-insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, tenant_id, type_code,
-                           type_name, built_in, enabled, remark)
-values (2000001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
-        'sys_data_status', '数据状态', true, true, '系统基础数据状态'),
-       (2000002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
-        'sys_gender', '性别', true, true, '系统用户性别'),
-       (2000003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1,
-        'sys_org_type', '组织类型', true, true, '系统组织架构类型')
+insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           type_code, type_name, built_in, enabled, remark)
+values (2200001, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'common_status', '启用状态', true, true, '通用启用状态'),
+       (2200002, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'common_builtin', '内置标识', true, true, '通用内置标识'),
+       (2200003, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_config_value_type', '参数值类型', true, true, '系统参数值类型'),
+       (2200004, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_role_permission_type', '角色数据权限', true, true, '系统角色数据权限范围'),
+       (2200005, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_menu_access_level', '菜单访问级别', true, true, '角色菜单访问级别'),
+       (2200006, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_menu_type', '菜单类型', true, true, '系统菜单类型')
 on conflict (id) do nothing;
 
 /*==============================================================*/
 /* sys_dict_data: 系统字典数据初始化                              */
 /*==============================================================*/
-insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, tenant_id, dict_type_id,
-                           dict_code, dict_label, dict_value, sort, enabled, remark)
-values (2100001, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000001,
-        'DISABLED', '禁用', '0', 10, true, null),
-       (2100002, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000001,
-        'ENABLED', '启用', '1', 20, true, null),
-       (2100003, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
-        'UNKNOWN', '未知', '0', 10, true, null),
-       (2100004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
-        'MALE', '男', '1', 20, true, null),
-       (2100005, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000002,
-        'FEMALE', '女', '2', 30, true, null),
-       (2100006, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
-        'COMPANY', '公司', 'company', 10, true, null),
-       (2100007, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
-        'DEPARTMENT', '部门', 'department', 20, true, null),
-       (2100008, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1, 1, 2000003,
-        'TEAM', '团队', 'team', 30, true, null)
+insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           dict_type_id, dict_code, dict_label, dict_value, sort, enabled, remark)
+values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200001, 'ENABLED', '启用', '1', 10, true, null),
+       (2300002, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200001, 'DISABLED', '禁用', '0', 20, true, null),
+       (2300003, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200002, 'BUILT_IN', '内置', 'true', 10, true, null),
+       (2300004, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200002, 'CUSTOM', '自定义', 'false', 20, true, null),
+       (2300005, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200003, 'STRING', '字符串', 'string', 10, true, null),
+       (2300006, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200003, 'NUMBER', '数字', 'number', 20, true, null),
+       (2300007, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200003, 'BOOLEAN', '布尔值', 'boolean', 30, true, null),
+       (2300008, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200003, 'JSON', 'JSON', 'json', 40, true, null),
+       (2300009, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200004, 'UNLIMITED', '不限制', '1', 10, true, null),
+       (2300010, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200004, 'SELF', '仅本人', '2', 20, true, null),
+       (2300011, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200004, 'CURRENT_ORG', '仅当前组织', '3', 30, true, null),
+       (2300012, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200004, 'CURRENT_AND_CHILD_ORG', '当前组织及下级组织', '4', 40, true, null),
+       (2300013, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200004, 'CUSTOM_ORG', '自定义跨组织', '5', 50, true, null),
+       (2300014, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200005, 'READ_ONLY', '只读', '1', 10, true, null),
+       (2300015, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200005, 'READ_WRITE', '读写', '2', 20, true, null),
+       (2300016, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200006, 'DIRECTORY', '目录', 'DIRECTORY', 10, true, null),
+       (2300017, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200006, 'MENU', '菜单', 'MENU', 20, true, null)
 on conflict (id) do nothing;
+
+
 
 /*==============================================================*/
 /* sys_config: 系统参数初始化                                    */

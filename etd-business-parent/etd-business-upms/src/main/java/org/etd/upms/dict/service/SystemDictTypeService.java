@@ -14,6 +14,8 @@ public interface SystemDictTypeService {
 
     void requireExists(Long id);
 
+    void requireWritable(Long id);
+
     Long insert(SystemDictTypeSaveDTO dto);
 
     boolean update(Long id, SystemDictTypeSaveDTO dto);

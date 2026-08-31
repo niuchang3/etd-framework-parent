@@ -43,6 +43,14 @@ public class SystemRoleServiceImpl implements SystemRoleService {
     }
 
     @Override
+    public void requireWritable(Long id, String message) {
+        SystemRoleEntity role = requireRole(id);
+        if (Boolean.TRUE.equals(role.getBuiltIn())) {
+            throw new ApiRuntimeException(message);
+        }
+    }
+
+    @Override
     public Long insert(SystemRoleSaveDTO dto) {
         ensureCodeAvailable(dto.getRoleCode(), null);
         SystemRoleEntity entity = toEntity(dto);
@@ -54,10 +62,7 @@ public class SystemRoleServiceImpl implements SystemRoleService {
 
     @Override
     public boolean update(Long id, SystemRoleSaveDTO dto) {
-        SystemRoleEntity existing = requireRole(id);
-        if (Boolean.TRUE.equals(existing.getBuiltIn()) && !existing.getRoleCode().equals(dto.getRoleCode())) {
-            throw new ApiRuntimeException("内置角色不允许修改角色编码。");
-        }
+        requireWritable(id, "内置角色不允许修改");
         ensureCodeAvailable(dto.getRoleCode(), id);
         SystemRoleEntity entity = toEntity(dto);
         entity.setId(id);
@@ -66,16 +71,13 @@ public class SystemRoleServiceImpl implements SystemRoleService {
 
     @Override
     public boolean delete(Long id) {
-        SystemRoleEntity entity = requireRole(id);
-        if (Boolean.TRUE.equals(entity.getBuiltIn())) {
-            throw new ApiRuntimeException("内置角色不允许删除。");
-        }
+        requireWritable(id, "内置角色不允许删除");
         return roleMapper.deleteById(id) > 0;
     }
 
     @Override
     public boolean switchStatus(Long id, Integer status) {
-        requireRole(id);
+        requireWritable(id, "内置角色不允许修改启用状态");
         SystemRoleEntity entity = new SystemRoleEntity();
         entity.setId(id);
         entity.setDataStatus(status);
