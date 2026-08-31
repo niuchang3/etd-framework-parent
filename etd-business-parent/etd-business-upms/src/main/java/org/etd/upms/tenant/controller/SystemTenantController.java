@@ -25,16 +25,17 @@ public class SystemTenantController {
 
 
     @GetMapping
-    public ResultModel page(@RequestParam Long current,
-                            @RequestParam Long size,
-                            @RequestParam(required = false) List<String> times,
-                            @RequestParam(required = false) String keyword){
+    public ResultModel page(@RequestParam("current") Long current,
+                            @RequestParam("size") Long size,
+                            @RequestParam(name = "times", required = false) List<String> times,
+                            @RequestParam(name = "keyword", required = false) String keyword){
         IPage<SystemTenantVO> page = tenantBizService.page(new Page(current, size), times, keyword);
         return ResultModel.success(page);
     }
 
     @PatchMapping("/{id}/{status}")
-    public ResultModel<Boolean> switchLocked(@PathVariable Long id,@PathVariable Boolean status){
+    public ResultModel<Boolean> switchLocked(@PathVariable("id") Long id,
+                                             @PathVariable("status") Boolean status){
         return ResultModel.success(tenantService.switchLocked(id,status));
     }
 }

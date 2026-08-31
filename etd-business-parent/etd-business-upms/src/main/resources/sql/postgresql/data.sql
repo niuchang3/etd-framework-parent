@@ -40,24 +40,25 @@ on conflict (id) do nothing;
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
                        menu_path, menu_router, menu_icon, menu_type, sort)
 values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '首页', '/dashboard', '/dashboard', 'AppstoreOutlined', 'MENU', 10),
+        '首页', '/dashboard', '@/views/404.vue', 'AppstoreOutlined', 'MENU', 10),
        (1000002, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '租户管理', '/tenants', '/tenants', 'TeamOutlined', 'MENU', 20),
+        '租户管理', '/tenants', '@/views/404.vue', 'TeamOutlined', 'MENU', 20),
        (1000003, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '用户中心', '/users', '/users', 'UserOutlined', 'MENU', 30),
+        '用户中心', '/users', '@/views/404.vue', 'UserOutlined', 'MENU', 30),
        (1000004, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统管理', '/system', '/system', 'SettingOutlined', 'DIRECTORY', 40),
+        '系统管理', '/system', null, 'SettingOutlined', 'DIRECTORY', 40),
        (1000005, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统字典', '/system/dictionaries', '/system/dictionaries', 'DatabaseOutlined', 'MENU', 10),
+        '系统字典', '/system/dictionaries', '@/views/404.vue', 'DatabaseOutlined', 'MENU', 10),
        (1000006, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '角色管理', '/system/roles', '/system/roles', 'SafetyCertificateOutlined', 'MENU', 20),
+        '角色管理', '/system/roles', '@/views/404.vue', 'SafetyCertificateOutlined', 'MENU', 20),
        (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '菜单管理', '/system/menus', '/system/menus', 'MenuOutlined', 'MENU', 30),
+        '菜单管理', '/system/menus', '@/views/menu/index.vue', 'MenuOutlined', 'MENU', 30),
        (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '部门管理', '/system/departments', '/system/departments', 'ApartmentOutlined', 'MENU', 40),
+        '部门管理', '/system/departments', '@/views/404.vue', 'ApartmentOutlined', 'MENU', 40),
        (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统参数', '/system/parameters', '/system/parameters', 'SettingOutlined', 'MENU', 50)
-on conflict (id) do nothing;
+        '系统参数', '/system/parameters', '@/views/404.vue', 'SettingOutlined', 'MENU', 50)
+on conflict (id) do update
+set menu_router = excluded.menu_router;
 
 /*==============================================================*/
 /* sys_tenant_menu_rel: 默认租户菜单权限初始化                   */

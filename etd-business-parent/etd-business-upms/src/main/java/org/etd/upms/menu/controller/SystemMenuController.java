@@ -33,7 +33,7 @@ public class SystemMenuController {
     private SystemMenuBizService menuBizService;
 
     @GetMapping("/{id}")
-    public ResultModel<SystemMenuVO> detail(@PathVariable Long id) {
+    public ResultModel<SystemMenuVO> detail(@PathVariable("id") Long id) {
         return ResultModel.success(menusService.selectById(id));
     }
 
@@ -43,20 +43,20 @@ public class SystemMenuController {
     }
 
     @PutMapping("/{id}")
-    public ResultModel<Boolean> update(@PathVariable Long id,
+    public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemMenuSaveDTO dto) {
         return ResultModel.success(menusService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResultModel<Boolean> delete(@PathVariable Long id) {
+    public ResultModel<Boolean> delete(@PathVariable("id") Long id) {
         return ResultModel.success(menuBizService.delete(id));
     }
 
     @PatchMapping("/{id}/status/{status}")
     public ResultModel<Boolean> switchStatus(
-            @PathVariable Long id,
-            @PathVariable @Min(value = BasicConstant.DataStatus.DISABLED_CODE, message = "菜单状态只能为0或1")
+            @PathVariable("id") Long id,
+            @PathVariable("status") @Min(value = BasicConstant.DataStatus.DISABLED_CODE, message = "菜单状态只能为0或1")
             @Max(value = BasicConstant.DataStatus.ENABLED_CODE, message = "菜单状态只能为0或1") Integer status) {
         return ResultModel.success(menusService.switchStatus(id, status));
     }
