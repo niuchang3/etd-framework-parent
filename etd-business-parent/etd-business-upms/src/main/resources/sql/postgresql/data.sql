@@ -56,7 +56,7 @@ values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475
        (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '组织架构', '/system/organizations', '@/views/system/organizations/index.vue', 'ApartmentOutlined', 'MENU', 40),
        (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '系统参数', '/system/parameters', '@/views/system/parameters/index.vue', 'SettingOutlined', 'MENU', 50)
+        '系统配置', '/system/config', '@/views/system/config/index.vue', 'SettingOutlined', 'MENU', 50)
 on conflict (id) do update
 set menu_router = excluded.menu_router;
 
