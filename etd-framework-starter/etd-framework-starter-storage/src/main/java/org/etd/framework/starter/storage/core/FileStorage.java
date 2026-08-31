@@ -40,7 +40,7 @@ public abstract class FileStorage<C> implements FileUpload {
     }
 
     /**
-     * 构建在 Bucket 内部的安全对象存储路径（防止 directory 为空时拼出开头带 / 的根路径）
+     * 构建在 Bucket 内部的安全对象存储路径
      *
      * @param directory 目标目录
      * @param fileName  文件名称
