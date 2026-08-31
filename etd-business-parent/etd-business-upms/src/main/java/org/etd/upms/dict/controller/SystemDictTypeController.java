@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.upms.dict.biz.SystemDictBizService;
 import org.etd.upms.dict.controller.dto.SystemDictTypeSaveDTO;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
@@ -53,6 +57,14 @@ public class SystemDictTypeController {
     @GetMapping("/{id}")
     public ResultModel<SystemDictTypeVO> detail(@PathVariable Long id) {
         return ResultModel.success(dictTypeService.selectById(id));
+    }
+
+    @GetMapping("/data")
+    public ResultModel<Map<String, List<SystemDictDataVO>>> enabledData(
+            @RequestParam @NotEmpty(message = "字典类型编码不能为空")
+            List<@NotBlank(message = "字典类型编码不能为空")
+                    @Size(max = 100, message = "字典类型编码不能超过100个字符") String> typeCodes) {
+        return ResultModel.success(dictBizService.selectEnabledDataByTypeCodes(typeCodes));
     }
 
     @GetMapping("/code/{typeCode}/data")

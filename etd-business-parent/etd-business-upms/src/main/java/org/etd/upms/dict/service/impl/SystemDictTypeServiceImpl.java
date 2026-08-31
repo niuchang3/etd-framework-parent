@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collection;
+import java.util.List;
+
 @Service
 public class SystemDictTypeServiceImpl implements SystemDictTypeService {
 
@@ -42,6 +45,17 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         wrapper.eq(SystemDictTypeEntity::getTypeCode, typeCode)
                 .eq(SystemDictTypeEntity::getEnabled, true);
         return toVO(dictTypeMapper.selectOne(wrapper));
+    }
+
+    @Override
+    public List<SystemDictTypeVO> selectEnabledByCodes(Collection<String> typeCodes) {
+        if (typeCodes.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<SystemDictTypeEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemDictTypeEntity::getTypeCode, typeCodes)
+                .eq(SystemDictTypeEntity::getEnabled, true);
+        return dictTypeMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

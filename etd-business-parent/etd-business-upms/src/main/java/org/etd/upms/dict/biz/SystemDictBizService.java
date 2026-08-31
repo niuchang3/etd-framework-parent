@@ -9,6 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class SystemDictBizService {
 
@@ -17,6 +24,21 @@ public class SystemDictBizService {
 
     @Autowired
     private SystemDictDataService dictDataService;
+
+    /**
+     * 批量查询启用的字典类型及字典项，并保留前端传入的编码顺序。
+     */
+    public Map<String, List<SystemDictDataVO>> selectEnabledDataByTypeCodes(Collection<String> typeCodes) {
+        LinkedHashSet<String> distinctTypeCodes = new LinkedHashSet<>(typeCodes);
+        Map<String, List<SystemDictDataVO>> result = initializeResult(distinctTypeCodes);
+        var types = dictTypeService.selectEnabledByCodes(distinctTypeCodes);
+        var typeIds = types.stream().map(type -> type.getId()).toList();
+        Map<Long, List<SystemDictDataVO>> dataByTypeId = dictDataService.selectEnabledByTypeIds(typeIds)
+                .stream().collect(Collectors.groupingBy(SystemDictDataVO::getDictTypeId));
+        types.forEach(type -> result.put(type.getTypeCode(),
+                dataByTypeId.getOrDefault(type.getId(), List.of())));
+        return result;
+    }
 
     public Long insertData(SystemDictDataSaveDTO dto) {
         dictTypeService.requireWritable(dto.getDictTypeId());
@@ -60,5 +82,11 @@ public class SystemDictBizService {
             throw new ApiRuntimeException("字典项不存在");
         }
         return data;
+    }
+
+    private Map<String, List<SystemDictDataVO>> initializeResult(Collection<String> typeCodes) {
+        Map<String, List<SystemDictDataVO>> result = new LinkedHashMap<>();
+        typeCodes.forEach(typeCode -> result.put(typeCode, List.of()));
+        return result;
     }
 }

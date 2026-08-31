@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.dict.controller.dto.SystemDictDataSaveDTO;
 import org.etd.upms.dict.controller.vo.SystemDictDataVO;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface SystemDictDataService {
@@ -13,6 +14,8 @@ public interface SystemDictDataService {
     SystemDictDataVO selectById(Long id);
 
     List<SystemDictDataVO> selectEnabledByTypeId(Long dictTypeId);
+
+    List<SystemDictDataVO> selectEnabledByTypeIds(Collection<Long> dictTypeIds);
 
     boolean existsByTypeId(Long dictTypeId);
 

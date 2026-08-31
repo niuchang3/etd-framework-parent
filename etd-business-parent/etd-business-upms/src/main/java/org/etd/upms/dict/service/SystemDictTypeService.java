@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.dict.controller.dto.SystemDictTypeSaveDTO;
 import org.etd.upms.dict.controller.vo.SystemDictTypeVO;
 
+import java.util.Collection;
+import java.util.List;
+
 public interface SystemDictTypeService {
 
     IPage<SystemDictTypeVO> page(long current, long size, String keyword, Boolean enabled);
@@ -11,6 +14,8 @@ public interface SystemDictTypeService {
     SystemDictTypeVO selectById(Long id);
 
     SystemDictTypeVO selectEnabledByCode(String typeCode);
+
+    List<SystemDictTypeVO> selectEnabledByCodes(Collection<String> typeCodes);
 
     void requireExists(Long id);
 

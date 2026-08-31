@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -39,6 +40,19 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         wrapper.eq(SystemDictDataEntity::getDictTypeId, dictTypeId)
                 .eq(SystemDictDataEntity::getEnabled, true)
                 .orderByAsc(SystemDictDataEntity::getSort, SystemDictDataEntity::getId);
+        return dictDataMapper.selectList(wrapper).stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<SystemDictDataVO> selectEnabledByTypeIds(Collection<Long> dictTypeIds) {
+        if (dictTypeIds.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<SystemDictDataEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemDictDataEntity::getDictTypeId, dictTypeIds)
+                .eq(SystemDictDataEntity::getEnabled, true)
+                .orderByAsc(SystemDictDataEntity::getDictTypeId, SystemDictDataEntity::getSort,
+                        SystemDictDataEntity::getId);
         return dictDataMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
