@@ -23,7 +23,6 @@
     </properties>
 
     <modules>
-        <module>demo</module>
         <module>etd-framework-commons</module>
         <module>etd-framework-starter</module>
         <module>etd-framework-dependencies</module>

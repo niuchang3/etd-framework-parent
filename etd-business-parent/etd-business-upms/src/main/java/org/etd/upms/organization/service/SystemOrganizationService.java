@@ -4,6 +4,7 @@ import org.etd.upms.organization.controller.dto.SystemOrganizationSaveDTO;
 import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 
 import java.util.List;
+import java.util.Set;
 
 public interface SystemOrganizationService {
 
@@ -24,6 +25,10 @@ public interface SystemOrganizationService {
     boolean existsReference(Long id);
 
     boolean delete(Long id);
+
+    Set<Long> selectSubtreeIds(Long id);
+
+    boolean deleteByIds(Set<Long> ids);
 
     boolean switchEnabled(Long id, Boolean enabled);
 }

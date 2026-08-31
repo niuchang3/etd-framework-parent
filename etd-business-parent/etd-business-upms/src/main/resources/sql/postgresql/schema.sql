@@ -537,7 +537,6 @@ create table if not exists sys_config
     update_by       bigint,
     data_status     int,
     del_flag        smallint not null default 0,
-    tenant_id       bigint not null,
     parameter_key   varchar(100) not null,
     parameter_name  varchar(100) not null,
     parameter_value text,
@@ -556,7 +555,6 @@ comment on column sys_config.update_time is '修改时间';
 comment on column sys_config.update_by is '修改人';
 comment on column sys_config.data_status is '数据状态';
 comment on column sys_config.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column sys_config.tenant_id is '租户id';
 comment on column sys_config.parameter_key is '参数键';
 comment on column sys_config.parameter_name is '参数名称';
 comment on column sys_config.parameter_value is '参数值';
@@ -565,9 +563,9 @@ comment on column sys_config.built_in is '是否系统内置';
 comment on column sys_config.enabled is '是否启用';
 comment on column sys_config.remark is '备注';
 
-create index if not exists idx_sys_config_tenant_key
-    on sys_config (tenant_id, parameter_key);
+create index if not exists idx_sys_config_key
+    on sys_config (parameter_key);
 
-create unique index if not exists uk_sys_config_tenant_key
-    on sys_config (tenant_id, parameter_key)
+create unique index if not exists uk_sys_config_key
+    on sys_config (parameter_key)
     where del_flag = 0;

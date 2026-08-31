@@ -4,6 +4,8 @@ import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.upms.organization.controller.dto.SystemOrganizationSaveDTO;
 import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 import org.etd.upms.organization.service.SystemOrganizationService;
+import org.etd.upms.role.service.SystemRoleOrganizationService;
+import org.etd.upms.user.service.SystemUserOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class SystemOrganizationBizService {
@@ -22,6 +25,12 @@ public class SystemOrganizationBizService {
 
     @Autowired
     private SystemOrganizationService organizationService;
+
+    @Autowired
+    private SystemUserOrganizationService userOrganizationService;
+
+    @Autowired
+    private SystemRoleOrganizationService roleOrganizationService;
 
     public List<SystemOrganizationVO> selectTree(String keyword, Boolean enabled) {
         List<SystemOrganizationVO> organizations = organizationService.selectList(enabled);
@@ -49,15 +58,16 @@ public class SystemOrganizationBizService {
         return updated;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
-        organizationService.requireExists(id);
-        if (organizationService.existsChild(id)) {
-            throw new ApiRuntimeException("请先删除当前组织的下级组织。");
+        Set<Long> organizationIds = organizationService.selectSubtreeIds(id);
+        // 删除组织树时只清理两类组织关系，用户、角色及其他业务数据保留。
+        userOrganizationService.removeByOrganizationIds(organizationIds);
+        roleOrganizationService.removeByOrganizationIds(organizationIds);
+        if (!organizationService.deleteByIds(organizationIds)) {
+            throw new ApiRuntimeException("组织架构删除失败。");
         }
-        if (organizationService.existsReference(id)) {
-            throw new ApiRuntimeException("当前组织已关联用户或角色数据权限，不能删除。");
-        }
-        return organizationService.delete(id);
+        return true;
     }
 
     private String resolveParentPath(Long parentId, Long currentId) {

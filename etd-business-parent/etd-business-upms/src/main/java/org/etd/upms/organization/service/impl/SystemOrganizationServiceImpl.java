@@ -11,7 +11,9 @@ import org.etd.upms.organization.service.SystemOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class SystemOrganizationServiceImpl implements SystemOrganizationService {
@@ -82,6 +84,26 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
     public boolean delete(Long id) {
         requireExists(id);
         return organizationMapper.deleteById(id) > 0;
+    }
+
+    @Override
+    public Set<Long> selectSubtreeIds(Long id) {
+        SystemOrganizationVO organization = requireExists(id);
+        String pathPrefix = organization.getParentIdPath() + id + "/";
+        Set<Long> ids = new LinkedHashSet<>();
+        ids.add(id);
+        selectDescendants(pathPrefix).forEach(descendant -> ids.add(descendant.getId()));
+        return ids;
+    }
+
+    @Override
+    public boolean deleteByIds(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return false;
+        }
+        LambdaQueryWrapper<SystemOrganizationEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemOrganizationEntity::getId, ids);
+        return organizationMapper.delete(wrapper) == ids.size();
     }
 
     @Override

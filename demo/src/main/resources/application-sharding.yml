@@ -1,4 +1,0 @@
-spring:
-  datasource:
-    driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
-    url: jdbc:shardingsphere:classpath:sharding.yaml?placeholder-type=environment
