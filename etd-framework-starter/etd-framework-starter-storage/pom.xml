@@ -32,10 +32,6 @@
             <artifactId>jakarta.servlet-api</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.alibaba.fastjson2</groupId>
-            <artifactId>fastjson2</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.etd.framework</groupId>
