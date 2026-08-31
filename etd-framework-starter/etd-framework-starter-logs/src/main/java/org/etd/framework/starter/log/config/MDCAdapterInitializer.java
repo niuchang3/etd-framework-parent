@@ -1,6 +1,6 @@
 package org.etd.framework.starter.log.config;
 
-import org.slf4j.AutuLogMDCAdapter;
+import org.slf4j.AutoLogMDCAdapter;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -14,7 +14,7 @@ public class MDCAdapterInitializer implements ApplicationContextInitializer<Conf
 
     @Override
     public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
-        AutuLogMDCAdapter.getInstance();
+        AutoLogMDCAdapter.getInstance();
     }
 
 

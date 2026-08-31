@@ -60,7 +60,7 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
         RabbitQueue rabbitQueue = (RabbitQueue) messageQueue;
         final Long finalTtl = ttl;
         rabbitTemplate.convertAndSend(rabbitQueue.getExchange(), rabbitQueue.getRouteKey(), notificationMsgRequest, message -> {
-            message.getMessageProperties().setHeader("x-delay", finalTtl);
+            message.getMessageProperties().setHeader(org.etd.framework.common.core.constants.HeaderConstant.X_DELAY, finalTtl);
             return message;
         });
     }

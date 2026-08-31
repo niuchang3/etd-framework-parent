@@ -1,42 +1,39 @@
 package org.etd.framework.starter.log.constant;
 
+import lombok.Getter;
+
 import java.io.Serializable;
 
 /**
+ * 日志模块专有常量及枚举定义
+ *
  * @author Young
- * @description
  * @date 2020/9/15
  */
 public class LogConstant implements Serializable {
     /**
-     * 服务信息
-     */
-    public static final String APPLICATION_NAME_HEADER = "x-application-header";
-    /**
-     * 服务信息版本信息
-     */
-    public static final String APPLICATION_VERSION_HEADER = "x-application-version-header";
-    /**
-     * 代理信息
-     */
-    public static final String USER_AGENT = "User-Agent";
-    /**
-     * 日志链路追踪id日志标志
+     * MDC 上下文中的日志链路追踪 ID 键名
      */
     public static final String LOG_TRACE_ID = "traceId";
 
     /**
      * 日志类型
      */
+    @Getter
     public enum LOG_TYPE {
         /**
          * 系统异常日志
          */
-        error,
+        ERROR("error"),
         /**
          * 访问日志
          */
-        access;
+        ACCESS("access");
 
+        private final String code;
+
+        LOG_TYPE(String code) {
+            this.code = code;
+        }
     }
 }

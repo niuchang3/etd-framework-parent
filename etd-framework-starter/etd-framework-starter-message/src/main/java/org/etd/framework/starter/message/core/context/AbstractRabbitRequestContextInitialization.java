@@ -39,7 +39,6 @@ public abstract class AbstractRabbitRequestContextInitialization extends Abstrac
 
     @Override
     protected String getRemoteIp(Message message) {
-//        return (String) message.getMessageProperties().getHeaders().get(RequestContextConstant.REQUEST_IP.getCode());
         return null;
     }
 

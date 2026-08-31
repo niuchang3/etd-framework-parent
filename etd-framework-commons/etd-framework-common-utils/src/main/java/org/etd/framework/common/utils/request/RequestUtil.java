@@ -18,21 +18,27 @@ import java.net.URI;
  */
 public class RequestUtil {
 
+    private static final String[] IP_HEADERS = {
+            "X-Forwarded-For",
+            "X-Real-IP",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP"
+    };
+
     /**
      * 获得客户端ip
      */
     public static String getRemoteIp(HttpServletRequest request) {
-        String ip = request.getHeader("x-forwarded-for");
-        if (StringUtils.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
+        for (String header : IP_HEADERS) {
+            String ip = request.getHeader(header);
+            if (StringUtils.isNotEmpty(ip) && !"unknown".equalsIgnoreCase(ip)) {
+                int commaIndex = ip.indexOf(',');
+                String realIp = commaIndex > -1 ? ip.substring(0, commaIndex).trim() : ip.trim();
+                return "0:0:0:0:0:0:0:1".equals(realIp) ? "127.0.0.1" : realIp;
+            }
         }
-        if (StringUtils.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (StringUtils.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return "0:0:0:0:0:0:0:1".equals(ip) ? "127.0.0.1" : ip;
+        String remoteAddr = request.getRemoteAddr();
+        return "0:0:0:0:0:0:0:1".equals(remoteAddr) ? "127.0.0.1" : remoteAddr;
     }
 
     /**

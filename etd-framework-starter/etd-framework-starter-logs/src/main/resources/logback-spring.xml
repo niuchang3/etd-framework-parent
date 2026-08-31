@@ -48,9 +48,6 @@
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>ERROR</level>
-        </filter>
     </appender>
 
 
@@ -91,7 +88,7 @@
 
 
     <!-- 系统Access访问日志级别调整为INFO级   -->
-    <logger name="org.etd.framework.starter.log.aspect.AutoLogAspect" level="INFO" addtivity="false">
+    <logger name="org.etd.framework.starter.log.aspect.AutoLogAspect" level="INFO" additivity="false">
         <appender-ref ref="systemAccessLogAsync"/>
     </logger>
 

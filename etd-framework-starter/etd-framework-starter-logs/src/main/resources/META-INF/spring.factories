@@ -1,5 +1,2 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.etd.framework.starter.log.LogConfig
-
 org.springframework.context.ApplicationContextInitializer=\
   org.etd.framework.starter.log.config.MDCAdapterInitializer

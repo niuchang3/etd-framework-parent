@@ -1,8 +1,8 @@
 package org.etd.framework.common.core.context;
 
-import org.etd.framework.common.core.user.UserDetails;
-import org.etd.framework.common.core.constants.RequestContextConstant;
+import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.user.UserDetails;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ObjectUtils;
@@ -48,15 +48,15 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
     @Override
     public void invoke(E e) {
 
-        String traceId = getHeaderValue(e, RequestContextConstant.TRACE_ID.getCode());
+        String traceId = getHeaderValue(e, HeaderConstant.TRACE_ID);
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
 
-        String tenantCode = getHeaderValue(e, RequestContextConstant.TENANT_CODE.getCode());
+        String tenantCode = getHeaderValue(e, HeaderConstant.TENANT_CODE);
         if(!ObjectUtils.isEmpty(tenantCode)){
             RequestContext.setTenantCode(Long.valueOf(tenantCode));
         }
 
-        RequestContext.setToken(getHeaderValue(e, RequestContextConstant.TOKEN.getCode()));
+        RequestContext.setToken(getHeaderValue(e, HeaderConstant.AUTHORIZATION));
         RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setAttribute(getAttribute(e));
 

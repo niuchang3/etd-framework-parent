@@ -1,6 +1,6 @@
 package org.etd.framework.starter.message.core.config;
 
-import org.etd.framework.common.core.constants.RequestContextConstant;
+import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.starter.message.core.context.AbstractRabbitRequestContextInitialization;
 import org.springframework.amqp.core.Message;
@@ -47,8 +47,8 @@ public class RabbitConfig extends AbstractRabbitRequestContextInitialization {
     }
 
     public void setRabbitMqMessageHeads(Message message) {
-        message.getMessageProperties().setHeader(RequestContextConstant.TRACE_ID.getCode(), RequestContext.getTraceId());
-        message.getMessageProperties().setHeader(RequestContextConstant.TENANT_CODE.getCode(), RequestContext.getTenantCode());
-        message.getMessageProperties().setHeader(RequestContextConstant.TOKEN.getCode(), RequestContext.getTenantCode());
+        message.getMessageProperties().setHeader(HeaderConstant.TRACE_ID, RequestContext.getTraceId());
+        message.getMessageProperties().setHeader(HeaderConstant.TENANT_CODE, RequestContext.getTenantCode());
+        message.getMessageProperties().setHeader(HeaderConstant.AUTHORIZATION, RequestContext.getToken());
     }
 }

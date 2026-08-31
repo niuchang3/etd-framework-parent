@@ -1,7 +1,9 @@
 package org.etd.framework.starter.log.aspect;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -16,32 +18,43 @@ import org.springframework.web.context.request.RequestContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
+ * 自动日志记录切面
+ *
  * @author Young
- * @description
  * @date 2020/12/14
  */
-
 @Slf4j
 @Aspect
 @Component
 @ConditionalOnClass({HttpServletRequest.class, RequestContextHolder.class})
 public class AutoLogAspect {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @Around("@within(autoLog) || @annotation(autoLog)")
-    public Object beforeMethod(ProceedingJoinPoint joinPoint, AutoLog autoLog) throws Throwable {
+    @Around("@annotation(autoLog) || @within(autoLog)")
+    public Object around(ProceedingJoinPoint joinPoint, AutoLog autoLog) throws Throwable {
+        long startTime = System.currentTimeMillis();
         LogInfo logInfo = LogInfo.getInstance(joinPoint, autoLog);
         try {
             Object proceed = joinPoint.proceed();
-
-            log.info("{}", new Gson().toJson(logInfo));
+            logInfo.setCostTime(System.currentTimeMillis() - startTime);
+            log.info("{}", toJson(logInfo));
             return proceed;
         } catch (Throwable throwable) {
-            logInfo.setLogType(LogConstant.LOG_TYPE.error.name());
+            logInfo.setCostTime(System.currentTimeMillis() - startTime);
+            logInfo.setLogType(LogConstant.LOG_TYPE.ERROR.getCode());
             logInfo.setMessage(ExceptionUtil.stacktraceToString(throwable));
-            log.error("{}", new Gson().toJson(logInfo));
+            log.error("{}", toJson(logInfo));
             throw throwable;
         }
     }
 
+    private String toJson(Object object) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            log.warn("AutoLogAspect JSON 序列化失败: {}", e.getMessage());
+            return String.valueOf(object);
+        }
+    }
 }

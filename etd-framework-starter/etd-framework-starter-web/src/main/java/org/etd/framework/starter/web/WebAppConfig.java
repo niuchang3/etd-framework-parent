@@ -1,7 +1,7 @@
 package org.etd.framework.starter.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.etd.framework.starter.log.lnterceptor.TraceInterceptor;
+import org.etd.framework.starter.log.interceptor.TraceInterceptor;
 import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;

@@ -183,7 +183,7 @@ public class MinIoFileStorage extends FileStorage<MinioClient> {
         if (ObjectUtils.isEmpty(downLoadFileName)) {
             downLoadFileName = fileName;
         }
-        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(downLoadFileName, "UTF-8"));
+        response.setHeader(org.etd.framework.common.core.constants.HeaderConstant.CONTENT_DISPOSITION, "attachment;filename=" + URLEncoder.encode(downLoadFileName, "UTF-8"));
         response.setContentType("application/x-msdownload");
         response.setCharacterEncoding("utf-8");
         download(response.getOutputStream(), bucketName, fileName);

@@ -1,16 +1,16 @@
 package org.etd.framework.starter.log;
 
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /**
+ * 日志模块自动配置
+ *
  * @author Young
- * @description
  * @date 2020/12/16
  */
-@Configuration
-@ComponentScan({"org.etd.framework.starter.log.**"})
+@AutoConfiguration
+@ComponentScan({"org.etd.framework.starter.log"})
 public class LogConfig {
 
 }
