@@ -1,16 +1,16 @@
 package org.etd.framework.starter.log.dto;
 
-import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.useragent.UserAgent;
 import cn.hutool.http.useragent.UserAgentUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.etd.framework.common.core.constants.HeaderConstant;
+import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.framework.starter.log.constant.LogConstant;
-import org.slf4j.MDC;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
@@ -22,19 +22,26 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
- * 操作日志数据模型
+ * 操作日志数据模型（兼容 Web HTTP 请求、MQ 消息消费、Job 定时任务及异步线程池等多种环境）
  *
  * @author Young
  * @date 2020/12/14
  */
 @Data
 public class LogInfo {
+
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
 	/**
 	 * 日志类型
 	 */
@@ -89,9 +96,22 @@ public class LogInfo {
 	private Object parameters;
 
 	/**
+	 * 转换为可直接复制在终端执行的 cURL 命令（仅 HTTP 请求生成）
+	 */
+	private String curl;
+
+	/**
 	 * 用户访问IP
 	 */
 	private String ip;
+	/**
+	 * 设备指纹
+	 */
+	private String deviceFingerprint;
+	/**
+	 * 设备唯一标识 ID
+	 */
+	private String deviceId;
 	/**
 	 * 是否为移动端访问
 	 */
@@ -143,7 +163,8 @@ public class LogInfo {
 		fillAutoLogMetadata(logInfo, autoLog);
 		fillMethodMetadata(logInfo, joinPoint);
 		fillTraceContext(logInfo);
-		fillHttpRequestContext(logInfo);
+		fillRequestContext(logInfo);
+		fillCurlCommand(logInfo);
 
 		return logInfo;
 	}
@@ -172,41 +193,40 @@ public class LogInfo {
 	}
 
 	/**
-	 * 填充 MDC 链路追踪信息
+	 * 填充 MDC / 上下文链路追踪信息
 	 */
 	private static void fillTraceContext(LogInfo logInfo) {
-		Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
-		if (!CollectionUtils.isEmpty(copyOfContextMap)) {
-			logInfo.setTraceId(copyOfContextMap.get(LogConstant.LOG_TRACE_ID));
-		}
+		logInfo.setTraceId(RequestContext.getTraceId());
 	}
 
 	/**
-	 * 填充 HTTP 请求上下文（URL、Method、IP、Header 等）
+	 * 填充请求上下文（优先全量读取全局 RequestContext，兼容非 HTTP 的 MQ 消费与异步子线程）
 	 */
-	private static void fillHttpRequestContext(LogInfo logInfo) {
+	private static void fillRequestContext(LogInfo logInfo) {
+		logInfo.setApplicationName(RequestContext.getApplicationName());
+		logInfo.setApplicationVersion(RequestContext.getApplicationVersion());
+		logInfo.setDeviceFingerprint(RequestContext.getDeviceFingerprint());
+		logInfo.setDeviceId(RequestContext.getDeviceId());
+		logInfo.setIp(RequestContext.getRequestIP());
+
 		RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
 		if (requestAttributes instanceof ServletRequestAttributes servletRequestAttributes) {
 			HttpServletRequest request = servletRequestAttributes.getRequest();
 			if (!ObjectUtils.isEmpty(request)) {
-				logInfo.setApplicationName(request.getHeader(HeaderConstant.APPLICATION_NAME));
-				logInfo.setApplicationVersion(request.getHeader(HeaderConstant.APPLICATION_VERSION));
 				if (request.getRequestURL() != null) {
-					logInfo.setUrl(URLUtil.getPath(request.getRequestURL().toString()));
+					logInfo.setUrl(request.getRequestURL().toString());
 				}
 				logInfo.setUrlMethod(request.getMethod());
-				logInfo.setIp(getClientIp(request));
-
-				fillUserAgentContext(logInfo, request);
 			}
 		}
+		fillUserAgentContext(logInfo);
 	}
 
 	/**
 	 * 填充 Client User-Agent 客户端软硬件环境信息
 	 */
-	private static void fillUserAgentContext(LogInfo logInfo, HttpServletRequest request) {
-		String userAgentStr = request.getHeader(HeaderConstant.USER_AGENT);
+	private static void fillUserAgentContext(LogInfo logInfo) {
+		String userAgentStr = RequestContext.getUserAgent();
 		if (StringUtils.hasText(userAgentStr)) {
 			UserAgent parse = UserAgentUtil.parse(userAgentStr);
 			if (parse != null) {
@@ -222,35 +242,84 @@ public class LogInfo {
 	}
 
 	/**
-	 * 过滤无法直接 JSON 序列化的参数对象（如 HttpServletRequest, MultipartFile 等）
+	 * 将请求转换为能在终端直接粘帖运行的 cURL 命令字符串（仅限 Web HTTP 请求场景）
 	 */
-	private static List<Object> filterArgs(Object[] args) {
-		List<Object> validArgs = new ArrayList<>();
-		if (args == null || args.length == 0) {
-			return validArgs;
+	private static void fillCurlCommand(LogInfo logInfo) {
+		if (!StringUtils.hasText(logInfo.getUrl()) || !StringUtils.hasText(logInfo.getUrlMethod())) {
+			return;
 		}
+
+		String method = logInfo.getUrlMethod().toUpperCase();
+		String url = logInfo.getUrl();
+
+		StringBuilder builder = new StringBuilder("curl -X ").append(method).append(" '").append(url).append("'");
+
+		// 填充 Header
+		if ("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) {
+			builder.append(" -H 'Content-Type: application/json'");
+		}
+		if (StringUtils.hasText(logInfo.getTraceId())) {
+			builder.append(" -H '").append(HeaderConstant.TRACE_ID).append(": ").append(logInfo.getTraceId()).append("'");
+		}
+		if (RequestContext.getTenantCode() != null) {
+			builder.append(" -H '").append(HeaderConstant.TENANT_CODE).append(": ").append(RequestContext.getTenantCode()).append("'");
+		}
+		if (StringUtils.hasText(RequestContext.getToken())) {
+			builder.append(" -H '").append(HeaderConstant.AUTHORIZATION).append(": ").append(RequestContext.getToken()).append("'");
+		}
+		if (StringUtils.hasText(logInfo.getDeviceFingerprint())) {
+			builder.append(" -H '").append(HeaderConstant.DEVICE_FINGERPRINT).append(": ").append(logInfo.getDeviceFingerprint()).append("'");
+		}
+		if (StringUtils.hasText(logInfo.getDeviceId())) {
+			builder.append(" -H '").append(HeaderConstant.DEVICE_ID).append(": ").append(logInfo.getDeviceId()).append("'");
+		}
+		if (StringUtils.hasText(RequestContext.getLanguage())) {
+			builder.append(" -H '").append(HeaderConstant.ACCEPT_LANGUAGE).append(": ").append(RequestContext.getLanguage()).append("'");
+		}
+
+		// 填充 Body 参数
+		Object params = logInfo.getParameters();
+		if (params != null) {
+			try {
+				String jsonBody = OBJECT_MAPPER.writeValueAsString(params);
+				if (StringUtils.hasText(jsonBody) && !"[]".equals(jsonBody) && !"{}".equals(jsonBody)) {
+					// 替换单引号防截断
+					String safeBody = jsonBody.replace("'", "'\\''");
+					builder.append(" --data-raw '").append(safeBody).append("'");
+				}
+			} catch (JsonProcessingException ignored) {
+			}
+		}
+
+		logInfo.setCurl(builder.toString());
+	}
+
+	/**
+	 * 过滤无法直接 JSON 序列化的参数对象（如 Servlet 容器对象、文件流、IO 流、Principal 等），并优化单参数解壳
+	 */
+	private static Object filterArgs(Object[] args) {
+		if (args == null || args.length == 0) {
+			return null;
+		}
+		List<Object> validArgs = new ArrayList<>();
 		for (Object arg : args) {
 			if (arg == null) {
 				continue;
 			}
 			if (arg instanceof ServletRequest || arg instanceof ServletResponse
 					|| arg instanceof MultipartFile || arg instanceof MultipartFile[]
-					|| arg instanceof BindingResult) {
+					|| arg instanceof BindingResult
+					|| arg instanceof InputStream || arg instanceof OutputStream
+					|| arg instanceof Reader || arg instanceof Writer
+					|| arg instanceof Principal) {
 				continue;
 			}
 			validArgs.add(arg);
 		}
-		return validArgs;
-	}
-
-	private static String getClientIp(HttpServletRequest request) {
-		for (String header : HeaderConstant.IP_HEADERS) {
-			String value = request.getHeader(header);
-			if (!ObjectUtils.isEmpty(value) && !"unknown".equalsIgnoreCase(value)) {
-				int commaIndex = value.indexOf(',');
-				return commaIndex > -1 ? value.substring(0, commaIndex).trim() : value.trim();
-			}
+		if (validArgs.isEmpty()) {
+			return null;
 		}
-		return request.getRemoteAddr();
+		// 如果过滤后仅剩下 1 个有效参数（如典型的 Controller 单 DTO 入参），解开外层数组直接返回单对象
+		return validArgs.size() == 1 ? validArgs.get(0) : validArgs;
 	}
 }

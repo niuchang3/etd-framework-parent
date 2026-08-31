@@ -1,17 +1,16 @@
 package org.etd.framework.common.core.context.model;
 
-import org.etd.framework.common.core.user.UserDetails;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.etd.framework.common.core.user.UserDetails;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.io.Serializable;
 import java.util.Map;
 
-
 /**
- * 请求上下文
+ * 请求上下文工具类
  *
  * @author 牛昌
  */
@@ -55,7 +54,6 @@ public class RequestContext implements Serializable {
         return copyRequestContext;
     }
 
-
     public static String getTraceId() {
         return getRequestContext().getTraceId();
     }
@@ -80,13 +78,60 @@ public class RequestContext implements Serializable {
         getRequestContext().setTenantCode(tenantCode);
     }
 
-
     public static String getToken() {
         return getRequestContext().getToken();
     }
 
     public static void setToken(String token) {
         getRequestContext().setToken(token);
+    }
+
+    public static String getLanguage() {
+        return getRequestContext().getLanguage();
+    }
+
+    public static void setLanguage(String language) {
+        getRequestContext().setLanguage(language);
+    }
+
+    public static String getApplicationName() {
+        return getRequestContext().getApplicationName();
+    }
+
+    public static void setApplicationName(String applicationName) {
+        getRequestContext().setApplicationName(applicationName);
+    }
+
+    public static String getApplicationVersion() {
+        return getRequestContext().getApplicationVersion();
+    }
+
+    public static void setApplicationVersion(String applicationVersion) {
+        getRequestContext().setApplicationVersion(applicationVersion);
+    }
+
+    public static String getDeviceFingerprint() {
+        return getRequestContext().getDeviceFingerprint();
+    }
+
+    public static void setDeviceFingerprint(String deviceFingerprint) {
+        getRequestContext().setDeviceFingerprint(deviceFingerprint);
+    }
+
+    public static String getDeviceId() {
+        return getRequestContext().getDeviceId();
+    }
+
+    public static void setDeviceId(String deviceId) {
+        getRequestContext().setDeviceId(deviceId);
+    }
+
+    public static String getUserAgent() {
+        return getRequestContext().getUserAgent();
+    }
+
+    public static void setUserAgent(String userAgent) {
+        getRequestContext().setUserAgent(userAgent);
     }
 
     public static UserDetails getUser() {
@@ -105,7 +150,6 @@ public class RequestContext implements Serializable {
         getRequestContext().setIgnoreTenant(ignore);
     }
 
-
     public static Object getAttribute(String key) {
         return getRequestContext().getAttribute(key);
     }
@@ -113,7 +157,6 @@ public class RequestContext implements Serializable {
     public static void setAttribute(String key, Object value) {
         getRequestContext().setAttribute(key, value);
     }
-
 
     public static Map<String, Object> getAttribute() {
         return getRequestContext().getAttribute();

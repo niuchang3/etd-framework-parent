@@ -18,29 +18,18 @@ import java.util.UUID;
  */
 public abstract class AbstractRequestContextInitialization<E> extends AbstractContextInitialization<E> {
 
-
     /**
-     * 获取HeaderValue
-     *
-     * @param e
-     * @param headerName
-     * @return
+     * 获取 HeaderValue
      */
     protected abstract String getHeaderValue(E e, String headerName);
 
     /**
      * 获取请求参数
-     *
-     * @param e
-     * @return
      */
     protected abstract Map<String, Object> getAttribute(E e);
 
     /**
-     * 获取请求IP
-     *
-     * @param e
-     * @return
+     * 获取请求 IP
      */
     protected abstract String getRemoteIp(E e);
 
@@ -52,11 +41,21 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
         RequestContext.setTraceId(ObjectUtils.isEmpty(traceId) ? UUID.randomUUID().toString() : traceId);
 
         String tenantCode = getHeaderValue(e, HeaderConstant.TENANT_CODE);
-        if(!ObjectUtils.isEmpty(tenantCode)){
-            RequestContext.setTenantCode(Long.valueOf(tenantCode));
+        if (!ObjectUtils.isEmpty(tenantCode)) {
+            try {
+                RequestContext.setTenantCode(Long.valueOf(tenantCode));
+            } catch (NumberFormatException ignored) {
+            }
         }
 
         RequestContext.setToken(getHeaderValue(e, HeaderConstant.AUTHORIZATION));
+        RequestContext.setLanguage(getHeaderValue(e, HeaderConstant.ACCEPT_LANGUAGE));
+        RequestContext.setApplicationName(getHeaderValue(e, HeaderConstant.APPLICATION_NAME));
+        RequestContext.setApplicationVersion(getHeaderValue(e, HeaderConstant.APPLICATION_VERSION));
+        RequestContext.setDeviceFingerprint(getHeaderValue(e, HeaderConstant.DEVICE_FINGERPRINT));
+        RequestContext.setDeviceId(getHeaderValue(e, HeaderConstant.DEVICE_ID));
+        RequestContext.setUserAgent(getHeaderValue(e, HeaderConstant.USER_AGENT));
+
         RequestContext.setRequestIP(getRemoteIp(e));
         RequestContext.setAttribute(getAttribute(e));
 
@@ -67,8 +66,7 @@ public abstract class AbstractRequestContextInitialization<E> extends AbstractCo
         if (ObjectUtils.isEmpty(context.getAuthentication().getDetails())) {
             return;
         }
-        if (context.getAuthentication().getDetails() instanceof UserDetails) {
-            UserDetails details = (UserDetails) context.getAuthentication().getDetails();
+        if (context.getAuthentication().getDetails() instanceof UserDetails details) {
             RequestContext.setUser(details);
         }
     }

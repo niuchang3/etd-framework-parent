@@ -11,12 +11,12 @@ public class HeaderConstant {
     /**
      * 链路追踪 ID Header
      */
-    public static final String TRACE_ID = "TRACE-ID";
+    public static final String TRACE_ID = "trace-id";
 
     /**
      * 租户 CODE Header
      */
-    public static final String TENANT_CODE = "TENANT-CODE";
+    public static final String TENANT_CODE = "tenant-code";
 
     /**
      * 身份认证 Token Header
@@ -37,6 +37,21 @@ public class HeaderConstant {
      * 客户端 User-Agent 环境标识 Header
      */
     public static final String USER_AGENT = "User-Agent";
+
+    /**
+     * 国际化语言 Header (HTTP 官方标准)
+     */
+    public static final String ACCEPT_LANGUAGE = "Accept-Language";
+
+    /**
+     * 客户端设备指纹 Header
+     */
+    public static final String DEVICE_FINGERPRINT = "x-device-fingerprint";
+
+    /**
+     * 客户端设备唯一标识 ID Header
+     */
+    public static final String DEVICE_ID = "x-device-id";
 
     /**
      * 代理转发真实客户端 IP Header
