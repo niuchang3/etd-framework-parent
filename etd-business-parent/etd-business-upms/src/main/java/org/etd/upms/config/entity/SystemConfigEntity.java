@@ -8,7 +8,7 @@ import org.etd.framework.starter.mybaits.core.BaseEntity;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("sys_config")
+@TableName(value = "sys_config", excludeProperty = "tenantId")
 public class SystemConfigEntity extends BaseEntity {
 
     @TableField("parameter_key")
