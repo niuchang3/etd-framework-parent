@@ -13,10 +13,14 @@
     <artifactId>etd-framework-starter-web</artifactId>
 
     <dependencies>
-
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-common-utils</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-common-core</artifactId>
         </dependency>
 
         <dependency>
@@ -25,28 +29,10 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-web</artifactId>
-        </dependency>
-
-
-        <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>
-            <version>${etd.framework.version}</version>
-            <scope>compile</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-
     </dependencies>
-
-
-
 
     <dependencyManagement>
         <dependencies>
@@ -59,7 +45,5 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-
 
 </project>

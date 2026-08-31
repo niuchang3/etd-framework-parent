@@ -519,6 +519,10 @@ comment on column sys_organization.enabled is '是否启用';
 create index if not exists idx_sys_organization_tenant_parent
     on sys_organization (tenant_id, parent_id);
 
+create unique index if not exists uk_sys_organization_tenant_code
+    on sys_organization (tenant_id, org_code)
+    where del_flag = 0;
+
 /*==============================================================*/
 /* table: sys_config                                            */
 /*==============================================================*/

@@ -1,1 +1,4 @@
 org.etd.framework.starter.web.WebAppConfig
+org.etd.framework.starter.web.WebJacksonConfig
+org.etd.framework.starter.web.config.StarterWebConfig
+org.etd.framework.starter.web.exception.GlobalExceptionHandler

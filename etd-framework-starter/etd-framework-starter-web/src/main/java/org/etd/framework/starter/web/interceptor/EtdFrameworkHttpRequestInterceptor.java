@@ -1,68 +1,61 @@
 package org.etd.framework.starter.web.interceptor;
 
-import org.etd.framework.common.core.context.extend.HttpServletRequestContextInitializer;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.etd.framework.common.core.context.RequestContextInitializer;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**
+ * 框架 HTTP 请求拦截器基类
+ * 负责全局 RequestContext 上下文的生命周期管理与异常安全的 ThreadLocal 清理
+ *
  * @author Young
- * @description 自定义拦截器接口
  * @date 2020/11/12
  */
-
-public abstract class EtdFrameworkHttpRequestInterceptor extends HttpServletRequestContextInitializer implements HandlerInterceptor {
-
+public abstract class EtdFrameworkHttpRequestInterceptor implements HandlerInterceptor {
 
     /**
-     * 执行 preHandle之前的钩子函数
+     * 上下文初始化就绪后执行的业务逻辑钩子（如租户校验、权限拦截等）
      *
-     * @param request
-     * @param response
-     * @param handler
+     * @param request  HTTP 请求
+     * @param response HTTP 响应
+     * @param handler  处理器
+     * @return 是否放行请求
+     * @throws Exception 业务处理异常
      */
-    protected abstract void beforeHandle(HttpServletRequest request, HttpServletResponse response, Object handler);
-
-    /**
-     * 执行 preHandle之后的钩子函数
-     *
-     * @param request
-     * @param response
-     * @param handler
-     */
-    protected abstract void afterHandle(HttpServletRequest request, HttpServletResponse response, Object handler);
-
+    protected abstract boolean doHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        beforeHandle(request, response, handler);
-        initialization(request);
-        afterHandle(request, response, handler);
-        return true;
+        try {
+            // 1. 优先完成 RequestContext 线程上下文的解析与初始化
+            RequestContextInitializer.init(request);
+
+            // 2. 执行子类业务钩子逻辑
+            return doHandle(request, response, handler);
+        } catch (Exception ex) {
+            // 关键安全防线：当 preHandle 抛出异常中断时，Spring MVC 不会触发 afterCompletion，
+            // 必须在此处立即强行清理 ThreadLocal，防止线程池复用造成严重的跨租户污染与内存泄露！
+            RequestContext.clean();
+            throw ex;
+        }
     }
 
     /**
-     * 清空请求上下文内容
-     *
-     * @param request
-     * @param response
-     * @param handler
-     * @param ex
-     * @throws Exception
+     * 请求完成后清理线程上下文内容
      */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         RequestContext.clean();
     }
 
-
     /**
-     * 获取拦截器路径
+     * 获取拦截器路由路径
      *
-     * @return
+     * @return 拦截路径列表
      */
     public abstract List<String> getInterceptorsPath();
 }

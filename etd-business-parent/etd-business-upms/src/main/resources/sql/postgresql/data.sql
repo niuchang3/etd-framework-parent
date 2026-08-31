@@ -54,7 +54,7 @@ values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475
        (1000007, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '菜单管理', '/system/menus', '@/views/system/menus/index.vue', 'MenuOutlined', 'MENU', 30),
        (1000008, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '组织架构', '/system/departments', '@/views/404.vue', 'ApartmentOutlined', 'MENU', 40),
+        '组织架构', '/system/organizations', '@/views/system/organizations/index.vue', 'ApartmentOutlined', 'MENU', 40),
        (1000009, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '系统参数', '/system/parameters', '@/views/system/parameters/index.vue', 'SettingOutlined', 'MENU', 50)
 on conflict (id) do update
@@ -108,7 +108,9 @@ values (2200001, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2200005, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'system_menu_access_level', '菜单访问级别', true, true, '角色菜单访问级别'),
        (2200006, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'system_menu_type', '菜单类型', true, true, '系统菜单类型')
+        'system_menu_type', '菜单类型', true, true, '系统菜单类型'),
+       (2200007, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_org_type', '组织类型', true, true, '系统组织机构类型')
 on conflict (id) do nothing;
 
 /*==============================================================*/
@@ -149,7 +151,11 @@ values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300016, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200006, 'DIRECTORY', '目录', 'DIRECTORY', 10, true, null),
        (2300017, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200006, 'MENU', '菜单', 'MENU', 20, true, null)
+        2200006, 'MENU', '菜单', 'MENU', 20, true, null),
+       (2300018, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200007, 'COMPANY', '公司', 'COMPANY', 10, true, null),
+       (2300019, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, null)
 on conflict (id) do nothing;
 
 
