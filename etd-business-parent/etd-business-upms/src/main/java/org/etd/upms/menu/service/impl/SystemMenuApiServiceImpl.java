@@ -1,6 +1,7 @@
 package org.etd.upms.menu.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.menu.entity.SystemMenuApiRelEntity;
 import org.etd.upms.menu.mapper.SystemMenuApiRelMapper;
 import org.etd.upms.menu.service.SystemMenuApiService;
@@ -15,6 +16,7 @@ public class SystemMenuApiServiceImpl implements SystemMenuApiService {
     @Autowired
     private SystemMenuApiRelMapper menuApiRelMapper;
 
+    @IgnoreTenant
     @Override
     public void removeByMenuIds(Set<Long> menuIds) {
         if (menuIds.isEmpty()) {

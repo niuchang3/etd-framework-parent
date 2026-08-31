@@ -3,6 +3,7 @@ package org.etd.upms.menu.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.menu.controller.dto.SystemMenuSaveDTO;
 import org.etd.upms.menu.controller.vo.SystemMenuVO;
 import org.etd.upms.menu.converter.SystemMenusConverter;
@@ -63,6 +64,7 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return collectDescendantIds(id);
     }
 
+    @IgnoreTenant
     @Override
     public boolean deleteByIds(Set<Long> ids) {
         return systemMenusMapper.deleteByIds(ids) == ids.size();
