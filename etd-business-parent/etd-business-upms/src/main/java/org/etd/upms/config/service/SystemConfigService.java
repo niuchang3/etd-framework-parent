@@ -4,13 +4,18 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.config.controller.dto.SystemConfigSaveDTO;
 import org.etd.upms.config.controller.vo.SystemConfigVO;
 
+import java.util.Collection;
+import java.util.Map;
+
 public interface SystemConfigService {
 
-    IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled);
+    IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled, String valueType);
 
     SystemConfigVO selectById(Long id);
 
     SystemConfigVO selectEnabledByKey(String parameterKey);
+
+    Map<String, String> selectEnabledValuesByKeys(Collection<String> parameterKeys);
 
     Long insert(SystemConfigSaveDTO dto);
 

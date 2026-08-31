@@ -3,7 +3,11 @@ package org.etd.upms.config.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.upms.config.constant.SystemConfigValueType;
 import org.etd.upms.config.controller.dto.SystemConfigSaveDTO;
 import org.etd.upms.config.controller.vo.SystemConfigVO;
 import org.etd.upms.config.entity.SystemConfigEntity;
@@ -13,16 +17,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 @Service
 public class SystemConfigServiceImpl implements SystemConfigService {
 
     @Autowired
     private SystemConfigMapper configMapper;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
-    public IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled) {
+    public IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled, String valueType) {
         LambdaQueryWrapper<SystemConfigEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(enabled != null, SystemConfigEntity::getEnabled, enabled)
+                .eq(StringUtils.hasText(valueType), SystemConfigEntity::getValueType, valueType)
                 .and(StringUtils.hasText(keyword), query -> query
                         .like(SystemConfigEntity::getParameterKey, keyword)
                         .or().like(SystemConfigEntity::getParameterName, keyword))
@@ -45,7 +59,21 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     }
 
     @Override
+    public Map<String, String> selectEnabledValuesByKeys(Collection<String> parameterKeys) {
+        List<String> distinctKeys = parameterKeys.stream().distinct().toList();
+        LambdaQueryWrapper<SystemConfigEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemConfigEntity::getParameterKey, distinctKeys)
+                .eq(SystemConfigEntity::getEnabled, true);
+        Map<String, String> values = configMapper.selectList(wrapper).stream().collect(
+                LinkedHashMap::new,
+                (result, config) -> result.put(config.getParameterKey(), config.getParameterValue()),
+                Map::putAll);
+        return orderValues(distinctKeys, values);
+    }
+
+    @Override
     public Long insert(SystemConfigSaveDTO dto) {
+        validateParameterValue(dto);
         ensureKeyAvailable(dto.getParameterKey(), null);
         SystemConfigEntity entity = toEntity(dto);
         entity.setBuiltIn(false);
@@ -58,6 +86,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     public boolean update(Long id, SystemConfigSaveDTO dto) {
         SystemConfigEntity existing = requireConfig(id);
         ensureWritable(existing, "内置系统参数不允许修改");
+        validateParameterValue(dto);
         ensureKeyAvailable(dto.getParameterKey(), id);
         SystemConfigEntity entity = toEntity(dto);
         entity.setId(id);
@@ -101,6 +130,55 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     private void ensureWritable(SystemConfigEntity entity, String message) {
         if (Boolean.TRUE.equals(entity.getBuiltIn())) {
             throw new ApiRuntimeException(message);
+        }
+    }
+
+    private Map<String, String> orderValues(List<String> distinctKeys, Map<String, String> values) {
+        // 按请求顺序返回，未配置或未启用的参数键不进入结果。
+        Map<String, String> orderedValues = new LinkedHashMap<>();
+        distinctKeys.forEach(key -> {
+            if (values.containsKey(key)) {
+                orderedValues.put(key, values.get(key));
+            }
+        });
+        return orderedValues;
+    }
+
+    private void validateParameterValue(SystemConfigSaveDTO dto) {
+        SystemConfigValueType valueType = SystemConfigValueType.fromCode(dto.getValueType());
+        String parameterValue = dto.getParameterValue();
+        if (parameterValue == null || valueType == SystemConfigValueType.STRING) {
+            return;
+        }
+        try {
+            validateTypedValue(valueType, parameterValue);
+        } catch (IllegalArgumentException | JsonProcessingException exception) {
+            throw new ApiRuntimeException("参数值与参数值类型不匹配。");
+        }
+    }
+
+    private void validateTypedValue(SystemConfigValueType valueType, String parameterValue)
+            throws JsonProcessingException {
+        switch (valueType) {
+            case NUMBER -> new BigDecimal(parameterValue);
+            case BOOLEAN -> validateBoolean(parameterValue);
+            case JSON -> validateJson(parameterValue);
+            case STRING -> {
+                // 字符串不需要额外格式校验。
+            }
+        }
+    }
+
+    private void validateBoolean(String parameterValue) {
+        if (!"true".equalsIgnoreCase(parameterValue) && !"false".equalsIgnoreCase(parameterValue)) {
+            throw new IllegalArgumentException("布尔参数只允许true或false");
+        }
+    }
+
+    private void validateJson(String parameterValue) throws JsonProcessingException {
+        JsonNode jsonNode = objectMapper.readTree(parameterValue);
+        if (jsonNode == null) {
+            throw new IllegalArgumentException("JSON参数不能为空");
         }
     }
 

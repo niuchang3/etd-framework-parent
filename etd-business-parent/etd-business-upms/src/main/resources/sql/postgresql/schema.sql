@@ -567,3 +567,7 @@ comment on column sys_config.remark is '备注';
 
 create index if not exists idx_sys_config_tenant_key
     on sys_config (tenant_id, parameter_key);
+
+create unique index if not exists uk_sys_config_tenant_key
+    on sys_config (tenant_id, parameter_key)
+    where del_flag = 0;
