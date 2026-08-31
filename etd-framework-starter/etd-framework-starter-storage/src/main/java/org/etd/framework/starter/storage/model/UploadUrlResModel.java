@@ -1,4 +1,4 @@
-package org.etd.framework.starter.storage.model.extend;
+package org.etd.framework.starter.storage.model;
 
 import lombok.Data;
 

@@ -2,7 +2,8 @@ package org.etd.framework.starter.storage;
 
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.OSSClientBuilder;
-import io.minio.MinioClient;
+import io.minio.CustomMinioClient;
+import io.minio.MinioAsyncClient;
 import org.etd.framework.starter.storage.core.FileStorage;
 import org.etd.framework.starter.storage.core.extend.AlibabaOSSFileStorage;
 import org.etd.framework.starter.storage.core.extend.MinIoFileStorage;
@@ -25,21 +26,22 @@ import org.springframework.context.annotation.Import;
 public class StorageConfiguration {
 
     /**
-     * 创建 MinIO SDK 客户端
+     * 创建 MinIO SDK 异步客户端 (包装为 CustomMinioClient)
      */
     @ConditionalOnProperty(prefix = "storage.minio", value = "enabled", havingValue = "true")
     @Bean
-    public MinioClient minioClient(StorageProperties storageProperties) {
-        return MinioClient.builder()
+    public CustomMinioClient minioClient(StorageProperties storageProperties) {
+        MinioAsyncClient rawClient = MinioAsyncClient.builder()
                 .endpoint(storageProperties.getMinio().getEndpoint())
                 .credentials(storageProperties.getMinio().getAccessKey(), storageProperties.getMinio().getSecretKey())
                 .build();
+        return new CustomMinioClient(rawClient);
     }
 
     /**
      * 创建 MinIO 文件存储策略实现
      */
-    @ConditionalOnBean(MinioClient.class)
+    @ConditionalOnBean(CustomMinioClient.class)
     @Bean
     public FileStorage minIoFileStorage(StorageProperties storageProperties) {
         return new MinIoFileStorage(storageProperties.getMinio());
