@@ -2,72 +2,71 @@ package org.etd.framework.starter.storage.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
-@ConfigurationProperties(prefix = "storage")
+/**
+ * 存储配置属性
+ *
+ * @author Young
+ */
 @Data
+@ConfigurationProperties(prefix = "storage")
 public class StorageProperties {
 
-
-    public StorageProperties() {
-
-    }
+    /**
+     * MinIO 存储配置
+     */
+    private MinIo minio = new MinIo();
 
     /**
-     * MinIo存储
+     * 阿里云 OSS 存储配置
      */
-    @NestedConfigurationProperty
-    private MinIo minio;
-    /**
-     * 阿里巴巴OSS存储
-     */
-    @NestedConfigurationProperty
-    private AlibabaOSS alibaba;
+    private AlibabaOSS alibaba = new AlibabaOSS();
 
-    /**
-     * MinIo 配置
-     */
     @Data
     public static class MinIo {
-
         private boolean enabled;
+        private String endpoint;
+        private String accessKey;
+        private String secretKey;
         /**
-         * Minio连接端点  http://127.0.0.1:9000
+         * 默认全局存储桶名称
          */
-        private String endpoint = "http://127.0.0.1:9000";
-
-        private String accessKey = "minioadmin";
-
-        private String secretKey = "minioadmin";
+        private String defaultBucket;
         /**
-         * 是否自动创建bucket
+         * 自动建桶时的默认访问策略（默认 private）。可选值：
+         * 1. private: 私有读写（默认，最高安全等级，禁止匿名读写）
+         * 2. public-read (或 public): 公共读、私有写（适用于公开图片、头像、静态文件）
+         * 3. public-read-write: 公共读写（高危，允许任何人匿名读、写、删除，请谨慎使用）
+         * 4. authenticated-read: 授权读（仅通过身份认证的账号可读）
          */
-        private Boolean autoCreateBucket = false;
+        private String policy = "private";
         /**
-         * 过期时间默认最大7天,单位秒
+         * 预签名链接默认有效时长（单位：秒，默认 7 天）
          */
-        private Integer expiry = 604800;
+        private int expiry = 604800;
     }
 
     @Data
     public static class AlibabaOSS {
-
         private boolean enabled;
+        private String endpoint;
+        private String accessKey;
+        private String secretKey;
         /**
-         * 连接端点  http://127.0.0.1:9000
+         * 默认全局存储桶名称
          */
-        private String endpoint = "";
-
-        private String accessKey = "";
-
-        private String secretKey = "";
+        private String defaultBucket;
         /**
-         * 是否自动创建bucket
+         * 自动建桶时的默认访问策略（默认 private）。可选值：
+         * 1. private: 私有读写（默认，最高安全等级，禁止匿名读写）
+         * 2. public-read (或 public): 公共读、私有写（适用于公开图片、头像、静态文件）
+         * 3. public-read-write: 公共读写（高危，允许任何人匿名读、写、删除，请谨慎使用）
+         * 4. authenticated-read: 授权读（仅通过身份认证的账号可读）
          */
-        private Boolean autoCreateBucket = false;
+        private String policy = "private";
         /**
-         * 过期时间默认最大7天,单位秒
+         * 预签名链接默认有效时长（单位：秒，默认 7 天）
          */
-        private Integer expiry = 604800;
+        private int expiry = 604800;
     }
 }

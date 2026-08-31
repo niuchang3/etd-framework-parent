@@ -1,8 +1,6 @@
 package org.etd.framework.starter.storage.core.extend;
 
-import io.minio.CustomMinioClient;
-import io.minio.GetPresignedObjectUrlArgs;
-import io.minio.PutObjectArgs;
+import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Part;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +28,56 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
         this.properties = properties;
     }
 
+    @Override
+    protected void ensureBucketExists(String bucketName) {
+        try {
+            boolean exists = getClient().bucketExists(BucketExistsArgs.builder().bucket(bucketName).build()).get();
+            if (!exists) {
+                log.info("MinIO bucket [{}] does not exist, creating automatically...", bucketName);
+                getClient().makeBucket(MakeBucketArgs.builder().bucket(bucketName).build()).get();
+
+                String policyConfig = properties.getPolicy();
+                if (StringUtils.hasText(policyConfig)) {
+                    if ("public-read".equalsIgnoreCase(policyConfig) || "public".equalsIgnoreCase(policyConfig)) {
+                        String readOnlyPolicy = """
+                                {
+                                  "Version": "2012-10-17",
+                                  "Statement": [
+                                    {
+                                      "Effect": "Allow",
+                                      "Principal": "*",
+                                      "Action": ["s3:GetObject"],
+                                      "Resource": ["arn:aws:s3:::%s/*"]
+                                    }
+                                  ]
+                                }
+                                """.formatted(bucketName);
+                        getClient().setBucketPolicy(SetBucketPolicyArgs.builder().bucket(bucketName).config(readOnlyPolicy).build()).get();
+                        log.info("MinIO bucket [{}] set policy to 'public-read' successfully", bucketName);
+                    } else if ("public-read-write".equalsIgnoreCase(policyConfig)) {
+                        String readWritePolicy = """
+                                {
+                                  "Version": "2012-10-17",
+                                  "Statement": [
+                                    {
+                                      "Effect": "Allow",
+                                      "Principal": "*",
+                                      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+                                      "Resource": ["arn:aws:s3:::%s/*"]
+                                    }
+                                  ]
+                                }
+                                """.formatted(bucketName);
+                        getClient().setBucketPolicy(SetBucketPolicyArgs.builder().bucket(bucketName).config(readWritePolicy).build()).get();
+                        log.warn("MinIO bucket [{}] set policy to 'public-read-write' (HIGH RISK!)", bucketName);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("MinIO check/create bucket [{}] encountered warning: {}", bucketName, e.getMessage());
+        }
+    }
+
     // =========================================================================
     // 1. Web 前端直传能力
     // =========================================================================
@@ -37,6 +85,9 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
     @Override
     public UploadUrlResModel generateUploadUrl(UploadUrlReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
@@ -47,7 +98,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
 
             GetPresignedObjectUrlArgs.Builder builder = GetPresignedObjectUrlArgs.builder()
                     .method(Method.PUT)
-                    .bucket(reqModel.getBucketName())
+                    .bucket(bucketName)
                     .object(objectName)
                     .expiry(expiry);
 
@@ -67,12 +118,15 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
     @Override
     public InitMultipartResModel initMultipart(InitMultipartReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
 
             String uploadId = getClient().initMultipartUpload(
-                    reqModel.getBucketName(),
+                    bucketName,
                     null,
                     objectName,
                     null,
@@ -92,6 +146,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
     @Override
     public GeneratePartUrlResModel generatePartUrl(GeneratePartUrlReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
             int expiry = reqModel.getExpiry() != null && reqModel.getExpiry() > 0
                     ? reqModel.getExpiry()
                     : properties.getExpiry();
@@ -102,7 +157,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
 
             GetPresignedObjectUrlArgs.Builder builder = GetPresignedObjectUrlArgs.builder()
                     .method(Method.PUT)
-                    .bucket(reqModel.getBucketName())
+                    .bucket(bucketName)
                     .object(reqModel.getFileName())
                     .expiry(expiry)
                     .extraQueryParams(queryParams);
@@ -123,6 +178,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
     @Override
     public CompleteMultipartResModel completeMultipart(CompleteMultipartReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
             Part[] minioParts = new Part[reqModel.getParts() != null ? reqModel.getParts().size() : 0];
             if (reqModel.getParts() != null) {
                 for (int i = 0; i < reqModel.getParts().size(); i++) {
@@ -132,7 +188,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
             }
 
             getClient().completeMultipart(
-                    reqModel.getBucketName(),
+                    bucketName,
                     null,
                     reqModel.getFileName(),
                     reqModel.getUploadId(),
@@ -144,7 +200,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
             String fileUrl = getClient().getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
-                            .bucket(reqModel.getBucketName())
+                            .bucket(bucketName)
                             .object(reqModel.getFileName())
                             .expiry(properties.getExpiry())
                             .build()
@@ -167,6 +223,9 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
     @Override
     public ServerUploadResModel upload(InputStreamUploadReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
@@ -175,7 +234,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
             long partSize = objectSize > 0 ? -1 : 10 * 1024 * 1024;
 
             PutObjectArgs.Builder builder = PutObjectArgs.builder()
-                    .bucket(reqModel.getBucketName())
+                    .bucket(bucketName)
                     .object(objectName)
                     .stream(reqModel.getInputStream(), objectSize, partSize);
 
@@ -188,7 +247,7 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
             String fileUrl = getClient().getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
-                            .bucket(reqModel.getBucketName())
+                            .bucket(bucketName)
                             .object(objectName)
                             .expiry(properties.getExpiry())
                             .build()
@@ -235,6 +294,64 @@ public class MinIoFileStorage extends FileStorage<CustomMinioClient> {
             return upload(uploadReq);
         } catch (Exception e) {
             log.error("MinIO server upload MultipartFile failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    // =========================================================================
+    // 3. 在线预览/下载链接生成与物理流式下载能力
+    // =========================================================================
+
+    @Override
+    public GenerateObjectUrlResModel generateObjectUrl(GenerateObjectUrlReqModel reqModel) throws Exception {
+        try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            int expiry = reqModel.getExpiry() != null && reqModel.getExpiry() > 0
+                    ? reqModel.getExpiry()
+                    : properties.getExpiry();
+
+            String fileUrl = getClient().getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(bucketName)
+                            .object(reqModel.getFileName())
+                            .expiry(expiry)
+                            .build()
+            );
+
+            GenerateObjectUrlResModel resModel = new GenerateObjectUrlResModel();
+            resModel.setFileUrl(fileUrl);
+            resModel.setExpired(expiry);
+            return resModel;
+        } catch (Exception e) {
+            log.error("MinIO generateObjectUrl failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public InputStream downloadInputStream(DownloadObjectReqModel reqModel) throws Exception {
+        try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            GetObjectResponse response = getClient().getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(reqModel.getFileName())
+                            .build()
+            ).get();
+            return response;
+        } catch (Exception e) {
+            log.error("MinIO downloadInputStream failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public byte[] downloadBytes(DownloadObjectReqModel reqModel) throws Exception {
+        try (InputStream inputStream = downloadInputStream(reqModel)) {
+            return inputStream.readAllBytes();
+        } catch (Exception e) {
+            log.error("MinIO downloadBytes failed: {}", e.getMessage(), e);
             throw e;
         }
     }

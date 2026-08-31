@@ -3,7 +3,7 @@ package org.etd.framework.starter.storage.core;
 import org.etd.framework.starter.storage.model.*;
 
 /**
- * 文件存储策略统一接口
+ * 文件上传策略接口（专注负责单文件直传、大文件分片直传与服务端物理上传）
  *
  * @author Young
  */

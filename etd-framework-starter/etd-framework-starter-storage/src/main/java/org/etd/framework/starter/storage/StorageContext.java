@@ -1,7 +1,9 @@
 package org.etd.framework.starter.storage;
 
 import lombok.Getter;
+import org.etd.framework.starter.storage.core.FileDownload;
 import org.etd.framework.starter.storage.core.FileStorage;
+import org.etd.framework.starter.storage.core.FileUpload;
 import org.etd.framework.starter.storage.core.extend.AlibabaOSSFileStorage;
 import org.etd.framework.starter.storage.core.extend.MinIoFileStorage;
 import org.springframework.beans.BeansException;
@@ -46,7 +48,7 @@ public class StorageContext implements ApplicationContextAware {
     }
 
     /**
-     * 根据类型获取对应的客户端实现
+     * 根据类型获取对应的通用存储策略实现 (组合包含上传与下载)
      *
      * @param clientType 客户端类型
      * @return 对应的存储策略 Bean
@@ -57,6 +59,26 @@ public class StorageContext implements ApplicationContextAware {
             throw new RuntimeException("Bean not initialized, please check if " + clientType.getStorageClient().getName() + " is managed by Spring");
         }
         return (FileStorage) bean;
+    }
+
+    /**
+     * 根据类型获取对应的上传策略实现
+     *
+     * @param clientType 客户端类型
+     * @return 对应的上传策略 Bean
+     */
+    public static FileUpload getUploadClient(ClientType clientType) {
+        return getStorageClient(clientType);
+    }
+
+    /**
+     * 根据类型获取对应的下载与外链生成策略实现
+     *
+     * @param clientType 客户端类型
+     * @return 对应的下载策略 Bean
+     */
+    public static FileDownload getDownloadClient(ClientType clientType) {
+        return getStorageClient(clientType);
     }
 
     private static <T> T getBean(Class<?> aClass) {

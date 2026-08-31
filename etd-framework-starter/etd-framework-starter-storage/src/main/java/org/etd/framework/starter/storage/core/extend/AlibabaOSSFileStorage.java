@@ -30,6 +30,26 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         this.properties = properties;
     }
 
+    @Override
+    protected void ensureBucketExists(String bucketName) {
+        try {
+            boolean exists = getClient().doesBucketExist(bucketName);
+            if (!exists) {
+                log.info("Alibaba OSS bucket [{}] does not exist, creating automatically...", bucketName);
+                CreateBucketRequest request = new CreateBucketRequest(bucketName);
+                if ("public-read".equalsIgnoreCase(properties.getPolicy()) || "public".equalsIgnoreCase(properties.getPolicy())) {
+                    request.setCannedACL(CannedAccessControlList.PublicRead);
+                } else {
+                    request.setCannedACL(CannedAccessControlList.Private);
+                }
+                getClient().createBucket(request);
+                log.info("Alibaba OSS bucket [{}] created with policy [{}] successfully", bucketName, properties.getPolicy());
+            }
+        } catch (Exception e) {
+            log.warn("Alibaba OSS check/create bucket [{}] encountered warning: {}", bucketName, e.getMessage());
+        }
+    }
+
     // =========================================================================
     // 1. Web 前端直传能力
     // =========================================================================
@@ -37,6 +57,9 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     @Override
     public UploadUrlResModel generateUploadUrl(UploadUrlReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
@@ -46,7 +69,7 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
                     : properties.getExpiry();
 
             Date expiration = new Date(System.currentTimeMillis() + expiry * 1000L);
-            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(reqModel.getBucketName(), objectName, HttpMethod.PUT);
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, objectName, HttpMethod.PUT);
             request.setExpiration(expiration);
             if (StringUtils.hasText(reqModel.getContentType())) {
                 request.setContentType(reqModel.getContentType());
@@ -68,11 +91,14 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     @Override
     public InitMultipartResModel initMultipart(InitMultipartReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
 
-            InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(reqModel.getBucketName(), objectName);
+            InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucketName, objectName);
             if (StringUtils.hasText(reqModel.getContentType())) {
                 ObjectMetadata metadata = new ObjectMetadata();
                 metadata.setContentType(reqModel.getContentType());
@@ -94,12 +120,13 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     @Override
     public GeneratePartUrlResModel generatePartUrl(GeneratePartUrlReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
             int expiry = reqModel.getExpiry() != null && reqModel.getExpiry() > 0
                     ? reqModel.getExpiry()
                     : properties.getExpiry();
 
             Date expiration = new Date(System.currentTimeMillis() + expiry * 1000L);
-            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(reqModel.getBucketName(), reqModel.getFileName(), HttpMethod.PUT);
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, reqModel.getFileName(), HttpMethod.PUT);
             request.setExpiration(expiration);
             request.addQueryParameter("uploadId", reqModel.getUploadId());
             request.addQueryParameter("partNumber", String.valueOf(reqModel.getPartNumber()));
@@ -120,6 +147,7 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     @Override
     public CompleteMultipartResModel completeMultipart(CompleteMultipartReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
             List<PartETag> partETags = new ArrayList<>();
             if (reqModel.getParts() != null) {
                 for (CompleteMultipartReqModel.PartETagInfo info : reqModel.getParts()) {
@@ -128,7 +156,7 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
             }
 
             CompleteMultipartUploadRequest request = new CompleteMultipartUploadRequest(
-                    reqModel.getBucketName(),
+                    bucketName,
                     reqModel.getFileName(),
                     reqModel.getUploadId(),
                     partETags
@@ -153,6 +181,9 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     @Override
     public ServerUploadResModel upload(InputStreamUploadReqModel reqModel) throws Exception {
         try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            ensureBucketExists(bucketName);
+
             String objectName = StringUtils.hasText(reqModel.getFileName())
                     ? buildObjectPath(reqModel.getDirectory(), reqModel.getFileName())
                     : buildObjectPath(reqModel.getDirectory(), generateFileName(reqModel.getOriginalFileName()));
@@ -165,10 +196,10 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
                 metadata.setContentLength(reqModel.getFileSize());
             }
 
-            getClient().putObject(reqModel.getBucketName(), objectName, reqModel.getInputStream(), metadata);
+            getClient().putObject(bucketName, objectName, reqModel.getInputStream(), metadata);
 
             Date expiration = new Date(System.currentTimeMillis() + properties.getExpiry() * 1000L);
-            URL url = getClient().generatePresignedUrl(reqModel.getBucketName(), objectName, expiration);
+            URL url = getClient().generatePresignedUrl(bucketName, objectName, expiration);
 
             ServerUploadResModel resModel = new ServerUploadResModel();
             resModel.setFileName(objectName);
@@ -211,6 +242,53 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
             return upload(uploadReq);
         } catch (Exception e) {
             log.error("Alibaba OSS server upload MultipartFile failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    // =========================================================================
+    // 3. 在线预览/下载链接生成与物理流式下载能力
+    // =========================================================================
+
+    @Override
+    public GenerateObjectUrlResModel generateObjectUrl(GenerateObjectUrlReqModel reqModel) throws Exception {
+        try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            int expiry = reqModel.getExpiry() != null && reqModel.getExpiry() > 0
+                    ? reqModel.getExpiry()
+                    : properties.getExpiry();
+
+            Date expiration = new Date(System.currentTimeMillis() + expiry * 1000L);
+            URL url = getClient().generatePresignedUrl(bucketName, reqModel.getFileName(), expiration);
+
+            GenerateObjectUrlResModel resModel = new GenerateObjectUrlResModel();
+            resModel.setFileUrl(url != null ? url.toString() : "");
+            resModel.setExpired(expiry);
+            return resModel;
+        } catch (Exception e) {
+            log.error("Alibaba OSS generateObjectUrl failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public InputStream downloadInputStream(DownloadObjectReqModel reqModel) throws Exception {
+        try {
+            String bucketName = getRealBucketName(reqModel.getBucketName(), properties.getDefaultBucket());
+            OSSObject ossObject = getClient().getObject(bucketName, reqModel.getFileName());
+            return ossObject.getObjectContent();
+        } catch (Exception e) {
+            log.error("Alibaba OSS downloadInputStream failed: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public byte[] downloadBytes(DownloadObjectReqModel reqModel) throws Exception {
+        try (InputStream inputStream = downloadInputStream(reqModel)) {
+            return inputStream.readAllBytes();
+        } catch (Exception e) {
+            log.error("Alibaba OSS downloadBytes failed: {}", e.getMessage(), e);
             throw e;
         }
     }

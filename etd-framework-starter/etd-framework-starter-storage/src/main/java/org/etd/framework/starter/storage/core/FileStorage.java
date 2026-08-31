@@ -6,12 +6,12 @@ import org.springframework.util.StringUtils;
 import java.util.UUID;
 
 /**
- * 抽象文件存储策略基类
+ * 抽象文件存储策略基类（同时实现上传与下载/预览能力）
  *
  * @param <C> 底层 SDK 客户端类型
  * @author Young
  */
-public abstract class FileStorage<C> implements FileUpload {
+public abstract class FileStorage<C> implements FileUpload, FileDownload {
 
     @Autowired
     private C client;
@@ -24,6 +24,31 @@ public abstract class FileStorage<C> implements FileUpload {
     protected static final String SEPARATOR_DASH = "-";
     protected static final String SEPARATOR_EMPTY = "";
     protected static final String SEPARATOR_SLASH = "/";
+
+    /**
+     * 确保存储桶存在（如果不存在则自动创建）
+     *
+     * @param bucketName 存储桶名称
+     * @throws Exception 异常信息
+     */
+    protected abstract void ensureBucketExists(String bucketName) throws Exception;
+
+    /**
+     * 安全获取目标存储桶名称（请求中未传时自动使用默认配置桶）
+     *
+     * @param requestBucketName       请求中传入的桶名（可能为空）
+     * @param defaultPropertiesBucket 配置中指定的默认桶名
+     * @return 最终生效的存储桶名称
+     */
+    protected String getRealBucketName(String requestBucketName, String defaultPropertiesBucket) {
+        if (StringUtils.hasText(requestBucketName)) {
+            return requestBucketName.trim();
+        }
+        if (StringUtils.hasText(defaultPropertiesBucket)) {
+            return defaultPropertiesBucket.trim();
+        }
+        throw new IllegalArgumentException("BucketName cannot be empty! Please provide bucketName in request or configure 'default-bucket' in application.yml");
+    }
 
     /**
      * 生成随机防重名的上传文件名

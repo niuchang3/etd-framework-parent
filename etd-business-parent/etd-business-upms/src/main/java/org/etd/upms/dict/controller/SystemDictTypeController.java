@@ -61,7 +61,7 @@ public class SystemDictTypeController {
 
     @GetMapping("/data")
     public ResultModel<Map<String, List<SystemDictDataVO>>> enabledData(
-            @RequestParam @NotEmpty(message = "字典类型编码不能为空")
+            @RequestParam("typeCodes") @NotEmpty(message = "字典类型编码不能为空")
             List<@NotBlank(message = "字典类型编码不能为空")
                     @Size(max = 100, message = "字典类型编码不能超过100个字符") String> typeCodes) {
         return ResultModel.success(dictBizService.selectEnabledDataByTypeCodes(typeCodes));
