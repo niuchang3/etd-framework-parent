@@ -42,7 +42,7 @@ insert into sys_menus (id, parent_id, create_time, create_by, update_time, updat
 values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '首页', '/dashboard', '@/views/404.vue', 'AppstoreOutlined', 'MENU', 10),
        (1000002, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '租户管理', '/tenants', '@/views/404.vue', 'TeamOutlined', 'MENU', 20),
+        '租户管理', '/system/tenants', '@/views/tenant/index.vue', 'TeamOutlined', 'MENU', 20),
        (1000003, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '用户中心', '/users', '@/views/404.vue', 'UserOutlined', 'MENU', 30),
        (1000004, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
