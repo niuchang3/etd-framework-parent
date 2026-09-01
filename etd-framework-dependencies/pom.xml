@@ -53,6 +53,7 @@
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok.version>1.18.38</lombok.version>
         <mysql.version>9.4.0</mysql.version>
+        <ipaddress.version>5.5.1</ipaddress.version>
     </properties>
 
 
@@ -84,6 +85,12 @@
                 <version>${druid.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.github.seancfoley</groupId>
+                <artifactId>ipaddress</artifactId>
+                <version>${ipaddress.version}</version>
+            </dependency>
+
 
             <!--   本地工程jar包管理     -->
             <dependency>
@@ -95,12 +102,6 @@
             <dependency>
                 <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-common-core</artifactId>
-                <version>${etd.framework.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.etd.framework</groupId>
-                <artifactId>etd-framework-common-utils</artifactId>
                 <version>${etd.framework.version}</version>
             </dependency>
 

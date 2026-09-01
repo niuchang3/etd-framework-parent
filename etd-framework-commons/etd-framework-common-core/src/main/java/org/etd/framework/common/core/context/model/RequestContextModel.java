@@ -1,16 +1,18 @@
 package org.etd.framework.common.core.context.model;
 
-import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import org.etd.framework.common.core.user.UserDetails;
+import org.etd.framework.common.core.user.RoleAuthority;
+import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
-import java.util.Map;
+import java.util.LinkedHashSet;
 
 /**
- * 请求上下文数据模型
+ * 统一请求上下文组合数据模型 (Composite Model)
+ * 清晰拆分为：消息头上下文（headers）、用户领域模型（userDetails）、治理控制标志（controlFlags）
  *
  * @author 牛昌
  */
@@ -22,96 +24,56 @@ public class RequestContextModel implements Serializable {
     private static final long serialVersionUID = -1L;
 
     /**
-     * 链路追踪 ID
+     * 1. 协议与传输消息头上下文（可直接无损进行 Header 序列化/导出/跨服务透传）
      */
-    private String traceId;
+    private RequestHeaderContext headers = new RequestHeaderContext();
 
     /**
-     * 请求客户端 IP
-     */
-    private String requestIP;
-
-    /**
-     * 租户 CODE
-     */
-    private Long tenantCode;
-
-    /**
-     * 认证 Token
-     */
-    private String token;
-
-    /**
-     * 国际化语言标识 (Accept-Language)
-     */
-    private String language;
-
-    /**
-     * 发起请求的应用名称
-     */
-    private String applicationName;
-
-    /**
-     * 发起请求的应用版本号
-     */
-    private String applicationVersion;
-
-    /**
-     * 客户端设备指纹
-     */
-    private String deviceFingerprint;
-
-    /**
-     * 客户端设备 ID
-     */
-    private String deviceId;
-
-    /**
-     * 客户端 User-Agent 字符串
-     */
-    private String userAgent;
-
-    /**
-     * 当前登录用户信息
+     * 2. 安全与用户身份领域模型
      */
     private UserDetails userDetails;
 
     /**
-     * 是否忽略租户化查询
+     * 3. 框架与治理控制指令标志
      */
-    private Boolean ignoreTenant = false;
+    private RequestControlFlags controlFlags = new RequestControlFlags();
 
     /**
-     * 扩展自定义属性
+     * 重置并清理上下文数据
      */
-    private Map<String, Object> attribute = Maps.newLinkedHashMap();
-
     public void clean() {
-        this.traceId = null;
-        this.requestIP = null;
-        this.tenantCode = null;
-        this.token = null;
-        this.language = null;
-        this.applicationName = null;
-        this.applicationVersion = null;
-        this.deviceFingerprint = null;
-        this.deviceId = null;
-        this.userAgent = null;
+        if (this.headers != null) {
+            this.headers.clean();
+        }
         this.userDetails = null;
-        this.ignoreTenant = false;
-        if (this.attribute != null) {
-            this.attribute.clear();
+        if (this.controlFlags != null) {
+            this.controlFlags.clean();
         }
     }
 
-    public Object getAttribute(String key) {
-        return attribute != null ? attribute.get(key) : null;
+    /**
+     * 创建可安全交给异步线程使用的独立上下文副本。
+     */
+    public RequestContextModel copy() {
+        RequestContextModel copy = new RequestContextModel();
+        copy.headers = headers == null ? new RequestHeaderContext() : headers.copy();
+        copy.userDetails = copyUserDetails(userDetails);
+        copy.controlFlags = controlFlags == null ? new RequestControlFlags() : controlFlags.copy();
+        return copy;
     }
 
-    public void setAttribute(String key, Object value) {
-        if (this.attribute == null) {
-            this.attribute = Maps.newLinkedHashMap();
+    private UserDetails copyUserDetails(UserDetails source) {
+        if (source == null) {
+            return null;
         }
-        attribute.put(key, value);
+        UserDetails copy = new UserDetails();
+        BeanUtils.copyProperties(source, copy);
+        // 请求上下文快照不传播登录凭证，避免密码进入异步任务或消息对象。
+        copy.setPassword(null);
+        copy.setRoleCodes(source.getRoleCodes() == null ? null : new LinkedHashSet<>(source.getRoleCodes()));
+        copy.setAuthorities(source.getAuthorities() == null ? null : source.getAuthorities().stream()
+                .map(authority -> new RoleAuthority(authority.getAuthority()))
+                .toList());
+        return copy;
     }
 }

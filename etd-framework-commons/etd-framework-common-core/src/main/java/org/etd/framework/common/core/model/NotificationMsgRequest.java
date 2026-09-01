@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.etd.framework.common.core.context.model.RequestContextModel;
 
 import java.io.Serializable;
 
@@ -35,9 +34,4 @@ public class NotificationMsgRequest<T extends Serializable> implements Serializa
      * 重试次数
      */
     private int retries = 1;
-    /**
-     * 请求上下文Model
-     */
-    private RequestContextModel requestContextModel;
-
 }

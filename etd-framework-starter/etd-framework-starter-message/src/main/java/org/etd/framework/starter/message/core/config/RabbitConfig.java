@@ -1,5 +1,6 @@
 package org.etd.framework.starter.message.core.config;
 
+import org.aopalliance.intercept.MethodInterceptor;
 import org.etd.framework.common.core.context.RequestContextInitializer;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.slf4j.MDC;
@@ -47,13 +48,28 @@ public class RabbitConfig {
             }
             return message;
         });
+        factory.setAdviceChain(requestContextCleanupAdvice());
         return factory;
     }
 
     public void setRabbitMqMessageHeads(Message message) {
         if (message != null && message.getMessageProperties() != null) {
-            Map<String, Object> headers = RequestContextInitializer.exportHeaders();
+            Map<String, Object> headers = RequestContextInitializer.exportMessageHeaders();
             headers.forEach((k, v) -> message.getMessageProperties().setHeader(k, v));
         }
+    }
+
+    /**
+     * Rabbit 监听线程由线程池复用，必须在成功和异常场景下统一清理请求上下文。
+     */
+    static MethodInterceptor requestContextCleanupAdvice() {
+        return invocation -> {
+            try {
+                return invocation.proceed();
+            } finally {
+                RequestContext.clean();
+                MDC.clear();
+            }
+        };
     }
 }

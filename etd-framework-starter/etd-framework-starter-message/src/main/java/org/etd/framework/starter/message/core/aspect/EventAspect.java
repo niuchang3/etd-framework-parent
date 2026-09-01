@@ -5,7 +5,6 @@ import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.NotificationMsgRequest;
 import org.etd.framework.common.utils.json.JsonUtils;
 import org.etd.framework.starter.message.core.annotation.Event;
@@ -39,7 +38,6 @@ public class EventAspect {
             request.setMessageHandleCode(code);
             request.setMessageBody(gson);
             request.setRetries(declaredAnnotation.retries());
-            request.setRequestContextModel(RequestContext.getRequestContext());
             rabbitMessageService.sendMessage(DefaultRabbitQueue.DEFAULT, request);
         }
 

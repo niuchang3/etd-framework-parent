@@ -66,15 +66,4 @@ public class RetryUtil {
         T value();
     }
 
-//    /**
-//     * @param args
-//     * @throws Exception
-//     */
-//    public static void main(String[] args) throws Exception {
-//        Result<String> result = RetryUtil.invoke(() -> {
-//            throw new RuntimeException("测试重试工具类");
-//        }, 20);
-//        System.out.println(result);
-//    }
-
 }

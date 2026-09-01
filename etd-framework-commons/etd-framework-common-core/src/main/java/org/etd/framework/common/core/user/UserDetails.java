@@ -1,6 +1,7 @@
 package org.etd.framework.common.core.user;
 
 import lombok.Data;
+import lombok.ToString;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ public class UserDetails implements Serializable {
     /**
      * 密码信息。
      */
+    @ToString.Exclude
     private String password;
 
     /**

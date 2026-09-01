@@ -43,7 +43,7 @@
 
         <dependency>
             <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-utils</artifactId>
+            <artifactId>etd-framework-common-core</artifactId>
         </dependency>
 
     </dependencies>
