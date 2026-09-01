@@ -2,7 +2,7 @@ package org.etd.upms.user.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Data
 public class SystemUserMenusVO {
@@ -19,7 +19,7 @@ public class SystemUserMenusVO {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Instant createTime;
     /**
      * 父级ID
      */

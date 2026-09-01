@@ -2,7 +2,7 @@ package org.etd.upms.menu.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Data
 public class SystemMenuVO {
@@ -11,7 +11,7 @@ public class SystemMenuVO {
 
     private Long parentId;
 
-    private Date createTime;
+    private Instant createTime;
 
     private Integer dataStatus;
 

@@ -82,7 +82,7 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         try {
             signedJWT.sign(jwsSigner);
             String token = signedJWT.serialize();
-            return new TokenValue(token, build.getExpirationTime());
+            return new TokenValue(token, build.getExpirationTime().toInstant());
         } catch (JOSEException e) {
             throw new IllegalStateException("令牌签名失败。", e);
         }
@@ -146,9 +146,9 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         claim.put(SecurityParameterConstant.UserClaim.ACCOUNT, userDetails.getAccount());
         claim.put(SecurityParameterConstant.UserClaim.MOBILE, userDetails.getMobile());
         claim.put(SecurityParameterConstant.UserClaim.USER_NAME, userDetails.getUserName());
-        // JWT Claim 中业务日期统一写毫秒时间戳，避免 Nimbus 转成 Locale 相关字符串后无法反序列化。
+        // 生日是无时区的业务日期，JWT 中使用 ISO 日期字符串避免跨时区后日期偏移。
         claim.put(SecurityParameterConstant.UserClaim.BIRTHDAY,
-                userDetails.getBirthday() == null ? null : userDetails.getBirthday().getTime());
+                userDetails.getBirthday() == null ? null : userDetails.getBirthday().toString());
         claim.put(SecurityParameterConstant.UserClaim.GENDER, userDetails.getGender());
         claim.put(SecurityParameterConstant.UserClaim.AVATAR, userDetails.getAvatar());
         claim.put(SecurityParameterConstant.UserClaim.NICK_NAME, userDetails.getNickName());

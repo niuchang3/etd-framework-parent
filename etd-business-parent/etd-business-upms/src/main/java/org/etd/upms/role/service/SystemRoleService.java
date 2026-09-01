@@ -18,6 +18,8 @@ public interface SystemRoleService {
 
     void requireEnabled(Set<Long> ids);
 
+    void requireAssignable(Set<Long> ids);
+
     Long insert(SystemRoleSaveDTO dto);
 
     Long createTenantAdminRole(Long tenantId, String tenantName);

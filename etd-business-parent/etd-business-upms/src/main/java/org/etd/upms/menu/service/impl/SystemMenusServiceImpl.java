@@ -15,7 +15,7 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +36,7 @@ public class SystemMenusServiceImpl implements SystemMenusService {
     @Override
     public Long insert(SystemMenuSaveDTO dto) {
         SystemMenusEntity entity = Mappers.getMapper(SystemMenusConverter.class).toEntity(dto);
-        entity.setCreateTime(new Date());
+        entity.setCreateTime(Instant.now());
         entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
         systemMenusMapper.insert(entity);
         return entity.getId();

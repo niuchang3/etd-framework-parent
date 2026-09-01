@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -156,7 +157,7 @@ public class SystemTenantBizService {
         return tenantService.selectByIds(Set.of(userDetails.getTenantId()));
     }
 
-    public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<String> times, String keyword) {
+    public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword) {
         IPage<SystemTenantVO> tenantPage = tenantService.page(page, times, keyword);
         // 租户分页展示需要补充管理员名称，跨用户能力的组装放在 biz 层。
         populateAdminUser(tenantPage.getRecords());

@@ -3,7 +3,7 @@ package org.etd.framework.common.core.user;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +42,7 @@ public class UserDetails implements Serializable {
     /**
      * 生日。
      */
-    private Date birthday;
+    private LocalDate birthday;
     /**
      * 性别。
      */

@@ -106,8 +106,7 @@ public class UserLoginTokenStorage {
         if (!hasValidValue(token)) {
             throw new IllegalArgumentException("令牌值和过期时间不能为空。");
         }
-        Instant expiresAt = token.getExpires().toInstant();
-        tokenStore.put(key, token, expiresAt);
+        tokenStore.put(key, token, token.getExpires());
     }
 
     private boolean tokenMatches(String key, String tokenValue) {

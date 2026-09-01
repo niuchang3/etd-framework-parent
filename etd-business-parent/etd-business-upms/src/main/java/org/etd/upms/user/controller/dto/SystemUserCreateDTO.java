@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -26,7 +26,7 @@ public class SystemUserCreateDTO {
     @Size(max = 20, message = "手机号码长度不能超过20个字符")
     private String mobile;
 
-    private Date birthday;
+    private LocalDate birthday;
 
     private Integer gender;
 

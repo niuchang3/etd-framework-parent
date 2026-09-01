@@ -20,7 +20,7 @@ import org.springframework.util.ObjectUtils;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -65,7 +65,7 @@ public class DBRulesManage extends RulesManage {
         if (exist(droolsRule.getKieBaseName())) {
             throw new ApiRuntimeException(RequestCodeConstant.VALIDATE_ERROR, "已存在" + droolsRule.getKieBaseName() + "请勿重复添加");
         }
-        droolsRule.setCreatedTime(new Date());
+        droolsRule.setCreatedTime(Instant.now());
         droolsRulesMapper.insert(droolsRule);
         insertRuleNames(droolsRule.getId(), names);
         super.addRules(droolsRule);

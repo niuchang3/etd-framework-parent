@@ -61,6 +61,16 @@
 - 新代码不要再调用已废弃的 Redis Jackson 序列化 API，例如 `setObjectMapper(...)`。应使用当前 Spring Data Redis 支持的构造方式。
 - 谨慎启用 Jackson 多态类型信息。不要在未理解安全影响的情况下开启过宽的 default typing。
 
+## 时间类型与时区
+
+- 创建时间、修改时间、登录时间、过期时间等表示绝对时间点的字段统一使用 `Instant`，禁止在业务实体、DTO、VO 中使用 `Date` 或 `LocalDateTime` 代替时间点。
+- 生日、业务日期等不包含时间和时区语义的字段使用 `LocalDate`；纯时间使用 `LocalTime`。
+- `Date` 只允许出现在第三方 API 明确要求该类型的边界适配代码中，例如 Nimbus JWT、OSS SDK，进入业务模型后必须转换为 `Instant` 或 `LocalDate`。
+- HTTP 时间点统一按 `spring.jackson.time-zone` 配置的时区输出 `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`；未配置时默认使用 `Asia/Shanghai`。
+- HTTP 纯日期统一输出 `yyyy-MM-dd`，纯时间统一输出 `HH:mm:ss`。前端不得自行给接口时间固定增加或减少小时数。
+- PostgreSQL 中绝对时间点使用 `timestamp with time zone`，纯日期使用 `date`，不要用无时区 `timestamp` 保存绝对时间点。
+- 初始化 SQL 中的固定时间点必须显式携带 `Z` 或偏移量，例如 `2026-09-01 12:30:00.000000+08:00`；动态初始化时间使用 `current_timestamp`。
+
 ## 配置规范
 
 - 应用配置必须方便环境化：

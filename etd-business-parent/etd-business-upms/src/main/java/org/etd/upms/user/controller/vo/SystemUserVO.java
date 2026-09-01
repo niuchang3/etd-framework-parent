@@ -2,7 +2,8 @@ package org.etd.upms.user.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -13,9 +14,9 @@ public class SystemUserVO {
      */
     private Long id;
 
-    private Date createTime;
+    private Instant createTime;
 
-    private Date updateTime;
+    private Instant updateTime;
 
     /**
      * 登录账号
@@ -33,7 +34,7 @@ public class SystemUserVO {
     /**
      * 生日
      */
-    private Date birthday;
+    private LocalDate birthday;
     /**
      * 性别
      */

@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
-import java.util.Date;
+import java.time.Instant;
 
 
 @Data
@@ -23,8 +23,8 @@ public class BaseEntity {
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    @TableFieldExtend("new java.util.Date()")
-    private Date createTime;
+    @TableFieldExtend("T(java.time.Instant).now()")
+    private Instant createTime;
 
     /**
      * 创建人
@@ -37,8 +37,8 @@ public class BaseEntity {
      * 修改时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    @TableFieldExtend("new java.util.Date()")
-    private Date updateTime;
+    @TableFieldExtend("T(java.time.Instant).now()")
+    private Instant updateTime;
 
     /**
      * 修改人

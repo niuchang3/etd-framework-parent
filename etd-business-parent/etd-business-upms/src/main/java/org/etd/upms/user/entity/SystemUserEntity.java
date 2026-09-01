@@ -9,7 +9,7 @@ import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -44,7 +44,7 @@ public class SystemUserEntity extends BaseEntity implements Serializable {
      * 生日
      */
     @TableField("birthday")
-    private Date birthday;
+    private LocalDate birthday;
     /**
      * 性别
      */

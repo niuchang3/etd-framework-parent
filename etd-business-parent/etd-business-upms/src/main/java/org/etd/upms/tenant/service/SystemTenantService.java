@@ -6,6 +6,7 @@ import org.etd.upms.tenant.controller.vo.SystemTenantVO;
 
 import java.util.List;
 import java.util.Set;
+import java.time.Instant;
 
 public interface SystemTenantService {
 
@@ -29,7 +30,7 @@ public interface SystemTenantService {
      * @param keyword
      * @return
      */
-    IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<String> times, String keyword);
+    IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword);
 
     Long insert(SystemTenantEntity entity);
 

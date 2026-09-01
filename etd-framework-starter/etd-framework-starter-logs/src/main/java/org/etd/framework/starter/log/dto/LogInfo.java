@@ -27,7 +27,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.security.Principal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +49,7 @@ public class LogInfo {
 	/**
 	 * 操作时间
 	 */
-	private LocalDateTime timestamp;
+	private Instant timestamp;
 	/**
 	 * 接口耗时（毫秒）
 	 */
@@ -158,7 +158,7 @@ public class LogInfo {
 
 	private static LogInfo builder(JoinPoint joinPoint, AutoLog autoLog) {
 		LogInfo logInfo = new LogInfo();
-		logInfo.setTimestamp(LocalDateTime.now());
+		logInfo.setTimestamp(Instant.now());
 
 		fillAutoLogMetadata(logInfo, autoLog);
 		fillMethodMetadata(logInfo, joinPoint);

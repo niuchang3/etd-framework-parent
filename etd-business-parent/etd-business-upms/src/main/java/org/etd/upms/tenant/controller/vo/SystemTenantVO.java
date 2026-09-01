@@ -3,7 +3,7 @@ package org.etd.upms.tenant.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Data
 public class SystemTenantVO {
@@ -15,7 +15,7 @@ public class SystemTenantVO {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Instant createTime;
     /**
      * 数据状态
      */

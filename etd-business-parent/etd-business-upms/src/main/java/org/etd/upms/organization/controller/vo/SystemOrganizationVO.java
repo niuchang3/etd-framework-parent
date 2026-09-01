@@ -3,7 +3,7 @@ package org.etd.upms.organization.controller.vo;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -11,9 +11,9 @@ public class SystemOrganizationVO {
 
     private Long id;
 
-    private Date createTime;
+    private Instant createTime;
 
-    private Date updateTime;
+    private Instant updateTime;
 
     private Long parentId;
 

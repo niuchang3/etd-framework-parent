@@ -4,9 +4,9 @@
 create table if not exists sys_tenant
 (
     id                bigint not null,
-    create_time       timestamp(6),
+    create_time       timestamp(6) with time zone,
     create_by         bigint,
-    update_time       timestamp(6),
+    update_time       timestamp(6) with time zone,
     update_by         bigint,
     data_status       int,
     del_flag          smallint not null default 0,
@@ -50,9 +50,9 @@ create unique index if not exists uk_sys_tenant_credit_code
 create table if not exists sys_user
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -104,9 +104,9 @@ create unique index if not exists uk_sys_user_mobile
 create table if not exists sys_role
 (
     id              bigint not null,
-    create_time     timestamp(6),
+    create_time     timestamp(6) with time zone,
     create_by       bigint,
-    update_time     timestamp(6),
+    update_time     timestamp(6) with time zone,
     update_by       bigint,
     data_status     int,
     del_flag        smallint not null default 0,
@@ -144,9 +144,9 @@ create unique index if not exists uk_sys_role_tenant_code
 create table if not exists sys_user_role_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -178,9 +178,9 @@ create unique index if not exists uk_sys_user_role_rel_tenant_user_role
 create table if not exists sys_user_org_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -221,9 +221,9 @@ create unique index if not exists uk_sys_user_org_rel_primary_org
 create table if not exists sys_role_menu_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -253,9 +253,9 @@ comment on column sys_role_menu_rel.access_level is '角色菜单访问级别：
 create table if not exists sys_role_org_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -286,9 +286,9 @@ create index if not exists idx_sys_role_org_rel_tenant_role
 create table if not exists sys_tenant_menu_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -321,9 +321,9 @@ create unique index if not exists uk_sys_tenant_menu_rel_tenant_menu
 create table if not exists sys_api
 (
     id             bigint not null,
-    create_time    timestamp(6),
+    create_time    timestamp(6) with time zone,
     create_by      bigint,
-    update_time    timestamp(6),
+    update_time    timestamp(6) with time zone,
     update_by      bigint,
     data_status    int,
     del_flag       smallint not null default 0,
@@ -358,9 +358,9 @@ create index if not exists idx_sys_api_request
 create table if not exists sys_menu_api_rel
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -393,9 +393,9 @@ create table if not exists sys_menus
 (
     id          bigint not null,
     parent_id   bigint,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -430,9 +430,9 @@ comment on column sys_menus.sort is '排序';
 create table if not exists sys_dict_type
 (
     id          bigint not null,
-    create_time timestamp(6),
+    create_time timestamp(6) with time zone,
     create_by   bigint,
-    update_time timestamp(6),
+    update_time timestamp(6) with time zone,
     update_by   bigint,
     data_status int,
     del_flag    smallint not null default 0,
@@ -467,9 +467,9 @@ create unique index if not exists uk_sys_dict_type_code
 create table if not exists sys_dict_data
 (
     id           bigint not null,
-    create_time  timestamp(6),
+    create_time  timestamp(6) with time zone,
     create_by    bigint,
-    update_time  timestamp(6),
+    update_time  timestamp(6) with time zone,
     update_by    bigint,
     data_status  int,
     del_flag     smallint not null default 0,
@@ -516,9 +516,9 @@ create index if not exists idx_sys_dict_data_type_enabled_sort
 create table if not exists sys_organization
 (
     id             bigint not null,
-    create_time    timestamp(6),
+    create_time    timestamp(6) with time zone,
     create_by      bigint,
-    update_time    timestamp(6),
+    update_time    timestamp(6) with time zone,
     update_by      bigint,
     data_status    int,
     del_flag       smallint not null default 0,
@@ -565,9 +565,9 @@ create unique index if not exists uk_sys_organization_tenant_code
 create table if not exists sys_config
 (
     id              bigint not null,
-    create_time     timestamp(6),
+    create_time     timestamp(6) with time zone,
     create_by       bigint,
-    update_time     timestamp(6),
+    update_time     timestamp(6) with time zone,
     update_by       bigint,
     data_status     int,
     del_flag        smallint not null default 0,

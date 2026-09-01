@@ -7,6 +7,8 @@ logging:
   level:
     root: DEBUG
 spring:
+  jackson:
+    time-zone: Asia/Shanghai
   profiles:
     active: local
   application:

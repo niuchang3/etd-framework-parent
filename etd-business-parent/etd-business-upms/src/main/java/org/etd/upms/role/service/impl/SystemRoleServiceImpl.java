@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -63,6 +64,23 @@ public class SystemRoleServiceImpl implements SystemRoleService {
                 .eq(SystemRoleEntity::getDataStatus, BasicConstant.DataStatus.ENABLED.getCode());
         if (roleMapper.selectCount(wrapper) != ids.size()) {
             throw new ApiRuntimeException("只能为用户分配当前租户下已启用的角色。");
+        }
+    }
+
+    @Override
+    public void requireAssignable(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemRoleEntity::getId, ids)
+                .eq(SystemRoleEntity::getDataStatus, BasicConstant.DataStatus.ENABLED.getCode());
+        List<SystemRoleEntity> roles = roleMapper.selectList(wrapper);
+        if (roles.size() != ids.size()) {
+            throw new ApiRuntimeException("只能为用户分配当前租户下已启用的角色。");
+        }
+        if (roles.stream().anyMatch(this::isProtectedAdminRole)) {
+            throw new ApiRuntimeException("禁止手工分配平台管理员或租户管理员角色。");
         }
     }
 
@@ -143,6 +161,12 @@ public class SystemRoleServiceImpl implements SystemRoleService {
             throw new ApiRuntimeException("角色不存在。");
         }
         return entity;
+    }
+
+    private boolean isProtectedAdminRole(SystemRoleEntity role) {
+        String roleCode = role.getRoleCode();
+        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equalsIgnoreCase(roleCode)
+                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equalsIgnoreCase(roleCode);
     }
 
     private SystemRoleEntity toEntity(SystemRoleSaveDTO dto) {

@@ -5,7 +5,7 @@ create table drools_rule
    KIE_PACKAGE_NAME     varchar(200) comment 'KIE_PACKAGE_NAME',
    RULE_CONTENT         text comment 'RULE_CONTENT',
    DESCRIPTION          varchar(500) comment 'DESCRIPTION',
-   CREATED_TIME         datetime comment 'CREATED_TIME',
+   CREATED_TIME         timestamp(6) comment 'CREATED_TIME',
    primary key (ID)
 );
 

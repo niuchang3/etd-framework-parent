@@ -2,14 +2,14 @@ package org.etd.upms.dict.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Data
 public class SystemDictDataVO {
 
     private Long id;
-    private Date createTime;
-    private Date updateTime;
+    private Instant createTime;
+    private Instant updateTime;
     private Long dictTypeId;
     private String dictCode;
     private String dictLabel;

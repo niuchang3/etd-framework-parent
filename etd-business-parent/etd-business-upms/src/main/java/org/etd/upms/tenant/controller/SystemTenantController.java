@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.Instant;
 
 @RestController
 @Validated
@@ -33,7 +34,7 @@ public class SystemTenantController {
     @GetMapping
     public ResultModel page(@RequestParam("current") Long current,
                             @RequestParam("size") Long size,
-                            @RequestParam(name = "times", required = false) List<String> times,
+                            @RequestParam(name = "times", required = false) List<Instant> times,
                             @RequestParam(name = "keyword", required = false) String keyword){
         IPage<SystemTenantVO> page = tenantBizService.page(new Page<>(current, size), times, keyword);
         return ResultModel.success(page);

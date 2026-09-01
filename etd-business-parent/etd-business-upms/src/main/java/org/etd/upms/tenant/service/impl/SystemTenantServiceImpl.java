@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 
@@ -52,7 +53,7 @@ public class SystemTenantServiceImpl implements SystemTenantService {
 
 
     @Override
-    public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<String> times, String keyword) {
+    public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword) {
         UserDetails user = RequestContext.getUser();
         EtdLambdaQueryWrapper<SystemTenantEntity> wrapper = new EtdLambdaQueryWrapper<>();
         if (!user.isPlatformAdmin()) {

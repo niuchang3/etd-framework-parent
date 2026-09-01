@@ -2,14 +2,14 @@ package org.etd.upms.role.controller.vo;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.Instant;
 
 @Data
 public class SystemRoleVO {
 
     private Long id;
-    private Date createTime;
-    private Date updateTime;
+    private Instant createTime;
+    private Instant updateTime;
     private Integer dataStatus;
     private Boolean builtIn;
     private String roleName;

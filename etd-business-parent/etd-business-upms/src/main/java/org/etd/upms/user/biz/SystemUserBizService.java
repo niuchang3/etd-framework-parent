@@ -150,7 +150,7 @@ public class SystemUserBizService {
     public boolean replaceRoles(Long userId, SystemUserRoleAssignDTO dto) {
         requireNotProtectedUser(userId, "当前用户或租户管理员的角色不允许修改。");
         Set<Long> roleIds = normalizedIds(dto.getRoleIds());
-        roleService.requireEnabled(roleIds);
+        roleService.requireAssignable(roleIds);
         userRoleRelService.replace(userId, roleIds);
         revokeUserTokens(userId);
         return true;
@@ -163,6 +163,7 @@ public class SystemUserBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceOrganizations(Long userId, SystemUserOrganizationAssignDTO dto) {
+        requireNotProtectedUser(userId, "当前用户或租户管理员的角色不允许修改。");
         userService.requireExists(userId);
         Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
         validateOrganizations(organizationIds, dto.getPrimaryOrganizationId());
@@ -201,7 +202,7 @@ public class SystemUserBizService {
     }
 
     private void validateAssignments(Set<Long> roleIds, Set<Long> organizationIds, Long primaryOrganizationId) {
-        roleService.requireEnabled(roleIds);
+        roleService.requireAssignable(roleIds);
         validateOrganizations(organizationIds, primaryOrganizationId);
     }
 
@@ -298,7 +299,8 @@ public class SystemUserBizService {
         return entity;
     }
 
-    private void copyProfile(String account, String userName, String mobile, java.util.Date birthday, Integer gender,
+    private void copyProfile(String account, String userName, String mobile, java.time.LocalDate birthday,
+                             Integer gender,
                              String avatar, String nickName, SystemUserEntity entity) {
         entity.setAccount(account);
         entity.setUserName(userName);
