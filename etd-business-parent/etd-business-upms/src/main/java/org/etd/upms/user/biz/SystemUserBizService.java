@@ -2,13 +2,12 @@ package org.etd.upms.user.biz;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
+import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.upms.organization.service.SystemOrganizationService;
 import org.etd.upms.role.service.SystemRoleService;
-import org.etd.upms.tenant.controller.vo.SystemTenantVO;
-import org.etd.upms.tenant.service.SystemTenantService;
 import org.etd.upms.user.controller.dto.SystemUserCreateDTO;
 import org.etd.upms.user.controller.dto.SystemUserOrganizationAssignDTO;
 import org.etd.upms.user.controller.dto.SystemUserRoleAssignDTO;
@@ -68,9 +67,6 @@ public class SystemUserBizService {
     private SystemRoleMenuService roleMenuService;
 
     @Autowired
-    private SystemTenantService tenantService;
-
-    @Autowired
     private UserLoginTokenStorage userLoginTokenStorage;
 
     public IPage<SystemUserVO> page(long current, long size, String keyword, Long organizationId,
@@ -107,7 +103,7 @@ public class SystemUserBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
-        requireNotProtectedUser(id, "当前用户或租户管理员不允许删除。");
+        requireOrdinaryUser(id, "平台管理员或租户管理员不允许删除。");
         userRoleRelService.removeByUserId(id);
         userOrganizationService.removeByUserId(id);
         boolean deleted = userService.delete(id);
@@ -120,7 +116,7 @@ public class SystemUserBizService {
     @Transactional(rollbackFor = Exception.class)
     public boolean switchEnabled(Long id, Boolean enabled) {
         if (!enabled) {
-            requireNotProtectedUser(id, "当前用户或租户管理员不允许停用。");
+            requireOrdinaryUser(id, "平台管理员或租户管理员不允许停用。");
         }
         boolean updated = userService.switchEnabled(id, enabled);
         if (updated && !enabled) {
@@ -132,7 +128,7 @@ public class SystemUserBizService {
     @Transactional(rollbackFor = Exception.class)
     public boolean switchLocked(Long id, Boolean locked) {
         if (locked) {
-            requireNotProtectedUser(id, "当前用户或租户管理员不允许锁定。");
+            requireOrdinaryUser(id, "平台管理员或租户管理员不允许锁定。");
         }
         boolean updated = userService.switchLocked(id, locked);
         if (updated && locked) {
@@ -148,7 +144,7 @@ public class SystemUserBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceRoles(Long userId, SystemUserRoleAssignDTO dto) {
-        requireNotProtectedUser(userId, "当前用户或租户管理员的角色不允许修改。");
+        requireOrdinaryUser(userId, "平台管理员或租户管理员的角色不允许修改。");
         Set<Long> roleIds = normalizedIds(dto.getRoleIds());
         roleService.requireAssignable(roleIds);
         userRoleRelService.replace(userId, roleIds);
@@ -163,8 +159,7 @@ public class SystemUserBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceOrganizations(Long userId, SystemUserOrganizationAssignDTO dto) {
-        requireNotProtectedUser(userId, "当前用户或租户管理员的角色不允许修改。");
-        userService.requireExists(userId);
+        requireOrdinaryUser(userId, "平台管理员或租户管理员的组织不允许修改。");
         Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
         validateOrganizations(organizationIds, dto.getPrimaryOrganizationId());
         userOrganizationService.replace(userId, organizationIds, dto.getPrimaryOrganizationId());
@@ -247,20 +242,19 @@ public class SystemUserBizService {
         return joined.isEmpty() ? UNASSIGNED_DISPLAY : joined;
     }
 
-    private void requireNotProtectedUser(Long userId, String message) {
+    private void requireOrdinaryUser(Long userId, String message) {
         userService.requireExists(userId);
-        UserDetails currentUser = RequestContext.getUser();
-        if (currentUser != null && Objects.equals(currentUser.getId(), userId)) {
+        boolean administrator = userRoleRelService.selectByUser(userId).stream()
+                .map(SystemUserRoleVO::getRoleCode)
+                .anyMatch(this::isAdministratorRole);
+        if (administrator) {
             throw new ApiRuntimeException(message);
         }
-        requireNotTenantAdmin(userId, message);
     }
 
-    private void requireNotTenantAdmin(Long userId, String message) {
-        SystemTenantVO tenant = tenantService.selectCurrentTenant();
-        if (tenant != null && Objects.equals(tenant.getTenantAdminUser(), userId)) {
-            throw new ApiRuntimeException(message);
-        }
+    private boolean isAdministratorRole(String roleCode) {
+        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equalsIgnoreCase(roleCode)
+                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equalsIgnoreCase(roleCode);
     }
 
     private void revokeUserTokens(Long userId) {
