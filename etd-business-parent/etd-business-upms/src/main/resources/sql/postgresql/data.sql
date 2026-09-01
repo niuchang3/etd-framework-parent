@@ -2,9 +2,9 @@
 /* sys_tenant: 系统租户表初始化                                  */
 /*==============================================================*/
 insert into sys_tenant (id, create_time, create_by, update_time, update_by, data_status, logo, tenant_name,
-                        description, credit_code, tenant_type, tenant_admin_user, locked, enabled)
+                        description, credit_code, tenant_type, tenant_admin_user, locked)
 values (1, '2024-04-11 16:38:46.000000', 1, '2024-04-11 16:38:46.000000', 1, 1, null,
-        'ETD Console', 'easy to develop framework functional demo', '1', 'system', 1, false, true)
+        'ETD Console', 'easy to develop framework functional demo', '1', 'system', 1, false)
 on conflict (id) do nothing;
 
 /*==============================================================*/

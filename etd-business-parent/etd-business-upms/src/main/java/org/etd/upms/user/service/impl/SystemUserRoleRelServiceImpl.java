@@ -3,6 +3,7 @@ package org.etd.upms.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import org.etd.upms.user.mapper.SystemUserRoleRelMapper;
@@ -34,6 +35,18 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SystemUserRoleRelEntity::getRoleId, roleId);
         return userRoleRelMapper.selectCount(wrapper) > 0;
+    }
+
+    @IgnoreTenant
+    @Override
+    public void assignRole(Long tenantId, Long userId, Long roleId) {
+        SystemUserRoleRelEntity relation = new SystemUserRoleRelEntity();
+        relation.setTenantId(tenantId);
+        relation.setUserId(userId);
+        relation.setRoleId(roleId);
+        if (userRoleRelMapper.insert(relation) <= 0) {
+            throw new ApiRuntimeException("租户管理员角色绑定失败。");
+        }
     }
 
     /**

@@ -49,6 +49,4 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
      */
     @TableField("locked")
     private Boolean locked;
-
-
 }

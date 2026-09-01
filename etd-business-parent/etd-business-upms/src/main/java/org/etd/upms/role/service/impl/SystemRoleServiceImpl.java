@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.role.controller.dto.SystemRoleSaveDTO;
 import org.etd.upms.role.controller.vo.SystemRoleVO;
 import org.etd.upms.role.entity.SystemRoleEntity;
@@ -60,6 +61,25 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         return entity.getId();
     }
 
+    @IgnoreTenant
+    @Override
+    public Long createTenantAdminRole(Long tenantId, String tenantName) {
+        String roleCode = BasicConstant.SystemRole.TENANT_ADMIN.getCode();
+        ensureTenantRoleCodeAvailable(tenantId, roleCode);
+        SystemRoleEntity entity = new SystemRoleEntity();
+        entity.setTenantId(tenantId);
+        entity.setBuiltIn(true);
+        entity.setRoleName(tenantName + "管理员");
+        entity.setRoleCode(roleCode);
+        entity.setRoleDesc(tenantName + "租户管理员，拥有租户内全部数据权限");
+        entity.setPermissionType(BasicConstant.PermissionType.ALL.getCode());
+        entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
+        if (roleMapper.insert(entity) <= 0) {
+            throw new ApiRuntimeException("租户管理员角色创建失败。");
+        }
+        return entity.getId();
+    }
+
     @Override
     public boolean update(Long id, SystemRoleSaveDTO dto) {
         requireWritable(id, "内置角色不允许修改");
@@ -88,6 +108,15 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SystemRoleEntity::getRoleCode, roleCode)
                 .ne(excludedId != null, SystemRoleEntity::getId, excludedId);
+        if (roleMapper.selectCount(wrapper) > 0) {
+            throw new ApiRuntimeException("当前租户下角色编码已存在。");
+        }
+    }
+
+    private void ensureTenantRoleCodeAvailable(Long tenantId, String roleCode) {
+        LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SystemRoleEntity::getTenantId, tenantId)
+                .eq(SystemRoleEntity::getRoleCode, roleCode);
         if (roleMapper.selectCount(wrapper) > 0) {
             throw new ApiRuntimeException("当前租户下角色编码已存在。");
         }

@@ -16,5 +16,6 @@ public interface SystemUserRoleRelService extends PermissionsService {
 
     boolean existsByRoleId(Long roleId);
 
+    void assignRole(Long tenantId, Long userId, Long roleId);
 
 }

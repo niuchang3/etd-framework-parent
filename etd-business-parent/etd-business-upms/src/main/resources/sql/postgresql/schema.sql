@@ -17,7 +17,6 @@ create table if not exists sys_tenant
     tenant_type       varchar(100),
     tenant_admin_user bigint,
     locked            boolean,
-    enabled           boolean,
     primary key (id)
 );
 
@@ -36,7 +35,14 @@ comment on column sys_tenant.credit_code is '信用代码';
 comment on column sys_tenant.tenant_type is '企业类型';
 comment on column sys_tenant.tenant_admin_user is '租户管理员';
 comment on column sys_tenant.locked is '租户是否锁定';
-comment on column sys_tenant.enabled is '租户启用';
+
+create unique index if not exists uk_sys_tenant_name
+    on sys_tenant (tenant_name)
+    where del_flag = 0;
+
+create unique index if not exists uk_sys_tenant_credit_code
+    on sys_tenant (credit_code)
+    where del_flag = 0 and credit_code is not null and credit_code <> '';
 
 /*==============================================================*/
 /* table: sys_user                                              */
@@ -84,6 +90,10 @@ comment on column sys_user.nick_name is '用户昵称';
 comment on column sys_user.locked is '账号锁定';
 comment on column sys_user.enabled is '账号启用';
 
+create unique index if not exists uk_sys_user_account
+    on sys_user (account)
+    where del_flag = 0;
+
 /*==============================================================*/
 /* table: sys_role                                              */
 /*==============================================================*/
@@ -98,7 +108,7 @@ create table if not exists sys_role
     del_flag        smallint not null default 0,
     tenant_id       bigint not null,
     built_in        boolean,
-    role_name       varchar(20),
+    role_name       varchar(120),
     role_code       varchar(50),
     role_desc       varchar(200),
     permission_type varchar(30),
@@ -119,6 +129,10 @@ comment on column sys_role.role_name is '角色名称';
 comment on column sys_role.role_code is '角色code';
 comment on column sys_role.role_desc is '角色描述';
 comment on column sys_role.permission_type is '数据权限范围类型：1不限制，2仅本人，3仅组织，4组织及下级组织，5自定义跨组织';
+
+create unique index if not exists uk_sys_role_tenant_code
+    on sys_role (tenant_id, role_code)
+    where del_flag = 0;
 
 /*==============================================================*/
 /* table: sys_user_role_rel                                     */
@@ -149,6 +163,10 @@ comment on column sys_user_role_rel.del_flag is '逻辑删除标识：0未删除
 comment on column sys_user_role_rel.tenant_id is '租户id';
 comment on column sys_user_role_rel.user_id is '用户id';
 comment on column sys_user_role_rel.role_id is '角色id';
+
+create unique index if not exists uk_sys_user_role_rel_tenant_user_role
+    on sys_user_role_rel (tenant_id, user_id, role_id)
+    where del_flag = 0;
 
 /*==============================================================*/
 /* table: sys_user_org_rel                                      */

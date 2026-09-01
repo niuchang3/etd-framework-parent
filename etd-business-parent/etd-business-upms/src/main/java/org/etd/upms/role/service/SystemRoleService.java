@@ -16,6 +16,8 @@ public interface SystemRoleService {
 
     Long insert(SystemRoleSaveDTO dto);
 
+    Long createTenantAdminRole(Long tenantId, String tenantName);
+
     boolean update(Long id, SystemRoleSaveDTO dto);
 
     boolean delete(Long id);

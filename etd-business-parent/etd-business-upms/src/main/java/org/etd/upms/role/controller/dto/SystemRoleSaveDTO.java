@@ -12,7 +12,7 @@ import java.util.Arrays;
 public class SystemRoleSaveDTO {
 
     @NotBlank(message = "角色名称不能为空")
-    @Size(max = 20, message = "角色名称不能超过20个字符")
+    @Size(max = 120, message = "角色名称不能超过120个字符")
     private String roleName;
 
     @NotBlank(message = "角色编码不能为空")

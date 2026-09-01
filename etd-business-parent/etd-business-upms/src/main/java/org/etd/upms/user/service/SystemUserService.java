@@ -26,6 +26,8 @@ public interface SystemUserService extends IUserService {
      */
     List<SystemUserEntity> selectByUserById(Set<Long> ids);
 
+    Set<Long> selectUserIdsByTenantId(Long tenantId);
+
     /**
      * 根据账号查询用户信息
      *
@@ -33,4 +35,6 @@ public interface SystemUserService extends IUserService {
      * @return
      */
     SystemUserEntity selectByAccount(String account);
+
+    Long createTenantAdmin(Long tenantId, String account, String password, String userName, String mobile);
 }
