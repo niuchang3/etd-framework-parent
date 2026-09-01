@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 public class SystemUserUpdateDTO {
@@ -29,4 +30,10 @@ public class SystemUserUpdateDTO {
 
     @Size(max = 100, message = "昵称长度不能超过100个字符")
     private String nickName;
+
+    private Set<Long> roleIds;
+
+    private Set<Long> organizationIds;
+
+    private Long primaryOrganizationId;
 }

@@ -98,6 +98,19 @@ public class SystemUserBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean update(Long id, SystemUserUpdateDTO dto) {
+        userService.requireExists(id);
+        if (dto.getRoleIds() != null) {
+            requireOrdinaryUser(id, "平台管理员或租户管理员的角色不允许修改。");
+            Set<Long> roleIds = normalizedIds(dto.getRoleIds());
+            roleService.requireAssignable(roleIds);
+            userRoleRelService.replace(id, roleIds);
+            revokeUserTokens(id);
+        }
+        if (dto.getOrganizationIds() != null) {
+            Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
+            validateOrganizations(organizationIds, dto.getPrimaryOrganizationId());
+            userOrganizationService.replace(id, organizationIds, dto.getPrimaryOrganizationId());
+        }
         return userService.update(id, toEntity(dto));
     }
 

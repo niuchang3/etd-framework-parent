@@ -26,12 +26,21 @@ public class SystemRoleServiceImpl implements SystemRoleService {
 
     @Override
     public IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus) {
+        return page(current, size, keyword, dataStatus, false);
+    }
+
+    @Override
+    public IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus, Boolean assignableOnly) {
         LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dataStatus != null, SystemRoleEntity::getDataStatus, dataStatus)
                 .and(StringUtils.hasText(keyword), query -> query
                         .like(SystemRoleEntity::getRoleName, keyword)
-                        .or().like(SystemRoleEntity::getRoleCode, keyword))
-                .orderByDesc(SystemRoleEntity::getBuiltIn)
+                        .or().like(SystemRoleEntity::getRoleCode, keyword));
+        if (Boolean.TRUE.equals(assignableOnly)) {
+            wrapper.ne(SystemRoleEntity::getRoleCode, BasicConstant.SystemRole.PLATFORM_ADMIN.getCode())
+                    .ne(SystemRoleEntity::getRoleCode, BasicConstant.SystemRole.TENANT_ADMIN.getCode());
+        }
+        wrapper.orderByDesc(SystemRoleEntity::getBuiltIn)
                 .orderByAsc(SystemRoleEntity::getRoleName);
         return roleMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVO);
     }

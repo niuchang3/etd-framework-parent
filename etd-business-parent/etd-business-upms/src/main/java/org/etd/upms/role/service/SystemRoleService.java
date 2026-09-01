@@ -4,11 +4,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.role.controller.dto.SystemRoleSaveDTO;
 import org.etd.upms.role.controller.vo.SystemRoleVO;
 
+import java.util.List;
 import java.util.Set;
 
 public interface SystemRoleService {
 
     IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus);
+
+    IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus, Boolean assignableOnly);
 
     SystemRoleVO selectById(Long id);
 

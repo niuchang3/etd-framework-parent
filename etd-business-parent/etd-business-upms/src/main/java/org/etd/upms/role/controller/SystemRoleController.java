@@ -49,8 +49,9 @@ public class SystemRoleController {
             @Max(value = 200, message = "每页条数不能超过200") long size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @Min(value = BasicConstant.DataStatus.DISABLED_CODE)
-            @Max(value = BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus) {
-        return ResultModel.success(roleService.page(current, size, keyword, dataStatus));
+            @Max(value = BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus,
+            @RequestParam(required = false) Boolean assignableOnly) {
+        return ResultModel.success(roleService.page(current, size, keyword, dataStatus, assignableOnly));
     }
 
     @GetMapping("/{id}")
