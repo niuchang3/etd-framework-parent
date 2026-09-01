@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.upms.tenant.biz.SystemTenantBizService;
 import org.etd.upms.tenant.controller.dto.SystemTenantCreateDTO;
+import org.etd.upms.tenant.controller.dto.SystemTenantMenuAssignDTO;
 import org.etd.upms.tenant.controller.dto.SystemTenantUpdateDTO;
+import org.etd.upms.tenant.controller.vo.SystemTenantMenuSettingsVO;
 import org.etd.upms.tenant.controller.vo.SystemTenantVO;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,17 @@ public class SystemTenantController {
     public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemTenantUpdateDTO dto) {
         return ResultModel.success(tenantBizService.update(id, dto));
+    }
+
+    @GetMapping("/{id}/menus")
+    public ResultModel<SystemTenantMenuSettingsVO> menus(@PathVariable("id") Long id) {
+        return ResultModel.success(tenantBizService.selectMenuSettings(id));
+    }
+
+    @PutMapping("/{id}/menus")
+    public ResultModel<Boolean> replaceMenus(@PathVariable("id") Long id,
+                                             @Valid @RequestBody SystemTenantMenuAssignDTO dto) {
+        return ResultModel.success(tenantBizService.replaceMenus(id, dto.getMenuIds()));
     }
 
     @PatchMapping("/{id}/status/{status}")

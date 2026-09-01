@@ -25,6 +25,8 @@ public interface SystemMenusConverter {
 
     SystemMenuVO toMenuVO(SystemMenusEntity entity);
 
+    List<SystemMenuVO> toMenuVO(List<SystemMenusEntity> entities);
+
     @Mapping(target = "tenantId", ignore = true)
     @Mapping(target = "accessLevel", ignore = true)
     SystemUserMenusVO toUserMenu(SystemMenusEntity entity);

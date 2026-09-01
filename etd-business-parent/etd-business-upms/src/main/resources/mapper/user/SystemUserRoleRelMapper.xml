@@ -35,4 +35,27 @@
           and t2.data_status = 1
     </select>
 
+    <select id="selectAssignmentsByUserIds" resultMap="systemUserRoleVo">
+        select
+            t1.id,
+            t1.tenant_id,
+            t1.user_id,
+            t1.role_id,
+            t2.role_code,
+            t2.role_name,
+            t2.permission_type
+        from sys_user_role_rel as t1
+        inner join sys_role as t2
+            on t1.role_id = t2.id
+            and t1.tenant_id = t2.tenant_id
+            and t2.del_flag = 0
+        where t1.user_id in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+          and t1.del_flag = 0
+          and t1.data_status = 1
+        order by t1.user_id, t2.role_name, t2.id
+    </select>
+
 </mapper>

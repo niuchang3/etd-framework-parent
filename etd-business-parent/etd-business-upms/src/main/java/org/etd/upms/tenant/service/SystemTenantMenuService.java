@@ -8,5 +8,7 @@ public interface SystemTenantMenuService {
 
     boolean appendMenu(Long tenantId, Long menuId);
 
+    boolean replace(Long tenantId, Set<Long> menuIds);
+
     void removeByMenuIds(Set<Long> menuIds);
 }

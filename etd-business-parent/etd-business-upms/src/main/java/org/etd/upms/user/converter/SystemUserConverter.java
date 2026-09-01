@@ -25,5 +25,12 @@ public interface SystemUserConverter {
      * @param userDetails
      * @return
      */
+    @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "dataStatus", ignore = true)
+    @Mapping(target = "roleNames", ignore = true)
+    @Mapping(target = "organizationNames", ignore = true)
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "organizations", ignore = true)
     SystemUserVO toUserVO(UserDetails userDetails);
 }

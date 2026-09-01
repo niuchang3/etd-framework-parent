@@ -14,6 +14,8 @@ public interface SystemOrganizationService {
 
     SystemOrganizationVO requireExists(Long id);
 
+    void requireAllExist(Set<Long> ids);
+
     Long insert(SystemOrganizationSaveDTO dto, String parentIdPath);
 
     boolean update(Long id, SystemOrganizationSaveDTO dto, String parentIdPath);

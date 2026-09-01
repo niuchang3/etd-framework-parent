@@ -20,6 +20,4 @@ public class SystemTenantUpdateDTO {
     @Size(max = 100, message = "统一社会信用代码不能超过100个字符")
     private String creditCode;
 
-    @Size(max = 100, message = "租户类型不能超过100个字符")
-    private String tenantType;
 }

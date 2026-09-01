@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.upms.user.mapper.SystemUserOrganizationRelMapper">
+
+    <resultMap id="systemUserOrganizationVo" type="org.etd.upms.user.controller.vo.SystemUserOrganizationVO">
+        <id property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="organizationId" column="org_id"/>
+        <result property="organizationName" column="org_name"/>
+        <result property="primaryOrganization" column="primary_org"/>
+    </resultMap>
+
+    <select id="selectByUserIds" resultMap="systemUserOrganizationVo">
+        select
+            t1.id,
+            t1.tenant_id,
+            t1.user_id,
+            t1.org_id,
+            t1.primary_org,
+            t2.org_name
+        from sys_user_org_rel as t1
+        inner join sys_organization as t2
+            on t1.org_id = t2.id
+            and t1.tenant_id = t2.tenant_id
+            and t2.del_flag = 0
+        where t1.user_id in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+          and t1.del_flag = 0
+          and t1.data_status = 1
+        order by t1.user_id, t1.primary_org desc, t2.org_name, t2.id
+    </select>
+
+</mapper>

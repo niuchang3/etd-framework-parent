@@ -82,4 +82,16 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         wrapper.in(SystemRoleMenuRelEntity::getMenuId, menuIds);
         roleMenuRelMapper.delete(wrapper);
     }
+
+    @IgnoreTenant
+    @Override
+    public void removeByTenantAndMenuIds(Long tenantId, Set<Long> menuIds) {
+        if (menuIds.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<SystemRoleMenuRelEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SystemRoleMenuRelEntity::getTenantId, tenantId)
+                .in(SystemRoleMenuRelEntity::getMenuId, menuIds);
+        roleMenuRelMapper.delete(wrapper);
+    }
 }

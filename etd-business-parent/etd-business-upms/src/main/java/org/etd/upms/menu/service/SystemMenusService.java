@@ -21,6 +21,8 @@ public interface SystemMenusService {
 
     boolean switchStatus(Long id, Integer status);
 
+    List<SystemMenuVO> selectAllEnabled();
+
     List<SystemUserMenusVO> selectEnabledByIds(Set<Long> menuIds, Long tenantId);
 
 }

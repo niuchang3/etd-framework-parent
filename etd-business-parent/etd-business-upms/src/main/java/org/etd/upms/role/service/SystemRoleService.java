@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.role.controller.dto.SystemRoleSaveDTO;
 import org.etd.upms.role.controller.vo.SystemRoleVO;
 
+import java.util.Set;
+
 public interface SystemRoleService {
 
     IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus);
@@ -13,6 +15,8 @@ public interface SystemRoleService {
     void requireExists(Long id);
 
     void requireWritable(Long id, String message);
+
+    void requireEnabled(Set<Long> ids);
 
     Long insert(SystemRoleSaveDTO dto);
 

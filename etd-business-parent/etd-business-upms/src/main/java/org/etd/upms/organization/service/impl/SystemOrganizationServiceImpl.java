@@ -44,6 +44,18 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
     }
 
     @Override
+    public void requireAllExist(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<SystemOrganizationEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemOrganizationEntity::getId, ids);
+        if (organizationMapper.selectCount(wrapper) != ids.size()) {
+            throw new ApiRuntimeException("只能为用户分配当前租户下存在的组织机构。");
+        }
+    }
+
+    @Override
     public Long insert(SystemOrganizationSaveDTO dto, String parentIdPath) {
         ensureCodeAvailable(dto.getOrgCode(), null);
         SystemOrganizationEntity entity = toEntity(dto, parentIdPath);

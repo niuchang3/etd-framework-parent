@@ -2,6 +2,7 @@ package org.etd.upms.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.etd.framework.common.core.user.UserPermissions;
+import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
@@ -31,6 +32,14 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
     }
 
     @Override
+    public List<SystemUserRoleVO> selectAssignmentsByUserIds(Set<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+        return userRoleRelMapper.selectAssignmentsByUserIds(userIds);
+    }
+
+    @Override
     public boolean existsByRoleId(Long roleId) {
         LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SystemUserRoleRelEntity::getRoleId, roleId);
@@ -47,6 +56,20 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         if (userRoleRelMapper.insert(relation) <= 0) {
             throw new ApiRuntimeException("租户管理员角色绑定失败。");
         }
+    }
+
+    @Override
+    public void replace(Long userId, Set<Long> roleIds) {
+        removeByUserId(userId);
+        Long tenantId = requireTenantId();
+        roleIds.forEach(roleId -> insertRelation(tenantId, userId, roleId));
+    }
+
+    @Override
+    public void removeByUserId(Long userId) {
+        LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SystemUserRoleRelEntity::getUserId, userId);
+        userRoleRelMapper.delete(wrapper);
     }
 
     /**
@@ -84,5 +107,23 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
 
     private boolean containsRole(Set<String> roleCodes, BasicConstant.SystemRole expectedRole) {
         return roleCodes.stream().anyMatch(roleCode -> expectedRole.getCode().equalsIgnoreCase(roleCode));
+    }
+
+    private void insertRelation(Long tenantId, Long userId, Long roleId) {
+        SystemUserRoleRelEntity relation = new SystemUserRoleRelEntity();
+        relation.setTenantId(tenantId);
+        relation.setUserId(userId);
+        relation.setRoleId(roleId);
+        if (userRoleRelMapper.insert(relation) <= 0) {
+            throw new ApiRuntimeException("用户角色绑定失败。");
+        }
+    }
+
+    private Long requireTenantId() {
+        Long tenantId = RequestContext.getTenantCode();
+        if (tenantId == null) {
+            throw new ApiRuntimeException("用户角色维护时必须指定租户。");
+        }
+        return tenantId;
     }
 }

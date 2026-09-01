@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Set;
+
 @Service
 public class SystemRoleServiceImpl implements SystemRoleService {
 
@@ -48,6 +50,19 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         SystemRoleEntity role = requireRole(id);
         if (Boolean.TRUE.equals(role.getBuiltIn())) {
             throw new ApiRuntimeException(message);
+        }
+    }
+
+    @Override
+    public void requireEnabled(Set<Long> ids) {
+        if (ids.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(SystemRoleEntity::getId, ids)
+                .eq(SystemRoleEntity::getDataStatus, BasicConstant.DataStatus.ENABLED.getCode());
+        if (roleMapper.selectCount(wrapper) != ids.size()) {
+            throw new ApiRuntimeException("只能为用户分配当前租户下已启用的角色。");
         }
     }
 

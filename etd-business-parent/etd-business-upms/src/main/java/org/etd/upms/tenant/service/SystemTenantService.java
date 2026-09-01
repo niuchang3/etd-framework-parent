@@ -44,4 +44,6 @@ public interface SystemTenantService {
     boolean delete(Long tenantId);
 
     boolean isLoginEnabled(Long tenantId);
+
+    void requireOrdinary(Long tenantId);
 }

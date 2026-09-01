@@ -7,10 +7,13 @@ import org.etd.upms.user.entity.SystemUserRoleRelEntity;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 
 import java.util.List;
+import java.util.Set;
 
 @Mapper
 public interface SystemUserRoleRelMapper extends BaseMapper<SystemUserRoleRelEntity> {
 
 
     List<SystemUserRoleVO> selectByUserId(@Param("userId") Long userId);
+
+    List<SystemUserRoleVO> selectAssignmentsByUserIds(@Param("userIds") Set<Long> userIds);
 }

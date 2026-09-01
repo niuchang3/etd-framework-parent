@@ -22,9 +22,6 @@ public class SystemTenantCreateDTO {
     @Size(max = 100, message = "统一社会信用代码不能超过100个字符")
     private String creditCode;
 
-    @Size(max = 100, message = "租户类型不能超过100个字符")
-    private String tenantType;
-
     @Valid
     @NotNull(message = "租户管理员信息不能为空")
     private SystemTenantAdminCreateDTO administrator;

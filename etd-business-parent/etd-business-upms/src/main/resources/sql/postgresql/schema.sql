@@ -94,6 +94,10 @@ create unique index if not exists uk_sys_user_account
     on sys_user (account)
     where del_flag = 0;
 
+create unique index if not exists uk_sys_user_mobile
+    on sys_user (mobile)
+    where del_flag = 0 and mobile is not null and mobile <> '';
+
 /*==============================================================*/
 /* table: sys_role                                              */
 /*==============================================================*/
@@ -203,6 +207,14 @@ comment on column sys_user_org_rel.primary_org is '是否主组织';
 create index if not exists idx_sys_user_org_rel_tenant_user
     on sys_user_org_rel (tenant_id, user_id);
 
+create unique index if not exists uk_sys_user_org_rel_tenant_user_org
+    on sys_user_org_rel (tenant_id, user_id, org_id)
+    where del_flag = 0;
+
+create unique index if not exists uk_sys_user_org_rel_primary_org
+    on sys_user_org_rel (tenant_id, user_id)
+    where del_flag = 0 and primary_org = true;
+
 /*==============================================================*/
 /* table: sys_role_menu_rel                                     */
 /*==============================================================*/
@@ -298,6 +310,10 @@ comment on column sys_tenant_menu_rel.menu_id is '菜单id';
 
 create index if not exists idx_sys_tenant_menu_rel_tenant_menu
     on sys_tenant_menu_rel (tenant_id, menu_id);
+
+create unique index if not exists uk_sys_tenant_menu_rel_tenant_menu
+    on sys_tenant_menu_rel (tenant_id, menu_id)
+    where del_flag = 0;
 
 /*==============================================================*/
 /* table: sys_api                                               */

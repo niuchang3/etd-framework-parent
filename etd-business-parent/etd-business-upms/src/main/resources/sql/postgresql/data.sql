@@ -44,7 +44,7 @@ values (1000001, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475
        (1000002, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '租户管理', '/system/tenants', '@/views/tenant/index.vue', 'TeamOutlined', 'MENU', 20),
        (1000003, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
-        '用户中心', '/users', '@/views/404.vue', 'UserOutlined', 'MENU', 30),
+        '用户中心', '/system/users', '@/views/system/users/index.vue', 'UserOutlined', 'MENU', 30),
        (1000004, null, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
         '系统管理', '/system', null, 'SettingOutlined', 'DIRECTORY', 40),
        (1000005, 1000004, '2026-08-30 04:57:41.475264', 1, '2026-08-30 04:57:41.475264', 1, 1,
@@ -93,7 +93,9 @@ values (2200001, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2200006, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'system_menu_type', '菜单类型', true, true, '系统菜单类型'),
        (2200007, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'system_org_type', '组织类型', true, true, '系统组织机构类型')
+        'system_org_type', '组织类型', true, true, '系统组织机构类型'),
+       (2200008, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'system_tenant_type', '租户类型', true, true, '系统租户类型')
 on conflict (id) do nothing;
 
 /*==============================================================*/
@@ -138,7 +140,11 @@ values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300018, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200007, 'COMPANY', '公司', 'COMPANY', 10, true, true, null),
        (2300019, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, true, null)
+        2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, true, null),
+       (2300020, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200008, 'SYSTEM', '系统租户', 'system', 10, true, true, null),
+       (2300021, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200008, 'ORDINARY', '普通租户', 'ordinary', 20, true, true, null)
 on conflict (id) do nothing;
 
 

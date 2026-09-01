@@ -100,6 +100,14 @@ public class SystemMenusServiceImpl implements SystemMenusService {
     }
 
     @Override
+    public List<SystemMenuVO> selectAllEnabled() {
+        LambdaQueryWrapper<SystemMenusEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SystemMenusEntity::getDataStatus, BasicConstant.DataStatus.ENABLED.getCode())
+                .orderByAsc(SystemMenusEntity::getSort, SystemMenusEntity::getId);
+        return Mappers.getMapper(SystemMenusConverter.class).toMenuVO(systemMenusMapper.selectList(wrapper));
+    }
+
+    @Override
     public List<SystemUserMenusVO> selectEnabledByIds(Set<Long> menuIds, Long tenantId) {
         if (menuIds.isEmpty()) {
             return List.of();

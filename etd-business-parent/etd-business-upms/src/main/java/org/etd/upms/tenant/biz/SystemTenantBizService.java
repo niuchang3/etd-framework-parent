@@ -6,13 +6,18 @@ import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.upms.menu.controller.vo.SystemMenuVO;
+import org.etd.upms.menu.service.SystemMenusService;
+import org.etd.upms.role.service.SystemRoleMenuService;
 import org.etd.upms.role.service.SystemRoleService;
 import org.etd.upms.tenant.controller.dto.SystemTenantAdminCreateDTO;
 import org.etd.upms.tenant.controller.dto.SystemTenantCreateDTO;
 import org.etd.upms.tenant.controller.dto.SystemTenantUpdateDTO;
+import org.etd.upms.tenant.controller.vo.SystemTenantMenuSettingsVO;
 import org.etd.upms.tenant.controller.vo.SystemTenantVO;
 import org.etd.upms.tenant.entity.SystemTenantEntity;
 import org.etd.upms.user.entity.SystemUserEntity;
+import org.etd.upms.tenant.service.SystemTenantMenuService;
 import org.etd.upms.tenant.service.SystemTenantService;
 import org.etd.upms.user.service.SystemUserRoleRelService;
 import org.etd.upms.user.service.SystemUserService;
@@ -22,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -46,6 +52,15 @@ public class SystemTenantBizService {
     @Autowired
     private UserLoginTokenStorage userLoginTokenStorage;
 
+    @Autowired
+    private SystemMenusService menusService;
+
+    @Autowired
+    private SystemRoleMenuService roleMenuService;
+
+    @Autowired
+    private SystemTenantMenuService tenantMenuService;
+
     @Transactional(rollbackFor = Exception.class)
     public Long insert(SystemTenantCreateDTO dto) {
         requirePlatformAdmin();
@@ -64,6 +79,35 @@ public class SystemTenantBizService {
     public boolean update(Long tenantId, SystemTenantUpdateDTO dto) {
         requirePlatformAdmin();
         return tenantService.update(tenantId, toTenantEntity(dto));
+    }
+
+    /**
+     * 租户菜单授权信息属于平台管理能力，普通租户管理员也无权读取。
+     */
+    public SystemTenantMenuSettingsVO selectMenuSettings(Long tenantId) {
+        requirePlatformAdmin();
+        tenantService.requireOrdinary(tenantId);
+        List<SystemMenuVO> menus = menusService.selectAllEnabled();
+        Set<Long> selectedMenuIds = new LinkedHashSet<>(tenantMenuService.selectMenuIds(tenantId));
+        selectedMenuIds.retainAll(menus.stream().map(SystemMenuVO::getId).collect(Collectors.toSet()));
+        SystemTenantMenuSettingsVO settings = new SystemTenantMenuSettingsVO();
+        settings.setMenus(menus);
+        settings.setSelectedMenuIds(selectedMenuIds);
+        return settings;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean replaceMenus(Long tenantId, Set<Long> requestedMenuIds) {
+        // 必须在查询租户和菜单前校验身份，非法操作不能触达任何租户数据。
+        requirePlatformAdmin();
+        tenantService.requireOrdinary(tenantId);
+        Set<Long> normalizedMenuIds = includeAncestorMenus(requestedMenuIds, menusService.selectAllEnabled());
+        Set<Long> removedMenuIds = new LinkedHashSet<>(tenantMenuService.selectMenuIds(tenantId));
+        removedMenuIds.removeAll(normalizedMenuIds);
+        tenantMenuService.replace(tenantId, normalizedMenuIds);
+        // 收回租户菜单时清理角色遗留授权，避免之后重新授权租户菜单时意外恢复。
+        roleMenuService.removeByTenantAndMenuIds(tenantId, removedMenuIds);
+        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -167,13 +211,37 @@ public class SystemTenantBizService {
                 .forEach(userId -> userLoginTokenStorage.deleteAll(String.valueOf(userId)));
     }
 
+    private Set<Long> includeAncestorMenus(Set<Long> requestedMenuIds, List<SystemMenuVO> availableMenus) {
+        Map<Long, SystemMenuVO> menuMap = availableMenus.stream()
+                .collect(Collectors.toMap(SystemMenuVO::getId, Function.identity()));
+        if (!menuMap.keySet().containsAll(requestedMenuIds)) {
+            throw new ApiRuntimeException("只能为租户授权已启用的菜单。");
+        }
+        Set<Long> normalizedMenuIds = new LinkedHashSet<>(requestedMenuIds);
+        requestedMenuIds.forEach(menuId -> includeAncestors(menuId, menuMap, normalizedMenuIds));
+        return normalizedMenuIds;
+    }
+
+    private void includeAncestors(Long menuId, Map<Long, SystemMenuVO> menuMap, Set<Long> menuIds) {
+        Set<Long> visited = new LinkedHashSet<>();
+        Long parentId = menuMap.get(menuId).getParentId();
+        while (parentId != null && visited.add(parentId)) {
+            if (!menuMap.containsKey(parentId)) {
+                throw new ApiRuntimeException("菜单的父节点不存在或已停用。");
+            }
+            menuIds.add(parentId);
+            parentId = menuMap.get(parentId).getParentId();
+        }
+    }
+
     private SystemTenantEntity toTenantEntity(SystemTenantCreateDTO dto) {
         SystemTenantEntity entity = new SystemTenantEntity();
         entity.setLogo(dto.getLogo());
         entity.setTenantName(dto.getTenantName().trim());
         entity.setDescription(dto.getDescription());
         entity.setCreditCode(dto.getCreditCode());
-        entity.setTenantType(dto.getTenantType());
+        // 系统租户只能由初始化数据创建，业务新增统一为普通租户。
+        entity.setTenantType(BasicConstant.TenantType.ORDINARY.getCode());
         entity.setLocked(false);
         entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
         return entity;
@@ -185,7 +253,6 @@ public class SystemTenantBizService {
         entity.setTenantName(dto.getTenantName().trim());
         entity.setDescription(dto.getDescription());
         entity.setCreditCode(dto.getCreditCode());
-        entity.setTenantType(dto.getTenantType());
         return entity;
     }
 }

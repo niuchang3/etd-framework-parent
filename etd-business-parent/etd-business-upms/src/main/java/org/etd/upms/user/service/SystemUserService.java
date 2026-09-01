@@ -1,6 +1,7 @@
 package org.etd.upms.user.service;
 
 import com.etd.framework.starter.client.core.user.IUserService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.user.entity.SystemUserEntity;
 
 import java.util.List;
@@ -10,6 +11,9 @@ import java.util.Set;
  * 系统用户Service
  */
 public interface SystemUserService extends IUserService {
+
+    IPage<SystemUserEntity> page(long current, long size, String keyword, Boolean enabled, Boolean locked,
+                                 Set<Long> userIds);
     /**
      * 根据用户ID查询用户信息
      *
@@ -17,6 +21,8 @@ public interface SystemUserService extends IUserService {
      * @return
      */
     SystemUserEntity selectByUserById(Long id);
+
+    SystemUserEntity requireExists(Long id);
 
     /**
      * 根据ID集合查询用户
@@ -35,6 +41,16 @@ public interface SystemUserService extends IUserService {
      * @return
      */
     SystemUserEntity selectByAccount(String account);
+
+    Long insert(SystemUserEntity entity, String rawPassword);
+
+    boolean update(Long id, SystemUserEntity entity);
+
+    boolean delete(Long id);
+
+    boolean switchEnabled(Long id, Boolean enabled);
+
+    boolean switchLocked(Long id, Boolean locked);
 
     Long createTenantAdmin(Long tenantId, String account, String password, String userName, String mobile);
 }

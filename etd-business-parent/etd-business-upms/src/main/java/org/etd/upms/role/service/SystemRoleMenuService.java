@@ -18,4 +18,6 @@ public interface SystemRoleMenuService {
     void removeByRoleId(Long roleId);
 
     void removeByMenuIds(Set<Long> menuIds);
+
+    void removeByTenantAndMenuIds(Long tenantId, Set<Long> menuIds);
 }

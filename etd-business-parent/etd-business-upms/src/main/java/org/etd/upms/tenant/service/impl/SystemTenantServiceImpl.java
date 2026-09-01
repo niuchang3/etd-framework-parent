@@ -136,6 +136,14 @@ public class SystemTenantServiceImpl implements SystemTenantService {
                 && Objects.equals(BasicConstant.DataStatus.ENABLED.getCode(), tenant.getDataStatus());
     }
 
+    @Override
+    public void requireOrdinary(Long tenantId) {
+        SystemTenantEntity tenant = requireExists(tenantId);
+        if (!Objects.equals(BasicConstant.TenantType.ORDINARY.getCode(), tenant.getTenantType())) {
+            throw new ApiRuntimeException("只允许为普通租户设置菜单。");
+        }
+    }
+
     private SystemTenantEntity requireExists(Long tenantId) {
         if (tenantId == null) {
             throw new ApiRuntimeException("用户未绑定租户。");
