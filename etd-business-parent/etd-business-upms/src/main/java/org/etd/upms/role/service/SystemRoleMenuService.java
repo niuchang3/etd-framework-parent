@@ -9,7 +9,7 @@ import java.util.Set;
 
 public interface SystemRoleMenuService {
 
-    Map<Long, Integer> selectMenuAccessLevels(Set<Long> roleIds);
+    Map<Long, String> selectMenuAccessLevels(Set<Long> roleIds);
 
     List<SystemRoleMenuVO> selectByRoleId(Long roleId);
 

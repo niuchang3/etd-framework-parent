@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class SystemRoleMenuVO {
 
     private Long menuId;
-    private Integer accessLevel;
+    private String accessLevel;
 }

@@ -18,5 +18,5 @@ public class SystemRoleMenuRelEntity extends BaseEntity {
     private Long menuId;
 
     @TableField("access_level")
-    private Integer accessLevel;
+    private String accessLevel;
 }

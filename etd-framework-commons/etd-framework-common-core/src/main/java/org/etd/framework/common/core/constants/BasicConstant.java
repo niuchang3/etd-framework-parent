@@ -121,26 +121,36 @@ public interface BasicConstant {
         /**
          * 只读
          */
-        READ(1, "只读"),
+        READ_ONLY("READ_ONLY", "只读"),
         /**
          * 读写
          */
-        WRITE(2, "读写");
+        READ_WRITE("READ_WRITE", "读写");
 
-        private final int code;
+        private final String code;
         private final String description;
 
-        AccessLevel(int code, String description) {
+        AccessLevel(String code, String description) {
             this.code = code;
             this.description = description;
         }
 
-        public int getCode() {
+        public String getCode() {
             return code;
         }
 
         public String getDescription() {
             return description;
+        }
+
+        /**
+         * 合并访问级别（READ_WRITE 优先于 READ_ONLY）
+         */
+        public static String merge(String level1, String level2) {
+            if (READ_WRITE.getCode().equals(level1) || READ_WRITE.getCode().equals(level2)) {
+                return READ_WRITE.getCode();
+            }
+            return READ_ONLY.getCode();
         }
     }
 }

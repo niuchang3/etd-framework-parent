@@ -14,11 +14,11 @@ public class SystemRoleMenuGrantDTO {
     private Long menuId;
 
     @NotNull(message = "菜单访问级别不能为空")
-    private Integer accessLevel;
+    private String accessLevel;
 
-    @AssertTrue(message = "菜单访问级别只能为1或2")
+    @AssertTrue(message = "菜单访问级别只能为 READ_ONLY 或 READ_WRITE")
     public boolean isAccessLevelValid() {
         return accessLevel != null && Arrays.stream(BasicConstant.AccessLevel.values())
-                .anyMatch(level -> level.getCode() == accessLevel);
+                .anyMatch(level -> level.getCode().equals(accessLevel));
     }
 }

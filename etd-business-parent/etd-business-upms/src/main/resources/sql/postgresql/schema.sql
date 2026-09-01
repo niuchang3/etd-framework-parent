@@ -230,7 +230,7 @@ create table if not exists sys_role_menu_rel
     tenant_id   bigint not null,
     role_id     bigint,
     menu_id     bigint,
-    access_level     smallint not null default 1,
+    access_level     varchar(32) not null default 'READ_ONLY',
     primary key (id)
 );
 
@@ -245,7 +245,7 @@ comment on column sys_role_menu_rel.del_flag is '逻辑删除标识：0未删除
 comment on column sys_role_menu_rel.tenant_id is '租户id';
 comment on column sys_role_menu_rel.role_id is '角色id';
 comment on column sys_role_menu_rel.menu_id is '菜单id';
-comment on column sys_role_menu_rel.access_level is '角色菜单访问级别：1只读，2读写';
+comment on column sys_role_menu_rel.access_level is '角色菜单访问级别：READ_ONLY只读，READ_WRITE读写';
 
 /*==============================================================*/
 /* table: sys_role_org_rel                                      */
@@ -330,7 +330,7 @@ create table if not exists sys_api
     api_name       varchar(100) not null,
     request_method varchar(10) not null,
     request_path   varchar(200) not null,
-    access_level   smallint not null default 1,
+    access_level   varchar(32) not null default 'READ_ONLY',
     enabled        boolean default true,
     primary key (id)
 );
@@ -346,7 +346,7 @@ comment on column sys_api.del_flag is '逻辑删除标识：0未删除，1已删
 comment on column sys_api.api_name is '接口名称';
 comment on column sys_api.request_method is 'HTTP请求方法';
 comment on column sys_api.request_path is 'Spring请求路径模式';
-comment on column sys_api.access_level is '接口要求访问级别：1读取，2写入';
+comment on column sys_api.access_level is '接口要求访问级别：READ_ONLY只读，READ_WRITE读写';
 comment on column sys_api.enabled is '是否启用';
 
 create index if not exists idx_sys_api_request

@@ -25,7 +25,7 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
     private SystemRoleMenuRelMapper roleMenuRelMapper;
 
     @Override
-    public Map<Long, Integer> selectMenuAccessLevels(Set<Long> roleIds) {
+    public Map<Long, String> selectMenuAccessLevels(Set<Long> roleIds) {
         if (roleIds.isEmpty()) {
             return Map.of();
         }
@@ -33,9 +33,9 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         wrapper.in(SystemRoleMenuRelEntity::getRoleId, roleIds)
                 .eq(SystemRoleMenuRelEntity::getDataStatus, BasicConstant.DataStatus.ENABLED.getCode())
                 .select(SystemRoleMenuRelEntity::getMenuId, SystemRoleMenuRelEntity::getAccessLevel);
-        Map<Long, Integer> accessLevels = new LinkedHashMap<>();
+        Map<Long, String> accessLevels = new LinkedHashMap<>();
         roleMenuRelMapper.selectList(wrapper).forEach(relation -> accessLevels.merge(
-                relation.getMenuId(), relation.getAccessLevel(), Math::max));
+                relation.getMenuId(), relation.getAccessLevel(), BasicConstant.AccessLevel::merge));
         return accessLevels;
     }
 

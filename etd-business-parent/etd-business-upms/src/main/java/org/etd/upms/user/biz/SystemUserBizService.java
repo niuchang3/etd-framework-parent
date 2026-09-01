@@ -181,7 +181,7 @@ public class SystemUserBizService {
         Set<Long> roleIds = userRoleRelService.selectByUser(userId).stream()
                 .map(SystemUserRoleVO::getRoleId)
                 .collect(Collectors.toSet());
-        Map<Long, Integer> accessLevels = new LinkedHashMap<>(roleMenuService.selectMenuAccessLevels(roleIds));
+        Map<Long, String> accessLevels = new LinkedHashMap<>(roleMenuService.selectMenuAccessLevels(roleIds));
         accessLevels.keySet().retainAll(tenantMenuIds);
         List<SystemUserMenusVO> menus = menusService.selectEnabledByIds(accessLevels.keySet(), tenantId);
         menus.forEach(menu -> menu.setAccessLevel(accessLevels.get(menu.getId())));

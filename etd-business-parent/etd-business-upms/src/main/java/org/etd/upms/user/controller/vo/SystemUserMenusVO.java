@@ -52,5 +52,5 @@ public class SystemUserMenusVO {
     /**
      * 角色对菜单的访问级别；租户管理员菜单不限制具体级别。
      */
-    private Integer accessLevel;
+    private String accessLevel;
 }
