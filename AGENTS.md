@@ -168,6 +168,16 @@
   - 包含 2 个及以上中间算子（如同时包含 `filter` + `map` + `groupingBy`）、涉及算法/复杂分组或业务规则判断的 Stream 表达式，**必须提取为独立且语义明确的私有辅助方法**（如 `groupOrganizationsByUserId`），避免在主业务逻辑中内联长流；仅涉及单一属性映射（如 `list.stream().map(X::getId).toList()`）或简单 `anyMatch` 的极简单行流，允许直接内联。
 - 单个方法理论上不超过 30 行。超过 30 行时，必须优先考虑提取私有方法、规则方法、转换方法或独立组件承接复杂逻辑。
 - 提取方法时，方法名必须表达业务语义或技术语义，不要用 `handle`、`process`、`doSomething`、`buildData` 这类含糊命名。
+- **业务函数命名规范（适用于业务模块及公共模块，`etd-framework-starter` 模块不在本命名规范约束范围内）**：
+  - **语序结构**：必须遵循 `[核心动作(动词)] + [操作对象(目标名词)] + [限定条件/维度(如 By/With)]` 的自然语序（如 `createTenantAdmin`、`switchStatus`、`selectUserPage`），严禁使用名词开头的颠倒命名（如 `tenantAdminCreate`）。
+  - **单复数显式修饰**：为了符合中文阅读习惯，返回集合/批量查询的方法必须在名称中显式带上集合特征（如 `selectUserList`、`selectUserIds`、`groupOrganizationsByUserId`、`countAccount`），避免仅靠结尾 `s` 区分单复数。
+  - **条件查询统一介词**：表达按条件/维度过滤查询时，统一使用 `By` 作为介词（如 `selectByUser`、`selectByUserIds`），减少多种介词混用的阅读转换负担。
+  - **技术分层动词规范**：
+    - Controller 层：表达前端 HTTP 意图，统一使用 `save` / `remove` / `update` / `get` / `page`；
+    - BizService 层：表达完整业务流程，使用 `init` / `grant` / `import` / `assign` / `bind`；
+    - Service 层：表达单一能力或规则，使用 `switch` / `require` / `populate` / `resolve`；
+    - Mapper 层：表达基础 SQL 动作，统一使用 `select` / `insert` / `update` / `delete`。
+  - **禁忌**：严禁使用 `handleData`、`processUser`、`doSomething`、`buildData` 这类无法看出实际逻辑的含糊无意义词汇。
 - AI 编写与修改的代码必须包含清晰的中文注释：
   - 新增类与关键方法必须编写中文 JavaDoc 注释；
   - 复杂业务规则、关键分支、算法步骤、非显而易见的处理、兼容性决策、缓存失效原因、事务边界都要有简洁中文注释；

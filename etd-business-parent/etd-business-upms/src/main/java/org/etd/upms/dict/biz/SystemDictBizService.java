@@ -26,9 +26,12 @@ public class SystemDictBizService {
     private SystemDictDataService dictDataService;
 
     /**
-     * 批量查询启用的字典类型及字典项，并保留前端传入的编码顺序。
+     * 按类型编码集合批量查询启用的字典类型及对应字典项映射（保留传入编码顺序）。
+     *
+     * @param typeCodes 字典类型编码集合
+     * @return 字典类型编码映射字典数据列表的 Map 映射
      */
-    public Map<String, List<SystemDictDataVO>> selectEnabledDataByTypeCodes(Collection<String> typeCodes) {
+    public Map<String, List<SystemDictDataVO>> mapEnabledDataByTypeCodes(Collection<String> typeCodes) {
         LinkedHashSet<String> distinctTypeCodes = new LinkedHashSet<>(typeCodes);
         Map<String, List<SystemDictDataVO>> result = initializeResult(distinctTypeCodes);
         var types = dictTypeService.selectEnabledByCodes(distinctTypeCodes);

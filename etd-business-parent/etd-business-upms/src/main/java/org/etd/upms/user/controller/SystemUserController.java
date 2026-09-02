@@ -155,14 +155,11 @@ public class SystemUserController {
     }
 
     /**
-     * organizations
-     *
-     * @param id 参数 id
-     * @return 处理结果
+     * 根据用户 ID 获取关联组织列表
      */
     @GetMapping("/{id}/organizations")
-    public ResultModel<List<SystemUserOrganizationVO>> organizations(@PathVariable Long id) {
-        return ResultModel.success(userBizService.selectOrganizations(id));
+    public ResultModel<List<SystemUserOrganizationVO>> getOrganizationList(@PathVariable Long id) {
+        return ResultModel.success(userBizService.selectOrganizationListByUser(id));
     }
 
     @PutMapping("/{id}/organizations")
@@ -173,13 +170,6 @@ public class SystemUserController {
 
     /**
      * 获取当前登录人个人信息
-     *
-     * @return
-     */
-    /**
-     * me
-     *
-     * @return 处理结果
      */
     @IgnoreTenant
     @GetMapping(value = "/me")
@@ -190,34 +180,20 @@ public class SystemUserController {
     }
 
     /**
-     * 获取当前登录人租户信息
-     *
-     * @return
-     */
-    /**
-     * current User Tenant
-     *
-     * @return 处理结果
+     * 获取当前登录人租户列表
      */
     @IgnoreTenant
     @GetMapping("/tenant")
-    public ResultModel<List<SystemTenantVO>> currentUserTenant() {
-        List<SystemTenantVO> tenantVOS = tenantBizService.selectByUser(RequestContext.getUser());
+    public ResultModel<List<SystemTenantVO>> getCurrentUserTenantList() {
+        List<SystemTenantVO> tenantVOS = tenantBizService.selectTenantListByUser(RequestContext.getUser());
         return ResultModel.success(tenantVOS);
     }
 
     /**
-     * 获取当前登录人角色信息
-     *
-     * @return
-     */
-    /**
-     * current User Role
-     *
-     * @return 处理结果
+     * 获取当前登录人角色列表
      */
     @GetMapping("/role")
-    public ResultModel<List<SystemUserRoleVO>> currentUserRole() {
+    public ResultModel<List<SystemUserRoleVO>> getCurrentUserRoleList() {
         UserDetails user = RequestContext.getUser();
         List<SystemUserRoleVO> systemUserRoleVOS = userRoleRelService.selectByUser(user.getId());
         return ResultModel.success(systemUserRoleVOS);
@@ -226,11 +202,6 @@ public class SystemUserController {
 
     /**
      * 获取当前登录人菜单权限
-     *
-     * @return
-     */
-    /**
-     * current User Menus
      *
      * @return 处理结果
      */

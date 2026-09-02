@@ -222,11 +222,13 @@ public class SystemUserBizService {
 
     /**
      * 查询 Organizations
+    /**
+     * 根据用户 ID 查询关联的组织信息列表
      *
-     * @param userId 参数 userId
-     * @return 处理结果
+     * @param userId 用户 ID
+     * @return 用户所属组织列表
      */
-    public List<SystemUserOrganizationVO> selectOrganizations(Long userId) {
+    public List<SystemUserOrganizationVO> selectOrganizationListByUser(Long userId) {
         userService.requireExists(userId);
         return userOrganizationService.selectByUserIds(Set.of(userId));
     }

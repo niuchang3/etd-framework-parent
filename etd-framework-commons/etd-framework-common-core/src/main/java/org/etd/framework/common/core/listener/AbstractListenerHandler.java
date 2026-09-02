@@ -61,12 +61,12 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
      * @return
      */
     /**
-     * 处理 Business
+     * 执行具体业务事件监听逻辑
      *
-     * @param message 参数 message
+     * @param message 抽象消息通知请求对象
      * @return 处理结果
      */
-    protected abstract Object handleBusiness(NotificationMsgRequest message);
+    protected abstract Object executeBusiness(NotificationMsgRequest message);
 
     /**
      * 调用消息接手者处理程序
@@ -83,7 +83,7 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
     @Override
     public Object invokeProcessHandler(M message) throws Exception {
         beforeInvoke(message);
-        Object result = doProcessHandler(() -> handleBusiness(message), message);
+        Object result = doProcessHandler(() -> executeBusiness(message), message);
         afterInvoke(message);
         return result;
     }

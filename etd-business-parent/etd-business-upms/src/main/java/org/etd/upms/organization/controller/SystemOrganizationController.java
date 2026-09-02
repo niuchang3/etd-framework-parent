@@ -35,11 +35,14 @@ public class SystemOrganizationController {
     @Autowired
     private SystemOrganizationBizService organizationBizService;
 
+    /**
+     * 查询组织机构树列表
+     */
     @GetMapping("/tree")
     public ResultModel<List<SystemOrganizationVO>> tree(
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "enabled", required = false) Boolean enabled) {
-        return ResultModel.success(organizationBizService.selectTree(keyword, enabled));
+        return ResultModel.success(organizationBizService.selectOrganizationTreeList(keyword, enabled));
     }
 
     /**

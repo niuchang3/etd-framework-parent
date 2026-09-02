@@ -36,13 +36,13 @@ public class SystemOrganizationBizService {
     private SystemRoleOrganizationService roleOrganizationService;
 
     /**
-     * 查询 Tree
+     * 查询组织树列表
      *
      * @param keyword 参数 keyword
      * @param enabled 参数 enabled
-     * @return 处理结果
+     * @return 组织树节点列表
      */
-    public List<SystemOrganizationVO> selectTree(String keyword, Boolean enabled) {
+    public List<SystemOrganizationVO> selectOrganizationTreeList(String keyword, Boolean enabled) {
         List<SystemOrganizationVO> organizations = organizationService.selectList(enabled);
         List<SystemOrganizationVO> roots = buildTree(organizations);
         if (!StringUtils.hasText(keyword)) {

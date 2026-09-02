@@ -17,10 +17,11 @@ public class DefaultHandle extends AbstractListenerHandler {
      * 处理 Business
      *
      * @param message 参数 message
-     * @return 处理结果
+    /**
+     * 执行默认消息处理逻辑
      */
     @Override
-    protected Object handleBusiness(NotificationMsgRequest message) {
+    protected Object executeBusiness(NotificationMsgRequest message) {
         log.info("处理默认消息，消息编码：{}，链路标识：{}", message.getMessageHandleCode(), RequestContext.getTraceId());
         return null;
     }

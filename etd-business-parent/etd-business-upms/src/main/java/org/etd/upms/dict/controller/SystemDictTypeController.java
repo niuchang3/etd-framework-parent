@@ -73,17 +73,14 @@ public class SystemDictTypeController {
             @RequestParam("typeCodes") @NotEmpty(message = "字典类型编码不能为空")
             List<@NotBlank(message = "字典类型编码不能为空")
                     @Size(max = 100, message = "字典类型编码不能超过100个字符") String> typeCodes) {
-        return ResultModel.success(dictBizService.selectEnabledDataByTypeCodes(typeCodes));
+        return ResultModel.success(dictBizService.mapEnabledDataByTypeCodes(typeCodes));
     }
 
     /**
-     * enabled Data
-     *
-     * @param typeCode 参数 typeCode
-     * @return 处理结果
+     * 根据字典类型编码获取启用的字典数据列表
      */
     @GetMapping("/code/{typeCode}/data")
-    public ResultModel<List<SystemDictDataVO>> enabledData(@PathVariable String typeCode) {
+    public ResultModel<List<SystemDictDataVO>> getEnabledDataList(@PathVariable String typeCode) {
         SystemDictTypeVO type = dictTypeService.selectEnabledByCode(typeCode);
         return ResultModel.success(type == null ? List.of() : dictDataService.selectEnabledByTypeId(type.getId()));
     }

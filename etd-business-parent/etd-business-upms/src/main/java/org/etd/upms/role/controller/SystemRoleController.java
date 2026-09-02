@@ -131,13 +131,10 @@ public class SystemRoleController {
     }
 
     /**
-     * organizations
-     *
-     * @param id 参数 id
-     * @return 处理结果
+     * 根据角色 ID 获取关联的组织机构 ID 集合
      */
     @GetMapping("/{id}/organizations")
-    public ResultModel<Set<Long>> organizations(@PathVariable Long id) {
+    public ResultModel<Set<Long>> getOrganizationIds(@PathVariable Long id) {
         return ResultModel.success(roleBizService.selectOrganizationIds(id));
     }
 

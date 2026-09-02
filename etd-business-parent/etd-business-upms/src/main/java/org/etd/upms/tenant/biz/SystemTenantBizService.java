@@ -188,12 +188,12 @@ public class SystemTenantBizService {
     }
 
     /**
-     * 查询 By User
+     * 根据当前登录用户身份查询所属租户列表
      *
-     * @param userDetails 参数 userDetails
-     * @return 处理结果
+     * @param userDetails 用户身份上下文
+     * @return 关联租户列表
      */
-    public List<SystemTenantVO> selectByUser(UserDetails userDetails) {
+    public List<SystemTenantVO> selectTenantListByUser(UserDetails userDetails) {
         if (ObjectUtils.isEmpty(userDetails)) {
             throw new ApiRuntimeException("该请求需要身份认证。");
         }
