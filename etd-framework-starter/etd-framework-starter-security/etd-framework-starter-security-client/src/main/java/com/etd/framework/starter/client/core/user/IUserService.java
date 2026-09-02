@@ -24,13 +24,4 @@ public interface IUserService {
      */
     UserDetails loadUserByAccount(String username);
 
-    /**
-     * 注册用户。
-     *
-     * @param userDetails 用户详情
-     * @return 注册结果
-     */
-    boolean register(UserDetails userDetails);
-
-
 }

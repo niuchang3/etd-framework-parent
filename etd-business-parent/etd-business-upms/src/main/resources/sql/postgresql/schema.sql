@@ -57,6 +57,7 @@ create table if not exists sys_user
     data_status int,
     del_flag    smallint not null default 0,
     tenant_id   bigint not null,
+    org_id      bigint,
     account     varchar(32),
     mobile      varchar(20),
     password    varchar(100),
@@ -79,6 +80,7 @@ comment on column sys_user.update_by is '修改人';
 comment on column sys_user.data_status is '数据状态';
 comment on column sys_user.del_flag is '逻辑删除标识：0未删除，1已删除';
 comment on column sys_user.tenant_id is '租户id';
+comment on column sys_user.org_id is '主组织机构id';
 comment on column sys_user.account is '账号';
 comment on column sys_user.mobile is '手机号码';
 comment on column sys_user.password is '密码';

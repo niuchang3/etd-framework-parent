@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.upms.user.mapper.SystemUserMapper">
+
+    <!-- 系统用户分页查询（包含主部门与兼任部门匹配） -->
+    <select id="selectUserPage" resultType="org.etd.upms.user.entity.SystemUserEntity">
+        SELECT DISTINCT
+            u.id,
+            u.create_time,
+            u.create_by,
+            u.update_time,
+            u.update_by,
+            u.data_status,
+            u.del_flag,
+            u.tenant_id,
+            u.org_id,
+            u.account,
+            u.mobile,
+            u.password,
+            u.user_name,
+            u.birthday,
+            u.gender,
+            u.avatar,
+            u.nick_name,
+            u.locked,
+            u.enabled
+        FROM sys_user u
+        <if test="orgIds != null and orgIds.size() > 0">
+            LEFT JOIN sys_user_org_rel rel ON u.id = rel.user_id AND rel.del_flag = 0
+        </if>
+        <where>
+            u.del_flag = 0
+            <if test="enabled != null">
+                AND u.enabled = #{enabled}
+            </if>
+            <if test="locked != null">
+                AND u.locked = #{locked}
+            </if>
+            <if test="orgIds != null and orgIds.size() > 0">
+                AND (
+                    u.org_id IN
+                    <foreach collection="orgIds" item="orgId" open="(" separator="," close=")">
+                        #{orgId}
+                    </foreach>
+                    OR rel.org_id IN
+                    <foreach collection="orgIds" item="orgId" open="(" separator="," close=")">
+                        #{orgId}
+                    </foreach>
+                )
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    u.account LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.user_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.mobile LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.nick_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY u.create_time DESC, u.id DESC
+    </select>
+
+</mapper>

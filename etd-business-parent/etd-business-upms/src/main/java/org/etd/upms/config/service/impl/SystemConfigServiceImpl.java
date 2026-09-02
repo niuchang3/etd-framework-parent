@@ -117,8 +117,6 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         validateParameterValue(dto);
         ensureKeyAvailable(dto.getParameterKey(), null);
         SystemConfigEntity entity = toEntity(dto);
-        entity.setBuiltIn(false);
-        entity.setEnabled(true);
         configMapper.insert(entity);
         return entity.getId();
     }

@@ -11,6 +11,8 @@ import org.etd.upms.organization.service.SystemOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +38,22 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         wrapper.eq(enabled != null, SystemOrganizationEntity::getEnabled, enabled)
                 .orderByAsc(SystemOrganizationEntity::getSort, SystemOrganizationEntity::getId);
         return organizationMapper.selectList(wrapper).stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<SystemOrganizationVO> selectListByUserId(Long userId, Boolean enabled) {
+        if (userId == null) {
+            return Collections.emptyList();
+        }
+        return organizationMapper.selectListByUserId(userId, enabled).stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<SystemOrganizationVO> selectListByIds(Collection<Long> ids, Boolean enabled) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return organizationMapper.selectListByIds(ids, enabled).stream().map(this::toVO).toList();
     }
 
     /**
@@ -92,7 +110,6 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
     public Long insert(SystemOrganizationSaveDTO dto, String parentIdPath) {
         ensureCodeAvailable(dto.getOrgCode(), null);
         SystemOrganizationEntity entity = toEntity(dto, parentIdPath);
-        entity.setEnabled(true);
         organizationMapper.insert(entity);
         return entity.getId();
     }

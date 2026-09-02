@@ -1,6 +1,5 @@
 package org.etd.upms.user.service;
 
-import com.etd.framework.starter.client.core.user.IUserService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.etd.upms.user.entity.SystemUserEntity;
 
@@ -10,7 +9,9 @@ import java.util.Set;
 /**
  * 系统用户Service
  */
-public interface SystemUserService extends IUserService {
+public interface SystemUserService {
+
+    IPage<SystemUserEntity> selectUserPage(long current, long size, String keyword, Set<Long> orgIds, Boolean enabled, Boolean locked);
 
     IPage<SystemUserEntity> page(long current, long size, String keyword, Boolean enabled, Boolean locked,
                                  Set<Long> userIds);
@@ -53,4 +54,9 @@ public interface SystemUserService extends IUserService {
     boolean switchLocked(Long id, Boolean locked);
 
     Long createTenantAdmin(Long tenantId, String account, String password, String userName, String mobile);
+
+    /**
+     * 更新用户主组织机构 ID
+     */
+    void updatePrimaryOrganization(Long userId, Long primaryOrgId);
 }

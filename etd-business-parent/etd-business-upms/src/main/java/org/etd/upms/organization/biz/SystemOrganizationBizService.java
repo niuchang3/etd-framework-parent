@@ -1,6 +1,9 @@
 package org.etd.upms.organization.biz;
 
+import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.upms.organization.controller.dto.SystemOrganizationSaveDTO;
 import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 import org.etd.upms.organization.service.SystemOrganizationService;
@@ -9,9 +12,11 @@ import org.etd.upms.user.service.SystemUserOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +48,8 @@ public class SystemOrganizationBizService {
      * @return 组织树节点列表
      */
     public List<SystemOrganizationVO> selectOrganizationTreeList(String keyword, Boolean enabled) {
-        List<SystemOrganizationVO> organizations = organizationService.selectList(enabled);
+        UserDetails user = RequestContext.getUser();
+        List<SystemOrganizationVO> organizations = selectScopedOrganizations(user, enabled);
         List<SystemOrganizationVO> roots = buildTree(organizations);
         if (!StringUtils.hasText(keyword)) {
             return roots;
@@ -51,6 +57,51 @@ public class SystemOrganizationBizService {
         String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
         roots.removeIf(root -> !retainMatchedBranch(root, normalizedKeyword));
         return roots;
+    }
+
+    private List<SystemOrganizationVO> selectScopedOrganizations(UserDetails user, Boolean enabled) {
+        if (user == null) {
+            return Collections.emptyList();
+        }
+        if (user.isAdmin()) {
+            return organizationService.selectList(enabled);
+        }
+        Set<String> permissionTypes = resolvePermissionTypes(user);
+        if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
+            return organizationService.selectList(enabled);
+        }
+        if (hasOrganizationPermission(permissionTypes)) {
+            if (!CollectionUtils.isEmpty(user.getScopeOrgIds())) {
+                return organizationService.selectListByIds(user.getScopeOrgIds(), enabled);
+            }
+            if (user.getOrgId() != null) {
+                return organizationService.selectListByIds(Set.of(user.getOrgId()), enabled);
+            }
+            return organizationService.selectListByUserId(user.getId(), enabled);
+        }
+        if (permissionTypes.contains(BasicConstant.PermissionType.SELF.getCode())) {
+            if (user.getOrgId() != null) {
+                return organizationService.selectListByIds(Set.of(user.getOrgId()), enabled);
+            }
+            return organizationService.selectListByUserId(user.getId(), enabled);
+        }
+        return Collections.emptyList();
+    }
+
+    private Set<String> resolvePermissionTypes(UserDetails user) {
+        if (!CollectionUtils.isEmpty(user.getPermissionTypes())) {
+            return user.getPermissionTypes();
+        }
+        if (StringUtils.hasText(user.getPermissionType())) {
+            return Set.of(user.getPermissionType());
+        }
+        return Collections.emptySet();
+    }
+
+    private boolean hasOrganizationPermission(Set<String> permissionTypes) {
+        return permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION.getCode())
+                || permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION_AND_SUBORDINATE.getCode())
+                || permissionTypes.contains(BasicConstant.PermissionType.CUSTOM_ORGANIZATION.getCode());
     }
 
     /**

@@ -37,27 +37,7 @@ public class MemoryUserServiceImpl implements IUserService {
         return userDetailsMap.get(account);
     }
 
-    /**
-     * 注册内存用户。
-     *
-     * @param userDetails 用户信息
-     * @return 注册结果
-     */
-    /**
-     * register
-     *
-     * @param userDetails 参数 userDetails
-     * @return 处理结果
-     */
-    @Override
-    public boolean register(UserDetails userDetails) {
-        Assert.notNull(userDetails, "用户信息不能为空。");
-        Assert.notNull(userDetails.getId(), "用户标识不能为空。");
-        Assert.hasText(userDetails.getAccount(), "登录账号不能为空。");
-        userDetailsMap.put(userDetails.getAccount(), userDetails);
-        userDetailsMap.put(String.valueOf(userDetails.getId()), userDetails);
-        return true;
-    }
+
 
     /**
      * 根据用户标识加载用户。

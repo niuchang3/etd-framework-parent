@@ -100,8 +100,6 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
     public Long insert(SystemDictDataSaveDTO dto) {
         ensureCodeAvailable(dto.getDictTypeId(), dto.getDictCode(), null);
         SystemDictDataEntity entity = toEntity(dto);
-        entity.setBuiltIn(false);
-        entity.setEnabled(true);
         dictDataMapper.insert(entity);
         return entity.getId();
     }

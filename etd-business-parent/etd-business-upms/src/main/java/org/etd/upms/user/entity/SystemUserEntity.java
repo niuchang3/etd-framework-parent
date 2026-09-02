@@ -1,5 +1,6 @@
 package org.etd.upms.user.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
+import org.etd.framework.starter.mybaits.core.OrgScopedEntity;
+import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -14,7 +17,7 @@ import java.time.LocalDate;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("sys_user")
-public class SystemUserEntity extends BaseEntity implements Serializable {
+public class SystemUserEntity extends OrgScopedEntity implements Serializable {
 
     private static final long serialVersionUID = 1181085804651495813L;
 
@@ -65,13 +68,15 @@ public class SystemUserEntity extends BaseEntity implements Serializable {
     /**
      * 账号是否锁定
      */
-    @TableField("locked")
+    @TableField(value = "locked", fill = FieldFill.INSERT)
+    @TableFieldExtend("false")
     private Boolean locked;
 
     /**
      * 账号是否启用
      */
-    @TableField("enabled")
+    @TableField(value = "enabled", fill = FieldFill.INSERT)
+    @TableFieldExtend("true")
     private Boolean enabled;
 
 

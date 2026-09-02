@@ -69,4 +69,9 @@ public class SystemUserVO {
 
     private List<SystemUserOrganizationVO> organizations;
 
+    /**
+     * 主组织机构 ID
+     */
+    private Long orgId;
+
 }

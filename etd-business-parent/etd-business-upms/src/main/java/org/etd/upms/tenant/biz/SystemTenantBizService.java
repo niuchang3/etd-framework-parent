@@ -297,8 +297,6 @@ public class SystemTenantBizService {
         entity.setCreditCode(dto.getCreditCode());
         // 系统租户只能由初始化数据创建，业务新增统一为普通租户。
         entity.setTenantType(BasicConstant.TenantType.ORDINARY.getCode());
-        entity.setLocked(false);
-        entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
         return entity;
     }
 

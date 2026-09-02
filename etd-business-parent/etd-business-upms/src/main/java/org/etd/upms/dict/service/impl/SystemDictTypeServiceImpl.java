@@ -121,8 +121,6 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
     public Long insert(SystemDictTypeSaveDTO dto) {
         ensureCodeAvailable(dto.getTypeCode(), null);
         SystemDictTypeEntity entity = toEntity(dto);
-        entity.setBuiltIn(false);
-        entity.setEnabled(true);
         dictTypeMapper.insert(entity);
         return entity.getId();
     }

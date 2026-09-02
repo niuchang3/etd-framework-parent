@@ -39,6 +39,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 
+import org.etd.upms.organization.biz.SystemOrganizationBizService;
+import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
+
 @Validated
 @RestController
 @RequestMapping("/v1/user")
@@ -52,6 +55,9 @@ public class SystemUserController {
 
     @Autowired
     private SystemUserBizService userBizService;
+
+    @Autowired
+    private SystemOrganizationBizService organizationBizService;
 
     /**
      * 用户分页。组织参数为空时包含未分配组织的用户；传入时包含该组织及全部下级组织的用户。
@@ -211,5 +217,14 @@ public class SystemUserController {
         return ResultModel.success(systemUserMenusVOS);
     }
 
+    /**
+     * 获取当前登录人组织机构树列表
+     */
+    @GetMapping("/organization/tree")
+    public ResultModel<List<SystemOrganizationVO>> currentUserOrganizationTree(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "enabled", required = false) Boolean enabled) {
+        return ResultModel.success(organizationBizService.selectOrganizationTreeList(keyword, enabled));
+    }
 
 }

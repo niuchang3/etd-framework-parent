@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.upms.organization.mapper.SystemOrganizationMapper">
+
+    <resultMap id="systemOrganizationEntityMap" type="org.etd.upms.organization.entity.SystemOrganizationEntity">
+        <id property="id" column="id"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="parentIdPath" column="parent_id_path"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="orgName" column="org_name"/>
+        <result property="orgType" column="org_type"/>
+        <result property="leaderUserId" column="leader_user_id"/>
+        <result property="sort" column="sort"/>
+        <result property="enabled" column="enabled"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+    </resultMap>
+
+    <!-- 根据用户 ID 联表查询组织列表 -->
+    <select id="selectListByUserId" resultMap="systemOrganizationEntityMap">
+        select
+            t1.id,
+            t1.tenant_id,
+            t1.parent_id,
+            t1.parent_id_path,
+            t1.org_code,
+            t1.org_name,
+            t1.org_type,
+            t1.leader_user_id,
+            t1.sort,
+            t1.enabled,
+            t1.del_flag,
+            t1.create_time,
+            t1.create_by,
+            t1.update_time,
+            t1.update_by
+        from sys_organization as t1
+        inner join sys_user_org_rel as t2
+            on t1.id = t2.org_id
+            and t1.tenant_id = t2.tenant_id
+            and t2.del_flag = 0
+        where t2.user_id = #{userId}
+          and t1.del_flag = 0
+        <if test="enabled != null">
+          and t1.enabled = #{enabled}
+        </if>
+        order by t1.sort, t1.id
+    </select>
+
+    <!-- 根据组织 ID 集合查询组织列表 -->
+    <select id="selectListByIds" resultMap="systemOrganizationEntityMap">
+        select
+            t1.id,
+            t1.tenant_id,
+            t1.parent_id,
+            t1.parent_id_path,
+            t1.org_code,
+            t1.org_name,
+            t1.org_type,
+            t1.leader_user_id,
+            t1.sort,
+            t1.enabled,
+            t1.del_flag,
+            t1.create_time,
+            t1.create_by,
+            t1.update_time,
+            t1.update_by
+        from sys_organization as t1
+        where t1.del_flag = 0
+          and t1.id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        <if test="enabled != null">
+          and t1.enabled = #{enabled}
+        </if>
+        order by t1.sort, t1.id
+    </select>
+
+</mapper>

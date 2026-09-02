@@ -1,10 +1,12 @@
 package org.etd.upms.organization.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
+import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
 /**
  * 组织机构实体类。
@@ -35,6 +37,7 @@ public class SystemOrganizationEntity extends BaseEntity {
     @TableField("sort")
     private Integer sort;
 
-    @TableField("enabled")
+    @TableField(value = "enabled", fill = FieldFill.INSERT)
+    @TableFieldExtend("true")
     private Boolean enabled;
 }

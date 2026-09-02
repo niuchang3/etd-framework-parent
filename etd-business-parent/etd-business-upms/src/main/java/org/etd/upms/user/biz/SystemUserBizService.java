@@ -3,6 +3,7 @@ package org.etd.upms.user.biz;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.context.DataPermissionHelper;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -74,9 +75,16 @@ public class SystemUserBizService {
 
     public IPage<SystemUserVO> page(long current, long size, String keyword, Long organizationId,
                                     Boolean enabled, Boolean locked) {
-        Set<Long> userIds = selectUserIdsByOrganization(organizationId);
-        IPage<SystemUserVO> page = userService.page(current, size, keyword, enabled, locked, userIds)
-                .convert(this::toVO);
+        IPage<SystemUserEntity> entityPage;
+        if (organizationId != null) {
+            Set<Long> targetOrgIds = organizationService.selectSubtreeIds(organizationId);
+            try (DataPermissionHelper.Scope ignore = DataPermissionHelper.ignore()) {
+                entityPage = userService.selectUserPage(current, size, keyword, targetOrgIds, enabled, locked);
+            }
+        } else {
+            entityPage = userService.selectUserPage(current, size, keyword, null, enabled, locked);
+        }
+        IPage<SystemUserVO> page = entityPage.convert(this::toVO);
         populateAssignments(page.getRecords());
         return page;
     }
@@ -105,7 +113,9 @@ public class SystemUserBizService {
         Set<Long> roleIds = normalizedIds(dto.getRoleIds());
         Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
         validateAssignments(roleIds, organizationIds, dto.getPrimaryOrganizationId());
-        Long userId = userService.insert(toEntity(dto), dto.getPassword());
+        SystemUserEntity entity = toEntity(dto);
+        entity.setOrgId(dto.getPrimaryOrganizationId());
+        Long userId = userService.insert(entity, dto.getPassword());
         userRoleRelService.replace(userId, roleIds);
         userOrganizationService.replace(userId, organizationIds, dto.getPrimaryOrganizationId());
         return userId;
@@ -128,12 +138,14 @@ public class SystemUserBizService {
             userRoleRelService.replace(id, roleIds);
             revokeUserTokens(id);
         }
+        SystemUserEntity entity = toEntity(dto);
         if (dto.getOrganizationIds() != null) {
             Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
             validateOrganizations(organizationIds, dto.getPrimaryOrganizationId());
             userOrganizationService.replace(id, organizationIds, dto.getPrimaryOrganizationId());
+            entity.setOrgId(dto.getPrimaryOrganizationId());
         }
-        return userService.update(id, toEntity(dto));
+        return userService.update(id, entity);
     }
 
     /**
@@ -246,6 +258,7 @@ public class SystemUserBizService {
         Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
         validateOrganizations(organizationIds, dto.getPrimaryOrganizationId());
         userOrganizationService.replace(userId, organizationIds, dto.getPrimaryOrganizationId());
+        userService.updatePrimaryOrganization(userId, dto.getPrimaryOrganizationId());
         return true;
     }
 
@@ -276,13 +289,7 @@ public class SystemUserBizService {
         return menus;
     }
 
-    private Set<Long> selectUserIdsByOrganization(Long organizationId) {
-        if (organizationId == null) {
-            return null;
-        }
-        Set<Long> organizationIds = organizationService.selectSubtreeIds(organizationId);
-        return userOrganizationService.selectUserIdsByOrganizationIds(organizationIds);
-    }
+
 
     private void validateAssignments(Set<Long> roleIds, Set<Long> organizationIds, Long primaryOrganizationId) {
         roleService.requireAssignable(roleIds);

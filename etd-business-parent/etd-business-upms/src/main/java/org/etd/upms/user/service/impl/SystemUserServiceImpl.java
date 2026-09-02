@@ -1,6 +1,5 @@
 package org.etd.upms.user.service.impl;
 
-import com.etd.framework.starter.client.core.user.PermissionsService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.etd.framework.common.core.constants.BasicConstant;
@@ -14,6 +13,7 @@ import org.etd.upms.user.mapper.SystemUserMapper;
 import org.etd.upms.user.service.SystemUserService;
 import org.etd.upms.tenant.service.SystemTenantService;
 import org.etd.framework.starter.mybaits.core.EtdLambdaQueryWrapper;
+import org.etd.framework.starter.mybaits.permission.annotation.IgnoreDataPermission;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,28 +37,12 @@ public class SystemUserServiceImpl implements SystemUserService {
      */
     @Autowired
     private SystemUserMapper systemUserMapper;
-    /**
-     * 用户与角色的关系Service
-     */
-    @Autowired
-    private PermissionsService permissionsService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private SystemTenantService tenantService;
-
-    /**
-     * register
-     *
-     * @param userDetails 参数 userDetails
-     * @return 处理结果
-     */
-    @Override
-    public boolean register(UserDetails userDetails) {
-        return false;
-    }
 
     @Override
     public IPage<SystemUserEntity> page(long current, long size, String keyword, Boolean enabled, Boolean locked,
@@ -79,100 +63,10 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.selectPage(new Page<>(current, size), wrapper);
     }
 
-
-    /**
-     * load User By Id
-     *
-     * @param id 参数 id
-     * @return 处理结果
-     */
-    @IgnoreTenant
     @Override
-    public UserDetails loadUserById(Long id) {
-        SystemUserEntity systemUserEntity = selectByUserById(id);
-        if (ObjectUtils.isEmpty(systemUserEntity)) {
-            return null;
-        }
-        return toUserDetails(systemUserEntity);
-    }
-
-    /**
-     * load User By Account
-     *
-     * @param account 参数 account
-     * @return 处理结果
-     */
-    @IgnoreTenant
-    @Override
-    public UserDetails loadUserByAccount(String account) {
-        SystemUserEntity systemUserEntity = selectByAccount(account);
-        if (ObjectUtils.isEmpty(systemUserEntity)) {
-            return null;
-        }
-        return toUserDetails(systemUserEntity);
-    }
-
-    /**
-     * 数据转换
-     *
-     * @param systemUserEntity
-     * @return
-     */
-    private UserDetails toUserDetails(SystemUserEntity systemUserEntity) {
-        UserPermissions permissions = permissionsService.loadPermissionsByUser(systemUserEntity.getId());
-        validateTenant(systemUserEntity, permissions);
-        UserDetails userDetails = toUserDetails(systemUserEntity, permissions);
-        disableUserWhenTenantUnavailable(userDetails);
-        return userDetails;
-    }
-
-    /**
-     * 数据转换
-     *
-     * @param systemUserEntity
-     * @param permissions
-     * @return
-     */
-    private UserDetails toUserDetails(SystemUserEntity systemUserEntity, UserPermissions permissions) {
-        UserDetails userDetails = Mappers.getMapper(SystemUserConverter.class).toUserDetails(systemUserEntity);
-        userDetails.setTenantId(systemUserEntity.getTenantId());
-        userDetails.setRoleCodes(permissions.getRoleCodes());
-        userDetails.setAuthorities(permissions.getRoleCodes().stream()
-                .map(RoleAuthority::new)
-                .toList());
-        userDetails.setPlatformAdmin(permissions.getPlatformAdmin());
-        userDetails.setTenantAdmin(permissions.getTenantAdmin());
-        userDetails.setOrgId(permissions.getPrimaryOrganizationId());
-        userDetails.setOrgIds(permissions.getOrganizationIds());
-        userDetails.setPermissionTypes(permissions.getPermissionTypes());
-        userDetails.setPermissionType(resolveLegacyPermissionType(permissions.getPermissionTypes()));
-        userDetails.setCustomOrgIds(permissions.getCustomOrganizationIds());
-        userDetails.setScopeOrgIds(permissions.getScopeOrganizationIds());
-        return userDetails;
-    }
-
-    private String resolveLegacyPermissionType(Set<String> permissionTypes) {
-        if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
-            return BasicConstant.PermissionType.ALL.getCode();
-        }
-        return permissionTypes.size() == 1 ? permissionTypes.iterator().next() : null;
-    }
-
-    private void disableUserWhenTenantUnavailable(UserDetails userDetails) {
-        // 平台管理员承担租户维护职责，即使所属租户停用也保留登录能力。
-        if (!userDetails.isPlatformAdmin() && !tenantService.isLoginEnabled(userDetails.getTenantId())) {
-            // 不在用户加载阶段抛业务异常，交由 Security 统一执行用户禁用校验。
-            userDetails.setEnabled(false);
-        }
-    }
-
-    /**
-     * 用户主表与角色关系必须指向同一个租户，避免跨租户权限被合并到登录态。
-     */
-    private void validateTenant(SystemUserEntity user, UserPermissions permissions) {
-        if (permissions.getTenantId() != null && !Objects.equals(user.getTenantId(), permissions.getTenantId())) {
-            throw new IllegalStateException("用户主表与角色关系的租户不一致，用户ID：" + user.getId());
-        }
+    public IPage<SystemUserEntity> selectUserPage(long current, long size, String keyword, Set<Long> orgIds,
+                                                   Boolean enabled, Boolean locked) {
+        return systemUserMapper.selectUserPage(new Page<>(current, size), keyword, orgIds, enabled, locked);
     }
 
     /**
@@ -276,9 +170,6 @@ public class SystemUserServiceImpl implements SystemUserService {
         entity.setMobile(mobile);
         entity.setUserName(entity.getUserName().trim());
         entity.setPassword(passwordEncoder.encode(rawPassword));
-        entity.setLocked(false);
-        entity.setEnabled(true);
-        entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
         if (systemUserMapper.insert(entity) <= 0) {
             throw new ApiRuntimeException("用户创建失败。");
         }
@@ -371,12 +262,21 @@ public class SystemUserServiceImpl implements SystemUserService {
         entity.setPassword(passwordEncoder.encode(password));
         entity.setUserName(userName.trim());
         entity.setMobile(normalizedMobile);
-        entity.setLocked(false);
-        entity.setEnabled(true);
         if (systemUserMapper.insert(entity) <= 0) {
             throw new ApiRuntimeException("租户管理员创建失败。");
         }
         return entity.getId();
+    }
+
+    @Override
+    public void updatePrimaryOrganization(Long userId, Long primaryOrgId) {
+        if (userId == null) {
+            return;
+        }
+        SystemUserEntity entity = new SystemUserEntity();
+        entity.setId(userId);
+        entity.setOrgId(primaryOrgId);
+        systemUserMapper.updateById(entity);
     }
 
     private void ensureAccountAvailable(String account, Long excludedId) {

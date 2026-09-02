@@ -7,8 +7,20 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.etd.upms.user.entity.SystemUserEntity;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import java.util.Set;
+
 @Mapper
 public interface SystemUserMapper extends BaseMapper<SystemUserEntity> {
+
+    /**
+     * 原生 SQL 用户关联分页查询
+     */
+    IPage<SystemUserEntity> selectUserPage(IPage<SystemUserEntity> page,
+                                           @Param("keyword") String keyword,
+                                           @Param("orgIds") Set<Long> orgIds,
+                                           @Param("enabled") Boolean enabled,
+                                           @Param("locked") Boolean locked);
 
     /**
      * 登录账号在全平台唯一，因此唯一性检查必须忽略租户拦截器。

@@ -1,10 +1,12 @@
 package org.etd.upms.tenant.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
+import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
 import java.io.Serializable;
 
@@ -47,6 +49,7 @@ public class SystemTenantEntity extends BaseEntity implements Serializable {
     /**
      * 租户锁定
      */
-    @TableField("locked")
+    @TableField(value = "locked", fill = FieldFill.INSERT)
+    @TableFieldExtend("false")
     private Boolean locked;
 }
