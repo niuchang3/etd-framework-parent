@@ -91,6 +91,10 @@ public class EtdTenantLineHandler implements TenantLineHandler {
         if(ignoreTenant){
             return true;
         }
+        UserDetails user = RequestContext.getUser();
+        if (user != null && user.isPlatformAdmin()) {
+            return true;
+        }
         if (ignoreTables.contains(tableName.toUpperCase())) {
             return true;
         }
