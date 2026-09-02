@@ -117,7 +117,7 @@
   - 功能域名称应直接表达业务概念，优先使用 `user`、`role`，不要使用含义宽泛的 `usermanage`、`rolemanage`。
 - 新增包名前必须先检查同模块是否已有相同职责的包，优先放入已有包结构，不要随意创造 `utils`、`helper`、`common`、`config2`、`new`、`test` 等含义模糊的包。
 - 包名只使用小写字母和点号，不使用大写、下划线、中划线、拼音缩写或无意义缩写。
-- 包层级要表达业务或技术职责，不要过深。业务模块根包之后的业务层级一般不超过 4 层；超过时必须确认确实能提升边界清晰度。
+- 包层级要表达业务或技术职责，不要过深。以 `org.etd.<业务模块名>` 为业务模块根包（如 `org.etd.upms`），根包之后的标准层级结构为 3 层（即 `1.<功能域> -> 2.<技术分层> -> 3.<子包(如 dto/vo/impl)>`，如 `dict.controller.dto`）；只有在 Controller 下针对极复杂页面继续拆分子功能入口时，才允许扩展至 4 层。
 - starter 模块内不要引用业务模块包；common 模块不要反向引用 starter 或 business 包；business 模块可以依赖 starter 和 common 暴露的能力。
 - 新增类时，包路径必须和模块职责一致。例如：
   - 通用工具放在 `etd-framework-commons` 下合适的 `common` 包；
@@ -135,7 +135,7 @@
 - 每个功能域可以设置 `biz` 包作为业务编排层，例如 `user.biz`、`role.biz`、`menu.biz`、`tenant.biz`。
 - `biz` 层负责完整业务用例编排，例如创建用户并分配角色、角色授权菜单、初始化租户、导入用户、删除菜单并清理关系。
 - `biz` 层可以控制事务，可以调用多个 service，但不直接调用 mapper，不写 SQL 细节，不放 Controller DTO/VO。
-- 跨多个 Service 的业务组装必须放在 `biz` 包，不要塞进某个大 Service。
+- 跨多个 Service 的写流程、事务控制或复杂业务组装必须放在 `biz` 包，不要塞进某个大 Service。
 - `biz` 层命名使用 `XxxBizService`；复杂到需要独立表达场景时，可以使用 `XxxActionBizService`，例如 `UserImportBizService`、`TenantInitBizService`、`RoleAuthorizeBizService`。
 - Service 必须位于对应功能域内部，例如 `user.service`、`role.service`、`menu.service`、`tenant.service`。
 - Service 类按业务能力或业务关系拆分，不要把同一业务类型下的所有能力都塞进一个大 Service。
@@ -149,7 +149,7 @@
 - 能力型 Service 可以承接 JetCache 缓存职责。稳定查询方法可以使用 `@Cached`，写方法必须同步设计 `@CacheInvalidate` 或主动缓存失效策略。
 - `biz` 层不直接添加 JetCache 缓存注解，mapper 层不添加缓存注解。缓存应围绕稳定业务能力，而不是围绕 SQL 细节或编排流程。
 - 涉及用户权限、用户角色、角色菜单、菜单树等关联缓存时，必须明确失效范围，不能只加缓存不处理失效。
-- Controller 可以调用同一业务类型下的多个 Service 来完成简单页面功能；涉及多个 Service 的写流程或复杂业务组装时，应调用 `biz` 层。
+- Controller 在简单同业务域只读组装场景下可直接调用多个 Service；凡涉及多个 Service 的写流程、事务控制或复杂业务组装时，必须调用 `biz` 层。
 - Mapper 必须位于对应功能域内部，例如 `user.mapper`、`role.mapper`、`menu.mapper`、`tenant.mapper`。
 - Mapper 保持简单，负责对应表或关系表的数据访问，例如 `UserMapper`、`UserRoleMapper`、`RoleMapper`、`RoleMenuMapper`。
 - Mapper XML 必须和 Java Mapper 一一对应。Java Mapper 如何拆，XML 就如何拆。
@@ -164,7 +164,7 @@
 - 凡是编写或重构涉及多表关联（JOIN）或复杂查询的 Mapper XML SQL，必须主动审查并识别 SQL 中的连接字段（ON）、筛选条件（WHERE）及排序字段（ORDER BY）是否具备对应的索引支持（索引覆盖 / Index Range Scan）；若识别到缺失索引或未实现索引覆盖，必须在方案与回复中明确提出，并给出对应的索引 DDL 补齐建议。
 - 需要支持组织数据权限过滤（包含 `org_id` 字段）的业务实体类，必须继承 `org.etd.framework.starter.mybaits.core.OrgScopedEntity` 基类，不得重复定义 `orgId` 字段；无需组织权限过滤的公共系统实体类继续使用 `BaseEntity`。
 - 平台管理员（`platformAdmin = true`）具备最高系统权限，框架层自动跳过多租户隔离（`EtdTenantLineHandler` 不追加 `tenant_id` 条件）以及组织数据权限隔离（`EtdDataPermissionHandler` 不追加部门/用户过滤条件），实现跨租户、跨组织的全局系统管理。
-- 凡是实体基础通用属性的初始化默认值（如 `locked`、`enabled`、`builtIn`、`dataStatus` 等），统一通过框架层的 `@TableField(value = "...", fill = FieldFill.INSERT)` 结合 `@TableFieldExtend(...)` 注解（使用 SpEL 表达式如 `"false"`、`"true"` 或枚举代码）实现声明式自动填充。严禁在业务代码/Service 中显式编写 `entity.setLocked(...)`、`entity.setEnabled(...)` 等初始化硬编码代码，保持业务代码干净纯粹，必须严格参考 `BaseEntity` 规范。
+- 凡是实体基础通用属性新增插入（INSERT）时的初始化默认值（如 `locked`、`enabled`、`builtIn`、`dataStatus` 等），统一通过框架层的 `@TableField(value = "...", fill = FieldFill.INSERT)` 结合 `@TableFieldExtend(...)` 注解（使用 SpEL 表达式如 `"false"`、`"true"` 或枚举代码）实现声明式自动填充。严禁在业务代码/Service 中显式编写 `entity.setLocked(...)`、`entity.setEnabled(...)` 等新增插入时的初始化硬编码代码，保持业务代码干净纯粹，必须严格参考 `BaseEntity` 规范（在启用/禁用、锁定/解锁等状态更新业务方法中的 Setter 调用不受此限制）。
 - 修改要小而聚焦。
 - 优先写清楚直接的代码，不要炫技。
 - 避免使用过度复杂、多层嵌套或难以维护的 Stream 流式写法：
@@ -174,13 +174,13 @@
 - 单个方法理论上不超过 30 行。超过 30 行时，必须优先考虑提取私有方法、规则方法、转换方法或独立组件承接复杂逻辑。
 - 提取方法时，方法名必须表达业务语义或技术语义，不要用 `handle`、`process`、`doSomething`、`buildData` 这类含糊命名。
 - **业务函数命名规范（适用于业务模块及公共模块，`etd-framework-starter` 模块不在本命名规范约束范围内）**：
-  - **语序结构**：必须遵循 `[核心动作(动词)] + [操作对象(目标名词)] + [限定条件/维度(如 By/With)]` 的自然语序（如 `createTenantAdmin`、`switchStatus`、`selectUserPage`），严禁使用名词开头的颠倒命名（如 `tenantAdminCreate`）。
-  - **单复数显式修饰**：为了符合中文阅读习惯，返回集合/批量查询的方法必须在名称中显式带上集合特征（如 `selectUserList`、`selectUserIds`、`groupOrganizationsByUserId`、`countAccount`），避免仅靠结尾 `s` 区分单复数。
+  - **语序结构**：必须遵循 `[核心动作(动词)] + [操作对象(目标名词)] + [限定条件/维度(如 By/With)]` 的自然语序（如 `createTenantAdmin`、`switchStatus`、`getUserPage`），严禁使用名词开头的颠倒命名（如 `tenantAdminCreate`）。
+  - **单复数显式修饰**：为了符合中文阅读习惯，返回集合/批量查询的方法必须在名称中显式带上集合特征（如 `selectUserList`、`selectUserIds`、`groupOrganizationsByUserId`），避免仅靠结尾 `s` 区分单复数；返回数量的方法使用 `count` 前缀（如 `countAccount`）。
   - **条件查询统一介词**：表达按条件/维度过滤查询时，统一使用 `By` 作为介词（如 `selectByUser`、`selectByUserIds`），减少多种介词混用的阅读转换负担。
   - **技术分层动词规范**：
-    - Controller 层：表达前端 HTTP 意图，统一使用 `save` / `remove` / `update` / `get` / `page`；
-    - BizService 层：表达完整业务流程，使用 `init` / `grant` / `import` / `assign` / `bind`；
-    - Service 层：表达单一能力或规则，使用 `switch` / `require` / `populate` / `resolve`；
+    - Controller 层：表达前端 HTTP 意图，推荐使用 `save` / `remove` / `update` / `get` / `page` / `list` / `export`；
+    - BizService 层：表达完整业务流程，推荐使用 `init` / `grant` / `import` / `assign` / `bind` / `create` / `modify` / `cancel` / `approve` / `reject` / `export` / `remove`；
+    - Service 层：表达单一能力或规则，推荐使用 `create` / `modify` / `fetch` / `enable` / `disable` / `switch` / `require` / `populate` / `resolve`；
     - Mapper 层：表达基础 SQL 动作，统一使用 `select` / `insert` / `update` / `delete`。
   - **禁忌**：严禁使用 `handleData`、`processUser`、`doSomething`、`buildData` 这类无法看出实际逻辑的含糊无意义词汇。
 - AI 编写与修改的代码必须包含清晰的中文注释：
