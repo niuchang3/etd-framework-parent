@@ -130,6 +130,12 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         target.setPlatformAdmin(source.getPlatformAdmin());
         target.setTenantAdmin(source.getTenantAdmin());
         target.setAuthorities(source.getAuthorities());
+        target.setOrgId(source.getOrgId());
+        target.setOrgIds(source.getOrgIds());
+        target.setPermissionType(source.getPermissionType());
+        target.setPermissionTypes(source.getPermissionTypes());
+        target.setCustomOrgIds(source.getCustomOrgIds());
+        target.setScopeOrgIds(source.getScopeOrgIds());
         return target;
     }
 
@@ -159,6 +165,12 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         claim.put(SecurityParameterConstant.UserClaim.PLATFORM_ADMIN, userDetails.getPlatformAdmin());
         claim.put(SecurityParameterConstant.UserClaim.TENANT_ADMIN, userDetails.getTenantAdmin());
         claim.put(SecurityParameterConstant.UserClaim.AUTHORITIES, userDetails.getAuthorities());
+        claim.put(SecurityParameterConstant.UserClaim.ORG_ID, userDetails.getOrgId());
+        claim.put(SecurityParameterConstant.UserClaim.ORG_IDS, userDetails.getOrgIds());
+        claim.put(SecurityParameterConstant.UserClaim.PERMISSION_TYPE, userDetails.getPermissionType());
+        claim.put(SecurityParameterConstant.UserClaim.PERMISSION_TYPES, userDetails.getPermissionTypes());
+        claim.put(SecurityParameterConstant.UserClaim.CUSTOM_ORG_IDS, userDetails.getCustomOrgIds());
+        claim.put(SecurityParameterConstant.UserClaim.SCOPE_ORG_IDS, userDetails.getScopeOrgIds());
         return claim;
     }
 

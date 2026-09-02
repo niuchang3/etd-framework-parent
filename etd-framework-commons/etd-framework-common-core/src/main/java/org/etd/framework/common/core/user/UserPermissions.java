@@ -27,6 +27,31 @@ public class UserPermissions implements Serializable {
     private Set<String> roleCodes = new LinkedHashSet<>();
 
     /**
+     * 用户全部角色的数据权限类型编码。
+     */
+    private Set<String> permissionTypes = new LinkedHashSet<>();
+
+    /**
+     * 用户主组织标识。
+     */
+    private Long primaryOrganizationId;
+
+    /**
+     * 用户直接关联的组织标识集合。
+     */
+    private Set<Long> organizationIds = new LinkedHashSet<>();
+
+    /**
+     * 自定义跨组织角色授权的组织标识集合。
+     */
+    private Set<Long> customOrganizationIds = new LinkedHashSet<>();
+
+    /**
+     * 多角色合并后允许访问的组织标识集合。
+     */
+    private Set<Long> scopeOrganizationIds = new LinkedHashSet<>();
+
+    /**
      * 是否平台管理员。
      */
     private Boolean platformAdmin = false;

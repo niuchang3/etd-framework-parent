@@ -124,7 +124,20 @@ public class SystemUserServiceImpl implements SystemUserService {
                 .toList());
         userDetails.setPlatformAdmin(permissions.getPlatformAdmin());
         userDetails.setTenantAdmin(permissions.getTenantAdmin());
+        userDetails.setOrgId(permissions.getPrimaryOrganizationId());
+        userDetails.setOrgIds(permissions.getOrganizationIds());
+        userDetails.setPermissionTypes(permissions.getPermissionTypes());
+        userDetails.setPermissionType(resolveLegacyPermissionType(permissions.getPermissionTypes()));
+        userDetails.setCustomOrgIds(permissions.getCustomOrganizationIds());
+        userDetails.setScopeOrgIds(permissions.getScopeOrganizationIds());
         return userDetails;
+    }
+
+    private String resolveLegacyPermissionType(Set<String> permissionTypes) {
+        if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
+            return BasicConstant.PermissionType.ALL.getCode();
+        }
+        return permissionTypes.size() == 1 ? permissionTypes.iterator().next() : null;
     }
 
     private void disableUserWhenTenantUnavailable(UserDetails userDetails) {

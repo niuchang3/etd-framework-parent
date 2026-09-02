@@ -23,15 +23,22 @@ public class RequestControlFlags implements Serializable {
     private Boolean ignoreTenant = false;
 
     /**
+     * 是否忽略数据权限过滤
+     */
+    private Boolean ignoreDataPermission = false;
+
+    /**
      * 重置所有控制标志
      */
     public void clean() {
         this.ignoreTenant = false;
+        this.ignoreDataPermission = false;
     }
 
     public RequestControlFlags copy() {
         RequestControlFlags copy = new RequestControlFlags();
         copy.ignoreTenant = ignoreTenant;
+        copy.ignoreDataPermission = ignoreDataPermission;
         return copy;
     }
 }

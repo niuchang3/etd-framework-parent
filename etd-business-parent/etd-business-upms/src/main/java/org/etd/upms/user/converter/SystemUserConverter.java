@@ -18,6 +18,12 @@ public interface SystemUserConverter {
     @Mapping(target = "tenantAdmin", ignore = true)
     @Mapping(target = "roleCodes", ignore = true)
     @Mapping(target = "authorities", ignore = true)
+    @Mapping(target = "orgId", ignore = true)
+    @Mapping(target = "orgIds", ignore = true)
+    @Mapping(target = "permissionType", ignore = true)
+    @Mapping(target = "permissionTypes", ignore = true)
+    @Mapping(target = "customOrgIds", ignore = true)
+    @Mapping(target = "scopeOrgIds", ignore = true)
     UserDetails toUserDetails(SystemUserEntity user);
 
     /**

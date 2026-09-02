@@ -8,6 +8,7 @@ import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.upms.role.biz.SystemRoleBizService;
 import org.etd.upms.role.controller.dto.SystemRoleMenuAssignDTO;
+import org.etd.upms.role.controller.dto.SystemRoleOrganizationAssignDTO;
 import org.etd.upms.role.controller.dto.SystemRoleSaveDTO;
 import org.etd.upms.role.controller.vo.SystemRoleMenuVO;
 import org.etd.upms.role.controller.vo.SystemRoleVO;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 
 @Validated
 @RestController
@@ -61,12 +63,12 @@ public class SystemRoleController {
 
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemRoleSaveDTO dto) {
-        return ResultModel.success(roleService.insert(dto));
+        return ResultModel.success(roleBizService.insert(dto));
     }
 
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemRoleSaveDTO dto) {
-        return ResultModel.success(roleService.update(id, dto));
+        return ResultModel.success(roleBizService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
@@ -92,5 +94,16 @@ public class SystemRoleController {
     public ResultModel<Boolean> replaceMenus(@PathVariable Long id,
                                               @Valid @RequestBody SystemRoleMenuAssignDTO dto) {
         return ResultModel.success(roleBizService.replaceMenus(id, dto.getMenus()));
+    }
+
+    @GetMapping("/{id}/organizations")
+    public ResultModel<Set<Long>> organizations(@PathVariable Long id) {
+        return ResultModel.success(roleBizService.selectOrganizationIds(id));
+    }
+
+    @PutMapping("/{id}/organizations")
+    public ResultModel<Boolean> replaceOrganizations(
+            @PathVariable Long id, @Valid @RequestBody SystemRoleOrganizationAssignDTO dto) {
+        return ResultModel.success(roleBizService.replaceOrganizations(id, dto.getOrganizationIds()));
     }
 }

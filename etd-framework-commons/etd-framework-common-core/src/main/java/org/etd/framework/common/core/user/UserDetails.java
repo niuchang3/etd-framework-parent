@@ -94,6 +94,36 @@ public class UserDetails implements Serializable {
     private List<RoleAuthority> authorities;
 
     /**
+     * 用户主组织/部门标识。
+     */
+    private Long orgId;
+
+    /**
+     * 用户关联的所有组织/部门标识集合。
+     */
+    private Set<Long> orgIds;
+
+    /**
+     * 计算合并后的数据权限范围类型编码。
+     */
+    private String permissionType;
+
+    /**
+     * 用户全部角色的数据权限类型编码，用于按并集合并多个角色的数据范围。
+     */
+    private Set<String> permissionTypes;
+
+    /**
+     * 自定义数据权限范围绑定的组织/部门标识集合。
+     */
+    private Set<Long> customOrgIds;
+
+    /**
+     * 最终计算合并的可访问组织/部门标识集合（包含本部门、下级部门或自定义部门等）。
+     */
+    private Set<Long> scopeOrgIds;
+
+    /**
      * 是否为平台管理员。
      *
      * @return 是否平台管理员

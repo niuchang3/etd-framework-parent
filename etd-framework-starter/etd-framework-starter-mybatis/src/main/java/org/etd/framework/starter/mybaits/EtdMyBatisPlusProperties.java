@@ -34,6 +34,12 @@ public class EtdMyBatisPlusProperties {
     private Fill fill = new Fill();
 
     /**
+     * 数据权限相关配置
+     */
+    @NestedConfigurationProperty
+    private DataPermissionProperties dataPermission = new DataPermissionProperties();
+
+    /**
      * 数据快照配置
      */
     @Data
@@ -47,6 +53,33 @@ public class EtdMyBatisPlusProperties {
     public class Fill {
 
         private Boolean enabled = false;
+    }
+
+    /**
+     * 数据权限配置
+     */
+    @Data
+    public class DataPermissionProperties {
+
+        /**
+         * 是否启用数据权限过滤
+         */
+        private Boolean enabled = false;
+
+        /**
+         * 默认组织/部门字段名
+         */
+        private String defaultOrgColumn = "org_id";
+
+        /**
+         * 默认用户/创建人字段名
+         */
+        private String defaultUserColumn = "create_by";
+
+        /**
+         * 忽略数据权限拦截的表列表，由业务应用显式配置
+         */
+        private List<String> ignoreTables = Lists.newArrayList();
     }
 
 

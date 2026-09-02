@@ -51,7 +51,7 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         LambdaQueryWrapper<SystemOrganizationEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(SystemOrganizationEntity::getId, ids);
         if (organizationMapper.selectCount(wrapper) != ids.size()) {
-            throw new ApiRuntimeException("只能为用户分配当前租户下存在的组织机构。");
+            throw new ApiRuntimeException("只能选择当前租户下存在的组织机构。");
         }
     }
 

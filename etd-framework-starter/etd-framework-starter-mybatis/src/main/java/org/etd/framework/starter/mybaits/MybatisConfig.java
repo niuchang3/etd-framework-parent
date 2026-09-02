@@ -7,6 +7,9 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import org.etd.framework.starter.mybaits.permission.aspect.DataPermissionAspect;
+import org.etd.framework.starter.mybaits.permission.handler.EtdDataPermissionHandler;
 import org.etd.framework.starter.mybaits.tenant.EtdTenantLineHandler;
 import org.etd.framework.starter.mybaits.tenant.aspect.IgnoreTenantAspect;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +53,12 @@ public class MybatisConfig {
             interceptor.addInnerInterceptor(tenantLineInnerInterceptor);
         }
 
+        if (Boolean.TRUE.equals(properties.getDataPermission().getEnabled())) {
+            EtdDataPermissionHandler dataPermissionHandler = new EtdDataPermissionHandler(properties.getDataPermission());
+            DataPermissionInterceptor dataPermissionInterceptor = new DataPermissionInterceptor(dataPermissionHandler);
+            interceptor.addInnerInterceptor(dataPermissionInterceptor);
+        }
+
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
 
@@ -61,6 +70,12 @@ public class MybatisConfig {
     @Bean
     public IgnoreTenantAspect ignoreTenantAspect(){
         return new IgnoreTenantAspect();
+    }
+
+    @ConditionalOnProperty(prefix = "etd.mybatis.data-permission", name = "enabled", havingValue = "true")
+    @Bean
+    public DataPermissionAspect dataPermissionAspect() {
+        return new DataPermissionAspect();
     }
 
 

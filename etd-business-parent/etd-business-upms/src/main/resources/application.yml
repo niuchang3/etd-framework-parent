@@ -94,5 +94,26 @@ etd:
         - oauth2_authorization_consent
     fill:
       enabled: true
-    permission:
+    data-permission:
       enabled: true
+      ignore-tables:
+        - sys_tenant
+        - sys_user
+        - sys_role
+        - sys_user_role_rel
+        - sys_user_org_rel
+        - sys_role_org_rel
+        - sys_role_menu_rel
+        - sys_tenant_menu_rel
+        - sys_organization
+        - sys_menus
+        - sys_api
+        - sys_menu_api_rel
+        - sys_dict_type
+        - sys_dict_data
+        - sys_config
+        - oauth2_client
+        - oauth2_scope
+        - oauth2_client_scope
+        - oauth2_authorization
+        - oauth2_authorization_consent

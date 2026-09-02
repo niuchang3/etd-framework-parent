@@ -183,4 +183,13 @@ public class RequestContext implements Serializable {
     public static void setIgnoreTenant(Boolean ignore) {
         getControlFlags().setIgnoreTenant(ignore);
     }
+
+    public static boolean getIgnoreDataPermission() {
+        Boolean ignoreDataPermission = getControlFlags().getIgnoreDataPermission();
+        return Boolean.TRUE.equals(ignoreDataPermission);
+    }
+
+    public static void setIgnoreDataPermission(Boolean ignore) {
+        getControlFlags().setIgnoreDataPermission(ignore);
+    }
 }

@@ -52,6 +52,12 @@ public interface SecurityParameterConstant {
         String PLATFORM_ADMIN = "platformAdmin";
         String TENANT_ADMIN = "tenantAdmin";
         String AUTHORITIES = "authorities";
+        String ORG_ID = "orgId";
+        String ORG_IDS = "orgIds";
+        String PERMISSION_TYPE = "permissionType";
+        String PERMISSION_TYPES = "permissionTypes";
+        String CUSTOM_ORG_IDS = "customOrgIds";
+        String SCOPE_ORG_IDS = "scopeOrgIds";
     }
 
     /**
