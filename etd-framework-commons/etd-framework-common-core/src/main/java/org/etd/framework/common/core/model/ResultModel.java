@@ -55,6 +55,12 @@ public class ResultModel<T> implements Serializable {
      * @param <T>
      * @return
      */
+    /**
+     * success
+     *
+     * @param data 参数 data
+     * @return 处理结果
+     */
     public static <T> ResultModel<T> success(T data) {
 
         return new ResultModel(RequestCodeConstant.SUCCESS.getCode(), RequestCodeConstant.SUCCESS.getDescription(), "", data, "");
@@ -66,6 +72,15 @@ public class ResultModel<T> implements Serializable {
      * @param <T>
      * @return
      */
+    /**
+     * failed
+     *
+     * @param requestCode 参数 requestCode
+     * @param throwable 参数 throwable
+     * @param message 参数 message
+     * @param url 参数 url
+     * @return 处理结果
+     */
     public static <T> ResultModel<T> failed(RequestCodeConverter requestCode, Throwable throwable, String message, String url) {
         return new ResultModel(requestCode.getCode(), getDevMessage(throwable), message, "", url);
     }
@@ -75,6 +90,15 @@ public class ResultModel<T> implements Serializable {
      *
      * @param <T>
      * @return
+     */
+    /**
+     * failed
+     *
+     * @param requestCode 参数 requestCode
+     * @param throwable 参数 throwable
+     * @param message 参数 message
+     * @param url 参数 url
+     * @return 处理结果
      */
     public static <T> ResultModel<T> failed(Integer requestCode, Throwable throwable, String message, String url) {
         return new ResultModel(requestCode, getDevMessage(throwable), message, "", url);

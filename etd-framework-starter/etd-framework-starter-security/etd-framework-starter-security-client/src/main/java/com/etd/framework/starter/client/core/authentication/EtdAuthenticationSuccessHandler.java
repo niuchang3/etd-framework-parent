@@ -30,6 +30,13 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
      * @param response       当前响应
      * @param authentication 认证成功后的对象
      */
+    /**
+     * on Authentication Success
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param authentication 参数 authentication
+     */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         writeSuccess(response, ResultModel.success(authentication));
@@ -42,6 +49,12 @@ public class EtdAuthenticationSuccessHandler extends AbstractAuthenticationHandl
      *
      * @param response 当前响应
      * @param body 响应数据
+     */
+    /**
+     * write Body
+     *
+     * @param response 参数 response
+     * @param body 参数 body
      */
     public void writeBody(HttpServletResponse response, Object body) throws IOException {
         writeSuccess(response, ResultModel.success(body));

@@ -9,6 +9,9 @@ import org.etd.framework.starter.mybaits.core.BaseEntity;
 
 import java.io.Serializable;
 
+/**
+ * 系统菜单实体类。
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName(value = "sys_menus", excludeProperty = "tenantId")

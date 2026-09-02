@@ -23,18 +23,32 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * 租户基础能力 Service 实现类。
+ */
 @Service
 public class SystemTenantServiceImpl implements SystemTenantService {
 
     @Autowired
     private SystemTenantMapper systemTenantMapper;
 
+    /**
+     * 查询 All
+     *
+     * @return 处理结果
+     */
     @Override
     public List<SystemTenantVO> selectAll() {
         List<SystemTenantEntity> entities = systemTenantMapper.selectList(new QueryWrapper<>());
         return Mappers.getMapper(SystemTenantConvert.class).toVo(entities);
     }
 
+    /**
+     * 查询 By Ids
+     *
+     * @param tenantIds 参数 tenantIds
+     * @return 处理结果
+     */
     @Override
     public List<SystemTenantVO> selectByIds(Set<Long> tenantIds) {
         EtdLambdaQueryWrapper<SystemTenantEntity> wrapper = new EtdLambdaQueryWrapper<>();
@@ -43,6 +57,11 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return Mappers.getMapper(SystemTenantConvert.class).toVo(entities);
     }
 
+    /**
+     * 查询 Current Tenant
+     *
+     * @return 处理结果
+     */
     @Override
     public SystemTenantVO selectCurrentTenant() {
         EtdLambdaQueryWrapper<SystemTenantEntity> wrapper = new EtdLambdaQueryWrapper<>();
@@ -52,6 +71,14 @@ public class SystemTenantServiceImpl implements SystemTenantService {
     }
 
 
+    /**
+     * 分页查询
+     *
+     * @param page 参数 page
+     * @param times 参数 times
+     * @param keyword 参数 keyword
+     * @return 处理结果
+     */
     @Override
     public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword) {
         UserDetails user = RequestContext.getUser();
@@ -76,6 +103,12 @@ public class SystemTenantServiceImpl implements SystemTenantService {
                 .convert(Mappers.getMapper(SystemTenantConvert.class)::toVo);
     }
 
+    /**
+     * 新增保存
+     *
+     * @param entity 参数 entity
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemTenantEntity entity) {
         ensureTenantAvailable(entity, null);
@@ -85,6 +118,13 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return entity.getId();
     }
 
+    /**
+     * bind Admin User
+     *
+     * @param tenantId 参数 tenantId
+     * @param adminUserId 参数 adminUserId
+     * @return 处理结果
+     */
     @Override
     public boolean bindAdminUser(Long tenantId, Long adminUserId) {
         requireExists(tenantId);
@@ -94,6 +134,13 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return systemTenantMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 更新修改
+     *
+     * @param tenantId 参数 tenantId
+     * @param entity 参数 entity
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long tenantId, SystemTenantEntity entity) {
         requireExists(tenantId);
@@ -102,6 +149,13 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return systemTenantMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 切换 Status
+     *
+     * @param tenantId 参数 tenantId
+     * @param status 参数 status
+     * @return 处理结果
+     */
     @Override
     public boolean switchStatus(Long tenantId, Integer status) {
         requireExists(tenantId);
@@ -111,6 +165,13 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return systemTenantMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 切换 Locked
+     *
+     * @param tenantId 参数 tenantId
+     * @param locked 参数 locked
+     * @return 处理结果
+     */
     @Override
     public boolean switchLocked(Long tenantId, boolean locked) {
         requireExists(tenantId);
@@ -120,12 +181,24 @@ public class SystemTenantServiceImpl implements SystemTenantService {
         return systemTenantMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long tenantId) {
         requireExists(tenantId);
         return systemTenantMapper.deleteById(tenantId) > 0;
     }
 
+    /**
+     * 判断 LoginEnabled 状态
+     *
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @Override
     public boolean isLoginEnabled(Long tenantId) {
         if (tenantId == null) {
@@ -137,6 +210,11 @@ public class SystemTenantServiceImpl implements SystemTenantService {
                 && Objects.equals(BasicConstant.DataStatus.ENABLED.getCode(), tenant.getDataStatus());
     }
 
+    /**
+     * 校验并要求 Ordinary
+     *
+     * @param tenantId 参数 tenantId
+     */
     @Override
     public void requireOrdinary(Long tenantId) {
         SystemTenantEntity tenant = requireExists(tenantId);

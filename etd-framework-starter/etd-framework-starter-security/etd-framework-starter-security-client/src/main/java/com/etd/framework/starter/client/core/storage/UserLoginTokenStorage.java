@@ -44,6 +44,12 @@ public class UserLoginTokenStorage {
      * @param userId 用户标识
      * @return 是否存在
      */
+    /**
+     * 判断 AccessTokenPresent 状态
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
+     */
     public boolean isAccessTokenPresent(String userId) {
         return tokenStore.exists(getAccessTokenKey(userId));
     }
@@ -55,6 +61,13 @@ public class UserLoginTokenStorage {
      * @param tokenValue 当前请求携带的访问令牌
      * @return 是否匹配
      */
+    /**
+     * access Token Matches
+     *
+     * @param userId 参数 userId
+     * @param tokenValue 参数 tokenValue
+     * @return 处理结果
+     */
     public boolean accessTokenMatches(String userId, String tokenValue) {
         return tokenMatches(getAccessTokenKey(userId), tokenValue);
     }
@@ -64,6 +77,12 @@ public class UserLoginTokenStorage {
      *
      * @param userId 用户标识
      * @return 是否存在
+     */
+    /**
+     * 判断 RefreshTokenPresent 状态
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
      */
     public boolean isRefreshTokenPresent(String userId) {
         return tokenStore.exists(getRefreshTokenKey(userId));
@@ -75,6 +94,13 @@ public class UserLoginTokenStorage {
      * @param userId 用户标识
      * @param tokenValue 当前请求携带的刷新令牌
      * @return 是否匹配
+     */
+    /**
+     * refresh Token Matches
+     *
+     * @param userId 参数 userId
+     * @param tokenValue 参数 tokenValue
+     * @return 处理结果
      */
     public boolean refreshTokenMatches(String userId, String tokenValue) {
         return tokenMatches(getRefreshTokenKey(userId), tokenValue);

@@ -34,11 +34,21 @@ public abstract class DataFillHandler implements MetaObjectHandler, ApplicationC
 
     private ApplicationContext applicationContext;
 
+    /**
+     * 设置 ApplicationContext 属性值
+     *
+     * @param applicationContext 参数 applicationContext
+     */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
+    /**
+     * 新增保存 Fill
+     *
+     * @param metaObject 参数 metaObject
+     */
     @SneakyThrows
     @Override
     public void insertFill(MetaObject metaObject) {
@@ -54,6 +64,11 @@ public abstract class DataFillHandler implements MetaObjectHandler, ApplicationC
         }
     }
 
+    /**
+     * 更新修改 Fill
+     *
+     * @param metaObject 参数 metaObject
+     */
     @Override
     public void updateFill(MetaObject metaObject) {
         for (TableFieldInfo fieldInfo : findTableInfo(metaObject).getFieldList()) {

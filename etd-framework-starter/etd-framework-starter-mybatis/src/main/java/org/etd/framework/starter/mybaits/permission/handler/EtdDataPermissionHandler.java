@@ -62,6 +62,14 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      * @param mappedStatementId Mapper 方法 ID
      * @return 增强的数据权限 SQL 条件 Expression（返回 null 表示无视数据权限）
      */
+    /**
+     * 获取 SqlSegment 属性值
+     *
+     * @param table 参数 table
+     * @param where 参数 where
+     * @param mappedStatementId 参数 mappedStatementId
+     * @return 处理结果
+     */
     @Override
     public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
         if (!shouldApplyDataPermission() || isIgnoreTable(table.getName())) {
@@ -145,6 +153,12 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      *
      * @param tableName 表名
      * @return 是否忽略
+     */
+    /**
+     * 判断 IgnoreTable 状态
+     *
+     * @param tableName 参数 tableName
+     * @return 处理结果
      */
     public boolean isIgnoreTable(String tableName) {
         if (!StringUtils.hasText(tableName)) {

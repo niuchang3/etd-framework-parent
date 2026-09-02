@@ -59,6 +59,12 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param entity
 	 * @return
 	 */
+	/**
+	 * 新增保存
+	 *
+	 * @param entity 参数 entity
+	 * @return 处理结果
+	 */
 	@Override
 	public T insert(T entity) {
 		return operations.save(entity);
@@ -68,6 +74,11 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * 批量保存
 	 *
 	 * @param collection
+	 */
+	/**
+	 * 新增保存 Batch
+	 *
+	 * @param collection 参数 collection
 	 */
 	@Override
 	public void insertBatch(Collection<T> collection) {
@@ -80,6 +91,12 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * 查询所有文档内容
 	 *
 	 * @return
+	 */
+	/**
+	 * 查找 All
+	 *
+	 * @param orders 参数 orders
+	 * @return 处理结果
 	 */
 	@Override
 	public List<T> findAll(Sort.Order... orders) {
@@ -100,6 +117,13 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param orders
 	 * @return
 	 */
+	/**
+	 * 查找 All
+	 *
+	 * @param pageInfo 参数 pageInfo
+	 * @param orders 参数 orders
+	 * @return 处理结果
+	 */
 	@Override
 	public PageInfo<T> findAll(PageInfo pageInfo, Sort.Order... orders) {
 		PageRequest pageRequest = pageInfo.toPageRequest(getSort(orders));
@@ -116,6 +140,12 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param id
 	 * @return
 	 */
+	/**
+	 * 查找 By Id
+	 *
+	 * @param id 参数 id
+	 * @return 处理结果
+	 */
 	@Override
 	public T findById(ID id) {
 		return operations.get(String.valueOf(id), getEntityClass(), getIndexCoordinates());
@@ -126,6 +156,12 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 *
 	 * @param entity
 	 * @return
+	 */
+	/**
+	 * 查找 By Entity
+	 *
+	 * @param entity 参数 entity
+	 * @return 处理结果
 	 */
 	@Override
 	public List<T> findByEntity(T entity) {
@@ -141,6 +177,13 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param entity
 	 * @param orders
 	 * @return
+	 */
+	/**
+	 * 查找 By Entity
+	 *
+	 * @param entity 参数 entity
+	 * @param orders 参数 orders
+	 * @return 处理结果
 	 */
 	@Override
 	public List<T> findByEntity(T entity, Sort.Order... orders) {
@@ -158,6 +201,14 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @param orders
 	 * @return
 	 */
+	/**
+	 * 查找 By Entity
+	 *
+	 * @param pageInfo 参数 pageInfo
+	 * @param entity 参数 entity
+	 * @param orders 参数 orders
+	 * @return 处理结果
+	 */
 	@Override
 	public PageInfo<T> findByEntity(PageInfo pageInfo, T entity, Sort.Order... orders) {
 		PageRequest pageRequest = pageInfo.toPageRequest(getSort(orders));
@@ -165,15 +216,23 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 		CriteriaQuery searchQuery = CriteriaQuery.builder(toTermCriteria(maps)).withPageable(pageRequest).build();
 		SearchPage<T> page = select(searchQuery);
 		pageInfo.setTotal((int) page.getTotalElements());
-		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).collect(Collectors.toList()));
+		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).toList());
 		return pageInfo;
 	}
 
 	/**
-	 * 模糊查询
+	 * 结合实体条件进行模糊匹配查询
 	 *
-	 * @param entity
-	 * @return
+	 * @param entity          包含查询属性的实体对象
+	 * @param likeFieldNames  需要进行模糊匹配的属性字段名数组
+	 * @return 匹配条件的实体列表
+	 */
+	/**
+	 * 模糊查询 By Entity
+	 *
+	 * @param entity 参数 entity
+	 * @param likeFieldNames 参数 likeFieldNames
+	 * @return 处理结果
 	 */
 	@Override
 	public List<T> likeByEntity(T entity, String... likeFieldNames) {
@@ -184,9 +243,22 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	}
 
 	/**
-	 * @param pageInfo
-	 * @param entity
-	 * @return
+	 * 分页并按排序规则模糊查询实体数据
+	 *
+	 * @param pageInfo       分页对象
+	 * @param entity         包含查询属性的实体对象
+	 * @param sort           排序规则
+	 * @param likeFieldNames 需要进行模糊匹配的属性字段名数组
+	 * @return 包含匹配记录的分页对象
+	 */
+	/**
+	 * 模糊查询 By Entity
+	 *
+	 * @param pageInfo 参数 pageInfo
+	 * @param entity 参数 entity
+	 * @param sort 参数 sort
+	 * @param likeFieldNames 参数 likeFieldNames
+	 * @return 处理结果
 	 */
 	@Override
 	public PageInfo<T> likeByEntity(PageInfo pageInfo, T entity, Sort sort, String... likeFieldNames) {
@@ -195,7 +267,7 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 		CriteriaQuery searchQuery = CriteriaQuery.builder(toMatchCriteria(maps, likeFieldNames)).withPageable(pageRequest).build();
 		SearchPage<T> page = select(searchQuery);
 		pageInfo.setTotal((int) page.getTotalElements());
-		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).collect(Collectors.toList()));
+		pageInfo.setRecords(page.getContent().stream().map(SearchHit::getContent).toList());
 		return pageInfo;
 	}
 
@@ -213,6 +285,11 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * 根据主键ID批量删除
 	 *
 	 * @param ids
+	 */
+	/**
+	 * 删除 By Id
+	 *
+	 * @param ids 参数 ids
 	 */
 	@Override
 	public void deleteById(Collection<ID> ids) {
@@ -313,6 +390,11 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	}
 
 
+	/**
+	 * 统计数量
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public long count() {
 		CriteriaQuery query = CriteriaQuery.builder(new Criteria()).build();
@@ -337,6 +419,6 @@ public abstract class BaseRepositoryImpl<T, ID> implements BaseRepository<T, ID>
 	 * @return
 	 */
 	private List<T> toList(SearchPage<T> datas) {
-		return datas.getContent().stream().map(SearchHit::getContent).collect(Collectors.toList());
+		return datas.getContent().stream().map(SearchHit::getContent).toList();
 	}
 }

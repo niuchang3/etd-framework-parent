@@ -33,6 +33,12 @@ public class RefreshTokenRequestConverter implements AuthenticationConverter {
      * @param request 当前请求
      * @return 刷新令牌认证对象
      */
+    /**
+     * 转换
+     *
+     * @param request 参数 request
+     * @return 处理结果
+     */
     @Override
     public Authentication convert(HttpServletRequest request) {
         RefreshTokenLoginRequest refreshRequest = readJson(request, RefreshTokenLoginRequest.class);

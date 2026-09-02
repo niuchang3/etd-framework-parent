@@ -6,6 +6,9 @@ import lombok.Data;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * 用户分配角色关联关系 DTO。
+ */
 @Data
 public class SystemUserRoleAssignDTO {
 

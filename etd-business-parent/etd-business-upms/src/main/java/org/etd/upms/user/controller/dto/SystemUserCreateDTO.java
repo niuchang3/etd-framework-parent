@@ -8,6 +8,9 @@ import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * 系统用户创建数据传输对象 DTO。
+ */
 @Data
 public class SystemUserCreateDTO {
 

@@ -24,6 +24,12 @@ public class BearerAuthenticationConverter implements AuthenticationConverter {
      * @param request 当前请求
      * @return Bearer 认证对象，未携带认证头时返回 {@code null}
      */
+    /**
+     * 转换
+     *
+     * @param request 参数 request
+     * @return 处理结果
+     */
     @Override
     public Authentication convert(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);

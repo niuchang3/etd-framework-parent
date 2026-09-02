@@ -23,6 +23,13 @@ public class OAuth2LoginRedirectResolver {
      * @param requestBodyRedirect JSON请求体中的回跳地址
      * @return 合法的回跳地址
      */
+    /**
+     * resolve Login Redirect
+     *
+     * @param request 参数 request
+     * @param requestBodyRedirect 参数 requestBodyRedirect
+     * @return 处理结果
+     */
     public Optional<String> resolveLoginRedirect(HttpServletRequest request, String requestBodyRedirect) {
         String redirect = StringUtils.hasText(requestBodyRedirect)
                 ? requestBodyRedirect
@@ -38,6 +45,12 @@ public class OAuth2LoginRedirectResolver {
      *
      * @param request 当前请求
      * @return 登录页地址
+     */
+    /**
+     * 构建 Login Redirect
+     *
+     * @param request 参数 request
+     * @return 处理结果
      */
     public String buildLoginRedirect(HttpServletRequest request) {
         String authorizeUrl = getCurrentRequestPath(request);

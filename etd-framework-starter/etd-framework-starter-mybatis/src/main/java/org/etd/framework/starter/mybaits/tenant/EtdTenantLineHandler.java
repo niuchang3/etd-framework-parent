@@ -29,6 +29,11 @@ public class EtdTenantLineHandler implements TenantLineHandler {
         return this;
     }
 
+    /**
+     * 添加 Ignore Tables
+     *
+     * @param tableNames 参数 tableNames
+     */
     public void addIgnoreTables(List<String> tableNames){
         for (String tableName : tableNames) {
             addIgnoreTables(tableName.toUpperCase());
@@ -39,6 +44,11 @@ public class EtdTenantLineHandler implements TenantLineHandler {
      * 获取当前租户
      *
      * @return
+     */
+    /**
+     * 获取 TenantId 属性值
+     *
+     * @return 处理结果
      */
     @Override
     public Expression getTenantId() {
@@ -53,6 +63,11 @@ public class EtdTenantLineHandler implements TenantLineHandler {
      *
      * @return
      */
+    /**
+     * 获取 TenantIdColumn 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getTenantIdColumn() {
         return tenantIdColumn;
@@ -63,6 +78,12 @@ public class EtdTenantLineHandler implements TenantLineHandler {
      *
      * @param tableName 表名
      * @return
+     */
+    /**
+     * ignore Table
+     *
+     * @param tableName 参数 tableName
+     * @return 处理结果
      */
     @Override
     public boolean ignoreTable(String tableName) {

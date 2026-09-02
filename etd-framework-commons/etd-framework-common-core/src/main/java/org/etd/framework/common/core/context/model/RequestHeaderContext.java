@@ -205,10 +205,22 @@ public class RequestHeaderContext implements Serializable {
         });
     }
 
+    /**
+     * 获取 Attribute 属性值
+     *
+     * @param key 参数 key
+     * @return 处理结果
+     */
     public Object getAttribute(String key) {
         return attributes != null ? attributes.get(key) : null;
     }
 
+    /**
+     * 设置 Attribute 属性值
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     */
     public void setAttribute(String key, Object value) {
         if (this.attributes == null) {
             this.attributes = new LinkedHashMap<>();
@@ -235,6 +247,12 @@ public class RequestHeaderContext implements Serializable {
         return null;
     }
 
+    /**
+     * 判断 KnownHeader 状态
+     *
+     * @param headerName 参数 headerName
+     * @return 处理结果
+     */
     public static boolean isKnownHeader(String headerName) {
         if (!StringUtils.hasText(headerName)) {
             return false;

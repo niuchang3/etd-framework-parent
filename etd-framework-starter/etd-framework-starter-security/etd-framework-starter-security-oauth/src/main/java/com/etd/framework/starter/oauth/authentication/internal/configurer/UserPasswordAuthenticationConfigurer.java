@@ -37,6 +37,11 @@ public class UserPasswordAuthenticationConfigurer extends AbstractSecurityEndpoi
         return this;
     }
 
+    /**
+     * 初始化
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void init(HttpSecurity builder) {
         AuthenticationProvider provider = getAuthenticationProvider();
@@ -47,6 +52,11 @@ public class UserPasswordAuthenticationConfigurer extends AbstractSecurityEndpoi
         builder.authenticationProvider(provider);
     }
 
+    /**
+     * configure
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void configure(HttpSecurity builder) {
         UserPasswordAuthenticationFilterFactory factory = getApplicationContext(builder)
@@ -59,6 +69,11 @@ public class UserPasswordAuthenticationConfigurer extends AbstractSecurityEndpoi
      * 获取登录端点匹配器。
      *
      * @return 登录端点匹配器
+     */
+    /**
+     * 获取 RequestMatcher 属性值
+     *
+     * @return 处理结果
      */
     @Override
     public RequestMatcher getRequestMatcher() {

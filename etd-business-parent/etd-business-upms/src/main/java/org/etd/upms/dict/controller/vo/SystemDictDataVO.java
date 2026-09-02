@@ -4,6 +4,9 @@ import lombok.Data;
 
 import java.time.Instant;
 
+/**
+ * 字典数据项视图响应对象 VO。
+ */
 @Data
 public class SystemDictDataVO {
 

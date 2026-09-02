@@ -7,6 +7,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.Set;
 
+/**
+ * 系统用户更新数据传输对象 DTO。
+ */
 @Data
 public class SystemUserUpdateDTO {
 

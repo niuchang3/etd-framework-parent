@@ -20,10 +20,21 @@ public enum SystemConfigValueType {
         this.code = code;
     }
 
+    /**
+     * 获取 Code 属性值
+     *
+     * @return 处理结果
+     */
     public String getCode() {
         return code;
     }
 
+    /**
+     * 从 Code
+     *
+     * @param code 参数 code
+     * @return 处理结果
+     */
     public static SystemConfigValueType fromCode(String code) {
         return Arrays.stream(values())
                 .filter(valueType -> valueType.code.equals(code))

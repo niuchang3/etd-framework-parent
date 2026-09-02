@@ -24,6 +24,12 @@ import java.util.Map;
 @Import({DefaultQueueConfig.class})
 public class RabbitConfig {
 
+    /**
+     * rabbit Template
+     *
+     * @param connectionFactory 参数 connectionFactory
+     * @return 处理结果
+     */
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate();
@@ -36,6 +42,12 @@ public class RabbitConfig {
         return template;
     }
 
+    /**
+     * rabbit Listener Container Factory
+     *
+     * @param connectionFactory 参数 connectionFactory
+     * @return 处理结果
+     */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
@@ -52,6 +64,11 @@ public class RabbitConfig {
         return factory;
     }
 
+    /**
+     * 设置 RabbitMqMessageHeads 属性值
+     *
+     * @param message 参数 message
+     */
     public void setRabbitMqMessageHeads(Message message) {
         if (message != null && message.getMessageProperties() != null) {
             Map<String, Object> headers = RequestContextInitializer.exportMessageHeaders();

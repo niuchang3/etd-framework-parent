@@ -25,6 +25,13 @@ public class RedisTokenStore {
      * @param value 缓存值
      * @param expiresAt 绝对过期时间
      */
+    /**
+     * put
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @param expiresAt 参数 expiresAt
+     */
     public void put(String key, Object value, Instant expiresAt) {
         Assert.hasText(key, "令牌缓存键不能为空。");
         Assert.notNull(value, "令牌缓存值不能为空。");
@@ -44,6 +51,13 @@ public class RedisTokenStore {
      * @return 缓存值
      * @param <T> 缓存值类型
      */
+    /**
+     * 获取
+     *
+     * @param key 参数 key
+     * @param valueType 参数 valueType
+     * @return 处理结果
+     */
     public <T> Optional<T> get(String key, Class<T> valueType) {
         Assert.hasText(key, "令牌缓存键不能为空。");
         Assert.notNull(valueType, "令牌缓存值类型不能为空。");
@@ -59,6 +73,12 @@ public class RedisTokenStore {
      *
      * @param key 缓存键
      * @return 是否存在
+     */
+    /**
+     * exists
+     *
+     * @param key 参数 key
+     * @return 处理结果
      */
     public boolean exists(String key) {
         Assert.hasText(key, "令牌缓存键不能为空。");
@@ -79,6 +99,12 @@ public class RedisTokenStore {
      *
      * @param pattern Redis键模式
      * @return 匹配的缓存键
+     */
+    /**
+     * keys
+     *
+     * @param pattern 参数 pattern
+     * @return 处理结果
      */
     public Set<String> keys(String pattern) {
         Assert.hasText(pattern, "令牌缓存键模式不能为空。");

@@ -30,6 +30,14 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
         return this;
     }
 
+    /**
+     * do 处理
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param handler 参数 handler
+     * @return 处理结果
+     */
     @Override
     protected boolean doHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestUri = request.getRequestURI();
@@ -58,6 +66,11 @@ public class EtdFrameworkHttpRequestInterceptorImpl extends EtdFrameworkHttpRequ
         return true;
     }
 
+    /**
+     * 获取 InterceptorsPath 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public List<String> getInterceptorsPath() {
         List<String> list = new ArrayList<>();

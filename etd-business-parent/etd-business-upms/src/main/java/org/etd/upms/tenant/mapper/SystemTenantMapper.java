@@ -5,6 +5,9 @@ import org.apache.ibatis.annotations.Mapper;
 import org.etd.upms.tenant.entity.SystemTenantEntity;
 
 
+/**
+ * 租户数据访问 Mapper 接口。
+ */
 @Mapper
 public interface SystemTenantMapper extends BaseMapper<SystemTenantEntity> {
 }

@@ -40,20 +40,46 @@ public class SystemDictBizService {
         return result;
     }
 
+    /**
+     * 新增保存 Data
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     public Long insertData(SystemDictDataSaveDTO dto) {
         dictTypeService.requireExists(dto.getDictTypeId());
         return dictDataService.insert(dto);
     }
 
+    /**
+     * 更新修改 Data
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     public boolean updateData(Long id, SystemDictDataSaveDTO dto) {
         dictTypeService.requireExists(dto.getDictTypeId());
         return dictDataService.update(id, dto);
     }
 
+    /**
+     * 删除 Data
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     public boolean deleteData(Long id) {
         return dictDataService.delete(id);
     }
 
+    /**
+     * 切换 Data Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     public boolean switchDataEnabled(Long id, Boolean enabled) {
         return dictDataService.switchEnabled(id, enabled);
     }

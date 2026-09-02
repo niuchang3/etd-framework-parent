@@ -24,6 +24,11 @@ public class BearerAuthenticationConfigurer extends AbstractHttpConfigurer<Beare
      *
      * @param builder HTTP 安全构建器
      */
+    /**
+     * 初始化
+     *
+     * @param builder 参数 builder
+     */
     @Override
     @SuppressWarnings("unchecked")
     public void init(HttpSecurity builder) {
@@ -39,6 +44,11 @@ public class BearerAuthenticationConfigurer extends AbstractHttpConfigurer<Beare
      * 注册请求头令牌解析过滤器。
      *
      * @param builder HTTP 安全构建器
+     */
+    /**
+     * configure
+     *
+     * @param builder 参数 builder
      */
     @Override
     public void configure(HttpSecurity builder) {

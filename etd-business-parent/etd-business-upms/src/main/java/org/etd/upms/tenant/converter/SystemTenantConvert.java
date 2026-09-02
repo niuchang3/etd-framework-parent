@@ -7,6 +7,9 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
+/**
+ * 租户模块 StructMapper 转换器。
+ */
 @Mapper
 public interface SystemTenantConvert {
 

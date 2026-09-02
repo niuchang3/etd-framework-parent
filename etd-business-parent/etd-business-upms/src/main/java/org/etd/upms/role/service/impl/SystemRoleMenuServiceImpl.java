@@ -18,12 +18,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 角色与菜单关联关系能力 Service 实现类。
+ */
 @Service
 public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
 
     @Autowired
     private SystemRoleMenuRelMapper roleMenuRelMapper;
 
+    /**
+     * 查询 Menu Access Levels
+     *
+     * @param roleIds 参数 roleIds
+     * @return 处理结果
+     */
     @Override
     public Map<Long, String> selectMenuAccessLevels(Set<Long> roleIds) {
         if (roleIds.isEmpty()) {
@@ -39,6 +48,12 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         return accessLevels;
     }
 
+    /**
+     * 查询 By Role Id
+     *
+     * @param roleId 参数 roleId
+     * @return 处理结果
+     */
     @Override
     public List<SystemRoleMenuVO> selectByRoleId(Long roleId) {
         LambdaQueryWrapper<SystemRoleMenuRelEntity> wrapper = new LambdaQueryWrapper<>();
@@ -49,6 +64,13 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
                 .toList();
     }
 
+    /**
+     * replace
+     *
+     * @param roleId 参数 roleId
+     * @param menus 参数 menus
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean replace(Long roleId, List<SystemRoleMenuGrantDTO> menus) {
@@ -65,6 +87,11 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         return true;
     }
 
+    /**
+     * 移除 By Role Id
+     *
+     * @param roleId 参数 roleId
+     */
     @Override
     public void removeByRoleId(Long roleId) {
         LambdaQueryWrapper<SystemRoleMenuRelEntity> wrapper = new LambdaQueryWrapper<>();
@@ -72,6 +99,11 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         roleMenuRelMapper.delete(wrapper);
     }
 
+    /**
+     * 移除 By Menu Ids
+     *
+     * @param menuIds 参数 menuIds
+     */
     @IgnoreTenant
     @Override
     public void removeByMenuIds(Set<Long> menuIds) {
@@ -83,6 +115,12 @@ public class SystemRoleMenuServiceImpl implements SystemRoleMenuService {
         roleMenuRelMapper.delete(wrapper);
     }
 
+    /**
+     * 移除 By Tenant And Menu Ids
+     *
+     * @param tenantId 参数 tenantId
+     * @param menuIds 参数 menuIds
+     */
     @IgnoreTenant
     @Override
     public void removeByTenantAndMenuIds(Long tenantId, Set<Long> menuIds) {

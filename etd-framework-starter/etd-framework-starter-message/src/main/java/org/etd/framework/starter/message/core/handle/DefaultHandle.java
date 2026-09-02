@@ -13,6 +13,12 @@ import org.springframework.stereotype.Component;
 @Component("defaultHandle")
 public class DefaultHandle extends AbstractListenerHandler {
 
+    /**
+     * 处理 Business
+     *
+     * @param message 参数 message
+     * @return 处理结果
+     */
     @Override
     protected Object handleBusiness(NotificationMsgRequest message) {
         log.info("处理默认消息，消息编码：{}，链路标识：{}", message.getMessageHandleCode(), RequestContext.getTraceId());

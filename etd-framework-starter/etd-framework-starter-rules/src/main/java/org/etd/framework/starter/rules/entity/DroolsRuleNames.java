@@ -8,6 +8,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * Drools 规则名称实体类。
+ */
 @TableName("drools_rule_names")
 @Data
 public class DroolsRuleNames implements Serializable {

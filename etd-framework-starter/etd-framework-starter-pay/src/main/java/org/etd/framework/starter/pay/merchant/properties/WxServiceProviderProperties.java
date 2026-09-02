@@ -59,6 +59,13 @@ public class WxServiceProviderProperties implements Serializable {
 	 * @param subMchId
 	 * @return
 	 */
+	/**
+	 * 获取 PayConfig 属性值
+	 *
+	 * @param subAppId 参数 subAppId
+	 * @param subMchId 参数 subMchId
+	 * @return 处理结果
+	 */
 	public WxPayConfig getPayConfig(String subAppId, String subMchId) {
 		WxPayConfig config = new WxPayConfig();
 		config.setAppId(this.appId);
@@ -78,6 +85,13 @@ public class WxServiceProviderProperties implements Serializable {
 	 * @param subAppId
 	 * @param subMchId
 	 * @return
+	 */
+	/**
+	 * 获取 PayService 属性值
+	 *
+	 * @param subAppId 参数 subAppId
+	 * @param subMchId 参数 subMchId
+	 * @return 处理结果
 	 */
 	public WxPayService getPayService(String subAppId, String subMchId){
 		WxPayService wxPayService = new WxPayServiceImpl();

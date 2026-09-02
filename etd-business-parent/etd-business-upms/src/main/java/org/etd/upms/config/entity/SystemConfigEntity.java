@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
+/**
+ * 系统参数配置实体类。
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName(value = "sys_config", excludeProperty = "tenantId")

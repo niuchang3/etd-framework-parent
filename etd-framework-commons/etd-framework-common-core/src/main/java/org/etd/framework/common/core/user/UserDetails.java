@@ -141,6 +141,11 @@ public class UserDetails implements Serializable {
         return Boolean.TRUE.equals(tenantAdmin);
     }
 
+    /**
+     * 判断 Admin 状态
+     *
+     * @return 处理结果
+     */
     public boolean isAdmin(){
         return isPlatformAdmin() || isTenantAdmin();
     }

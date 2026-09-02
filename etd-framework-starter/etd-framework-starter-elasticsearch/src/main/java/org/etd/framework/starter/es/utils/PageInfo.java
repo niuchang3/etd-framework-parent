@@ -58,6 +58,14 @@ public class PageInfo<T> {
 	 * @param sort
 	 * @return
 	 */
+	/**
+	 * 转换为 分页查询 Request
+	 *
+	 * @param current 参数 current
+	 * @param size 参数 size
+	 * @param sort 参数 sort
+	 * @return 处理结果
+	 */
 	public static PageRequest toPageRequest(Integer current, Integer size, Sort sort) {
 		if (!ObjectUtils.isEmpty(sort)) {
 			return PageRequest.of(current, size, sort);

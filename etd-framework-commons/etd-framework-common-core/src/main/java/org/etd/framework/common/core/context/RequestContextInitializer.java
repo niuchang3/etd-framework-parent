@@ -91,6 +91,13 @@ public class RequestContextInitializer {
      *
      * @param headers 标头映射 Map
      */
+    /**
+     * 初始化
+     *
+     * @param Map<String 参数 Map<String
+     * @param headers 参数 headers
+     * @return 处理结果
+     */
     public static void init(Map<String, ?> headers) {
         RequestContext.clean();
         if (ObjectUtils.isEmpty(headers)) {
@@ -113,6 +120,11 @@ public class RequestContextInitializer {
      * 干净、全量导出网络传输标头，绝对不混入复杂的 UserDetails 对象
      *
      * @return 包含全量核心 Header 及动态扩展 Header 的 Map
+     */
+    /**
+     * export Headers
+     *
+     * @return 处理结果
      */
     public static Map<String, Object> exportHeaders() {
         return RequestContext.getHeaderContext().toMap();

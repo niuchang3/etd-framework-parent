@@ -11,17 +11,32 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * 角色与组织数据权限关联关系能力 Service 实现类。
+ */
 @Service
 public class SystemRoleOrganizationServiceImpl implements SystemRoleOrganizationService {
 
     @Autowired
     private SystemRoleOrganizationRelMapper roleOrganizationRelMapper;
 
+    /**
+     * 查询 Organization Ids
+     *
+     * @param roleId 参数 roleId
+     * @return 处理结果
+     */
     @Override
     public Set<Long> selectOrganizationIds(Long roleId) {
         return selectOrganizationIdsByRoleIds(Set.of(roleId));
     }
 
+    /**
+     * 查询 Organization Ids By Role Ids
+     *
+     * @param roleIds 参数 roleIds
+     * @return 处理结果
+     */
     @Override
     public Set<Long> selectOrganizationIdsByRoleIds(Set<Long> roleIds) {
         if (roleIds.isEmpty()) {
@@ -37,6 +52,13 @@ public class SystemRoleOrganizationServiceImpl implements SystemRoleOrganization
         return organizationIds;
     }
 
+    /**
+     * replace
+     *
+     * @param roleId 参数 roleId
+     * @param organizationIds 参数 organizationIds
+     * @return 处理结果
+     */
     @Override
     public boolean replace(Long roleId, Set<Long> organizationIds) {
         removeByRoleId(roleId);
@@ -44,6 +66,11 @@ public class SystemRoleOrganizationServiceImpl implements SystemRoleOrganization
         return true;
     }
 
+    /**
+     * 移除 By Role Id
+     *
+     * @param roleId 参数 roleId
+     */
     @Override
     public void removeByRoleId(Long roleId) {
         LambdaQueryWrapper<SystemRoleOrganizationRelEntity> wrapper = new LambdaQueryWrapper<>();
@@ -51,6 +78,11 @@ public class SystemRoleOrganizationServiceImpl implements SystemRoleOrganization
         roleOrganizationRelMapper.delete(wrapper);
     }
 
+    /**
+     * 移除 By Organization Ids
+     *
+     * @param organizationIds 参数 organizationIds
+     */
     @Override
     public void removeByOrganizationIds(Set<Long> organizationIds) {
         if (organizationIds.isEmpty()) {

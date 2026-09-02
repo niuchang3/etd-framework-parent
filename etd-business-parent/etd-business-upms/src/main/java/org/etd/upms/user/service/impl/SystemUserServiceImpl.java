@@ -49,6 +49,12 @@ public class SystemUserServiceImpl implements SystemUserService {
     @Autowired
     private SystemTenantService tenantService;
 
+    /**
+     * register
+     *
+     * @param userDetails 参数 userDetails
+     * @return 处理结果
+     */
     @Override
     public boolean register(UserDetails userDetails) {
         return false;
@@ -74,6 +80,12 @@ public class SystemUserServiceImpl implements SystemUserService {
     }
 
 
+    /**
+     * load User By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public UserDetails loadUserById(Long id) {
@@ -84,6 +96,12 @@ public class SystemUserServiceImpl implements SystemUserService {
         return toUserDetails(systemUserEntity);
     }
 
+    /**
+     * load User By Account
+     *
+     * @param account 参数 account
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public UserDetails loadUserByAccount(String account) {
@@ -163,11 +181,23 @@ public class SystemUserServiceImpl implements SystemUserService {
      * @param id
      * @return
      */
+    /**
+     * 查询 By User By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemUserEntity selectByUserById(Long id) {
         return systemUserMapper.selectById(id);
     }
 
+    /**
+     * 校验并要求 Exists
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemUserEntity requireExists(Long id) {
         SystemUserEntity entity = selectByUserById(id);
@@ -177,6 +207,12 @@ public class SystemUserServiceImpl implements SystemUserService {
         return entity;
     }
 
+    /**
+     * 查询 By User By Id
+     *
+     * @param ids 参数 ids
+     * @return 处理结果
+     */
     @Override
     @IgnoreTenant
     public List<SystemUserEntity> selectByUserById(Set<Long> ids) {
@@ -188,6 +224,12 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.selectList(wrapper);
     }
 
+    /**
+     * 查询 User Ids By Tenant Id
+     *
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @Override
     @IgnoreTenant
     public Set<Long> selectUserIdsByTenantId(Long tenantId) {
@@ -205,6 +247,12 @@ public class SystemUserServiceImpl implements SystemUserService {
      * @param account
      * @return
      */
+    /**
+     * 查询 By Account
+     *
+     * @param account 参数 account
+     * @return 处理结果
+     */
     @Override
     public SystemUserEntity selectByAccount(String account) {
         EtdLambdaQueryWrapper<SystemUserEntity> wrapper = new EtdLambdaQueryWrapper<>();
@@ -212,6 +260,13 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.selectOne(wrapper);
     }
 
+    /**
+     * 新增保存
+     *
+     * @param entity 参数 entity
+     * @param rawPassword 参数 rawPassword
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemUserEntity entity, String rawPassword) {
         ensureAccountAvailable(entity.getAccount(), null);
@@ -230,6 +285,13 @@ public class SystemUserServiceImpl implements SystemUserService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param entity 参数 entity
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemUserEntity entity) {
         requireExists(id);
@@ -243,12 +305,25 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         requireExists(id);
         return systemUserMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
         requireExists(id);
@@ -258,6 +333,13 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 切换 Locked
+     *
+     * @param id 参数 id
+     * @param locked 参数 locked
+     * @return 处理结果
+     */
     @Override
     public boolean switchLocked(Long id, Boolean locked) {
         requireExists(id);
@@ -267,6 +349,16 @@ public class SystemUserServiceImpl implements SystemUserService {
         return systemUserMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 创建 Tenant Admin
+     *
+     * @param tenantId 参数 tenantId
+     * @param account 参数 account
+     * @param password 参数 password
+     * @param userName 参数 userName
+     * @param mobile 参数 mobile
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public Long createTenantAdmin(Long tenantId, String account, String password, String userName, String mobile) {

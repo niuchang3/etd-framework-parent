@@ -56,6 +56,13 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         this.snowflake = IdUtil.getSnowflake(1, 1);
     }
 
+    /**
+     * encode
+     *
+     * @param tokenType 参数 tokenType
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public TokenValue encode(SecurityParameterConstant.TokenType tokenType, Authentication authentication) {
 

@@ -37,6 +37,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 系统用户业务编排层 BizService，承载用户创建、授权、关系组装等完整业务流程。
+ */
 @Service
 public class SystemUserBizService {
 
@@ -78,12 +81,24 @@ public class SystemUserBizService {
         return page;
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     public SystemUserVO detail(Long id) {
         SystemUserVO user = toVO(userService.requireExists(id));
         populateAssignments(List.of(user));
         return user;
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public Long insert(SystemUserCreateDTO dto) {
         requireTenantId();
@@ -96,6 +111,13 @@ public class SystemUserBizService {
         return userId;
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean update(Long id, SystemUserUpdateDTO dto) {
         userService.requireExists(id);
@@ -114,6 +136,12 @@ public class SystemUserBizService {
         return userService.update(id, toEntity(dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
         requireOrdinaryUser(id, "平台管理员或租户管理员不允许删除。");
@@ -126,6 +154,13 @@ public class SystemUserBizService {
         return deleted;
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean switchEnabled(Long id, Boolean enabled) {
         if (!enabled) {
@@ -138,6 +173,13 @@ public class SystemUserBizService {
         return updated;
     }
 
+    /**
+     * 切换 Locked
+     *
+     * @param id 参数 id
+     * @param locked 参数 locked
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean switchLocked(Long id, Boolean locked) {
         if (locked) {
@@ -150,11 +192,24 @@ public class SystemUserBizService {
         return updated;
     }
 
+    /**
+     * 查询 Roles
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
+     */
     public List<SystemUserRoleVO> selectRoles(Long userId) {
         userService.requireExists(userId);
         return userRoleRelService.selectAssignmentsByUserIds(Set.of(userId));
     }
 
+    /**
+     * replace Roles
+     *
+     * @param userId 参数 userId
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceRoles(Long userId, SystemUserRoleAssignDTO dto) {
         requireOrdinaryUser(userId, "平台管理员或租户管理员的角色不允许修改。");
@@ -165,11 +220,24 @@ public class SystemUserBizService {
         return true;
     }
 
+    /**
+     * 查询 Organizations
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
+     */
     public List<SystemUserOrganizationVO> selectOrganizations(Long userId) {
         userService.requireExists(userId);
         return userOrganizationService.selectByUserIds(Set.of(userId));
     }
 
+    /**
+     * replace Organizations
+     *
+     * @param userId 参数 userId
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceOrganizations(Long userId, SystemUserOrganizationAssignDTO dto) {
         requireOrdinaryUser(userId, "平台管理员或租户管理员的组织不允许修改。");
@@ -179,6 +247,11 @@ public class SystemUserBizService {
         return true;
     }
 
+    /**
+     * current User Menus
+     *
+     * @return 处理结果
+     */
     public List<SystemUserMenusVO> currentUserMenus() {
         UserDetails user = RequestContext.getUser();
         Long tenantId = user.getTenantId();

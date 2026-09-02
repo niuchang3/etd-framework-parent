@@ -28,6 +28,12 @@ public class LogIpConverter extends ClassicConverter {
 		HOST_ADDRESS = StringUtils.hasText(ip) ? ip : DEFAULT_IP;
 	}
 
+	/**
+	 * 转换
+	 *
+	 * @param iLoggingEvent 参数 iLoggingEvent
+	 * @return 处理结果
+	 */
 	@Override
 	public String convert(ILoggingEvent iLoggingEvent) {
 		return HOST_ADDRESS;

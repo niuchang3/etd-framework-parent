@@ -14,6 +14,11 @@ public abstract class AbstractQuartzJobProcessor extends AbstractJobProcessor<Jo
 
 
 
+    /**
+     * 执行
+     *
+     * @param context 参数 context
+     */
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {

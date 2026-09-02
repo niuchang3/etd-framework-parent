@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 组织机构保存与更新 DTO。
+ */
 @Data
 public class SystemOrganizationSaveDTO {
 

@@ -16,6 +16,12 @@ public class MemoryPermissionsServiceImpl implements PermissionsService {
      * @param userId 用户标识
      * @return 兜底实现不提供权限，返回空聚合结果
      */
+    /**
+     * load Permissions By User
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
+     */
     @Override
     public UserPermissions loadPermissionsByUser(Long userId) {
         return new UserPermissions();

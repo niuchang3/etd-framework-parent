@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 角色与菜单关联关系能力 Service 接口。
+ */
 public interface SystemRoleMenuService {
 
     Map<Long, String> selectMenuAccessLevels(Set<Long> roleIds);

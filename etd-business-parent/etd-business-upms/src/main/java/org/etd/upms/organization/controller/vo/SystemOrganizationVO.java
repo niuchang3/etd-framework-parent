@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * 组织机构视图响应对象 VO。
+ */
 @Data
 public class SystemOrganizationVO {
 

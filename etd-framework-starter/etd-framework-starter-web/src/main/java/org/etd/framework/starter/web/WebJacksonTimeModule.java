@@ -57,6 +57,13 @@ final class WebJacksonTimeModule {
 
     private static <T> JsonSerializer<T> instantSerializer(ZoneId zoneId, Function<T, Instant> converter) {
         return new JsonSerializer<>() {
+            /**
+             * serialize
+             *
+             * @param value 参数 value
+             * @param generator 参数 generator
+             * @param serializers 参数 serializers
+             */
             @Override
             public void serialize(T value, JsonGenerator generator, SerializerProvider serializers)
                     throws IOException {
@@ -67,6 +74,13 @@ final class WebJacksonTimeModule {
 
     private static JsonSerializer<LocalDateTime> localDateTimeSerializer(ZoneId zoneId) {
         return new JsonSerializer<>() {
+            /**
+             * serialize
+             *
+             * @param value 参数 value
+             * @param generator 参数 generator
+             * @param serializers 参数 serializers
+             */
             @Override
             public void serialize(LocalDateTime value, JsonGenerator generator, SerializerProvider serializers)
                     throws IOException {
@@ -77,6 +91,13 @@ final class WebJacksonTimeModule {
 
     private static JsonDeserializer<LocalDateTime> localDateTimeDeserializer(ZoneId zoneId) {
         return new JsonDeserializer<>() {
+            /**
+             * deserialize
+             *
+             * @param parser 参数 parser
+             * @param context 参数 context
+             * @return 处理结果
+             */
             @Override
             public LocalDateTime deserialize(JsonParser parser, DeserializationContext context) throws IOException {
                 String value = parser.getValueAsString();
@@ -92,6 +113,13 @@ final class WebJacksonTimeModule {
 
     private static JsonDeserializer<LocalDate> localDateDeserializer(ZoneId zoneId) {
         return new JsonDeserializer<>() {
+            /**
+             * deserialize
+             *
+             * @param parser 参数 parser
+             * @param context 参数 context
+             * @return 处理结果
+             */
             @Override
             public LocalDate deserialize(JsonParser parser, DeserializationContext context) throws IOException {
                 if (JsonToken.VALUE_NUMBER_INT.equals(parser.currentToken())) {

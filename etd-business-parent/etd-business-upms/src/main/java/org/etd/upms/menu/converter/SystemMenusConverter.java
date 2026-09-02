@@ -10,6 +10,9 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
+/**
+ * 系统菜单对象转换器 StructMapper 接口。
+ */
 @Mapper
 public interface SystemMenusConverter {
 

@@ -7,6 +7,9 @@ import org.etd.upms.dict.controller.vo.SystemDictDataVO;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * 字典数据项基础能力 Service 接口。
+ */
 public interface SystemDictDataService {
 
     IPage<SystemDictDataVO> page(long current, long size, Long dictTypeId, String keyword, Boolean enabled);

@@ -213,6 +213,12 @@ public class SimHashUtil {
      * @date 2020-04-01
      * @author huazai
      */
+    /**
+     * 获取 Similar 属性值
+     *
+     * @param simHashUtil 参数 simHashUtil
+     * @return 处理结果
+     */
     public Double getSimilar(SimHashUtil simHashUtil) {
  
         // 获取海明距离

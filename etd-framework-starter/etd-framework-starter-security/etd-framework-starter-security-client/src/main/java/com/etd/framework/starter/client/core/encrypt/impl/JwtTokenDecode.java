@@ -38,6 +38,12 @@ public class JwtTokenDecode implements TokenDecode<SignedJWT> {
      * @param token JWT 字符串
      * @return 已解析的 JWT
      */
+    /**
+     * decode
+     *
+     * @param token 参数 token
+     * @return 处理结果
+     */
     public SignedJWT decode(String token) throws JOSEException, ParseException {
         SignedJWT parse = SignedJWT.parse(token);
         if (!parse.verify(verifier)) {

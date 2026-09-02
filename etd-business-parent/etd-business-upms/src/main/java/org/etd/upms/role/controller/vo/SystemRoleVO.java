@@ -4,6 +4,9 @@ import lombok.Data;
 
 import java.time.Instant;
 
+/**
+ * 角色视图响应对象 VO。
+ */
 @Data
 public class SystemRoleVO {
 

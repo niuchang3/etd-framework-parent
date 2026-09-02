@@ -22,6 +22,12 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
      * @param messageQueue
      * @param notificationMsgRequest
      */
+    /**
+     * send Message
+     *
+     * @param messageQueue 参数 messageQueue
+     * @param notificationMsgRequest 参数 notificationMsgRequest
+     */
     @Override
     public void sendMessage(MessageQueue messageQueue, NotificationMsgRequest notificationMsgRequest) {
         RabbitQueue rabbitQueue = (RabbitQueue) messageQueue;
@@ -36,6 +42,13 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
      * @param messageQueue   队列枚举
      * @param notificationMsgRequest 队列消息
      * @param ttl            过期时间
+     */
+    /**
+     * send Delayed Message
+     *
+     * @param messageQueue 参数 messageQueue
+     * @param notificationMsgRequest 参数 notificationMsgRequest
+     * @param ttl 参数 ttl
      */
     @Override
     public void sendDelayedMessage(MessageQueue messageQueue, NotificationMsgRequest notificationMsgRequest, Long ttl) {
@@ -55,6 +68,13 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
      * @param notificationMsgRequest 队列消息
      * @param ttl            过期时间
      */
+    /**
+     * send Plugin Delayed Message
+     *
+     * @param messageQueue 参数 messageQueue
+     * @param notificationMsgRequest 参数 notificationMsgRequest
+     * @param ttl 参数 ttl
+     */
     @Override
     public void sendPluginDelayedMessage(MessageQueue messageQueue, NotificationMsgRequest notificationMsgRequest, Long ttl) {
         RabbitQueue rabbitQueue = (RabbitQueue) messageQueue;
@@ -66,11 +86,23 @@ public class RabbitMessageServiceImpl implements RabbitMessageService {
     }
 
 
+    /**
+     * confirm
+     *
+     * @param correlationData 参数 correlationData
+     * @param ack 参数 ack
+     * @param cause 参数 cause
+     */
     @Override
     public void confirm(CorrelationData correlationData, boolean ack, String cause) {
 
     }
 
+    /**
+     * returned Message
+     *
+     * @param returned 参数 returned
+     */
     @Override
     public void returnedMessage(ReturnedMessage returned) {
 

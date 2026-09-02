@@ -29,6 +29,12 @@ public class DataPermissionHelper {
      * @param ignore 是否忽略数据权限
      * @return Scope 自动恢复作用域对象
      */
+    /**
+     * use
+     *
+     * @param ignore 参数 ignore
+     * @return 处理结果
+     */
     public static Scope use(boolean ignore) {
         return new Scope(ignore);
     }
@@ -44,6 +50,10 @@ public class DataPermissionHelper {
             RequestContext.setIgnoreDataPermission(ignore);
         }
 
+        /**
+         * close
+         *
+         */
         @Override
         public void close() {
             RequestContext.setIgnoreDataPermission(previousFlag);

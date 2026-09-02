@@ -6,6 +6,9 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * 角色菜单分配 DTO。
+ */
 @Data
 public class SystemRoleMenuAssignDTO {
 

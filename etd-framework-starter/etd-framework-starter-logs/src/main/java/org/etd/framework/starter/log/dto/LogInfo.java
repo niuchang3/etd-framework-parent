@@ -152,6 +152,13 @@ public class LogInfo {
 	private String message;
 
 
+	/**
+	 * 获取 Instance 属性值
+	 *
+	 * @param joinPoint 参数 joinPoint
+	 * @param autoLog 参数 autoLog
+	 * @return 处理结果
+	 */
 	public static LogInfo getInstance(JoinPoint joinPoint, AutoLog autoLog) {
 		return builder(joinPoint, autoLog);
 	}

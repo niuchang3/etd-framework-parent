@@ -16,9 +16,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class SystemMenusServiceImpl implements SystemMenusService {
@@ -27,12 +31,24 @@ public class SystemMenusServiceImpl implements SystemMenusService {
     @Autowired
     private SystemMenusMapper systemMenusMapper;
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemMenuVO selectById(Long id) {
         SystemMenusEntity entity = systemMenusMapper.selectById(id);
         return Mappers.getMapper(SystemMenusConverter.class).toMenuVO(entity);
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemMenuSaveDTO dto) {
         SystemMenusEntity entity = Mappers.getMapper(SystemMenusConverter.class).toEntity(dto);
@@ -42,6 +58,13 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemMenuSaveDTO dto) {
         LambdaUpdateWrapper<SystemMenusEntity> wrapper = new LambdaUpdateWrapper<>();
@@ -56,6 +79,12 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return systemMenusMapper.update(null, wrapper) > 0;
     }
 
+    /**
+     * 查询 Subtree Ids
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public Set<Long> selectSubtreeIds(Long id) {
         if (systemMenusMapper.selectById(id) == null) {
@@ -64,6 +93,12 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return collectDescendantIds(id);
     }
 
+    /**
+     * 删除 By Ids
+     *
+     * @param ids 参数 ids
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public boolean deleteByIds(Set<Long> ids) {
@@ -77,20 +112,50 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         LambdaQueryWrapper<SystemMenusEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.select(SystemMenusEntity::getId, SystemMenusEntity::getParentId);
         List<SystemMenusEntity> menus = systemMenusMapper.selectList(wrapper);
-        Set<Long> menuIds = new LinkedHashSet<>();
-        menuIds.add(rootId);
-        boolean foundChild;
-        do {
-            foundChild = menus.stream()
-                    .filter(menu -> menuIds.contains(menu.getParentId()))
-                    .map(SystemMenusEntity::getId)
-                    .filter(menuIds::add)
-                    .findAny()
-                    .isPresent();
-        } while (foundChild);
-        return menuIds;
+        return collectDescendantIdsFromMenus(rootId, menus);
     }
 
+    /**
+     * 使用父菜单 ID 分组建立邻接表，基于队列广度优先遍历收集所有子节点。
+     *
+     * @param rootId 根菜单 ID
+     * @param menus  菜单全量列表
+     * @return 包含根菜单及所有子孙菜单 ID 的集合
+     */
+    private Set<Long> collectDescendantIdsFromMenus(Long rootId, List<SystemMenusEntity> menus) {
+        Map<Long, List<Long>> parentToChildrenMap = menus.stream()
+                .filter(menu -> menu.getParentId() != null)
+                .collect(Collectors.groupingBy(
+                        SystemMenusEntity::getParentId,
+                        Collectors.mapping(SystemMenusEntity::getId, Collectors.toList())
+                ));
+
+        Set<Long> result = new LinkedHashSet<>();
+        Deque<Long> queue = new ArrayDeque<>();
+        queue.add(rootId);
+        result.add(rootId);
+
+        while (!queue.isEmpty()) {
+            Long currentId = queue.poll();
+            List<Long> children = parentToChildrenMap.get(currentId);
+            if (children != null) {
+                for (Long childId : children) {
+                    if (result.add(childId)) {
+                        queue.add(childId);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 切换 Status
+     *
+     * @param id 参数 id
+     * @param status 参数 status
+     * @return 处理结果
+     */
     @Override
     public boolean switchStatus(Long id, Integer status) {
         LambdaUpdateWrapper<SystemMenusEntity> wrapper = new LambdaUpdateWrapper<>();
@@ -99,6 +164,11 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return systemMenusMapper.update(null, wrapper) > 0;
     }
 
+    /**
+     * 查询 All Enabled
+     *
+     * @return 处理结果
+     */
     @Override
     public List<SystemMenuVO> selectAllEnabled() {
         LambdaQueryWrapper<SystemMenusEntity> wrapper = new LambdaQueryWrapper<>();
@@ -107,6 +177,13 @@ public class SystemMenusServiceImpl implements SystemMenusService {
         return Mappers.getMapper(SystemMenusConverter.class).toMenuVO(systemMenusMapper.selectList(wrapper));
     }
 
+    /**
+     * 查询 Enabled By Ids
+     *
+     * @param menuIds 参数 menuIds
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @Override
     public List<SystemUserMenusVO> selectEnabledByIds(Set<Long> menuIds, Long tenantId) {
         if (menuIds.isEmpty()) {

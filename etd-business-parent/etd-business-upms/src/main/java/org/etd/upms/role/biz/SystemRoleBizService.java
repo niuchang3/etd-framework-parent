@@ -66,6 +66,12 @@ public class SystemRoleBizService {
         return roleOrganizationService.replace(roleId, organizationIds);
     }
 
+    /**
+     * 查询 Organization Ids
+     *
+     * @param roleId 参数 roleId
+     * @return 处理结果
+     */
     public Set<Long> selectOrganizationIds(Long roleId) {
         roleService.requireExists(roleId);
         return roleOrganizationService.selectOrganizationIds(roleId);

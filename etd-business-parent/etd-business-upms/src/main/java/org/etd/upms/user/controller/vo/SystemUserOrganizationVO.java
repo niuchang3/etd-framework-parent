@@ -4,6 +4,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * 用户关联组织信息视图响应对象 VO。
+ */
 @Data
 public class SystemUserOrganizationVO implements Serializable {
 

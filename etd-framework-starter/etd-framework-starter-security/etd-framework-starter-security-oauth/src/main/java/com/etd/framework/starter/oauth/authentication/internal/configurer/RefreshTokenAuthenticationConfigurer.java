@@ -41,6 +41,11 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
         return this;
     }
 
+    /**
+     * 初始化
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void init(HttpSecurity builder) {
         AuthenticationProvider provider = getAuthenticationProvider();
@@ -51,6 +56,11 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
         builder.authenticationProvider(provider);
     }
 
+    /**
+     * configure
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void configure(HttpSecurity builder) {
         RefreshTokenAuthenticationFilterFactory factory = getApplicationContext(builder)
@@ -63,6 +73,11 @@ public class RefreshTokenAuthenticationConfigurer extends AbstractSecurityEndpoi
      * 获取刷新令牌端点匹配器。
      *
      * @return 刷新令牌端点匹配器
+     */
+    /**
+     * 获取 RequestMatcher 属性值
+     *
+     * @return 处理结果
      */
     @Override
     public RequestMatcher getRequestMatcher() {

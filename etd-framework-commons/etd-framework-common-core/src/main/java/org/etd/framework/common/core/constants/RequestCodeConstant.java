@@ -36,16 +36,31 @@ public enum RequestCodeConstant implements RequestCodeConverter {
         this.description = description;
     }
 
+    /**
+     * 获取 Code 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public Integer getCode() {
         return this.code;
     }
 
+    /**
+     * 获取 Name 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getName() {
         return this.name();
     }
 
+    /**
+     * 获取 Description 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getDescription() {
         return this.description;

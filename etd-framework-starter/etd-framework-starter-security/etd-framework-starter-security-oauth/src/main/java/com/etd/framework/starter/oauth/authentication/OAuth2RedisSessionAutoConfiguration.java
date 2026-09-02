@@ -36,6 +36,12 @@ public class OAuth2RedisSessionAutoConfiguration {
      * @param properties OAuth2网页登录态配置
      * @return Session仓储定制器
      */
+    /**
+     * redis Session Repository Customizer
+     *
+     * @param properties 参数 properties
+     * @return 处理结果
+     */
     @Bean
     public SessionRepositoryCustomizer<RedisSessionRepository> redisSessionRepositoryCustomizer(OAuth2SessionProperties properties) {
         return repository -> {
@@ -50,6 +56,12 @@ public class OAuth2RedisSessionAutoConfiguration {
      *
      * @param properties OAuth2网页登录态配置
      * @return Cookie序列化器
+     */
+    /**
+     * oauth Cookie Serializer
+     *
+     * @param properties 参数 properties
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(CookieSerializer.class)
@@ -68,6 +80,11 @@ public class OAuth2RedisSessionAutoConfiguration {
      * Bean名称使用Spring Session约定值，只影响Session属性序列化，不覆盖业务RedisTemplate。
      *
      * @return Spring Session Redis序列化器
+     */
+    /**
+     * spring Session Default Redis Serializer
+     *
+     * @return 处理结果
      */
     @Bean("springSessionDefaultRedisSerializer")
     @ConditionalOnMissingBean(name = "springSessionDefaultRedisSerializer")

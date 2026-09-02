@@ -7,6 +7,9 @@ import org.etd.upms.config.controller.vo.SystemConfigVO;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * 系统参数配置能力 Service 接口。
+ */
 public interface SystemConfigService {
 
     IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled, String valueType);

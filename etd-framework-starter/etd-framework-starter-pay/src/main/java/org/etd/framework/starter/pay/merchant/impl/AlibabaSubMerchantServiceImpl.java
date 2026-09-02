@@ -14,6 +14,11 @@ public class AlibabaSubMerchantServiceImpl implements SubMerchantService {
 	 *
 	 * @param merchantApply
 	 */
+	/**
+	 * 创建 Merchant
+	 *
+	 * @param merchantApply 参数 merchantApply
+	 */
 	@Override
 	public void createMerchant(SubMerchantApply merchantApply) {
 

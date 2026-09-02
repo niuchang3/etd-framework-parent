@@ -18,6 +18,11 @@ public class DataFillAutoConfiguration {
      *
      * @return
      */
+    /**
+     * default Data Fill Handler
+     *
+     * @return 处理结果
+     */
     @ConditionalOnProperty(prefix = "etd.mybatis.fill", value = "enabled",matchIfMissing = true)
     @ConditionalOnMissingBean(DataFillHandler.class)
     @Bean

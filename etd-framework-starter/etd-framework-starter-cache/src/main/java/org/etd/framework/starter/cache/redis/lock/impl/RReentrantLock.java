@@ -66,6 +66,11 @@ public class RReentrantLock implements RLock {
     }
 
 
+    /**
+     * lock
+     *
+     * @return 处理结果
+     */
     @Override
     public boolean lock() {
         List<String> keys = getKeys();
@@ -95,6 +100,10 @@ public class RReentrantLock implements RLock {
         return true;
     }
 
+    /**
+     * un Lock
+     *
+     */
     @Override
     public void unLock() {
         List<String> keys = getKeys();

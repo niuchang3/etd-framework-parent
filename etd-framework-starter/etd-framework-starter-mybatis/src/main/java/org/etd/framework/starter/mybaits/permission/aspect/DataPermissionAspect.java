@@ -26,15 +26,29 @@ public class DataPermissionAspect {
 
     @Pointcut("@annotation(org.etd.framework.starter.mybaits.permission.annotation.IgnoreDataPermission) " +
               "|| @within(org.etd.framework.starter.mybaits.permission.annotation.IgnoreDataPermission)")
+    /**
+     * ignore Data Permission Pointcut
+     *
+     */
     public void ignoreDataPermissionPointcut() {
     }
 
     @Pointcut("@annotation(org.etd.framework.starter.mybaits.permission.annotation.DataPermission) " +
               "|| @within(org.etd.framework.starter.mybaits.permission.annotation.DataPermission)")
+    /**
+     * data Permission Pointcut
+     *
+     */
     public void dataPermissionPointcut() {
     }
 
     @Around("ignoreDataPermissionPointcut()")
+    /**
+     * 处理 Ignore Data Permission
+     *
+     * @param joinPoint 参数 joinPoint
+     * @return 处理结果
+     */
     public Object handleIgnoreDataPermission(ProceedingJoinPoint joinPoint) throws Throwable {
         boolean previousState = RequestContext.getIgnoreDataPermission();
         try {
@@ -46,6 +60,12 @@ public class DataPermissionAspect {
     }
 
     @Around("dataPermissionPointcut()")
+    /**
+     * 处理 Data Permission
+     *
+     * @param joinPoint 参数 joinPoint
+     * @return 处理结果
+     */
     public Object handleDataPermission(ProceedingJoinPoint joinPoint) throws Throwable {
         DataPermission annotation = findAnnotation(joinPoint);
         if (annotation != null) {

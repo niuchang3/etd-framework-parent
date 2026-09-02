@@ -18,6 +18,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 组织机构业务编排层 BizService。
+ */
 @Service
 public class SystemOrganizationBizService {
 
@@ -32,6 +35,13 @@ public class SystemOrganizationBizService {
     @Autowired
     private SystemRoleOrganizationService roleOrganizationService;
 
+    /**
+     * 查询 Tree
+     *
+     * @param keyword 参数 keyword
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     public List<SystemOrganizationVO> selectTree(String keyword, Boolean enabled) {
         List<SystemOrganizationVO> organizations = organizationService.selectList(enabled);
         List<SystemOrganizationVO> roots = buildTree(organizations);
@@ -43,12 +53,25 @@ public class SystemOrganizationBizService {
         return roots;
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public Long insert(SystemOrganizationSaveDTO dto) {
         String parentIdPath = resolveParentPath(dto.getParentId(), null);
         return organizationService.insert(dto, parentIdPath);
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean update(Long id, SystemOrganizationSaveDTO dto) {
         SystemOrganizationVO existing = organizationService.requireExists(id);
@@ -58,6 +81,12 @@ public class SystemOrganizationBizService {
         return updated;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
         Set<Long> organizationIds = organizationService.selectSubtreeIds(id);

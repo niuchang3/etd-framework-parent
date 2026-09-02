@@ -16,6 +16,9 @@ import org.springframework.util.StringUtils;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * 字典数据项基础能力 Service 实现类。
+ */
 @Service
 public class SystemDictDataServiceImpl implements SystemDictDataService {
 
@@ -29,11 +32,23 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVO);
     }
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemDictDataVO selectById(Long id) {
         return toVO(dictDataMapper.selectById(id));
     }
 
+    /**
+     * 查询 Enabled By Type Id
+     *
+     * @param dictTypeId 参数 dictTypeId
+     * @return 处理结果
+     */
     @Override
     public List<SystemDictDataVO> selectEnabledByTypeId(Long dictTypeId) {
         LambdaQueryWrapper<SystemDictDataEntity> wrapper = new LambdaQueryWrapper<>();
@@ -43,6 +58,12 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
+    /**
+     * 查询 Enabled By Type Ids
+     *
+     * @param dictTypeIds 参数 dictTypeIds
+     * @return 处理结果
+     */
     @Override
     public List<SystemDictDataVO> selectEnabledByTypeIds(Collection<Long> dictTypeIds) {
         if (dictTypeIds.isEmpty()) {
@@ -56,6 +77,12 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
+    /**
+     * exists By Type Id
+     *
+     * @param dictTypeId 参数 dictTypeId
+     * @return 处理结果
+     */
     @Override
     public boolean existsByTypeId(Long dictTypeId) {
         LambdaQueryWrapper<SystemDictDataEntity> wrapper = new LambdaQueryWrapper<>();
@@ -63,6 +90,12 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.selectCount(wrapper) > 0;
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemDictDataSaveDTO dto) {
         ensureCodeAvailable(dto.getDictTypeId(), dto.getDictCode(), null);
@@ -73,6 +106,13 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemDictDataSaveDTO dto) {
         SystemDictDataEntity existing = requireData(id);
@@ -83,6 +123,12 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         SystemDictDataEntity existing = requireData(id);
@@ -90,6 +136,13 @@ public class SystemDictDataServiceImpl implements SystemDictDataService {
         return dictDataMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
         SystemDictDataEntity existing = requireData(id);

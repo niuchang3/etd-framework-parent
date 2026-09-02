@@ -6,6 +6,9 @@ import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 组织机构基础能力 Service 接口。
+ */
 public interface SystemOrganizationService {
 
     List<SystemOrganizationVO> selectList(Boolean enabled);

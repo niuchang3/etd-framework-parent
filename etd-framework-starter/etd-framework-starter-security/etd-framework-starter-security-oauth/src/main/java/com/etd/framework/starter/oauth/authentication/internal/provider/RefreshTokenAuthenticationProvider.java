@@ -44,6 +44,12 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
     @Setter(onMethod_ = @Autowired)
     private UserLoginTokenStorage tokenStorage;
 
+    /**
+     * authenticate
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         Assert.notNull(userService, "用户服务不能为空。");
@@ -174,6 +180,12 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
             throw new BadCredentialsException(SecurityMessageCode.TOKEN_INVALID, e);
         }
     }
+    /**
+     * supports
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public boolean supports(Class<?> authentication) {
         return RefreshTokenRequestToken.class.isAssignableFrom(authentication);

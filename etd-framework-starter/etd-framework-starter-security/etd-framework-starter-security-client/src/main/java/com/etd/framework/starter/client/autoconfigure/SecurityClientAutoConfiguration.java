@@ -82,6 +82,11 @@ public class SecurityClientAutoConfiguration {
      *
      * @return 密码编码器
      */
+    /**
+     * password Encoder
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
@@ -92,6 +97,12 @@ public class SecurityClientAutoConfiguration {
      * 提供 JWT 解码器。
      *
      * @return 令牌解码器
+     */
+    /**
+     * token Decode
+     *
+     * @param securityProperties 参数 securityProperties
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(TokenDecode.class)
@@ -104,6 +115,11 @@ public class SecurityClientAutoConfiguration {
      * 提供 Security 专用默认消息源。
      *
      * @return Security 消息源
+     */
+    /**
+     * security Message Source
+     *
+     * @return 处理结果
      */
     @Bean("securityMessageSource")
     @ConditionalOnMissingBean(name = "securityMessageSource")
@@ -120,6 +136,12 @@ public class SecurityClientAutoConfiguration {
      *
      * @param messageSource Security 专用消息源
      * @return Security 消息解析器
+     */
+    /**
+     * security Message Resolver
+     *
+     * @param @Qualifier("securityMessageSource" 参数 @Qualifier("securityMessageSource"
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(SecurityMessageResolver.class)

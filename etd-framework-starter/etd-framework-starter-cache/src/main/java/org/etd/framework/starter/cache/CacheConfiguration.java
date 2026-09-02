@@ -41,6 +41,12 @@ public class CacheConfiguration {
      * @param factory
      * @return
      */
+    /**
+     * redis Template
+     *
+     * @param factory 参数 factory
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(RedisTemplate.class)
     public RedisTemplate<String,Object> redisTemplate(RedisConnectionFactory factory) {
@@ -65,6 +71,11 @@ public class CacheConfiguration {
     }
 
 
+    /**
+     * caffeine Cache
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(Cache.class)
     public Cache<String, Object> caffeineCache() {
@@ -76,18 +87,36 @@ public class CacheConfiguration {
                 .build();
     }
 
+    /**
+     * jet Cache Fastjson Value Encoder
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(name = "jetCacheFastjson2ValueEncoder")
     public Function<Object, byte[]> jetCacheFastjson2ValueEncoder() {
         return Fastjson2ValueEncoder.INSTANCE;
     }
 
+    /**
+     * jet Cache Fastjson Value Decoder
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(name = "jetCacheFastjson2ValueDecoder")
     public Function<byte[], Object> jetCacheFastjson2ValueDecoder() {
         return Fastjson2ValueDecoder.INSTANCE;
     }
 
+    /**
+     * redis Utils
+     *
+     * @param Cache<String 参数 Cache<String
+     * @param caffeineCache 参数 caffeineCache
+     * @param @Qualifier("redisTemplate" 参数 @Qualifier("redisTemplate"
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnBean(RedisTemplate.class)
     public RedisCache redisUtils(Cache<String, Object> caffeineCache, @Qualifier("redisTemplate") RedisTemplate<String,Object> redisTemplate) {

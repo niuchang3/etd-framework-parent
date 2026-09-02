@@ -13,6 +13,15 @@ public class MessageSourceSecurityMessageResolver implements SecurityMessageReso
 
     private final MessageSource messageSource;
 
+    /**
+     * resolve
+     *
+     * @param code 参数 code
+     * @param args 参数 args
+     * @param locale 参数 locale
+     * @param defaultMessage 参数 defaultMessage
+     * @return 处理结果
+     */
     @Override
     public String resolve(String code, Object[] args, Locale locale, String defaultMessage) {
         return messageSource.getMessage(code, args, defaultMessage, locale);

@@ -15,6 +15,11 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 
+/**
+ * 业务事件发布切面拦截器。
+ * <p>
+ * 监听带有 {@link Event} 注解的方法，在方法成功执行后自动组装消息并发送至 RabbitMQ 消息队列。
+ */
 @Aspect
 @Component
 public class EventAspect {
@@ -23,11 +28,20 @@ public class EventAspect {
     private RabbitMessageService rabbitMessageService;
 
     @Pointcut(value = "@annotation(org.etd.framework.starter.message.core.annotation.Event)")
+    /**
+     * pointcut
+     *
+     */
     public void pointcut() {
 
     }
 
     @After("pointcut()")
+    /**
+     * after
+     *
+     * @param joinPoint 参数 joinPoint
+     */
     public void after(JoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();

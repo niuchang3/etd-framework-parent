@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
+/**
+ * 用户与组织关联关系实体类。
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("sys_user_org_rel")

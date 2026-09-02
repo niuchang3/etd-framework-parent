@@ -20,6 +20,11 @@ public class StorageContext implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;
 
+    /**
+     * 设置 ApplicationContext 属性值
+     *
+     * @param applicationContext 参数 applicationContext
+     */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         StorageContext.applicationContext = applicationContext;
@@ -53,6 +58,12 @@ public class StorageContext implements ApplicationContextAware {
      * @param clientType 客户端类型
      * @return 对应的存储策略 Bean
      */
+    /**
+     * 获取 StorageClient 属性值
+     *
+     * @param clientType 参数 clientType
+     * @return 处理结果
+     */
     public static FileStorage getStorageClient(ClientType clientType) {
         Object bean = getBean(clientType.getStorageClient());
         if (ObjectUtils.isEmpty(bean)) {
@@ -67,6 +78,12 @@ public class StorageContext implements ApplicationContextAware {
      * @param clientType 客户端类型
      * @return 对应的上传策略 Bean
      */
+    /**
+     * 获取 UploadClient 属性值
+     *
+     * @param clientType 参数 clientType
+     * @return 处理结果
+     */
     public static FileUpload getUploadClient(ClientType clientType) {
         return getStorageClient(clientType);
     }
@@ -76,6 +93,12 @@ public class StorageContext implements ApplicationContextAware {
      *
      * @param clientType 客户端类型
      * @return 对应的下载策略 Bean
+     */
+    /**
+     * 获取 DownloadClient 属性值
+     *
+     * @param clientType 参数 clientType
+     * @return 处理结果
      */
     public static FileDownload getDownloadClient(ClientType clientType) {
         return getStorageClient(clientType);

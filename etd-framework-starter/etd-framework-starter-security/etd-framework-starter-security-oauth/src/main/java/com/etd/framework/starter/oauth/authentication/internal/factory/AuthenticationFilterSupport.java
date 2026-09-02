@@ -64,6 +64,11 @@ public class AuthenticationFilterSupport {
      *
      * @return 令牌签发器
      */
+    /**
+     * token Encoder
+     *
+     * @return 处理结果
+     */
     @SuppressWarnings("unchecked")
     public TokenEncoder<Authentication, TokenValue> tokenEncoder() {
         return (TokenEncoder<Authentication, TokenValue>) tokenEncoder;

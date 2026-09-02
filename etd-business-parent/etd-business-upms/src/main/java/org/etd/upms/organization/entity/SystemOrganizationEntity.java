@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
+/**
+ * 组织机构实体类。
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("sys_organization")

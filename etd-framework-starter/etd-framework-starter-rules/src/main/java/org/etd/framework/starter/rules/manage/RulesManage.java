@@ -56,6 +56,10 @@ public class RulesManage {
     }
 
 
+    /**
+     * 初始化
+     *
+     */
     @PostConstruct
     public void init() throws IOException {
         ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
@@ -85,6 +89,10 @@ public class RulesManage {
     }
 
 
+    /**
+     * destroy
+     *
+     */
     @PreDestroy
     public void destroy() {
         if (null != kieContainer) {
@@ -127,6 +135,10 @@ public class RulesManage {
         buildKieContainer();
     }
 
+    /**
+     * 构建 Kie Container
+     *
+     */
     protected void buildKieContainer() {
         KieBuilder kieBuilder = kieServices.newKieBuilder(kieFileSystem);
         // 通过KieBuilder构建KieModule下所有的KieBase
@@ -156,6 +168,13 @@ public class RulesManage {
      * @param kieBaseName
      * @param packageName
      * @param ruleName
+     */
+    /**
+     * 删除 Drools Rule
+     *
+     * @param kieBaseName 参数 kieBaseName
+     * @param packageName 参数 packageName
+     * @param ruleName 参数 ruleName
      */
     public void deleteDroolsRule(String kieBaseName, String packageName, String ruleName) {
         if (existsKieBase(kieBaseName)) {

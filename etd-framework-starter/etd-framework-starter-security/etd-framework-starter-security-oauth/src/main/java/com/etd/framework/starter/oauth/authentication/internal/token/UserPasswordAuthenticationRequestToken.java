@@ -41,11 +41,21 @@ public class UserPasswordAuthenticationRequestToken extends AbstractAuthenticati
         super(authorities);
     }
 
+    /**
+     * 获取 Credentials 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public Object getCredentials() {
         return password;
     }
 
+    /**
+     * 获取 Principal 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public Object getPrincipal() {
         return username;

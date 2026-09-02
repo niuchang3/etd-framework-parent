@@ -18,17 +18,39 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 系统角色基础能力 Service 实现类。
+ */
 @Service
 public class SystemRoleServiceImpl implements SystemRoleService {
 
     @Autowired
     private SystemRoleMapper roleMapper;
 
+    /**
+     * 分页查询
+     *
+     * @param current 参数 current
+     * @param size 参数 size
+     * @param keyword 参数 keyword
+     * @param dataStatus 参数 dataStatus
+     * @return 处理结果
+     */
     @Override
     public IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus) {
         return page(current, size, keyword, dataStatus, false);
     }
 
+    /**
+     * 分页查询
+     *
+     * @param current 参数 current
+     * @param size 参数 size
+     * @param keyword 参数 keyword
+     * @param dataStatus 参数 dataStatus
+     * @param assignableOnly 参数 assignableOnly
+     * @return 处理结果
+     */
     @Override
     public IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus, Boolean assignableOnly) {
         LambdaQueryWrapper<SystemRoleEntity> wrapper = new LambdaQueryWrapper<>();
@@ -45,16 +67,33 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         return roleMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVO);
     }
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemRoleVO selectById(Long id) {
         return toVO(roleMapper.selectById(id));
     }
 
+    /**
+     * 校验并要求 Exists
+     *
+     * @param id 参数 id
+     */
     @Override
     public void requireExists(Long id) {
         requireRole(id);
     }
 
+    /**
+     * 校验并要求 Writable
+     *
+     * @param id 参数 id
+     * @param message 参数 message
+     */
     @Override
     public void requireWritable(Long id, String message) {
         SystemRoleEntity role = requireRole(id);
@@ -63,6 +102,11 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         }
     }
 
+    /**
+     * 校验并要求 Enabled
+     *
+     * @param ids 参数 ids
+     */
     @Override
     public void requireEnabled(Set<Long> ids) {
         if (ids.isEmpty()) {
@@ -76,6 +120,11 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         }
     }
 
+    /**
+     * 校验并要求 Assignable
+     *
+     * @param ids 参数 ids
+     */
     @Override
     public void requireAssignable(Set<Long> ids) {
         if (ids.isEmpty()) {
@@ -93,6 +142,12 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         }
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemRoleSaveDTO dto) {
         ensureCodeAvailable(dto.getRoleCode(), null);
@@ -103,6 +158,13 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         return entity.getId();
     }
 
+    /**
+     * 创建 Tenant Admin Role
+     *
+     * @param tenantId 参数 tenantId
+     * @param tenantName 参数 tenantName
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public Long createTenantAdminRole(Long tenantId, String tenantName) {
@@ -122,6 +184,13 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemRoleSaveDTO dto) {
         requireWritable(id, "内置角色不允许修改");
@@ -131,12 +200,25 @@ public class SystemRoleServiceImpl implements SystemRoleService {
         return roleMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         requireWritable(id, "内置角色不允许删除");
         return roleMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 切换 Status
+     *
+     * @param id 参数 id
+     * @param status 参数 status
+     * @return 处理结果
+     */
     @Override
     public boolean switchStatus(Long id, Integer status) {
         requireWritable(id, "内置角色不允许修改启用状态");

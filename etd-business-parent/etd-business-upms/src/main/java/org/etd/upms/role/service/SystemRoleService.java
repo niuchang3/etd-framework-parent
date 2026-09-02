@@ -7,6 +7,9 @@ import org.etd.upms.role.controller.vo.SystemRoleVO;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 系统角色基础能力 Service 接口。
+ */
 public interface SystemRoleService {
 
     IPage<SystemRoleVO> page(long current, long size, String keyword, Integer dataStatus);

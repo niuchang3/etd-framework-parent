@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.util.Set;
 
+/**
+ * 租户菜单授权分配 DTO。
+ */
 @Data
 public class SystemTenantMenuAssignDTO {
 

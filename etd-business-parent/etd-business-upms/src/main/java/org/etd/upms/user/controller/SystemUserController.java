@@ -68,36 +68,81 @@ public class SystemUserController {
         return ResultModel.success(userBizService.page(current, size, keyword, organizationId, enabled, locked));
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemUserVO> detail(@PathVariable Long id) {
         return ResultModel.success(userBizService.detail(id));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemUserCreateDTO dto) {
         return ResultModel.success(userBizService.insert(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemUserUpdateDTO dto) {
         return ResultModel.success(userBizService.update(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(userBizService.delete(id));
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(userBizService.switchEnabled(id, enabled));
     }
 
+    /**
+     * 切换 Locked
+     *
+     * @param id 参数 id
+     * @param locked 参数 locked
+     * @return 处理结果
+     */
     @PatchMapping("/{id}/locked/{locked}")
     public ResultModel<Boolean> switchLocked(@PathVariable Long id, @PathVariable Boolean locked) {
         return ResultModel.success(userBizService.switchLocked(id, locked));
     }
 
+    /**
+     * roles
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}/roles")
     public ResultModel<List<SystemUserRoleVO>> roles(@PathVariable Long id) {
         return ResultModel.success(userBizService.selectRoles(id));
@@ -109,6 +154,12 @@ public class SystemUserController {
         return ResultModel.success(userBizService.replaceRoles(id, dto));
     }
 
+    /**
+     * organizations
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}/organizations")
     public ResultModel<List<SystemUserOrganizationVO>> organizations(@PathVariable Long id) {
         return ResultModel.success(userBizService.selectOrganizations(id));
@@ -125,6 +176,11 @@ public class SystemUserController {
      *
      * @return
      */
+    /**
+     * me
+     *
+     * @return 处理结果
+     */
     @IgnoreTenant
     @GetMapping(value = "/me")
     public ResultModel<SystemUserVO> me() {
@@ -138,6 +194,11 @@ public class SystemUserController {
      *
      * @return
      */
+    /**
+     * current User Tenant
+     *
+     * @return 处理结果
+     */
     @IgnoreTenant
     @GetMapping("/tenant")
     public ResultModel<List<SystemTenantVO>> currentUserTenant() {
@@ -149,6 +210,11 @@ public class SystemUserController {
      * 获取当前登录人角色信息
      *
      * @return
+     */
+    /**
+     * current User Role
+     *
+     * @return 处理结果
      */
     @GetMapping("/role")
     public ResultModel<List<SystemUserRoleVO>> currentUserRole() {
@@ -162,6 +228,11 @@ public class SystemUserController {
      * 获取当前登录人菜单权限
      *
      * @return
+     */
+    /**
+     * current User Menus
+     *
+     * @return 处理结果
      */
     @GetMapping("/menus")
     public ResultModel<List<SystemUserMenusVO>> currentUserMenus() {

@@ -6,6 +6,9 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.etd.upms.organization.entity.SystemOrganizationEntity;
 
+/**
+ * 组织机构 MyBatis Mapper 接口。
+ */
 @Mapper
 public interface SystemOrganizationMapper extends BaseMapper<SystemOrganizationEntity> {
 

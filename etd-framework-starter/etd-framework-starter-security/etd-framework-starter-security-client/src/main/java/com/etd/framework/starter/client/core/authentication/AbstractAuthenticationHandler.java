@@ -40,6 +40,13 @@ public abstract class AbstractAuthenticationHandler {
      * @param exception 认证异常
      * @throws IOException
      */
+    /**
+     * write Failed
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param exception 参数 exception
+     */
     protected void writeFailed(HttpServletRequest request, HttpServletResponse response, Exception exception) throws IOException {
         String messageCode = exception.getMessage();
         Locale locale = LocaleContextHolder.getLocale();
@@ -58,6 +65,12 @@ public abstract class AbstractAuthenticationHandler {
      * @param response 当前响应
      * @param body 响应体
      * @throws IOException
+     */
+    /**
+     * write Success
+     *
+     * @param response 参数 response
+     * @param body 参数 body
      */
     protected void writeSuccess(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpStatus.OK.value());

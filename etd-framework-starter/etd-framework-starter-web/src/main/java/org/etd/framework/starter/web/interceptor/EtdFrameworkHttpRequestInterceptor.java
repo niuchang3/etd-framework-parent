@@ -26,8 +26,24 @@ public abstract class EtdFrameworkHttpRequestInterceptor implements HandlerInter
      * @return 是否放行请求
      * @throws Exception 业务处理异常
      */
+    /**
+     * do 处理
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param handler 参数 handler
+     * @return 处理结果
+     */
     protected abstract boolean doHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception;
 
+    /**
+     * pre 处理
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param handler 参数 handler
+     * @return 处理结果
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         try {

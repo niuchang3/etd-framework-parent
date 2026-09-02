@@ -32,6 +32,12 @@ public class WebJacksonConfig {
      *
      * @return JSON 映射器
      */
+    /**
+     * object Mapper
+     *
+     * @param environment 参数 environment
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(ObjectMapper.class)
     public ObjectMapper objectMapper(Environment environment) {

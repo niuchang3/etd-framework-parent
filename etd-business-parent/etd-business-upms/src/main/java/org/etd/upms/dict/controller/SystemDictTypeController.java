@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 字典类型管理 Controller 控制器入口。
+ */
 @Validated
 @RestController
 @RequestMapping("/v1/dict/type")
@@ -54,6 +57,12 @@ public class SystemDictTypeController {
         return ResultModel.success(dictTypeService.page(current, size, keyword, enabled));
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemDictTypeVO> detail(@PathVariable Long id) {
         return ResultModel.success(dictTypeService.selectById(id));
@@ -67,27 +76,59 @@ public class SystemDictTypeController {
         return ResultModel.success(dictBizService.selectEnabledDataByTypeCodes(typeCodes));
     }
 
+    /**
+     * enabled Data
+     *
+     * @param typeCode 参数 typeCode
+     * @return 处理结果
+     */
     @GetMapping("/code/{typeCode}/data")
     public ResultModel<List<SystemDictDataVO>> enabledData(@PathVariable String typeCode) {
         SystemDictTypeVO type = dictTypeService.selectEnabledByCode(typeCode);
         return ResultModel.success(type == null ? List.of() : dictDataService.selectEnabledByTypeId(type.getId()));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemDictTypeSaveDTO dto) {
         return ResultModel.success(dictTypeService.insert(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemDictTypeSaveDTO dto) {
         return ResultModel.success(dictTypeService.update(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(dictBizService.deleteType(id));
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(dictTypeService.switchEnabled(id, enabled));

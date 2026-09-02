@@ -34,6 +34,12 @@ public final class SecurityKeyLoader {
      * @param securityProperties 安全配置
      * @return RSA 公钥
      */
+    /**
+     * load Public Key
+     *
+     * @param securityProperties 参数 securityProperties
+     * @return 处理结果
+     */
     public static RSAPublicKey loadPublicKey(SecurityProperties securityProperties) {
         String location = getPublicKeyLocation(securityProperties);
         try (InputStream inputStream = openInputStream(location, "公钥")) {
@@ -48,6 +54,12 @@ public final class SecurityKeyLoader {
      *
      * @param securityProperties 安全配置
      * @return RSA 私钥
+     */
+    /**
+     * load Private Key
+     *
+     * @param securityProperties 参数 securityProperties
+     * @return 处理结果
      */
     public static PrivateKey loadPrivateKey(SecurityProperties securityProperties) {
         String location = getPrivateKeyLocation(securityProperties);

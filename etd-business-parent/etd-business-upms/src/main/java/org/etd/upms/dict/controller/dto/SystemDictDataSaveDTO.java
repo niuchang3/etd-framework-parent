@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 字典数据项保存与更新数据传输对象 DTO。
+ */
 @Data
 public class SystemDictDataSaveDTO {
 

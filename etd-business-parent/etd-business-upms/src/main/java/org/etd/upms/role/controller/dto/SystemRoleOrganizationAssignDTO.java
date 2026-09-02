@@ -8,6 +8,9 @@ import lombok.Data;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * 角色组织数据权限分配 DTO。
+ */
 @Data
 public class SystemRoleOrganizationAssignDTO {
 

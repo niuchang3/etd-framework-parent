@@ -39,6 +39,12 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
     private PasswordEncoder passwordEncoder;
 
 
+    /**
+     * authenticate
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 
@@ -104,6 +110,12 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
         return token;
     }
 
+    /**
+     * supports
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public boolean supports(Class<?> authentication) {
         return UserPasswordAuthenticationRequestToken.class.isAssignableFrom(authentication);

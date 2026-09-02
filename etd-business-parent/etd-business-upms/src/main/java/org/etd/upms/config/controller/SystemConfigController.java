@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 系统参数配置 Controller 控制器入口。
+ */
 @Validated
 @RestController
 @RequestMapping("/v1/config")
@@ -46,6 +49,12 @@ public class SystemConfigController {
         return ResultModel.success(configService.page(current, size, keyword, enabled, valueType));
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemConfigVO> detail(@PathVariable Long id) {
         return ResultModel.success(configService.selectById(id));
@@ -66,21 +75,47 @@ public class SystemConfigController {
         return ResultModel.success(configService.selectEnabledValuesByKeys(parameterKeys));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemConfigSaveDTO dto) {
         return ResultModel.success(configService.insert(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemConfigSaveDTO dto) {
         return ResultModel.success(configService.update(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(configService.delete(id));
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(configService.switchEnabled(id, enabled));

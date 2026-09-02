@@ -13,6 +13,11 @@ import org.springframework.scripting.support.ResourceScriptSource;
 public class RedisLuaScripts {
 
 
+    /**
+     * lock
+     *
+     * @return 处理结果
+     */
     public static final DefaultRedisScript<Long> lock() {
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
         redisScript.setResultType(Long.class);
@@ -20,6 +25,11 @@ public class RedisLuaScripts {
         return redisScript;
     }
 
+    /**
+     * un Lock
+     *
+     * @return 处理结果
+     */
     public static final DefaultRedisScript<Long> unLock() {
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
         redisScript.setResultType(Long.class);
@@ -28,6 +38,11 @@ public class RedisLuaScripts {
     }
 
 
+    /**
+     * redis Lock Guard
+     *
+     * @return 处理结果
+     */
     public static final DefaultRedisScript<Long> redisLockGuard() {
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
         redisScript.setResultType(Long.class);

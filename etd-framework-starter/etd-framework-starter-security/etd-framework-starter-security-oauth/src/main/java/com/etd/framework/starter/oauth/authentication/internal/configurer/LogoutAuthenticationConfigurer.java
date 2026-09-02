@@ -42,6 +42,11 @@ public class LogoutAuthenticationConfigurer extends AbstractSecurityEndpointConf
         return this;
     }
 
+    /**
+     * 初始化
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void init(HttpSecurity builder) {
         AuthenticationProvider provider = getAuthenticationProvider(builder);
@@ -52,6 +57,11 @@ public class LogoutAuthenticationConfigurer extends AbstractSecurityEndpointConf
         builder.authenticationProvider(provider);
     }
 
+    /**
+     * configure
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void configure(HttpSecurity builder) {
         LogoutAuthenticationFilterFactory factory = getApplicationContext(builder)
@@ -64,6 +74,11 @@ public class LogoutAuthenticationConfigurer extends AbstractSecurityEndpointConf
      * 获取退出登录端点匹配器。
      *
      * @return 退出登录端点匹配器
+     */
+    /**
+     * 获取 RequestMatcher 属性值
+     *
+     * @return 处理结果
      */
     @Override
     public RequestMatcher getRequestMatcher() {

@@ -33,6 +33,12 @@ public class UserPasswordRequestAuthenticationConverter implements Authenticatio
      * @param request 当前请求
      * @return 用户名密码认证请求
      */
+    /**
+     * 转换
+     *
+     * @param request 参数 request
+     * @return 处理结果
+     */
     @Override
     public Authentication convert(HttpServletRequest request) {
         UserPasswordLoginRequest loginRequest = readJson(request, UserPasswordLoginRequest.class);

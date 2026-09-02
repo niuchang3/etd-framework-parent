@@ -30,6 +30,12 @@ public class RedisCache {
     public final static String VAR_SPLITOR = ":";
 
 
+    /**
+     * gen Key
+     *
+     * @param keyMembers 参数 keyMembers
+     * @return 处理结果
+     */
     public static String genKey(String... keyMembers) {
         return StringUtils.join(keyMembers, VAR_SPLITOR).toUpperCase();
     }
@@ -41,6 +47,14 @@ public class RedisCache {
      * @param key  键
      * @param time 时间(秒)
      */
+    /**
+     * expire
+     *
+     * @param key 参数 key
+     * @param time 参数 time
+     * @param unit 参数 unit
+     * @return 处理结果
+     */
     public static boolean expire(String key, final long time, final TimeUnit unit) {
         return redisTemplate.expire(key, time, unit);
     }
@@ -50,6 +64,13 @@ public class RedisCache {
      *
      * @param key  键
      * @param time 时间(秒)
+     */
+    /**
+     * expire
+     *
+     * @param key 参数 key
+     * @param time 参数 time
+     * @return 处理结果
      */
     public static boolean expire(String key, final long time) {
         return expire(key, time, TimeUnit.SECONDS);
@@ -61,6 +82,13 @@ public class RedisCache {
      * @param key 键 不能为null
      * @return 时间(秒) 返回0代表为永久有效
      */
+    /**
+     * 获取 Expire 属性值
+     *
+     * @param key 参数 key
+     * @param unit 参数 unit
+     * @return 处理结果
+     */
     public static long getExpire(final String key, final TimeUnit unit) {
         return redisTemplate.getExpire(key, unit);
     }
@@ -70,6 +98,12 @@ public class RedisCache {
      *
      * @param key 键 不能为null
      * @return 时间(秒) 返回0代表为永久有效
+     */
+    /**
+     * 获取 Expire 属性值
+     *
+     * @param key 参数 key
+     * @return 处理结果
      */
     public static long getExpire(final String key) {
         return getExpire(key, TimeUnit.SECONDS);
@@ -82,6 +116,12 @@ public class RedisCache {
      * @param key 键
      * @return true 存在 false不存在
      */
+    /**
+     * has Key
+     *
+     * @param key 参数 key
+     * @return 处理结果
+     */
     public static boolean hasKey(String key) {
         return redisTemplate.hasKey(key);
     }
@@ -91,6 +131,12 @@ public class RedisCache {
      * 删除缓存
      *
      * @param key 可以传一个值 或多个
+     */
+    /**
+     * del
+     *
+     * @param key 参数 key
+     * @return 处理结果
      */
     @SuppressWarnings("unchecked")
     public static void del(String... key) {
@@ -114,6 +160,12 @@ public class RedisCache {
      * @param key 键
      * @return 值
      */
+    /**
+     * 获取
+     *
+     * @param key 参数 key
+     * @return 处理结果
+     */
     public static Object get(String key) {
         if (ObjectUtils.isEmpty(key)) {
             return null;
@@ -129,6 +181,13 @@ public class RedisCache {
      * @return true成功 false失败
      */
 
+    /**
+     * set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static void set(String key, Object value) {
         redisTemplate.opsForValue().set(key, value);
     }
@@ -142,6 +201,15 @@ public class RedisCache {
      * @param time  时间(秒) time要大于0 如果time小于等于0 将设置无限期
      * @return true成功 false 失败
      */
+    /**
+     * set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @param time 参数 time
+     * @param unit 参数 unit
+     * @return 处理结果
+     */
     public static void set(String key, Object value, long time, TimeUnit unit) {
         redisTemplate.opsForValue().set(key, value, time, unit);
     }
@@ -153,6 +221,14 @@ public class RedisCache {
      * @param value
      * @param time
      */
+    /**
+     * set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @param time 参数 time
+     * @return 处理结果
+     */
     public static void set(String key, Object value, long time) {
         set(key, value, time, TimeUnit.SECONDS);
     }
@@ -163,6 +239,13 @@ public class RedisCache {
      *
      * @param key   键
      * @param delta 要增加几(大于0)
+     */
+    /**
+     * incr
+     *
+     * @param key 参数 key
+     * @param delta 参数 delta
+     * @return 处理结果
      */
     public static long incr(String key, long delta) {
         if (delta < 0) {
@@ -177,6 +260,13 @@ public class RedisCache {
      *
      * @param key   键
      * @param delta 要减少几(小于0)
+     */
+    /**
+     * decr
+     *
+     * @param key 参数 key
+     * @param delta 参数 delta
+     * @return 处理结果
      */
     public static long decr(String key, long delta) {
         if (delta < 0) {
@@ -194,6 +284,13 @@ public class RedisCache {
      * @param key  键 不能为null
      * @param item 项 不能为null
      */
+    /**
+     * hget
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @return 处理结果
+     */
     public static Object hget(String key, String item) {
         final String cacheKey = genKey(key, item);
         return localCache.get(cacheKey, k -> {
@@ -208,6 +305,12 @@ public class RedisCache {
      * @param key 键
      * @return 对应的多个键值
      */
+    /**
+     * hmget
+     *
+     * @param key 参数 key
+     * @return 处理结果
+     */
     public static Map<String, Object> hmget(String key) {
         return (Map<String, Object>) localCache.get(key, k -> redisTemplate.opsForHash().entries(key));
     }
@@ -217,6 +320,14 @@ public class RedisCache {
      *
      * @param key 键
      * @param map 对应多个键值
+     */
+    /**
+     * hmset
+     *
+     * @param key 参数 key
+     * @param Map<String 参数 Map<String
+     * @param map 参数 map
+     * @return 处理结果
      */
     public static void hmset(String key, Map<String, Object> map) {
         redisTemplate.opsForHash().putAll(key, map);
@@ -230,6 +341,15 @@ public class RedisCache {
      * @param map  对应多个键值
      * @param time 时间(秒)
      * @return true成功 false失败
+     */
+    /**
+     * hmset
+     *
+     * @param key 参数 key
+     * @param Map<String 参数 Map<String
+     * @param map 参数 map
+     * @param time 参数 time
+     * @return 处理结果
      */
     public static void hmset(String key, Map<String, Object> map, long time) {
         redisTemplate.opsForHash().putAll(key, map);
@@ -247,6 +367,14 @@ public class RedisCache {
      * @param value 值
      * @return true 成功 false失败
      */
+    /**
+     * hset
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static void hset(String key, String item, Object value) {
         redisTemplate.opsForHash().put(key, item, value);
     }
@@ -259,6 +387,15 @@ public class RedisCache {
      * @param value 值
      * @param time  时间(秒) 注意:如果已存在的hash表有时间,这里将会替换原有的时间
      * @return true 成功 false失败
+     */
+    /**
+     * hset
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @param value 参数 value
+     * @param time 参数 time
+     * @return 处理结果
      */
     public static void hset(String key, String item, Object value, long time) {
         redisTemplate.opsForHash().put(key, item, value);
@@ -273,6 +410,13 @@ public class RedisCache {
      *
      * @param key  键 不能为null
      * @param item 项 可以使多个 不能为null
+     */
+    /**
+     * hdel
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @return 处理结果
      */
     public static void hdel(String key, String... item) {
         List<String> keys = Lists.newArrayList();
@@ -291,6 +435,13 @@ public class RedisCache {
      * @param item 项 不能为null
      * @return true 存在 false不存在
      */
+    /**
+     * h Has Key
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @return 处理结果
+     */
     public static boolean hHasKey(String key, String item) {
         return redisTemplate.opsForHash().hasKey(key, item);
     }
@@ -303,6 +454,14 @@ public class RedisCache {
      * @param item 项
      * @param by   要增加几(大于0)
      */
+    /**
+     * hincr
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @param by 参数 by
+     * @return 处理结果
+     */
     public static double hincr(String key, String item, double by) {
         return redisTemplate.opsForHash().increment(key, item, by);
     }
@@ -314,6 +473,14 @@ public class RedisCache {
      * @param key  键
      * @param item 项
      * @param by   要减少记(小于0)
+     */
+    /**
+     * hdecr
+     *
+     * @param key 参数 key
+     * @param item 参数 item
+     * @param by 参数 by
+     * @return 处理结果
      */
     public static double hdecr(String key, String item, double by) {
         return redisTemplate.opsForHash().increment(key, item, -by);
@@ -339,6 +506,13 @@ public class RedisCache {
      * @param value 值
      * @return true 存在 false不存在
      */
+    /**
+     * s Has Key
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static boolean sHasKey(String key, Object value) {
         return redisTemplate.opsForSet().isMember(key, value);
     }
@@ -350,6 +524,13 @@ public class RedisCache {
      * @param key    键
      * @param values 值 可以是多个
      * @return 成功个数
+     */
+    /**
+     * s Set
+     *
+     * @param key 参数 key
+     * @param values 参数 values
+     * @return 处理结果
      */
     public static long sSet(String key, Object... values) {
         return redisTemplate.opsForSet().add(key, values);
@@ -363,6 +544,14 @@ public class RedisCache {
      * @param time   时间(秒)
      * @param values 值 可以是多个
      * @return 成功个数
+     */
+    /**
+     * s Set And Time
+     *
+     * @param key 参数 key
+     * @param time 参数 time
+     * @param values 参数 values
+     * @return 处理结果
      */
     public static void sSetAndTime(String key, long time, Object... values) {
         Long count = redisTemplate.opsForSet().add(key, values);
@@ -390,6 +579,13 @@ public class RedisCache {
      * @return 移除的个数
      */
 
+    /**
+     * 设置 Remove 属性值
+     *
+     * @param key 参数 key
+     * @param values 参数 values
+     * @return 处理结果
+     */
     public static void setRemove(String key, Object... values) {
         redisTemplate.opsForSet().remove(key, values);
     }
@@ -402,6 +598,14 @@ public class RedisCache {
      * @param key   键
      * @param start 开始
      * @param end   结束 0 到 -1代表所有值
+     */
+    /**
+     * l 获取
+     *
+     * @param key 参数 key
+     * @param start 参数 start
+     * @param end 参数 end
+     * @return 处理结果
      */
     public static List<Object> lGet(String key, long start, long end) {
         return redisTemplate.opsForList().range(key, start, end);
@@ -424,6 +628,13 @@ public class RedisCache {
      * @param key   键
      * @param index 索引 index>=0时， 0 表头，1 第二个元素，依次类推；index<0时，-1，表尾，-2倒数第二个元素，依次类推
      */
+    /**
+     * l 获取 Index
+     *
+     * @param key 参数 key
+     * @param index 参数 index
+     * @return 处理结果
+     */
     public static Object lGetIndex(String key, long index) {
         return redisTemplate.opsForList().index(key, index);
     }
@@ -434,6 +645,13 @@ public class RedisCache {
      *
      * @param key   键
      * @param value 值
+     */
+    /**
+     * l Set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @return 处理结果
      */
     public static void lSet(String key, Object value) {
         redisTemplate.opsForList().rightPush(key, value);
@@ -446,6 +664,14 @@ public class RedisCache {
      * @param key   键
      * @param value 值
      * @param time  时间(秒)
+     */
+    /**
+     * l Set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @param time 参数 time
+     * @return 处理结果
      */
     public static void lSet(String key, Object value, long time) {
         redisTemplate.opsForList().rightPush(key, value);
@@ -462,6 +688,13 @@ public class RedisCache {
      * @param value 值
      * @return
      */
+    /**
+     * l Set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static void lSet(String key, List<Object> value) {
         redisTemplate.opsForList().rightPushAll(key, value);
     }
@@ -474,6 +707,14 @@ public class RedisCache {
      * @param value 值
      * @param time  时间(秒)
      * @return
+     */
+    /**
+     * l Set
+     *
+     * @param key 参数 key
+     * @param value 参数 value
+     * @param time 参数 time
+     * @return 处理结果
      */
     public static void lSet(String key, List<Object> value, long time) {
         redisTemplate.opsForList().rightPushAll(key, value);
@@ -492,6 +733,14 @@ public class RedisCache {
      * @return
      */
 
+    /**
+     * l 更新修改 Index
+     *
+     * @param key 参数 key
+     * @param index 参数 index
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static void lUpdateIndex(String key, long index, Object value) {
         redisTemplate.opsForList().set(key, index, value);
     }
@@ -506,11 +755,25 @@ public class RedisCache {
      * @return 移除的个数
      */
 
+    /**
+     * l 移除
+     *
+     * @param key 参数 key
+     * @param count 参数 count
+     * @param value 参数 value
+     * @return 处理结果
+     */
     public static long lRemove(String key, long count, Object value) {
         return redisTemplate.opsForList().remove(key, count, value);
     }
 
 
+    /**
+     * 获取 Keys 属性值
+     *
+     * @param pattern 参数 pattern
+     * @return 处理结果
+     */
     public static Set<String> getKeys(String pattern){
         return redisTemplate.keys(pattern);
     }

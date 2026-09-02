@@ -24,6 +24,12 @@ public final class IpUtil {
      * @param request HTTP 请求对象
      * @return 客户端 IP 地址；未能识别时返回 remoteAddr
      */
+    /**
+     * 获取 RemoteIp 属性值
+     *
+     * @param request 参数 request
+     * @return 处理结果
+     */
     public static String getRemoteIp(HttpServletRequest request) {
         if (request == null) {
             return null;
@@ -59,6 +65,12 @@ public final class IpUtil {
      * @param addr IP 地址字符串
      * @return 是否为有效 IP
      */
+    /**
+     * 判断 IPAddr 状态
+     *
+     * @param addr 参数 addr
+     * @return 处理结果
+     */
     public static boolean isIPAddr(String addr) {
         if (StringUtils.isBlank(addr)) {
             return false;
@@ -71,6 +83,12 @@ public final class IpUtil {
      *
      * @param addr IP 地址字符串
      * @return 是否为有效 IPv4
+     */
+    /**
+     * 判断 IPv4 状态
+     *
+     * @param addr 参数 addr
+     * @return 处理结果
      */
     public static boolean isIPv4(String addr) {
         if (StringUtils.isBlank(addr)) {
@@ -85,6 +103,12 @@ public final class IpUtil {
      * @param addr IP 地址字符串
      * @return 是否为有效 IPv6
      */
+    /**
+     * 判断 IPv6 状态
+     *
+     * @param addr 参数 addr
+     * @return 处理结果
+     */
     public static boolean isIPv6(String addr) {
         if (StringUtils.isBlank(addr)) {
             return false;
@@ -97,6 +121,12 @@ public final class IpUtil {
      *
      * @param addr IP 地址字符串
      * @return 是否为内网/私有/环回 IP
+     */
+    /**
+     * 判断 InternalIp 状态
+     *
+     * @param addr 参数 addr
+     * @return 处理结果
      */
     public static boolean isInternalIp(String addr) {
         if (StringUtils.isBlank(addr)) {

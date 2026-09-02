@@ -32,6 +32,13 @@ public class AutoLogAspect {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Around("@annotation(autoLog) || @within(autoLog)")
+    /**
+     * around
+     *
+     * @param joinPoint 参数 joinPoint
+     * @param autoLog 参数 autoLog
+     * @return 处理结果
+     */
     public Object around(ProceedingJoinPoint joinPoint, AutoLog autoLog) throws Throwable {
         long startTime = System.currentTimeMillis();
         LogInfo logInfo = LogInfo.getInstance(joinPoint, autoLog);

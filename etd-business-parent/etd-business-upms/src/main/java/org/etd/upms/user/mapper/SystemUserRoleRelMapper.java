@@ -9,6 +9,9 @@ import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 用户与角色关联关系 Mapper 接口。
+ */
 @Mapper
 public interface SystemUserRoleRelMapper extends BaseMapper<SystemUserRoleRelEntity> {
 

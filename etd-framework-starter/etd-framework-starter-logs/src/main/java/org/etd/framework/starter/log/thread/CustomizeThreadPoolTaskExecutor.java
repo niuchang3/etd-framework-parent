@@ -20,12 +20,23 @@ public class CustomizeThreadPoolTaskExecutor extends ThreadPoolTaskExecutor {
 	 *
 	 * @param runnable
 	 */
+	/**
+	 * 执行
+	 *
+	 * @param runnable 参数 runnable
+	 */
 	@Override
 	public void execute(Runnable runnable) {
 		Map<String, String> mdcContext = MDC.getCopyOfContextMap();
 		super.execute(() -> run(runnable, mdcContext));
 	}
 
+	/**
+	 * submit
+	 *
+	 * @param task 参数 task
+	 * @return 处理结果
+	 */
 	@Override
 	public <T> Future<T> submit(Callable<T> task) {
 		Map<String, String> mdcContext = MDC.getCopyOfContextMap();

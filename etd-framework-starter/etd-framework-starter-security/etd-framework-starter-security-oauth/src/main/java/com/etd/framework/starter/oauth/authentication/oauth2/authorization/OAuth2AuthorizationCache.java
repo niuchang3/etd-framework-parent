@@ -35,6 +35,14 @@ public class OAuth2AuthorizationCache {
      * @param authorizationId 授权记录标识
      * @param expiresAt 令牌过期时间
      */
+    /**
+     * put
+     *
+     * @param tokenType 参数 tokenType
+     * @param tokenValue 参数 tokenValue
+     * @param authorizationId 参数 authorizationId
+     * @param expiresAt 参数 expiresAt
+     */
     public void put(String tokenType, String tokenValue, String authorizationId, Instant expiresAt) {
         Assert.hasText(authorizationId, "OAuth2授权记录标识不能为空。");
         tokenStore.put(buildKey(tokenType, tokenValue), authorizationId, expiresAt);
@@ -47,6 +55,13 @@ public class OAuth2AuthorizationCache {
      * @param tokenValue 令牌原文
      * @return 授权记录标识
      */
+    /**
+     * 查找 Authorization Id
+     *
+     * @param tokenType 参数 tokenType
+     * @param tokenValue 参数 tokenValue
+     * @return 处理结果
+     */
     public Optional<String> findAuthorizationId(String tokenType, String tokenValue) {
         return tokenStore.get(buildKey(tokenType, tokenValue), String.class);
     }
@@ -56,6 +71,12 @@ public class OAuth2AuthorizationCache {
      *
      * @param tokenType 令牌类型
      * @param tokenValue 令牌原文
+     */
+    /**
+     * evict
+     *
+     * @param tokenType 参数 tokenType
+     * @param tokenValue 参数 tokenValue
      */
     public void evict(String tokenType, String tokenValue) {
         tokenStore.delete(buildKey(tokenType, tokenValue));

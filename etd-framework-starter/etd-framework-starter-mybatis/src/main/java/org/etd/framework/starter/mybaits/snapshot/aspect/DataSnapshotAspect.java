@@ -19,20 +19,35 @@ import org.springframework.util.ObjectUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+/**
+ * 数据变更快照生成切面拦截器。
+ * <p>
+ * 监听含有 {@link DataSnapshot} 注解的实体对象在 BaseMapper 执行 insert/updateById 时，
+ * 自动生成数据快照记录并持久化至对应的快照映射表中。
+ */
 @Slf4j
 @Aspect
 public class DataSnapshotAspect {
 
     public DataSnapshotAspect() {
-        System.out.println("2");
     }
 
     @Pointcut("execution(* com.baomidou.mybatisplus.core.mapper.BaseMapper.insert(..)) || execution(* com.baomidou.mybatisplus.core.mapper.BaseMapper.updateById(..))")
+    /**
+     * 生成 Data Snapshot
+     *
+     */
     public void generateDataSnapshot() {
 
     }
 
     @Around("generateDataSnapshot()")
+    /**
+     * 生成 Data Snapshot
+     *
+     * @param joinPoint 参数 joinPoint
+     * @return 处理结果
+     */
     public Object generateDataSnapshot(ProceedingJoinPoint joinPoint) throws Throwable {
         Object proceed = joinPoint.proceed();
         Integer flag = (Integer) proceed;

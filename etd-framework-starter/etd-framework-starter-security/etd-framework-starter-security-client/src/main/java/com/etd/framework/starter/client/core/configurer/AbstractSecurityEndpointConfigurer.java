@@ -30,6 +30,12 @@ public abstract class AbstractSecurityEndpointConfigurer {
      * @param <T> 对象类型
      * @return 处理后的对象
      */
+    /**
+     * post 处理执行
+     *
+     * @param object 参数 object
+     * @return 处理结果
+     */
     @SuppressWarnings("unchecked")
     protected final <T> T postProcess(T object) {
         return (T) this.objectPostProcessor.apply(object);
@@ -62,6 +68,12 @@ public abstract class AbstractSecurityEndpointConfigurer {
      * @param httpSecurity HTTP 安全构建器
      * @return Spring 应用上下文
      */
+    /**
+     * 获取 ApplicationContext 属性值
+     *
+     * @param httpSecurity 参数 httpSecurity
+     * @return 处理结果
+     */
     protected ApplicationContext getApplicationContext(HttpSecurity httpSecurity) {
         return httpSecurity.getSharedObject(ApplicationContext.class);
     }
@@ -71,6 +83,12 @@ public abstract class AbstractSecurityEndpointConfigurer {
      *
      * @param httpSecurity HTTP 安全构建器
      * @return 环境变量
+     */
+    /**
+     * 获取 Environment 属性值
+     *
+     * @param httpSecurity 参数 httpSecurity
+     * @return 处理结果
      */
     protected Environment getEnvironment(HttpSecurity httpSecurity) {
         return getApplicationContext(httpSecurity).getEnvironment();
@@ -82,6 +100,12 @@ public abstract class AbstractSecurityEndpointConfigurer {
      *
      * @param httpSecurity HTTP 安全构建器
      * @return 认证管理器
+     */
+    /**
+     * 获取 AuthenticationManager 属性值
+     *
+     * @param httpSecurity 参数 httpSecurity
+     * @return 处理结果
      */
     protected AuthenticationManager getAuthenticationManager(HttpSecurity httpSecurity) {
         return httpSecurity.getSharedObject(AuthenticationManager.class);

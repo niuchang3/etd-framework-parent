@@ -30,6 +30,11 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         this.properties = properties;
     }
 
+    /**
+     * ensure Bucket Exists
+     *
+     * @param bucketName 参数 bucketName
+     */
     @Override
     protected void ensureBucketExists(String bucketName) {
         try {
@@ -54,6 +59,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     // 1. Web 前端直传能力
     // =========================================================================
 
+    /**
+     * 生成 Upload Url
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public UploadUrlResModel generateUploadUrl(UploadUrlReqModel reqModel) throws Exception {
         try {
@@ -88,6 +99,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * 初始化 Multipart
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public InitMultipartResModel initMultipart(InitMultipartReqModel reqModel) throws Exception {
         try {
@@ -117,6 +134,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * 生成 Part Url
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public GeneratePartUrlResModel generatePartUrl(GeneratePartUrlReqModel reqModel) throws Exception {
         try {
@@ -144,6 +167,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * complete Multipart
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public CompleteMultipartResModel completeMultipart(CompleteMultipartReqModel reqModel) throws Exception {
         try {
@@ -178,6 +207,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     // 2. 服务端直接上传能力
     // =========================================================================
 
+    /**
+     * upload
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public ServerUploadResModel upload(InputStreamUploadReqModel reqModel) throws Exception {
         try {
@@ -211,6 +246,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * upload
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public ServerUploadResModel upload(ByteUploadReqModel reqModel) throws Exception {
         try (InputStream inputStream = new ByteArrayInputStream(reqModel.getBytes())) {
@@ -229,6 +270,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * upload
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public ServerUploadResModel upload(MultipartUploadReqModel reqModel) throws Exception {
         try (InputStream inputStream = reqModel.getFile().getInputStream()) {
@@ -250,6 +297,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
     // 3. 在线预览/下载链接生成与物理流式下载能力
     // =========================================================================
 
+    /**
+     * 生成 Object Url
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public GenerateObjectUrlResModel generateObjectUrl(GenerateObjectUrlReqModel reqModel) throws Exception {
         try {
@@ -271,6 +324,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * download Input Stream
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public InputStream downloadInputStream(DownloadObjectReqModel reqModel) throws Exception {
         try {
@@ -283,6 +342,12 @@ public class AlibabaOSSFileStorage extends FileStorage<OSSClient> {
         }
     }
 
+    /**
+     * download Bytes
+     *
+     * @param reqModel 参数 reqModel
+     * @return 处理结果
+     */
     @Override
     public byte[] downloadBytes(DownloadObjectReqModel reqModel) throws Exception {
         try (InputStream inputStream = downloadInputStream(reqModel)) {

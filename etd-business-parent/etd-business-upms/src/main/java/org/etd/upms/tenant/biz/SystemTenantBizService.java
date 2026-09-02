@@ -62,6 +62,12 @@ public class SystemTenantBizService {
     @Autowired
     private SystemTenantMenuService tenantMenuService;
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public Long insert(SystemTenantCreateDTO dto) {
         requirePlatformAdmin();
@@ -76,6 +82,13 @@ public class SystemTenantBizService {
         return tenantId;
     }
 
+    /**
+     * 更新修改
+     *
+     * @param tenantId 参数 tenantId
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean update(Long tenantId, SystemTenantUpdateDTO dto) {
         requirePlatformAdmin();
@@ -97,6 +110,13 @@ public class SystemTenantBizService {
         return settings;
     }
 
+    /**
+     * replace Menus
+     *
+     * @param tenantId 参数 tenantId
+     * @param requestedMenuIds 参数 requestedMenuIds
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceMenus(Long tenantId, Set<Long> requestedMenuIds) {
         // 必须在查询租户和菜单前校验身份，非法操作不能触达任何租户数据。
@@ -111,6 +131,13 @@ public class SystemTenantBizService {
         return true;
     }
 
+    /**
+     * 切换 Status
+     *
+     * @param tenantId 参数 tenantId
+     * @param status 参数 status
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean switchStatus(Long tenantId, Integer status) {
         UserDetails operator = requirePlatformAdmin();
@@ -125,6 +152,13 @@ public class SystemTenantBizService {
         return updated;
     }
 
+    /**
+     * 切换 Locked
+     *
+     * @param tenantId 参数 tenantId
+     * @param locked 参数 locked
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean switchLocked(Long tenantId, boolean locked) {
         UserDetails operator = requirePlatformAdmin();
@@ -136,6 +170,12 @@ public class SystemTenantBizService {
         return updated;
     }
 
+    /**
+     * 删除
+     *
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long tenantId) {
         UserDetails operator = requirePlatformAdmin();
@@ -147,6 +187,12 @@ public class SystemTenantBizService {
         return deleted;
     }
 
+    /**
+     * 查询 By User
+     *
+     * @param userDetails 参数 userDetails
+     * @return 处理结果
+     */
     public List<SystemTenantVO> selectByUser(UserDetails userDetails) {
         if (ObjectUtils.isEmpty(userDetails)) {
             throw new ApiRuntimeException("该请求需要身份认证。");
@@ -157,6 +203,14 @@ public class SystemTenantBizService {
         return tenantService.selectByIds(Set.of(userDetails.getTenantId()));
     }
 
+    /**
+     * 分页查询
+     *
+     * @param page 参数 page
+     * @param times 参数 times
+     * @param keyword 参数 keyword
+     * @return 处理结果
+     */
     public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword) {
         IPage<SystemTenantVO> tenantPage = tenantService.page(page, times, keyword);
         // 租户分页展示需要补充管理员名称，跨用户能力的组装放在 biz 层。

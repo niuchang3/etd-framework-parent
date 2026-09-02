@@ -70,6 +70,13 @@ public class LogoutRequestFilter extends OncePerRequestFilter {
      * @param response 当前响应
      * @param filterChain 过滤器链
      */
+    /**
+     * do Filter Internal
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param filterChain 参数 filterChain
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         if (!logoutEndpointMatcher.matches(request)) {

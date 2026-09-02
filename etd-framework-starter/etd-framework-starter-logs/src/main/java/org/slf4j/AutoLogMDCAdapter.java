@@ -37,6 +37,11 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		installMdcAdapter(autoLogMDCAdapter);
 	}
 
+	/**
+	 * 获取 Instance 属性值
+	 *
+	 * @return 处理结果
+	 */
 	public static MDCAdapter getInstance() {
 		return autoLogMDCAdapter;
 	}
@@ -75,6 +80,12 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		return newMap;
 	}
 
+	/**
+	 * put
+	 *
+	 * @param key 参数 key
+	 * @param val 参数 val
+	 */
 	@Override
 	public void put(String key, String val) {
 		if (key == null) {
@@ -92,6 +103,11 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		}
 	}
 
+	/**
+	 * 移除
+	 *
+	 * @param key 参数 key
+	 */
 	@Override
 	public void remove(String key) {
 		if (key == null) {
@@ -112,12 +128,22 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		}
 	}
 
+	/**
+	 * 清空
+	 *
+	 */
 	@Override
 	public void clear() {
 		lastOperation.set(WRITE_OPERATION);
 		copyOnInheritThreadLocal.remove();
 	}
 
+	/**
+	 * 获取
+	 *
+	 * @param key 参数 key
+	 * @return 处理结果
+	 */
 	@Override
 	public String get(String key) {
 		final Map<String, String> map = copyOnInheritThreadLocal.get();
@@ -128,11 +154,21 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		}
 	}
 
+	/**
+	 * 获取 PropertyMap 属性值
+	 *
+	 * @return 处理结果
+	 */
 	public Map<String, String> getPropertyMap() {
 		lastOperation.set(MAP_COPY_OPERATION);
 		return copyOnInheritThreadLocal.get();
 	}
 
+	/**
+	 * 获取 Keys 属性值
+	 *
+	 * @return 处理结果
+	 */
 	public Set<String> getKeys() {
 		Map<String, String> map = getPropertyMap();
 
@@ -143,6 +179,11 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		}
 	}
 
+	/**
+	 * 获取 CopyOfContextMap 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public Map<String, String> getCopyOfContextMap() {
 		Map<String, String> hashMap = copyOnInheritThreadLocal.get();
@@ -153,6 +194,12 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		}
 	}
 
+	/**
+	 * 设置 ContextMap 属性值
+	 *
+	 * @param Map<String 参数 Map<String
+	 * @param contextMap 参数 contextMap
+	 */
 	@Override
 	public void setContextMap(Map<String, String> contextMap) {
 		lastOperation.set(WRITE_OPERATION);
@@ -165,6 +212,12 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		copyOnInheritThreadLocal.set(newMap);
 	}
 
+	/**
+	 * push By Key
+	 *
+	 * @param key 参数 key
+	 * @param value 参数 value
+	 */
 	@Override
 	public void pushByKey(String key, String value) {
 		if (key == null) {
@@ -178,6 +231,12 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		dequeMap.computeIfAbsent(key, ignored -> new ArrayDeque<>()).push(value);
 	}
 
+	/**
+	 * pop By Key
+	 *
+	 * @param key 参数 key
+	 * @return 处理结果
+	 */
 	@Override
 	public String popByKey(String key) {
 		if (key == null) {
@@ -194,6 +253,12 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		return deque.pop();
 	}
 
+	/**
+	 * 获取 CopyOfDequeByKey 属性值
+	 *
+	 * @param key 参数 key
+	 * @return 处理结果
+	 */
 	@Override
 	public Deque<String> getCopyOfDequeByKey(String key) {
 		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();
@@ -203,6 +268,11 @@ public class AutoLogMDCAdapter implements MDCAdapter {
 		return new ArrayDeque<>(dequeMap.get(key));
 	}
 
+	/**
+	 * 清空 Deque By Key
+	 *
+	 * @param key 参数 key
+	 */
 	@Override
 	public void clearDequeByKey(String key) {
 		Map<String, Deque<String>> dequeMap = dequeThreadLocal.get();

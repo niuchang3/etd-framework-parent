@@ -26,6 +26,12 @@ public class MemoryUserServiceImpl implements IUserService {
      * @param account 登录账号
      * @return 用户信息
      */
+    /**
+     * load User By Account
+     *
+     * @param account 参数 account
+     * @return 处理结果
+     */
     @Override
     public UserDetails loadUserByAccount(String account) {
         return userDetailsMap.get(account);
@@ -36,6 +42,12 @@ public class MemoryUserServiceImpl implements IUserService {
      *
      * @param userDetails 用户信息
      * @return 注册结果
+     */
+    /**
+     * register
+     *
+     * @param userDetails 参数 userDetails
+     * @return 处理结果
      */
     @Override
     public boolean register(UserDetails userDetails) {
@@ -52,6 +64,12 @@ public class MemoryUserServiceImpl implements IUserService {
      *
      * @param id 用户标识
      * @return 用户信息
+     */
+    /**
+     * load User By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
      */
     @Override
     public UserDetails loadUserById(Long id) {

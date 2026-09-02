@@ -4,6 +4,9 @@ import lombok.Data;
 
 import java.time.Instant;
 
+/**
+ * 系统参数配置视图响应对象 VO。
+ */
 @Data
 public class SystemConfigVO {
 

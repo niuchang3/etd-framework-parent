@@ -14,6 +14,11 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 public class StarterWebConfig {
 
+    /**
+     * 初始化 Custom Interceptor
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(EtdFrameworkHttpRequestInterceptor.class)
     public EtdFrameworkHttpRequestInterceptor initCustomInterceptor() {

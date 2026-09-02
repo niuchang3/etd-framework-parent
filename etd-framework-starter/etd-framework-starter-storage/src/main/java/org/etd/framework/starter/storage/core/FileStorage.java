@@ -16,6 +16,11 @@ public abstract class FileStorage<C> implements FileUpload, FileDownload {
     @Autowired
     private C client;
 
+    /**
+     * 获取 Client 属性值
+     *
+     * @return 处理结果
+     */
     protected C getClient() {
         return client;
     }
@@ -31,6 +36,12 @@ public abstract class FileStorage<C> implements FileUpload, FileDownload {
      * @param bucketName 存储桶名称
      * @throws Exception 异常信息
      */
+    /**
+     * ensure Bucket Exists
+     *
+     * @param bucketName 参数 bucketName
+     * @return 处理结果
+     */
     protected abstract void ensureBucketExists(String bucketName) throws Exception;
 
     /**
@@ -39,6 +50,13 @@ public abstract class FileStorage<C> implements FileUpload, FileDownload {
      * @param requestBucketName       请求中传入的桶名（可能为空）
      * @param defaultPropertiesBucket 配置中指定的默认桶名
      * @return 最终生效的存储桶名称
+     */
+    /**
+     * 获取 RealBucketName 属性值
+     *
+     * @param requestBucketName 参数 requestBucketName
+     * @param defaultPropertiesBucket 参数 defaultPropertiesBucket
+     * @return 处理结果
      */
     protected String getRealBucketName(String requestBucketName, String defaultPropertiesBucket) {
         if (StringUtils.hasText(requestBucketName)) {
@@ -56,6 +74,12 @@ public abstract class FileStorage<C> implements FileUpload, FileDownload {
      * @param originalFileName 原始文件名
      * @return 格式为 UUID + 后缀 的文件名
      */
+    /**
+     * 生成 File Name
+     *
+     * @param originalFileName 参数 originalFileName
+     * @return 处理结果
+     */
     protected String generateFileName(String originalFileName) {
         String suffix = originalFileName;
         if (StringUtils.hasText(originalFileName) && originalFileName.contains(SEPARATOR_DOT)) {
@@ -70,6 +94,13 @@ public abstract class FileStorage<C> implements FileUpload, FileDownload {
      * @param directory 目标目录
      * @param fileName  文件名称
      * @return 规范的对象 Key/Path
+     */
+    /**
+     * 构建 Object Path
+     *
+     * @param directory 参数 directory
+     * @param fileName 参数 fileName
+     * @return 处理结果
      */
     protected String buildObjectPath(String directory, String fileName) {
         if (!StringUtils.hasText(directory)) {

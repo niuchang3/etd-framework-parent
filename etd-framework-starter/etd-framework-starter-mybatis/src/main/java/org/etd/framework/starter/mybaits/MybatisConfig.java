@@ -42,6 +42,11 @@ public class MybatisConfig {
      *
      * @return
      */
+    /**
+     * mybatis Plus Interceptor
+     *
+     * @return 处理结果
+     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
@@ -66,12 +71,22 @@ public class MybatisConfig {
     }
 
 
+    /**
+     * ignore Tenant Aspect
+     *
+     * @return 处理结果
+     */
     @ConditionalOnProperty(prefix = "etd.mybatis.tenant", value = "enabled",matchIfMissing = true)
     @Bean
     public IgnoreTenantAspect ignoreTenantAspect(){
         return new IgnoreTenantAspect();
     }
 
+    /**
+     * data Permission Aspect
+     *
+     * @return 处理结果
+     */
     @ConditionalOnProperty(prefix = "etd.mybatis.data-permission", name = "enabled", havingValue = "true")
     @Bean
     public DataPermissionAspect dataPermissionAspect() {
@@ -79,6 +94,12 @@ public class MybatisConfig {
     }
 
 
+    /**
+     * identifier Generator
+     *
+     * @param properties 参数 properties
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnProperty(prefix = "etd.mybatis.idGenerator", value = "enabled",matchIfMissing = true)
     public IdentifierGenerator identifierGenerator(EtdMyBatisPlusProperties properties) {

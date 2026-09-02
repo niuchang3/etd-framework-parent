@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 系统菜单管理 Controller 控制器入口。
+ */
 @Validated
 @RestController
 @RequestMapping("/v1/menu")
@@ -32,22 +35,46 @@ public class SystemMenuController {
     @Autowired
     private SystemMenuBizService menuBizService;
 
+    /**
+     * detail
+     *
+     * @param @PathVariable("id" 参数 @PathVariable("id"
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemMenuVO> detail(@PathVariable("id") Long id) {
         return ResultModel.success(menusService.selectById(id));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemMenuSaveDTO dto) {
         return ResultModel.success(menuBizService.insert(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param @PathVariable("id" 参数 @PathVariable("id"
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemMenuSaveDTO dto) {
         return ResultModel.success(menusService.update(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param @PathVariable("id" 参数 @PathVariable("id"
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable("id") Long id) {
         return ResultModel.success(menuBizService.delete(id));

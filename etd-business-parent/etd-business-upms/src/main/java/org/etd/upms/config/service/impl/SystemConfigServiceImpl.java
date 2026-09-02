@@ -22,7 +22,11 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+/**
+ * 系统参数配置能力 Service 实现类。
+ */
 @Service
 public class SystemConfigServiceImpl implements SystemConfigService {
 
@@ -32,6 +36,16 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * 分页查询
+     *
+     * @param current 参数 current
+     * @param size 参数 size
+     * @param keyword 参数 keyword
+     * @param enabled 参数 enabled
+     * @param valueType 参数 valueType
+     * @return 处理结果
+     */
     @Override
     public IPage<SystemConfigVO> page(long current, long size, String keyword, Boolean enabled, String valueType) {
         LambdaQueryWrapper<SystemConfigEntity> wrapper = new LambdaQueryWrapper<>();
@@ -45,11 +59,23 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         return configMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVO);
     }
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemConfigVO selectById(Long id) {
         return toVO(configMapper.selectById(id));
     }
 
+    /**
+     * 查询 Enabled By Key
+     *
+     * @param parameterKey 参数 parameterKey
+     * @return 处理结果
+     */
     @Override
     public SystemConfigVO selectEnabledByKey(String parameterKey) {
         LambdaQueryWrapper<SystemConfigEntity> wrapper = new LambdaQueryWrapper<>();
@@ -58,6 +84,12 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         return toVO(configMapper.selectOne(wrapper));
     }
 
+    /**
+     * 查询 Enabled Values By Keys
+     *
+     * @param parameterKeys 参数 parameterKeys
+     * @return 处理结果
+     */
     @Override
     public Map<String, String> selectEnabledValuesByKeys(Collection<String> parameterKeys) {
         List<String> distinctKeys = parameterKeys.stream().distinct().toList();
@@ -65,12 +97,21 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         wrapper.in(SystemConfigEntity::getParameterKey, distinctKeys)
                 .eq(SystemConfigEntity::getEnabled, true);
         Map<String, String> values = configMapper.selectList(wrapper).stream().collect(
-                LinkedHashMap::new,
-                (result, config) -> result.put(config.getParameterKey(), config.getParameterValue()),
-                Map::putAll);
+                Collectors.toMap(
+                        SystemConfigEntity::getParameterKey,
+                        SystemConfigEntity::getParameterValue,
+                        (existing, replacement) -> existing,
+                        LinkedHashMap::new
+                ));
         return orderValues(distinctKeys, values);
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemConfigSaveDTO dto) {
         validateParameterValue(dto);
@@ -82,6 +123,13 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemConfigSaveDTO dto) {
         requireConfig(id);
@@ -92,12 +140,25 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         return configMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         requireConfig(id);
         throw new ApiRuntimeException("系统参数不允许删除。");
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
         requireConfig(id);

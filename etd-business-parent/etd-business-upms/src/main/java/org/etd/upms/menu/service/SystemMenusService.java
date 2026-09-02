@@ -7,6 +7,9 @@ import org.etd.upms.menu.controller.vo.SystemMenuVO;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 系统菜单基础能力 Service 接口。
+ */
 public interface SystemMenusService {
 
     SystemMenuVO selectById(Long id);

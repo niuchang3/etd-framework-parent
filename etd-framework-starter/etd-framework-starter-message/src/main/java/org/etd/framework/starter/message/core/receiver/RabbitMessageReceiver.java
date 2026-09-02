@@ -20,6 +20,13 @@ import org.springframework.stereotype.Component;
 public class RabbitMessageReceiver implements ListenerHandlerFactory {
 
 
+    /**
+     * 处理 Rabbit Message
+     *
+     * @param request 参数 request
+     * @param channel 参数 channel
+     * @param message 参数 message
+     */
     @RabbitHandler
     public void handleRabbitMessage(NotificationMsgRequest request, Channel channel, Message message) throws Exception {
         long deliveryTag = message.getMessageProperties().getDeliveryTag();

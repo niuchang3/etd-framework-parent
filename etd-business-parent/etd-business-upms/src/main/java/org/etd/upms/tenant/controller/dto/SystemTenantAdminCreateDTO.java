@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 租户管理员创建 DTO。
+ */
 @Data
 public class SystemTenantAdminCreateDTO {
 

@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 系统角色管理 Controller 控制器入口。
+ */
 @Validated
 @RestController
 @RequestMapping("/v1/role")
@@ -56,21 +59,46 @@ public class SystemRoleController {
         return ResultModel.success(roleService.page(current, size, keyword, dataStatus, assignableOnly));
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemRoleVO> detail(@PathVariable Long id) {
         return ResultModel.success(roleService.selectById(id));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemRoleSaveDTO dto) {
         return ResultModel.success(roleBizService.insert(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemRoleSaveDTO dto) {
         return ResultModel.success(roleBizService.update(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(roleBizService.delete(id));
@@ -84,6 +112,12 @@ public class SystemRoleController {
         return ResultModel.success(roleService.switchStatus(id, status));
     }
 
+    /**
+     * menus
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}/menus")
     public ResultModel<List<SystemRoleMenuVO>> menus(@PathVariable Long id) {
         roleService.requireExists(id);
@@ -96,6 +130,12 @@ public class SystemRoleController {
         return ResultModel.success(roleBizService.replaceMenus(id, dto.getMenus()));
     }
 
+    /**
+     * organizations
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}/organizations")
     public ResultModel<Set<Long>> organizations(@PathVariable Long id) {
         return ResultModel.success(roleBizService.selectOrganizationIds(id));

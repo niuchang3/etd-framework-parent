@@ -3,6 +3,9 @@ package org.etd.framework.common.core.listener;
 import org.etd.framework.common.core.spring.SpringContextHelper;
 import org.springframework.util.ObjectUtils;
 
+/**
+ * 监听处理器工厂类。
+ */
 public interface ListenerHandlerFactory {
 
 

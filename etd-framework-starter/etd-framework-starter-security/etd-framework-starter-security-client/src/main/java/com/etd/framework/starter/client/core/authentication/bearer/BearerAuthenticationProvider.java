@@ -67,6 +67,12 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
      * @param authentication Bearer 认证请求
      * @return 已认证的 Bearer 认证对象
      */
+    /**
+     * authenticate
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         BearerTokenAuthentication tokenAuthentication = (BearerTokenAuthentication) authentication;
@@ -103,6 +109,12 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
         }
     }
 
+    /**
+     * supports
+     *
+     * @param authentication 参数 authentication
+     * @return 处理结果
+     */
     @Override
     public boolean supports(Class<?> authentication) {
         return BearerTokenAuthentication.class.isAssignableFrom(authentication);

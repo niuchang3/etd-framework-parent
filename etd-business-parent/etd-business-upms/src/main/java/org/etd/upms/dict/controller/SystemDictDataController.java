@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 字典数据项管理 Controller 控制器入口。
+ */
 @Validated
 @RestController
 @RequestMapping("/v1/dict/data")
@@ -44,26 +47,58 @@ public class SystemDictDataController {
         return ResultModel.success(dictDataService.page(current, size, dictTypeId, keyword, enabled));
     }
 
+    /**
+     * detail
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @GetMapping("/{id}")
     public ResultModel<SystemDictDataVO> detail(@PathVariable Long id) {
         return ResultModel.success(dictDataService.selectById(id));
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemDictDataSaveDTO dto) {
         return ResultModel.success(dictBizService.insertData(dto));
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemDictDataSaveDTO dto) {
         return ResultModel.success(dictBizService.updateData(id, dto));
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(dictBizService.deleteData(id));
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(dictBizService.switchDataEnabled(id, enabled));

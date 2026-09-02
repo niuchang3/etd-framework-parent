@@ -32,6 +32,11 @@ public class OAuth2RegisteredClientRepository implements RegisteredClientReposit
         this.clientRepository = clientRepository;
     }
 
+    /**
+     * 保存
+     *
+     * @param registeredClient 参数 registeredClient
+     */
     @Override
     public void save(RegisteredClient registeredClient) {
         throw new UnsupportedOperationException("OAuth2客户端请通过oauth2_client结构化表维护。");
@@ -42,6 +47,12 @@ public class OAuth2RegisteredClientRepository implements RegisteredClientReposit
      *
      * @param id 客户端主键
      * @return 注册客户端
+     */
+    /**
+     * 查找 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
      */
     @Override
     public RegisteredClient findById(String id) {
@@ -64,6 +75,12 @@ public class OAuth2RegisteredClientRepository implements RegisteredClientReposit
      *
      * @param clientId OAuth2客户端ID
      * @return 注册客户端
+     */
+    /**
+     * 查找 By Client Id
+     *
+     * @param clientId 参数 clientId
+     * @return 处理结果
      */
     @Override
     public RegisteredClient findByClientId(String clientId) {

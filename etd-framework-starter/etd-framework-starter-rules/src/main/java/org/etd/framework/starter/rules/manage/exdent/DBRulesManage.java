@@ -27,6 +27,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+/**
+ * 基于数据库持久化的 Drools 动态规则管理器。
+ * <p>
+ * 支持将 Drools DRL 规则定义存储至数据库，并在系统启动或运行时动态加载、新增、更新和删除规则文件。
+ */
 public class DBRulesManage extends RulesManage {
 
     @Autowired
@@ -41,6 +46,10 @@ public class DBRulesManage extends RulesManage {
         super(kieServices, kieFileSystem, kieModuleModel, properties);
     }
 
+    /**
+     * 初始化
+     *
+     */
     @Override
     @PostConstruct
     public void init() throws IOException {
@@ -51,6 +60,11 @@ public class DBRulesManage extends RulesManage {
         }
     }
 
+    /**
+     * 添加 Rules
+     *
+     * @param droolsRule 参数 droolsRule
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addRules(DroolsRule droolsRule) {
@@ -112,6 +126,13 @@ public class DBRulesManage extends RulesManage {
         return rulesNames;
     }
 
+    /**
+     * 删除 Drools Rule
+     *
+     * @param kieBaseName 参数 kieBaseName
+     * @param packageName 参数 packageName
+     * @param ruleName 参数 ruleName
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void deleteDroolsRule(String kieBaseName, String packageName, String ruleName) {

@@ -14,12 +14,21 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 用户与所属组织关联关系能力 Service 实现类。
+ */
 @Service
 public class SystemUserOrganizationServiceImpl implements SystemUserOrganizationService {
 
     @Autowired
     private SystemUserOrganizationRelMapper userOrganizationRelMapper;
 
+    /**
+     * 查询 User Ids By Organization Ids
+     *
+     * @param organizationIds 参数 organizationIds
+     * @return 处理结果
+     */
     @Override
     public Set<Long> selectUserIdsByOrganizationIds(Set<Long> organizationIds) {
         if (organizationIds.isEmpty()) {
@@ -33,6 +42,12 @@ public class SystemUserOrganizationServiceImpl implements SystemUserOrganization
         return userIds;
     }
 
+    /**
+     * 查询 By User Ids
+     *
+     * @param userIds 参数 userIds
+     * @return 处理结果
+     */
     @Override
     public List<SystemUserOrganizationVO> selectByUserIds(Set<Long> userIds) {
         if (userIds.isEmpty()) {
@@ -41,6 +56,13 @@ public class SystemUserOrganizationServiceImpl implements SystemUserOrganization
         return userOrganizationRelMapper.selectByUserIds(userIds);
     }
 
+    /**
+     * replace
+     *
+     * @param userId 参数 userId
+     * @param organizationIds 参数 organizationIds
+     * @param primaryOrganizationId 参数 primaryOrganizationId
+     */
     @Override
     public void replace(Long userId, Set<Long> organizationIds, Long primaryOrganizationId) {
         removeByUserId(userId);
@@ -49,6 +71,11 @@ public class SystemUserOrganizationServiceImpl implements SystemUserOrganization
                 insertRelation(tenantId, userId, organizationId, organizationId.equals(primaryOrganizationId)));
     }
 
+    /**
+     * 移除 By User Id
+     *
+     * @param userId 参数 userId
+     */
     @Override
     public void removeByUserId(Long userId) {
         LambdaQueryWrapper<SystemUserOrganizationRelEntity> wrapper = new LambdaQueryWrapper<>();
@@ -56,6 +83,11 @@ public class SystemUserOrganizationServiceImpl implements SystemUserOrganization
         userOrganizationRelMapper.delete(wrapper);
     }
 
+    /**
+     * 移除 By Organization Ids
+     *
+     * @param organizationIds 参数 organizationIds
+     */
     @Override
     public void removeByOrganizationIds(Set<Long> organizationIds) {
         if (organizationIds.isEmpty()) {

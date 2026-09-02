@@ -1,2 +1,0 @@
-org.springframework.context.ApplicationContextInitializer=\
-  org.etd.framework.starter.log.config.MDCAdapterInitializer

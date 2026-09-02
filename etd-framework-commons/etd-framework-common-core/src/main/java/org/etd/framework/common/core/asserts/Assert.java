@@ -24,6 +24,12 @@ public class Assert {
      * @param object
      * @param <T>
      */
+    /**
+     * 校验
+     *
+     * @param object 参数 object
+     * @return 处理结果
+     */
     public static <T> void validate(T object) {
         // 获得验证器
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
@@ -44,6 +50,13 @@ public class Assert {
      * @param object
      * @param message
      */
+    /**
+     * 判断 NotNull 状态
+     *
+     * @param object 参数 object
+     * @param message 参数 message
+     * @return 处理结果
+     */
     public final static void isNotNull(Object object, String message) {
         if (!ObjectUtils.isEmpty(object)) {
             return;
@@ -56,6 +69,13 @@ public class Assert {
      *
      * @param object
      * @param message
+     */
+    /**
+     * 判断 Null 状态
+     *
+     * @param object 参数 object
+     * @param message 参数 message
+     * @return 处理结果
      */
     public final static void isNull(Object object, String message) {
         if (ObjectUtils.isEmpty(object)) {

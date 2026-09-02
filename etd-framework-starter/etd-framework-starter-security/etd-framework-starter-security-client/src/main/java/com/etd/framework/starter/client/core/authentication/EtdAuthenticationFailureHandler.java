@@ -31,6 +31,13 @@ public class EtdAuthenticationFailureHandler extends AbstractAuthenticationHandl
      * @param response  当前响应
      * @param exception 认证异常
      */
+    /**
+     * on Authentication Failure
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param exception 参数 exception
+     */
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
         if (response.getStatus() < HttpStatus.BAD_REQUEST.value()) {

@@ -15,12 +15,21 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 租户与菜单关联关系 Service 实现类。
+ */
 @Service
 public class SystemTenantMenuServiceImpl implements SystemTenantMenuService {
 
     @Autowired
     private SystemTenantMenuRelMapper tenantMenuRelMapper;
 
+    /**
+     * 查询 Menu Ids
+     *
+     * @param tenantId 参数 tenantId
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Override
     public Set<Long> selectMenuIds(Long tenantId) {
@@ -33,6 +42,13 @@ public class SystemTenantMenuServiceImpl implements SystemTenantMenuService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    /**
+     * append Menu
+     *
+     * @param tenantId 参数 tenantId
+     * @param menuId 参数 menuId
+     * @return 处理结果
+     */
     @Override
     public boolean appendMenu(Long tenantId, Long menuId) {
         if (exists(tenantId, menuId)) {
@@ -44,6 +60,13 @@ public class SystemTenantMenuServiceImpl implements SystemTenantMenuService {
         return tenantMenuRelMapper.insert(relation) > 0;
     }
 
+    /**
+     * replace
+     *
+     * @param tenantId 参数 tenantId
+     * @param menuIds 参数 menuIds
+     * @return 处理结果
+     */
     @IgnoreTenant
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -61,6 +84,11 @@ public class SystemTenantMenuServiceImpl implements SystemTenantMenuService {
         return true;
     }
 
+    /**
+     * 移除 By Menu Ids
+     *
+     * @param menuIds 参数 menuIds
+     */
     @IgnoreTenant
     @Override
     public void removeByMenuIds(Set<Long> menuIds) {

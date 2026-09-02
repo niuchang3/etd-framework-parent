@@ -14,10 +14,22 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
      *
      * @param message
      */
+    /**
+     * before Invoke
+     *
+     * @param message 参数 message
+     */
     protected void beforeInvoke(M message) {
 
     }
 
+    /**
+     * do 处理执行 Handler
+     *
+     * @param executor 参数 executor
+     * @param message 参数 message
+     * @return 处理结果
+     */
     protected Object doProcessHandler(RetryUtil.Executor executor, M message) throws Exception {
         RetryUtil.Result invoke = RetryUtil.invoke(() -> executor.execute(), message.getRetries());
         if (invoke.isSuccess()) {
@@ -33,6 +45,11 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
      *
      * @param message
      */
+    /**
+     * after Invoke
+     *
+     * @param message 参数 message
+     */
     protected void afterInvoke(M message) {
 
     }
@@ -43,6 +60,12 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
      * @param message
      * @return
      */
+    /**
+     * 处理 Business
+     *
+     * @param message 参数 message
+     * @return 处理结果
+     */
     protected abstract Object handleBusiness(NotificationMsgRequest message);
 
     /**
@@ -50,6 +73,12 @@ public abstract class AbstractListenerHandler<M extends NotificationMsgRequest> 
      *
      * @param message
      * @throws IOException
+     */
+    /**
+     * invoke 处理执行 Handler
+     *
+     * @param message 参数 message
+     * @return 处理结果
      */
     @Override
     public Object invokeProcessHandler(M message) throws Exception {

@@ -24,6 +24,11 @@ public class WxSubMerchantApply implements SubMerchantApply {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 MerchantType 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getMerchantType() {
 		return null;
@@ -34,6 +39,11 @@ public class WxSubMerchantApply implements SubMerchantApply {
 	 * 支付宝参照 merchant_type 字段内容中文
 	 *
 	 * @return
+	 */
+	/**
+	 * 获取 MerchantName 属性值
+	 *
+	 * @return 处理结果
 	 */
 	@Override
 	public String getMerchantName() {
@@ -46,6 +56,11 @@ public class WxSubMerchantApply implements SubMerchantApply {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 Description 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getDescription() {
 		return null;
@@ -56,6 +71,11 @@ public class WxSubMerchantApply implements SubMerchantApply {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 CertName 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getCertName() {
 		return null;
@@ -65,6 +85,11 @@ public class WxSubMerchantApply implements SubMerchantApply {
 	 * 证件编号
 	 *
 	 * @return
+	 */
+	/**
+	 * 获取 CertNumber 属性值
+	 *
+	 * @return 处理结果
 	 */
 	@Override
 	public String getCertNumber() {

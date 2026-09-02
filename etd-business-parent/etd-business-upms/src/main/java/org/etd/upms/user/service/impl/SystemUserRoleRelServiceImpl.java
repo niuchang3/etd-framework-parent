@@ -39,11 +39,23 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
     @Autowired
     private SystemOrganizationService organizationService;
 
+    /**
+     * 查询 By User
+     *
+     * @param userId 参数 userId
+     * @return 处理结果
+     */
     @Override
     public List<SystemUserRoleVO> selectByUser(Long userId) {
         return userRoleRelMapper.selectByUserId(userId);
     }
 
+    /**
+     * 查询 Assignments By User Ids
+     *
+     * @param userIds 参数 userIds
+     * @return 处理结果
+     */
     @Override
     public List<SystemUserRoleVO> selectAssignmentsByUserIds(Set<Long> userIds) {
         if (userIds.isEmpty()) {
@@ -52,6 +64,12 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         return userRoleRelMapper.selectAssignmentsByUserIds(userIds);
     }
 
+    /**
+     * exists By Role Id
+     *
+     * @param roleId 参数 roleId
+     * @return 处理结果
+     */
     @Override
     public boolean existsByRoleId(Long roleId) {
         LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();
@@ -59,6 +77,13 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         return userRoleRelMapper.selectCount(wrapper) > 0;
     }
 
+    /**
+     * 分配授权 Role
+     *
+     * @param tenantId 参数 tenantId
+     * @param userId 参数 userId
+     * @param roleId 参数 roleId
+     */
     @IgnoreTenant
     @Override
     public void assignRole(Long tenantId, Long userId, Long roleId) {
@@ -71,6 +96,12 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         }
     }
 
+    /**
+     * replace
+     *
+     * @param userId 参数 userId
+     * @param roleIds 参数 roleIds
+     */
     @Override
     public void replace(Long userId, Set<Long> roleIds) {
         removeByUserId(userId);
@@ -78,6 +109,11 @@ public class SystemUserRoleRelServiceImpl implements SystemUserRoleRelService {
         roleIds.forEach(roleId -> insertRelation(tenantId, userId, roleId));
     }
 
+    /**
+     * 移除 By User Id
+     *
+     * @param userId 参数 userId
+     */
     @Override
     public void removeByUserId(Long userId) {
         LambdaQueryWrapper<SystemUserRoleRelEntity> wrapper = new LambdaQueryWrapper<>();

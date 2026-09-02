@@ -10,12 +10,20 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+/**
+ * 菜单与 API 接口权限关联关系 Service 实现类。
+ */
 @Service
 public class SystemMenuApiServiceImpl implements SystemMenuApiService {
 
     @Autowired
     private SystemMenuApiRelMapper menuApiRelMapper;
 
+    /**
+     * 移除 By Menu Ids
+     *
+     * @param menuIds 参数 menuIds
+     */
     @IgnoreTenant
     @Override
     public void removeByMenuIds(Set<Long> menuIds) {

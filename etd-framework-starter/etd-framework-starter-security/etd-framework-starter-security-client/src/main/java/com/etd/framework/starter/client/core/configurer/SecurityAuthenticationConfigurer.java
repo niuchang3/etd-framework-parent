@@ -33,6 +33,12 @@ public class SecurityAuthenticationConfigurer extends AbstractHttpConfigurer<Sec
      * @param <T> 子配置器泛型
      * @return 子配置器实例
      */
+    /**
+     * 获取 Configurer 属性值
+     *
+     * @param clazz 参数 clazz
+     * @return 处理结果
+     */
     @SuppressWarnings("unchecked")
     public <T extends AbstractSecurityEndpointConfigurer> T getConfigurer(Class<T> clazz) {
         return (T) configurers.get(clazz);
@@ -44,12 +50,23 @@ public class SecurityAuthenticationConfigurer extends AbstractHttpConfigurer<Sec
      * @param bean 子配置器实例
      * @param <T> 子配置器泛型
      */
+    /**
+     * 添加 Configurer
+     *
+     * @param bean 参数 bean
+     * @return 处理结果
+     */
     public <T extends AbstractSecurityEndpointConfigurer> void addConfigurer(T bean) {
         bean.setObjectPostProcessor(this::postProcess);
         configurers.put(bean.getClass(), bean);
     }
 
 
+    /**
+     * 初始化
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void init(HttpSecurity builder) throws Exception {
         isEmpty();
@@ -65,6 +82,11 @@ public class SecurityAuthenticationConfigurer extends AbstractHttpConfigurer<Sec
 
     }
 
+    /**
+     * configure
+     *
+     * @param builder 参数 builder
+     */
     @Override
     public void configure(HttpSecurity builder) throws Exception {
         isEmpty();

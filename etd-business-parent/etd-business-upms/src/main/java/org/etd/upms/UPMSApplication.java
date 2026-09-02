@@ -16,6 +16,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @Import({WebAppConfig.class, SpringContextHelper.class})
 @SpringBootApplication
 public class UPMSApplication {
+    /**
+     * main
+     *
+     * @param args 参数 args
+     * @return 处理结果
+     */
     public static void main(String[] args) {
         SpringApplication.run(UPMSApplication.class, args);
     }

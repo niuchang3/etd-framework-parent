@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 
+/**
+ * 字典类型实体类。
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName(value = "sys_dict_type", excludeProperty = "tenantId")

@@ -11,6 +11,11 @@ import org.quartz.JobListener;
  */
 public class JobGlobalJobListeners implements JobListener {
 
+    /**
+     * 获取 Name 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getName() {
         return this.getClass().getSimpleName();

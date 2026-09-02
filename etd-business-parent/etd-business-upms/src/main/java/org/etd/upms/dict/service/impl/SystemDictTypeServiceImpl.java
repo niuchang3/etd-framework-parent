@@ -16,12 +16,24 @@ import org.springframework.util.StringUtils;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * 字典类型基础能力 Service 实现类。
+ */
 @Service
 public class SystemDictTypeServiceImpl implements SystemDictTypeService {
 
     @Autowired
     private SystemDictTypeMapper dictTypeMapper;
 
+    /**
+     * 分页查询
+     *
+     * @param current 参数 current
+     * @param size 参数 size
+     * @param keyword 参数 keyword
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public IPage<SystemDictTypeVO> page(long current, long size, String keyword, Boolean enabled) {
         LambdaQueryWrapper<SystemDictTypeEntity> wrapper = new LambdaQueryWrapper<>();
@@ -34,11 +46,23 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         return dictTypeMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVO);
     }
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemDictTypeVO selectById(Long id) {
         return toVO(dictTypeMapper.selectById(id));
     }
 
+    /**
+     * 查询 Enabled By Code
+     *
+     * @param typeCode 参数 typeCode
+     * @return 处理结果
+     */
     @Override
     public SystemDictTypeVO selectEnabledByCode(String typeCode) {
         LambdaQueryWrapper<SystemDictTypeEntity> wrapper = new LambdaQueryWrapper<>();
@@ -47,6 +71,12 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         return toVO(dictTypeMapper.selectOne(wrapper));
     }
 
+    /**
+     * 查询 Enabled By Codes
+     *
+     * @param typeCodes 参数 typeCodes
+     * @return 处理结果
+     */
     @Override
     public List<SystemDictTypeVO> selectEnabledByCodes(Collection<String> typeCodes) {
         if (typeCodes.isEmpty()) {
@@ -58,11 +88,21 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         return dictTypeMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
+    /**
+     * 校验并要求 Exists
+     *
+     * @param id 参数 id
+     */
     @Override
     public void requireExists(Long id) {
         requireType(id);
     }
 
+    /**
+     * 校验并要求 Writable
+     *
+     * @param id 参数 id
+     */
     @Override
     public void requireWritable(Long id) {
         SystemDictTypeEntity entity = requireType(id);
@@ -71,6 +111,12 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         }
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemDictTypeSaveDTO dto) {
         ensureCodeAvailable(dto.getTypeCode(), null);
@@ -81,6 +127,13 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemDictTypeSaveDTO dto) {
         requireWritable(id);
@@ -90,12 +143,25 @@ public class SystemDictTypeServiceImpl implements SystemDictTypeService {
         return dictTypeMapper.updateById(entity) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         requireWritable(id);
         return dictTypeMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
         requireWritable(id);

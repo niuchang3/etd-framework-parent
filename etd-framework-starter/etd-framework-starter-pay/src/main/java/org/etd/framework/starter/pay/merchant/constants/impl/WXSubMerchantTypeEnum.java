@@ -62,6 +62,11 @@ public enum WXSubMerchantTypeEnum implements SubMerchantTypeEnum {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 MerchantType 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getMerchantType() {
 		return this.code;
@@ -73,6 +78,11 @@ public enum WXSubMerchantTypeEnum implements SubMerchantTypeEnum {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 MerchantName 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getMerchantName() {
 		return this.name;
@@ -83,6 +93,11 @@ public enum WXSubMerchantTypeEnum implements SubMerchantTypeEnum {
 	 * 示例值：小微	无营业执照、免办理工商注册登记的商户，需提供小微经营者的个人身份证
 	 *
 	 * @return
+	 */
+	/**
+	 * 获取 Description 属性值
+	 *
+	 * @return 处理结果
 	 */
 	@Override
 	public String getDescription() {

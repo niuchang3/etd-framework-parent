@@ -46,6 +46,10 @@ public class DroolsRule implements Serializable {
     private Instant createdTime;
 
 
+    /**
+     * 校验
+     *
+     */
     public void validate() {
         if (isBlank(id) || isBlank(this.kieBaseName) || isBlank(this.kiePackageName) || isBlank(this.ruleContent)) {
             throw new RuntimeException("Drools参数有误");

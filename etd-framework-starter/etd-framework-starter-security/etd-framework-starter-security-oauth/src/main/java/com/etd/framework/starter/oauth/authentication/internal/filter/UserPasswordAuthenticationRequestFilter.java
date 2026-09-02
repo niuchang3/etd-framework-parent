@@ -100,6 +100,13 @@ public class UserPasswordAuthenticationRequestFilter extends OncePerRequestFilte
      * @throws ServletException
      * @throws IOException
      */
+    /**
+     * do Filter Internal
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param filterChain 参数 filterChain
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         if (!authenticationEndpointMatcher.matches(request)) {

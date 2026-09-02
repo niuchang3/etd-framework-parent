@@ -6,6 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 租户创建数据传输对象 DTO。
+ */
 @Data
 public class SystemTenantCreateDTO {
 

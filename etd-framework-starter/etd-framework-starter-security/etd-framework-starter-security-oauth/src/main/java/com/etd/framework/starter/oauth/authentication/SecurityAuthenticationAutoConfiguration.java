@@ -118,6 +118,11 @@ public class SecurityAuthenticationAutoConfiguration {
      *
      * @return 安全上下文仓储
      */
+    /**
+     * security Context Repository
+     *
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(SecurityContextRepository.class)
     public SecurityContextRepository securityContextRepository() {
@@ -128,6 +133,11 @@ public class SecurityAuthenticationAutoConfiguration {
      * 默认内存用户服务。
      *
      * @return 用户服务
+     */
+    /**
+     * user Service
+     *
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(IUserService.class)
@@ -140,6 +150,11 @@ public class SecurityAuthenticationAutoConfiguration {
      * 默认内存权限服务。
      *
      * @return 权限服务
+     */
+    /**
+     * permissions Service
+     *
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(PermissionsService.class)

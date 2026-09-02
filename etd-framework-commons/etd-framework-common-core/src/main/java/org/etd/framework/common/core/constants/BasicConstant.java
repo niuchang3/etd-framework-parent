@@ -24,6 +24,11 @@ public interface BasicConstant {
             this.code = code;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public int getCode() {
             return code;
         }
@@ -42,6 +47,11 @@ public interface BasicConstant {
             this.code = code;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public String getCode() {
             return code;
         }
@@ -70,6 +80,11 @@ public interface BasicConstant {
             this.code = code;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public String getCode() {
             return code;
         }
@@ -105,10 +120,20 @@ public interface BasicConstant {
             this.description = description;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public String getCode() {
             return code;
         }
 
+        /**
+         * 获取 Description 属性值
+         *
+         * @return 处理结果
+         */
         public String getDescription() {
             return description;
         }
@@ -135,10 +160,20 @@ public interface BasicConstant {
             this.description = description;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public String getCode() {
             return code;
         }
 
+        /**
+         * 获取 Description 属性值
+         *
+         * @return 处理结果
+         */
         public String getDescription() {
             return description;
         }

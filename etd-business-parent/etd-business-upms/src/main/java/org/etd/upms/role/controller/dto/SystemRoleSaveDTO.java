@@ -12,6 +12,9 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * 角色保存与更新 DTO。
+ */
 @Data
 public class SystemRoleSaveDTO {
 
@@ -33,12 +36,22 @@ public class SystemRoleSaveDTO {
     private Set<@NotNull(message = "组织ID不能为空") @Positive(message = "组织ID必须大于0") Long>
             organizationIds = new LinkedHashSet<>();
 
+    /**
+     * 判断 PermissionTypeValid 状态
+     *
+     * @return 处理结果
+     */
     @AssertTrue(message = "数据权限类型只能为1至5")
     public boolean isPermissionTypeValid() {
         return permissionType != null && Arrays.stream(BasicConstant.PermissionType.values())
                 .anyMatch(type -> type.getCode().equals(permissionType));
     }
 
+    /**
+     * 判断 CustomOrganizationSelectionValid 状态
+     *
+     * @return 处理结果
+     */
     @AssertTrue(message = "自定义跨组织数据权限至少需要选择一个组织")
     public boolean isCustomOrganizationSelectionValid() {
         return !BasicConstant.PermissionType.CUSTOM_ORGANIZATION.getCode().equals(permissionType)

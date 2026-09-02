@@ -8,6 +8,11 @@ import org.quartz.JobExecutionContext;
  */
 public class QuartzConcurrentProcessor extends AbstractQuartzJobProcessor {
 
+    /**
+     * do 处理执行
+     *
+     * @param context 参数 context
+     */
     @Override
     public void doProcess(JobExecutionContext context) {
 

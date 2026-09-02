@@ -31,6 +31,13 @@ public class AuthenticationEntryPointImpl extends AbstractAuthenticationHandler 
      * @param response 当前响应
      * @param authException 认证异常
      */
+    /**
+     * commence
+     *
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param authException 参数 authException
+     */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());

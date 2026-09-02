@@ -45,11 +45,21 @@ public class BearerTokenAuthentication extends AbstractAuthenticationToken {
         this.credentials = credentials;
     }
 
+    /**
+     * 获取 Credentials 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getCredentials() {
         return credentials;
     }
 
+    /**
+     * 获取 Principal 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public Object getPrincipal() {
         return principal;

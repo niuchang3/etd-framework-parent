@@ -13,6 +13,11 @@ public class WxSubMerchantCertType implements SubMerchantCertType {
 	 *
 	 * @return
 	 */
+	/**
+	 * 获取 CertName 属性值
+	 *
+	 * @return 处理结果
+	 */
 	@Override
 	public String getCertName() {
 		return null;
@@ -22,6 +27,11 @@ public class WxSubMerchantCertType implements SubMerchantCertType {
 	 * 证件编号
 	 *
 	 * @return
+	 */
+	/**
+	 * 获取 CertNumber 属性值
+	 *
+	 * @return 处理结果
 	 */
 	@Override
 	public String getCertNumber() {

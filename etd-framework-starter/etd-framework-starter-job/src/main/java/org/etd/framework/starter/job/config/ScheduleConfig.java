@@ -10,6 +10,12 @@ import java.util.Properties;
 @Configuration
 public class ScheduleConfig {
 
+    /**
+     * scheduler Factory Bean
+     *
+     * @param dataSource 参数 dataSource
+     * @return 处理结果
+     */
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean(DataSource dataSource) {
         SchedulerFactoryBean factory = new SchedulerFactoryBean();

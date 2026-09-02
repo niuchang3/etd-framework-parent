@@ -32,16 +32,31 @@ public class RetryUtil {
         Exception finalException = exception;
         T finalValue = value;
         RetryUtil.Result<T> result = new Result<T>() {
+            /**
+             * 判断 Success 状态
+             *
+             * @return 处理结果
+             */
             @Override
             public boolean isSuccess() {
                 return finalSuccess;
             }
 
+            /**
+             * exception
+             *
+             * @return 处理结果
+             */
             @Override
             public Exception exception() {
                 return finalException;
             }
 
+            /**
+             * value
+             *
+             * @return 处理结果
+             */
             @Override
             public T value() {
                 return finalValue;

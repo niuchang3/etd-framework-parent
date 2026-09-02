@@ -69,6 +69,12 @@ public class RsaUtil {
 	 * @param base64s
 	 * @return
 	 */
+	/**
+	 * base 转换为 Public Key
+	 *
+	 * @param base64s 参数 base64s
+	 * @return 处理结果
+	 */
 	public static RSAPublicKey base64ToPublicKey(String base64s) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		X509EncodedKeySpec keySpec = new X509EncodedKeySpec(toByte(base64s));
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -81,6 +87,12 @@ public class RsaUtil {
 	 * @param base64s
 	 * @return
 	 */
+	/**
+	 * base 转换为 Private Key
+	 *
+	 * @param base64s 参数 base64s
+	 * @return 处理结果
+	 */
 	public static RSAPrivateKey base64ToPrivateKey(String base64s) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(toByte(base64s));
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -88,6 +100,13 @@ public class RsaUtil {
 	}
 
 
+	/**
+	 * key Pair 转换为 Pem
+	 *
+	 * @param keyPair 参数 keyPair
+	 * @param path 参数 path
+	 * @return 处理结果
+	 */
 	public static void keyPairToPem(KeyPair keyPair, String path) {
 		Path publickPath = Paths.get(path + File.separator + "rsaPublicKey.pem");
 		Path privatePath = Paths.get(path + File.separator + "rsaPrivateKey.pem");
@@ -103,6 +122,12 @@ public class RsaUtil {
 	}
 
 
+	/**
+	 * main
+	 *
+	 * @param args 参数 args
+	 * @return 处理结果
+	 */
 	public static void main(String[] args) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		KeyPair keyPair = generateRsaKey();
 		File file = new File(System.getProperty("user.dir") + File.separator + "conf");

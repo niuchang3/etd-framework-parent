@@ -106,6 +106,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      * @param clientRepository OAuth2客户端仓储
      * @return 注册客户端仓储
      */
+    /**
+     * registered Client Repository
+     *
+     * @param clientRepository 参数 clientRepository
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnBean(OAuth2ClientRepository.class)
     @ConditionalOnMissingBean(RegisteredClientRepository.class)
@@ -119,6 +125,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      * @param properties OAuth2网页登录态配置
      * @return 登录回跳地址解析器
      */
+    /**
+     * oauth Login Redirect Resolver
+     *
+     * @param properties 参数 properties
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(OAuth2LoginRedirectResolver.class)
     public OAuth2LoginRedirectResolver oauth2LoginRedirectResolver(OAuth2SessionProperties properties) {
@@ -131,6 +143,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      * @param redirectResolver 登录回跳地址解析器
      * @return 未登录入口
      */
+    /**
+     * oauth Login Authentication Entry Point
+     *
+     * @param redirectResolver 参数 redirectResolver
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(OAuth2LoginAuthenticationEntryPoint.class)
     public OAuth2LoginAuthenticationEntryPoint oauth2LoginAuthenticationEntryPoint(OAuth2LoginRedirectResolver redirectResolver) {
@@ -142,6 +160,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      *
      * @param properties OAuth2授权服务器配置
      * @return 授权服务器配置
+     */
+    /**
+     * authorization Server Settings
+     *
+     * @param properties 参数 properties
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(AuthorizationServerSettings.class)
@@ -159,6 +183,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      * @param securityProperties 安全配置
      * @return JWK密钥源
      */
+    /**
+     * jwk Source
+     *
+     * @param securityProperties 参数 securityProperties
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(JWKSource.class)
     public JWKSource<SecurityContext> jwkSource(SecurityProperties securityProperties) {
@@ -175,6 +205,12 @@ public class OAuth2AuthorizationServerAutoConfiguration {
      *
      * @param jwkSource JWK密钥源
      * @return JWT解码器
+     */
+    /**
+     * jwt Decoder
+     *
+     * @param jwkSource 参数 jwkSource
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(JwtDecoder.class)

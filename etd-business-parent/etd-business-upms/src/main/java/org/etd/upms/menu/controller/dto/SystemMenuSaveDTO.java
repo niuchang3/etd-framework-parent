@@ -3,6 +3,9 @@ package org.etd.upms.menu.controller.dto;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * 系统菜单保存与更新数据传输对象 DTO。
+ */
 @Data
 public class SystemMenuSaveDTO {
 

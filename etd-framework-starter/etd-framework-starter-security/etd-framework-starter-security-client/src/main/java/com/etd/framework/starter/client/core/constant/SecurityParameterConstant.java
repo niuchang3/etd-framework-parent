@@ -28,6 +28,11 @@ public interface SecurityParameterConstant {
             this.code = code;
         }
 
+        /**
+         * 获取 Code 属性值
+         *
+         * @return 处理结果
+         */
         public String getCode() {
             return code;
         }

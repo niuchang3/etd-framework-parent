@@ -15,12 +15,21 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 组织机构基础能力 Service 实现类。
+ */
 @Service
 public class SystemOrganizationServiceImpl implements SystemOrganizationService {
 
     @Autowired
     private SystemOrganizationMapper organizationMapper;
 
+    /**
+     * 查询 查询列表
+     *
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public List<SystemOrganizationVO> selectList(Boolean enabled) {
         LambdaQueryWrapper<SystemOrganizationEntity> wrapper = new LambdaQueryWrapper<>();
@@ -29,11 +38,23 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return organizationMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
+    /**
+     * 查询 By Id
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemOrganizationVO selectById(Long id) {
         return toVO(organizationMapper.selectById(id));
     }
 
+    /**
+     * 校验并要求 Exists
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public SystemOrganizationVO requireExists(Long id) {
         SystemOrganizationVO organization = selectById(id);
@@ -43,6 +64,11 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return organization;
     }
 
+    /**
+     * 校验并要求 All 校验是否存在
+     *
+     * @param ids 参数 ids
+     */
     @Override
     public void requireAllExist(Set<Long> ids) {
         if (ids.isEmpty()) {
@@ -55,6 +81,13 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         }
     }
 
+    /**
+     * 新增保存
+     *
+     * @param dto 参数 dto
+     * @param parentIdPath 参数 parentIdPath
+     * @return 处理结果
+     */
     @Override
     public Long insert(SystemOrganizationSaveDTO dto, String parentIdPath) {
         ensureCodeAvailable(dto.getOrgCode(), null);
@@ -64,6 +97,14 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return entity.getId();
     }
 
+    /**
+     * 更新修改
+     *
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @param parentIdPath 参数 parentIdPath
+     * @return 处理结果
+     */
     @Override
     public boolean update(Long id, SystemOrganizationSaveDTO dto, String parentIdPath) {
         requireExists(id);
@@ -73,12 +114,24 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return organizationMapper.updateById(entity) > 0;
     }
 
+    /**
+     * replace Descendant Path Prefix
+     *
+     * @param oldPrefix 参数 oldPrefix
+     * @param newPrefix 参数 newPrefix
+     */
     @Override
     public void replaceDescendantPathPrefix(String oldPrefix, String newPrefix) {
         List<SystemOrganizationEntity> descendants = selectDescendants(oldPrefix);
         descendants.forEach(entity -> updateDescendantPath(entity, oldPrefix, newPrefix));
     }
 
+    /**
+     * exists Child
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean existsChild(Long id) {
         LambdaQueryWrapper<SystemOrganizationEntity> wrapper = new LambdaQueryWrapper<>();
@@ -86,18 +139,36 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return organizationMapper.selectCount(wrapper) > 0;
     }
 
+    /**
+     * exists Reference
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean existsReference(Long id) {
         return organizationMapper.selectUserReferenceCount(id) > 0
                 || organizationMapper.selectRoleReferenceCount(id) > 0;
     }
 
+    /**
+     * 删除
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public boolean delete(Long id) {
         requireExists(id);
         return organizationMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 查询 Subtree Ids
+     *
+     * @param id 参数 id
+     * @return 处理结果
+     */
     @Override
     public Set<Long> selectSubtreeIds(Long id) {
         SystemOrganizationVO organization = requireExists(id);
@@ -108,6 +179,12 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return ids;
     }
 
+    /**
+     * 删除 By Ids
+     *
+     * @param ids 参数 ids
+     * @return 处理结果
+     */
     @Override
     public boolean deleteByIds(Set<Long> ids) {
         if (ids.isEmpty()) {
@@ -118,6 +195,13 @@ public class SystemOrganizationServiceImpl implements SystemOrganizationService 
         return organizationMapper.delete(wrapper) == ids.size();
     }
 
+    /**
+     * 切换 Enabled
+     *
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 处理结果
+     */
     @Override
     public boolean switchEnabled(Long id, Boolean enabled) {
         requireExists(id);

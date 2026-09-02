@@ -24,16 +24,31 @@ public enum DefaultRabbitQueue implements RabbitQueue {
         this.routeKey = routeKey;
     }
 
+    /**
+     * 获取 Exchange 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getExchange() {
         return this.exchange;
     }
 
+    /**
+     * 获取 QueueName 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getQueueName() {
         return this.queueName;
     }
 
+    /**
+     * 获取 RouteKey 属性值
+     *
+     * @return 处理结果
+     */
     @Override
     public String getRouteKey() {
         return this.routeKey;
