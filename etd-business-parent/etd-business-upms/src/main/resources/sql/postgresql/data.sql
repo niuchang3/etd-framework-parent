@@ -142,10 +142,12 @@ values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300019, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200007, 'DEPARTMENT', '部门', 'DEPARTMENT', 20, true, true, null),
        (2300020, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200008, 'SYSTEM', '系统租户', 'system', 10, true, true, null),
+        2200007, 'TEAM', '组', 'TEAM', 20, true, true, null),
        (2300021, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200008, 'SYSTEM', '系统租户', 'system', 10, true, true, null),
+       (2300022, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200008, 'ORDINARY', '普通租户', 'ordinary', 20, true, true, null)
-on conflict (id) do nothing;
+    on conflict (id) do nothing;
 
 
 
