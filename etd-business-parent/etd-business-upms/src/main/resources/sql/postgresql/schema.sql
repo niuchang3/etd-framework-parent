@@ -100,6 +100,10 @@ create unique index if not exists uk_sys_user_mobile
     on sys_user (mobile)
     where del_flag = 0 and mobile is not null and mobile <> '';
 
+create index if not exists idx_sys_user_tenant_org
+    on sys_user (tenant_id, org_id)
+    where del_flag = 0;
+
 /*==============================================================*/
 /* table: sys_role                                              */
 /*==============================================================*/
@@ -216,6 +220,10 @@ create unique index if not exists uk_sys_user_org_rel_tenant_user_org
 create unique index if not exists uk_sys_user_org_rel_primary_org
     on sys_user_org_rel (tenant_id, user_id)
     where del_flag = 0 and primary_org = true;
+
+create index if not exists idx_sys_user_org_rel_org_user
+    on sys_user_org_rel (tenant_id, org_id, user_id)
+    where del_flag = 0;
 
 /*==============================================================*/
 /* table: sys_role_menu_rel                                     */

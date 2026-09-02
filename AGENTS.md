@@ -161,6 +161,7 @@
 - 不要提前为了可能存在的复杂查询创建大量 QueryMapper。复杂查询真实出现，且明显不适合放入基础 Mapper 时，再按查询场景新增对应的 `XxxQueryMapper.java` 和 `XxxQueryMapper.xml`。
 - Mapper 不写业务规则，不做业务编排，不直接返回 Controller VO。
 - 凡是通过多表关联（JOIN）或过滤就能完成的查询，严禁在 Java 代码/内存中进行硬编码拼接或多表循环拼接；应优先在对应的 Mapper XML 中编写标准 SQL 直接查询完成。
+- 凡是编写或重构涉及多表关联（JOIN）或复杂查询的 Mapper XML SQL，必须主动审查并识别 SQL 中的连接字段（ON）、筛选条件（WHERE）及排序字段（ORDER BY）是否具备对应的索引支持（索引覆盖 / Index Range Scan）；若识别到缺失索引或未实现索引覆盖，必须在方案与回复中明确提出，并给出对应的索引 DDL 补齐建议。
 - 需要支持组织数据权限过滤（包含 `org_id` 字段）的业务实体类，必须继承 `org.etd.framework.starter.mybaits.core.OrgScopedEntity` 基类，不得重复定义 `orgId` 字段；无需组织权限过滤的公共系统实体类继续使用 `BaseEntity`。
 - 平台管理员（`platformAdmin = true`）具备最高系统权限，框架层自动跳过多租户隔离（`EtdTenantLineHandler` 不追加 `tenant_id` 条件）以及组织数据权限隔离（`EtdDataPermissionHandler` 不追加部门/用户过滤条件），实现跨租户、跨组织的全局系统管理。
 - 凡是实体基础通用属性的初始化默认值（如 `locked`、`enabled`、`builtIn`、`dataStatus` 等），统一通过框架层的 `@TableField(value = "...", fill = FieldFill.INSERT)` 结合 `@TableFieldExtend(...)` 注解（使用 SpEL 表达式如 `"false"`、`"true"` 或枚举代码）实现声明式自动填充。严禁在业务代码/Service 中显式编写 `entity.setLocked(...)`、`entity.setEnabled(...)` 等初始化硬编码代码，保持业务代码干净纯粹，必须严格参考 `BaseEntity` 规范。
