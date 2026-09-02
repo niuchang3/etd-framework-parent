@@ -10,9 +10,9 @@ on conflict (id) do nothing;
 /*==============================================================*/
 /* sys_user: 系统用户初始化                                      */
 /*==============================================================*/
-insert into sys_user (id, create_time, create_by, update_time, update_by, data_status, tenant_id, org_id, account, mobile,
+insert into sys_user (id, create_time, create_by, update_time, update_by, data_status, tenant_id, account, mobile,
                       password, user_name, birthday, gender, avatar, nick_name, locked, enabled)
-values (1, '2024-04-11 15:05:51.000000+08:00', 1, '2024-04-11 15:05:51.000000+08:00', 1, 1, 1, null, 'admin', '17719540702',
+values (1, '2024-04-11 15:05:51.000000+08:00', 1, '2024-04-11 15:05:51.000000+08:00', 1, 1, 1, 'admin', '17719540702',
         '{bcrypt}$2a$10$ltbQNkrjY/tcqP8ytOVSOerYvPMxfNjYgfwv.HaslRAqV/jOyYkSS', '牛昌', '1990-02-02', 1, null,
         '淡淡丶奶油味', false, true)
 on conflict (id) do nothing;
