@@ -98,7 +98,6 @@ etd:
       enabled: true
       ignore-tables:
         - sys_tenant
-        - sys_user
         - sys_role
         - sys_user_role_rel
         - sys_user_org_rel
