@@ -172,7 +172,7 @@ insert into sys_config (id, create_time, create_by, update_time, update_by, data
                         parameter_name, parameter_value, value_type, built_in, enabled, remark)
 values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
         'system.branding', '系统视觉与版权信息',
-        '{"name":"ETD 后台管理系统","logo":"/assets/images/logo.png","favicon":"/favicon.ico","copyright":"Copyright © 2026 ETD. All Rights Reserved.","watermark":{"enabled":false,"opacity":0.15,"fontSize":14}}',
+        '{"name":"ETD 后台管理系统","subtitle":"Operations Suite","logo":"","favicon":"/favicon.ico","copyright":"Copyright © 2026 ETD. All Rights Reserved.","eyebrow":"Enterprise Operations Console","title":"统一运营管理平台","description":"集中管理任务、资源和平台运行状态。","region":"CN-EAST-1","version":"v2.8.4","securityText":"Secure access · TLS 1.3","formEyebrow":"Account Access","formTitle":"登录控制台","formDescription":"请输入你的账号和密码以继续。","auditNote":"仅限已授权的平台账号访问。登录行为将被安全审计。","serviceStatus":"Operational","watermark":{"enabled":false,"opacity":0.15,"fontSize":14}}',
         'json', true, true, '全局品牌名、Logo链接、水印配置'),
        (4000002, current_timestamp, 1, current_timestamp, 1, 1,
         'security.policy', '登录验证码与密码策略',
