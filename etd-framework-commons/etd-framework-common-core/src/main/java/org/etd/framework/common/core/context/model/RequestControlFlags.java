@@ -28,17 +28,24 @@ public class RequestControlFlags implements Serializable {
     private Boolean ignoreDataPermission = false;
 
     /**
+     * 当前请求上下文中显式绑定的组织节点 ID
+     */
+    private Long organizationId;
+
+    /**
      * 重置所有控制标志
      */
     public void clean() {
         this.ignoreTenant = false;
         this.ignoreDataPermission = false;
+        this.organizationId = null;
     }
 
     public RequestControlFlags copy() {
         RequestControlFlags copy = new RequestControlFlags();
         copy.ignoreTenant = ignoreTenant;
         copy.ignoreDataPermission = ignoreDataPermission;
+        copy.organizationId = organizationId;
         return copy;
     }
 }

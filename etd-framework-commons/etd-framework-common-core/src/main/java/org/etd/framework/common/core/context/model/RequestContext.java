@@ -360,4 +360,22 @@ public class RequestContext implements Serializable {
     public static void setIgnoreDataPermission(Boolean ignore) {
         getControlFlags().setIgnoreDataPermission(ignore);
     }
+
+    /**
+     * 获取当前上下文中指定的组织节点 ID
+     *
+     * @return 组织 ID（可能为 null）
+     */
+    public static Long getOrganizationId() {
+        return getControlFlags().getOrganizationId();
+    }
+
+    /**
+     * 设置当前上下文中的组织节点 ID
+     *
+     * @param organizationId 组织 ID
+     */
+    public static void setOrganizationId(Long organizationId) {
+        getControlFlags().setOrganizationId(organizationId);
+    }
 }
