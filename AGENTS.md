@@ -167,6 +167,7 @@
 - 凡是实体基础通用属性新增插入（INSERT）时的初始化默认值（如 `locked`、`enabled`、`builtIn`、`dataStatus` 等），统一通过框架层的 `@TableField(value = "...", fill = FieldFill.INSERT)` 结合 `@TableFieldExtend(...)` 注解（使用 SpEL 表达式如 `"false"`、`"true"` 或枚举代码）实现声明式自动填充。严禁在业务代码/Service 中显式编写 `entity.setLocked(...)`、`entity.setEnabled(...)` 等新增插入时的初始化硬编码代码，保持业务代码干净纯粹，必须严格参考 `BaseEntity` 规范（在启用/禁用、锁定/解锁等状态更新业务方法中的 Setter 调用不受此限制）。
 - 修改要小而聚焦。
 - 优先写清楚直接的代码，不要炫技。
+- 所有 `if` 判断必须使用 `{}` 包裹语句块，即使只有一行也不得省略。
 - 避免使用过度复杂、多层嵌套或难以维护的 Stream 流式写法：
   - 严禁在 Stream 算子内部（如 `.filter()`、`.map()`）引入修改外部变量状态或集合的副作用（side-effects）；
   - 严禁为了单纯的集合遍历或带 `try-catch` 的副作用循环而滥用 `.stream().forEach(...)`，纯副作用迭代应直接使用标准的 `for` 循环；

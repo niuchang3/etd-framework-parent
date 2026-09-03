@@ -2,6 +2,7 @@ package org.etd.upms.user.security;
 
 import com.etd.framework.starter.client.core.user.PermissionsService;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.upms.menu.service.SystemMenuPermissionService;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.organization.service.SystemOrganizationService;
@@ -33,6 +34,9 @@ import java.util.Collections;
  */
 @Service
 public class SystemUserPermissionsService implements PermissionsService, OrgSubtreeResolver {
+
+    @Autowired
+    private SystemMenuPermissionService menuPermissionService;
 
     /**
      * 实现 OrgSubtreeResolver SPI 接口，为底层数据权限拦截器提供通用组织子树解析能力
@@ -90,17 +94,26 @@ public class SystemUserPermissionsService implements PermissionsService, OrgSubt
         permissions.setTenantId(resolveUniqueTenantId(userId, roles));
         
         // 收集所有有效角色的权限编码
-        Set<String> roleCodes = roles.stream()
-                .map(SystemUserRoleVO::getRoleCode)
-                .filter(roleCode -> roleCode != null && !roleCode.isBlank())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> roleCodes = collectRoleCodes(roles);
         permissions.setRoleCodes(roleCodes);
         permissions.setPlatformAdmin(containsRole(roleCodes, BasicConstant.SystemRole.PLATFORM_ADMIN));
         permissions.setTenantAdmin(containsRole(roleCodes, BasicConstant.SystemRole.TENANT_ADMIN));
         
+        permissions.setAuthorityCodes(menuPermissionService.fetchAuthorityCodesByUser(userId, permissions.getTenantId(),
+                Boolean.TRUE.equals(permissions.getTenantAdmin()), Boolean.TRUE.equals(permissions.getPlatformAdmin())));
+
         // 填充用户对应的数据权限范围（主部门、关联部门、自定义部门及下级部门树）
         populateDataPermissions(userId, roles, permissions);
         return permissions;
+    }
+
+    /** 收集有效角色编码，角色标识与接口操作权限分别维护。 */
+    private Set<String> collectRoleCodes(List<SystemUserRoleVO> roles) {
+        Set<String> codes = new LinkedHashSet<>();
+        for (SystemUserRoleVO role : roles) {
+            if (role.getRoleCode() != null && !role.getRoleCode().isBlank()) codes.add(role.getRoleCode());
+        }
+        return codes;
     }
 
     /**

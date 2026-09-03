@@ -3,7 +3,6 @@ package org.etd.upms.menu.biz;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.upms.menu.controller.dto.SystemMenuSaveDTO;
-import org.etd.upms.menu.service.SystemMenuApiService;
 import org.etd.upms.menu.service.SystemMenusService;
 import org.etd.upms.role.service.SystemRoleMenuService;
 import org.etd.upms.tenant.service.SystemTenantMenuService;
@@ -25,9 +24,6 @@ public class SystemMenuBizService {
 
     @Autowired
     private SystemRoleMenuService roleMenuService;
-
-    @Autowired
-    private SystemMenuApiService menuApiService;
 
     /**
      * 新菜单必须同时加入当前租户权限，任一步失败都回滚。
@@ -52,10 +48,9 @@ public class SystemMenuBizService {
         if (menuIds.isEmpty()) {
             return false;
         }
-        // 菜单是全局资源，删除前必须清理所有租户、角色和接口关联，避免遗留无效关系。
+        // 菜单是全局资源，删除前必须清理所有租户和角色关联，避免遗留无效关系。
         tenantMenuService.removeByMenuIds(menuIds);
         roleMenuService.removeByMenuIds(menuIds);
-        menuApiService.removeByMenuIds(menuIds);
         if (!menusService.deleteByIds(menuIds)) {
             throw new ApiRuntimeException("菜单级联删除失败。");
         }

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.common.core.user.RoleAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.upms.user.converter.SystemUserConverter;

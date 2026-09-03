@@ -20,6 +20,11 @@
     </properties>
 
     <dependencies>
+        <!-- 菜单权限码等请求字段依赖 Bean Validation 执行校验，版本由 Boot BOM 管理。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.postgresql</groupId>

@@ -1,5 +1,7 @@
 package org.etd.upms.organization.controller;
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import jakarta.validation.Valid;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.upms.organization.biz.SystemOrganizationBizService;
@@ -25,6 +27,7 @@ import java.util.List;
  * 组织机构 Controller 入口。
  */
 @Validated
+@Permission(MenuPermissionCode.ORGANIZATION)
 @RestController
 @RequestMapping("/v1/organization")
 public class SystemOrganizationController {

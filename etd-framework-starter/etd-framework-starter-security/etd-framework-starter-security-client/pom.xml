@@ -13,6 +13,12 @@
 
     <dependencies>
 
+        <!-- 读取 MVC 已匹配的接口声明，不注册自定义拦截器。版本由 Boot BOM 管理。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

@@ -1,5 +1,7 @@
 package org.etd.upms.menu.controller;
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 系统菜单管理 Controller 控制器入口。
  */
 @Validated
+@Permission(MenuPermissionCode.MENU)
 @RestController
 @RequestMapping("/v1/menu")
 public class SystemMenuController {

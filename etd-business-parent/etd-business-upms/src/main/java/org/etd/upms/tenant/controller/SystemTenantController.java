@@ -1,6 +1,8 @@
 package org.etd.upms.tenant.controller;
 
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.constraints.Max;
@@ -24,6 +26,7 @@ import java.time.Instant;
 /**
  * 租户管理 Controller 控制器入口。
  */
+@Permission(MenuPermissionCode.TENANT)
 @RestController
 @Validated
 @RequestMapping("/v1/tenant")

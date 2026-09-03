@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.upms.menu.mapper.SystemMenusMapper">
+    <!-- 在数据库内完成角色授权和租户开放范围的交集，不在 Java 中拼接关系表。 -->
+    <select id="selectPermissionGrantListByUser" resultType="org.etd.upms.menu.entity.MenuPermissionGrant">
+        select m.permission_code,
+        <choose>
+            <when test="platformAdmin or tenantAdmin">#{readWrite} as access_level</when>
+            <otherwise>rm.access_level</otherwise>
+        </choose>
+        from sys_menus m
+        <if test="!platformAdmin">
+            inner join sys_tenant_menu_rel tm on tm.menu_id = m.id
+                and tm.tenant_id = #{tenantId} and tm.del_flag = 0 and tm.data_status = #{enabled}
+            <if test="!tenantAdmin">
+                inner join sys_role_menu_rel rm on rm.menu_id = m.id
+                    and rm.tenant_id = tm.tenant_id and rm.del_flag = 0 and rm.data_status = #{enabled}
+                inner join sys_role r on r.id = rm.role_id
+                    and r.tenant_id = rm.tenant_id and r.del_flag = 0 and r.data_status = #{enabled}
+                inner join sys_user_role_rel ur on ur.role_id = r.id
+                    and ur.tenant_id = r.tenant_id and ur.del_flag = 0 and ur.data_status = #{enabled}
+                    and ur.user_id = #{userId}
+            </if>
+        </if>
+        where m.del_flag = 0 and m.data_status = #{enabled}
+            and m.permission_code is not null and m.menu_type != #{directory}
+        <if test="!platformAdmin and !tenantAdmin">
+            and rm.access_level in (#{readOnly}, #{readWrite})
+        </if>
+    </select>
+</mapper>

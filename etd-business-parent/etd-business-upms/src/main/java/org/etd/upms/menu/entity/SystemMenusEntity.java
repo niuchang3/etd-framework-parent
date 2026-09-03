@@ -31,6 +31,10 @@ public class SystemMenusEntity extends BaseEntity implements Serializable {
     @TableField("menu_router")
     private String menuRouter;
 
+    /** 人工配置的完整资源权限码；目录和纯导航节点为空。 */
+    @TableField("permission_code")
+    private String permissionCode;
+
     @TableField("menu_icon")
     private String menuIcon;
 

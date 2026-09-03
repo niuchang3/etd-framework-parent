@@ -1,7 +1,7 @@
 package org.etd.upms.user.security;
 
 import com.etd.framework.starter.client.core.user.IUserService;
-import org.etd.framework.common.core.user.RoleAuthority;
+import org.etd.framework.common.core.user.PermissionAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.starter.mybaits.permission.annotation.IgnoreDataPermission;
@@ -103,8 +103,8 @@ public class SystemUserSecurityService implements IUserService {
         UserDetails userDetails = Mappers.getMapper(SystemUserConverter.class).toUserDetails(systemUserEntity);
         userDetails.setTenantId(systemUserEntity.getTenantId());
         userDetails.setRoleCodes(permissions.getRoleCodes());
-        userDetails.setAuthorities(permissions.getRoleCodes().stream()
-                .map(RoleAuthority::new)
+        userDetails.setAuthorities(permissions.getAuthorityCodes().stream()
+                .map(PermissionAuthority::new)
                 .toList());
         userDetails.setPlatformAdmin(permissions.getPlatformAdmin());
         userDetails.setTenantAdmin(permissions.getTenantAdmin());

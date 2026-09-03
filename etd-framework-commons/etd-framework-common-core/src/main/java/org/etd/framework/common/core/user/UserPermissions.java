@@ -16,6 +16,9 @@ public class UserPermissions implements Serializable {
 
     private static final long serialVersionUID = -1L;
 
+    /** 从有效菜单授权展开的接口操作权限码。 */
+    private Set<String> authorityCodes = new LinkedHashSet<>();
+
     /**
      * 用户唯一归属的租户标识。
      */

@@ -24,6 +24,9 @@ public class SystemMenuVO {
 
     private String menuRouter;
 
+    /** 人工配置的完整资源权限码；目录和纯导航节点为空。 */
+    private String permissionCode;
+
     private String menuIcon;
 
     private String menuType;

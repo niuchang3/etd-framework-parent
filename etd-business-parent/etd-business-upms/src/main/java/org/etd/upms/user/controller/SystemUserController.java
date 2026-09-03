@@ -1,17 +1,13 @@
 package org.etd.upms.user.controller;
 
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import org.etd.framework.common.core.user.UserDetails;
-import org.etd.upms.tenant.biz.SystemTenantBizService;
 import org.etd.upms.user.biz.SystemUserBizService;
-import org.etd.upms.user.converter.SystemUserConverter;
-import org.etd.upms.user.service.SystemUserRoleRelService;
-import org.etd.upms.tenant.controller.vo.SystemTenantVO;
-import org.etd.upms.user.controller.vo.SystemUserMenusVO;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import org.etd.upms.user.controller.vo.SystemUserVO;
 import org.etd.upms.user.controller.vo.SystemUserOrganizationVO;
@@ -19,10 +15,7 @@ import org.etd.upms.user.controller.dto.SystemUserCreateDTO;
 import org.etd.upms.user.controller.dto.SystemUserOrganizationAssignDTO;
 import org.etd.upms.user.controller.dto.SystemUserRoleAssignDTO;
 import org.etd.upms.user.controller.dto.SystemUserUpdateDTO;
-import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.model.ResultModel;
-import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
-import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,25 +32,16 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 
-import org.etd.upms.organization.biz.SystemOrganizationBizService;
-import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 
+/** 用户管理入口，统一校验用户资源的读写权限。 */
 @Validated
+@Permission(MenuPermissionCode.USER)
 @RestController
 @RequestMapping("/v1/user")
 public class SystemUserController {
 
     @Autowired
-    private SystemTenantBizService tenantBizService;
-
-    @Autowired
-    private SystemUserRoleRelService userRoleRelService;
-
-    @Autowired
     private SystemUserBizService userBizService;
-
-    @Autowired
-    private SystemOrganizationBizService organizationBizService;
 
     /**
      * 用户分页。按主组织及其下级筛选，并始终受当前登录人的数据权限限制。
@@ -172,59 +156,6 @@ public class SystemUserController {
     public ResultModel<Boolean> replaceOrganizations(
             @PathVariable Long id, @Valid @RequestBody SystemUserOrganizationAssignDTO dto) {
         return ResultModel.success(userBizService.replaceOrganizations(id, dto));
-    }
-
-    /**
-     * 获取当前登录人个人信息
-     */
-    @IgnoreTenant
-    @GetMapping(value = "/me")
-    public ResultModel<SystemUserVO> me() {
-        UserDetails user = RequestContext.getUser();
-        SystemUserVO systemUserVO = Mappers.getMapper(SystemUserConverter.class).toUserVO(user);
-        return ResultModel.success(systemUserVO);
-    }
-
-    /**
-     * 获取当前登录人租户列表
-     */
-    @IgnoreTenant
-    @GetMapping("/tenant")
-    public ResultModel<List<SystemTenantVO>> getCurrentUserTenantList() {
-        List<SystemTenantVO> tenantVOS = tenantBizService.selectTenantListByUser(RequestContext.getUser());
-        return ResultModel.success(tenantVOS);
-    }
-
-    /**
-     * 获取当前登录人角色列表
-     */
-    @GetMapping("/role")
-    public ResultModel<List<SystemUserRoleVO>> getCurrentUserRoleList() {
-        UserDetails user = RequestContext.getUser();
-        List<SystemUserRoleVO> systemUserRoleVOS = userRoleRelService.selectByUser(user.getId());
-        return ResultModel.success(systemUserRoleVOS);
-    }
-
-
-    /**
-     * 获取当前登录人菜单权限
-     *
-     * @return 处理结果
-     */
-    @GetMapping("/menus")
-    public ResultModel<List<SystemUserMenusVO>> currentUserMenus() {
-        List<SystemUserMenusVO> systemUserMenusVOS = userBizService.currentUserMenus();
-        return ResultModel.success(systemUserMenusVOS);
-    }
-
-    /**
-     * 获取当前登录人组织机构树列表
-     */
-    @GetMapping("/organization/tree")
-    public ResultModel<List<SystemOrganizationVO>> currentUserOrganizationTree(
-            @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "enabled", required = false) Boolean enabled) {
-        return ResultModel.success(organizationBizService.selectOrganizationTreeList(keyword, enabled));
     }
 
 }

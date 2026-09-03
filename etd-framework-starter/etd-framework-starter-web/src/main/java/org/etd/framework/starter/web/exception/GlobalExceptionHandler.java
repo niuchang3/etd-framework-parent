@@ -9,6 +9,8 @@ import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -28,6 +30,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /** 安全异常交回 Spring Security 过滤器链，避免被通用异常处理转换为 500。 */
+    @ExceptionHandler({AccessDeniedException.class, AuthenticationException.class})
+    public void propagateSecurityException(RuntimeException exception) {
+        throw exception;
+    }
 
     /**
      * 缺少必要的 @RequestParam 参数异常处理 状态码：400

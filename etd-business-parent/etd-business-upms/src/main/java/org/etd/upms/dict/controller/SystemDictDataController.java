@@ -1,5 +1,7 @@
 package org.etd.upms.dict.controller;
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 字典数据项管理 Controller 控制器入口。
  */
 @Validated
+@Permission(MenuPermissionCode.DICT)
 @RestController
 @RequestMapping("/v1/dict/data")
 public class SystemDictDataController {

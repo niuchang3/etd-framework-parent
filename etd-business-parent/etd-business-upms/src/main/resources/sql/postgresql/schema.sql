@@ -326,77 +326,6 @@ create unique index if not exists uk_sys_tenant_menu_rel_tenant_menu
     where del_flag = 0;
 
 /*==============================================================*/
-/* table: sys_api                                               */
-/*==============================================================*/
-create table if not exists sys_api
-(
-    id             bigint not null,
-    create_time    timestamp(6) with time zone,
-    create_by      bigint,
-    update_time    timestamp(6) with time zone,
-    update_by      bigint,
-    data_status    int,
-    del_flag       smallint not null default 0,
-    api_name       varchar(100) not null,
-    request_method varchar(10) not null,
-    request_path   varchar(200) not null,
-    access_level   varchar(32) not null default 'READ_ONLY',
-    enabled        boolean default true,
-    primary key (id)
-);
-
-comment on table sys_api is '系统接口权限资源表';
-comment on column sys_api.id is '主键id';
-comment on column sys_api.create_time is '创建时间';
-comment on column sys_api.create_by is '创建人';
-comment on column sys_api.update_time is '修改时间';
-comment on column sys_api.update_by is '修改人';
-comment on column sys_api.data_status is '数据状态';
-comment on column sys_api.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column sys_api.api_name is '接口名称';
-comment on column sys_api.request_method is 'HTTP请求方法';
-comment on column sys_api.request_path is 'Spring请求路径模式';
-comment on column sys_api.access_level is '接口要求访问级别：READ_ONLY只读，READ_WRITE读写';
-comment on column sys_api.enabled is '是否启用';
-
-create index if not exists idx_sys_api_request
-    on sys_api (request_method, request_path);
-
-/*==============================================================*/
-/* table: sys_menu_api_rel                                      */
-/*==============================================================*/
-create table if not exists sys_menu_api_rel
-(
-    id          bigint not null,
-    create_time timestamp(6) with time zone,
-    create_by   bigint,
-    update_time timestamp(6) with time zone,
-    update_by   bigint,
-    data_status int,
-    del_flag    smallint not null default 0,
-    menu_id     bigint not null,
-    api_id      bigint not null,
-    primary key (id)
-);
-
-comment on table sys_menu_api_rel is '系统菜单与接口的关系表';
-comment on column sys_menu_api_rel.id is '主键id';
-comment on column sys_menu_api_rel.create_time is '创建时间';
-comment on column sys_menu_api_rel.create_by is '创建人';
-comment on column sys_menu_api_rel.update_time is '修改时间';
-comment on column sys_menu_api_rel.update_by is '修改人';
-comment on column sys_menu_api_rel.data_status is '数据状态';
-comment on column sys_menu_api_rel.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column sys_menu_api_rel.menu_id is '菜单id';
-comment on column sys_menu_api_rel.api_id is '接口id';
-
-create index if not exists idx_sys_menu_api_rel_menu
-    on sys_menu_api_rel (menu_id);
-
-create index if not exists idx_sys_menu_api_rel_api
-    on sys_menu_api_rel (api_id);
-
-/*==============================================================*/
 /* table: sys_menus                                             */
 /*==============================================================*/
 create table if not exists sys_menus
@@ -412,8 +341,13 @@ create table if not exists sys_menus
     menu_name   varchar(10),
     menu_path   varchar(100),
     menu_router varchar(100),
+    permission_code varchar(100),
     menu_icon   varchar(200),
     menu_type   varchar(20),
+    constraint ck_sys_menus_permission_code check
+        (permission_code is null or permission_code ~ '^[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)*$'),
+    constraint ck_sys_menus_directory_permission check
+        (menu_type != 'DIRECTORY' or permission_code is null),
     sort        int,
     primary key (id)
 );
@@ -430,6 +364,7 @@ comment on column sys_menus.del_flag is '逻辑删除标识：0未删除，1已�
 comment on column sys_menus.menu_name is '菜单名称';
 comment on column sys_menus.menu_path is '菜单path';
 comment on column sys_menus.menu_router is '菜单路由';
+comment on column sys_menus.permission_code is '完整资源权限码，例如system:user；目录和纯导航为空，不包含read/write操作后缀';
 comment on column sys_menus.menu_icon is '菜单图标';
 comment on column sys_menus.menu_type is '菜单类型';
 comment on column sys_menus.sort is '排序';
@@ -613,3 +548,14 @@ create index if not exists idx_sys_config_key
 create unique index if not exists uk_sys_config_key
     on sys_config (parameter_key)
     where del_flag = 0;
+
+-- 权限加载按租户、用户、角色和菜单连接；关系索引覆盖连接键及返回的授权级别。
+create index if not exists idx_sys_role_menu_rel_permission
+    on sys_role_menu_rel (tenant_id, role_id, menu_id) include (access_level)
+    where del_flag = 0 and data_status = 1;
+create index if not exists idx_sys_user_role_rel_permission
+    on sys_user_role_rel (tenant_id, user_id, role_id)
+    where del_flag = 0 and data_status = 1;
+create index if not exists idx_sys_tenant_menu_rel_permission
+    on sys_tenant_menu_rel (tenant_id, menu_id)
+    where del_flag = 0 and data_status = 1;

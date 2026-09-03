@@ -1,1 +1,2 @@
 com.etd.framework.starter.client.autoconfigure.SecurityClientAutoConfiguration
+com.etd.framework.starter.client.autoconfigure.PermissionAutoConfiguration

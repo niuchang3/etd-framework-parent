@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import org.etd.framework.common.core.user.UserDetails;
-import org.etd.framework.common.core.user.RoleAuthority;
+import org.etd.framework.common.core.user.PermissionAuthority;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
@@ -72,7 +72,7 @@ public class RequestContextModel implements Serializable {
         copy.setPassword(null);
         copy.setRoleCodes(source.getRoleCodes() == null ? null : new LinkedHashSet<>(source.getRoleCodes()));
         copy.setAuthorities(source.getAuthorities() == null ? null : source.getAuthorities().stream()
-                .map(authority -> new RoleAuthority(authority.getAuthority()))
+                .map(authority -> new PermissionAuthority(authority.getAuthority()))
                 .toList());
         return copy;
     }

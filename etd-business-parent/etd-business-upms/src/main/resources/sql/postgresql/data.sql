@@ -38,27 +38,27 @@ on conflict (id) do nothing;
 /* sys_menus: 系统菜单初始化                                     */
 /*==============================================================*/
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
-                       menu_path, menu_router, menu_icon, menu_type, sort)
+                       menu_path, menu_router, menu_icon, menu_type, sort, permission_code)
 values (1000001, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '首页', '/dashboard', '@/views/404.vue', 'AppstoreOutlined', 'MENU', 10),
+        '首页', '/dashboard', '@/views/404.vue', 'AppstoreOutlined', 'MENU', 10, null),
        (1000002, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '租户管理', '/system/tenants', '@/views/tenant/index.vue', 'TeamOutlined', 'MENU', 20),
+        '租户管理', '/system/tenants', '@/views/tenant/index.vue', 'TeamOutlined', 'MENU', 20, 'system:tenant'),
        (1000003, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '用户中心', '/system/users', '@/views/system/users/index.vue', 'UserOutlined', 'MENU', 30),
+        '用户中心', '/system/users', '@/views/system/users/index.vue', 'UserOutlined', 'MENU', 30, 'system:user'),
        (1000004, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '系统管理', '/system', null, 'SettingOutlined', 'DIRECTORY', 40),
+        '系统管理', '/system', null, 'SettingOutlined', 'DIRECTORY', 40, null),
        (1000005, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '系统字典', '/system/dictionaries', '@/views/system/dictionaries/index.vue', 'DatabaseOutlined', 'MENU', 10),
+        '系统字典', '/system/dictionaries', '@/views/system/dictionaries/index.vue', 'DatabaseOutlined', 'MENU', 10, 'system:dict'),
        (1000006, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '角色管理', '/system/roles', '@/views/system/roles/index.vue', 'SafetyCertificateOutlined', 'MENU', 20),
+        '角色管理', '/system/roles', '@/views/system/roles/index.vue', 'SafetyCertificateOutlined', 'MENU', 20, 'system:role'),
        (1000007, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '菜单管理', '/system/menus', '@/views/system/menus/index.vue', 'MenuOutlined', 'MENU', 30),
+        '菜单管理', '/system/menus', '@/views/system/menus/index.vue', 'MenuOutlined', 'MENU', 30, 'system:menu'),
        (1000008, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '组织架构', '/system/organizations', '@/views/system/organizations/index.vue', 'ApartmentOutlined', 'MENU', 40),
+        '组织架构', '/system/organizations', '@/views/system/organizations/index.vue', 'ApartmentOutlined', 'MENU', 40, 'system:organization'),
        (1000009, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '系统配置', '/system/config', '@/views/system/config/index.vue', 'SettingOutlined', 'MENU', 50)
+        '系统配置', '/system/config', '@/views/system/config/index.vue', 'SettingOutlined', 'MENU', 50, 'system:config')
 on conflict (id) do update
-set menu_router = excluded.menu_router;
+set menu_router = excluded.menu_router, permission_code = excluded.permission_code;
 
 /*==============================================================*/
 /* sys_tenant_menu_rel: 默认租户菜单权限初始化                   */

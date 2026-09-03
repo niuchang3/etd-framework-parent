@@ -30,20 +30,10 @@ public class AccessDeniedHandlerImpl extends AbstractAuthenticationHandler imple
      * @param response 当前响应
      * @param exception 权限异常
      */
-    /**
-     * 处理
-     *
-     * @param request 参数 request
-     * @param response 参数 response
-     * @param exception 参数 exception
-     */
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) throws IOException, ServletException {
+    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) throws IOException {
         response.setStatus(HttpStatus.FORBIDDEN.value());
-        AccessDeniedException ex = exception;
-        if (ex == null || ex.getMessage() == null || "Access is denied".equals(ex.getMessage())) {
-            ex = new AccessDeniedException(SecurityMessageCode.ACCESS_DENIED, exception);
-        }
-        writeFailed(request, response, ex);
+        // 原生方法授权与请求授权使用同一国际化响应，异常原因保留在 cause 中。
+        writeFailed(request, response, new AccessDeniedException(SecurityMessageCode.ACCESS_DENIED, exception));
     }
 }

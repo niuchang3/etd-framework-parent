@@ -1,5 +1,7 @@
 package org.etd.upms.role.controller;
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -34,6 +36,7 @@ import java.util.Set;
  * 系统角色管理 Controller 控制器入口。
  */
 @Validated
+@Permission(MenuPermissionCode.ROLE)
 @RestController
 @RequestMapping("/v1/role")
 public class SystemRoleController {

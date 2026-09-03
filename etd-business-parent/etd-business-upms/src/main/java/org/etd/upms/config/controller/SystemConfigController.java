@@ -1,12 +1,12 @@
 package org.etd.upms.config.controller;
 
+import com.etd.framework.starter.client.core.permission.annotation.Permission;
+import org.etd.upms.menu.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.upms.config.controller.dto.SystemConfigSaveDTO;
 import org.etd.upms.config.controller.vo.SystemConfigVO;
@@ -24,13 +24,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
 
 /**
  * 系统参数配置 Controller 控制器入口。
  */
 @Validated
+@Permission(MenuPermissionCode.CONFIG)
 @RestController
 @RequestMapping("/v1/config")
 public class SystemConfigController {
@@ -64,15 +63,6 @@ public class SystemConfigController {
     public ResultModel<SystemConfigVO> enabledByKey(
             @PathVariable @NotBlank(message = "参数键不能为空") String parameterKey) {
         return ResultModel.success(configService.selectEnabledByKey(parameterKey));
-    }
-
-    @GetMapping("/values")
-    public ResultModel<Map<String, String>> enabledValues(
-            @RequestParam("parameterKeys") @NotEmpty(message = "参数键不能为空")
-            @Size(max = 100, message = "单次最多查询100个参数")
-            List<@NotBlank(message = "参数键不能为空")
-                    @Size(max = 100, message = "参数键不能超过100个字符") String> parameterKeys) {
-        return ResultModel.success(configService.selectEnabledValuesByKeys(parameterKeys));
     }
 
     /**

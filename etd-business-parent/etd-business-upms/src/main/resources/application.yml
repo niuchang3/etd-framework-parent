@@ -81,8 +81,6 @@ etd:
       column-name: tenant_id
       ignore-tables:
         - sys_tenant
-        - sys_api
-        - sys_menu_api_rel
         - sys_menus
         - sys_dict_type
         - sys_dict_data
@@ -106,8 +104,6 @@ etd:
         - sys_tenant_menu_rel
         - sys_organization
         - sys_menus
-        - sys_api
-        - sys_menu_api_rel
         - sys_dict_type
         - sys_dict_data
         - sys_config

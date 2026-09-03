@@ -89,9 +89,9 @@ public class UserDetails implements Serializable {
     private Boolean tenantAdmin = false;
 
     /**
-     * 权限信息。
+     * 用户实际获授的接口读写权限，角色编码单独存放在 roleCodes。
      */
-    private List<RoleAuthority> authorities;
+    private List<PermissionAuthority> authorities = new java.util.ArrayList<>();
 
     /**
      * 用户主组织/部门标识。
