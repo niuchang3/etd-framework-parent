@@ -154,12 +154,6 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      * @param tableName 表名
      * @return 是否忽略
      */
-    /**
-     * 判断 IgnoreTable 状态
-     *
-     * @param tableName 参数 tableName
-     * @return 处理结果
-     */
     public boolean isIgnoreTable(String tableName) {
         if (!StringUtils.hasText(tableName)) {
             return false;
