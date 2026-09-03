@@ -111,7 +111,9 @@ public class SystemUserPermissionsService implements PermissionsService, OrgSubt
     private Set<String> collectRoleCodes(List<SystemUserRoleVO> roles) {
         Set<String> codes = new LinkedHashSet<>();
         for (SystemUserRoleVO role : roles) {
-            if (role.getRoleCode() != null && !role.getRoleCode().isBlank()) codes.add(role.getRoleCode());
+            if (role.getRoleCode() != null && !role.getRoleCode().isBlank()) {
+                codes.add(role.getRoleCode());
+            }
         }
         return codes;
     }
@@ -230,6 +232,6 @@ public class SystemUserPermissionsService implements PermissionsService, OrgSubt
      * @return 是否包含
      */
     private boolean containsRole(Set<String> roleCodes, BasicConstant.SystemRole expectedRole) {
-        return roleCodes.stream().anyMatch(roleCode -> expectedRole.getCode().equalsIgnoreCase(roleCode));
+        return roleCodes.contains(expectedRole.getCode());
     }
 }

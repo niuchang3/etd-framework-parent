@@ -63,9 +63,10 @@ values (2094410000000000002, '2026-09-01 10:00:00.000000+08:00', 1, '2026-09-01 
        (2094410000000000007, '2026-09-01 10:00:00.000000+08:00', 1, '2026-09-01 10:00:00.000000+08:00', 1, 1, 1, false,
         '停用测试角色', 'role_deprecated', '此角色用于测试停用角色逻辑', '2'),
        (2094410000000000008, '2026-09-01 10:00:00.000000+08:00', 1, '2026-09-01 10:00:00.000000+08:00', 1, 1, 2, true,
-        '租户2管理员', 'tenant_admin', '华东科技租户超级管理员', '1')
+        '管理员', 'TENANT_ADMIN', '租户管理员，拥有租户内全部数据权限', '1')
 on conflict (id) do update set
     role_name = excluded.role_name,
+    role_code = excluded.role_code,
     role_desc = excluded.role_desc,
     permission_type = excluded.permission_type;
 

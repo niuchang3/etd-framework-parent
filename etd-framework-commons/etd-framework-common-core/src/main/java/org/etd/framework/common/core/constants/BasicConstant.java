@@ -64,15 +64,15 @@ public interface BasicConstant {
         /**
          * 普通用户
          */
-        ORDINARY("ordinary"),
+        ORDINARY("ORDINARY"),
         /**
          * 租户管理员
          */
-        TENANT_ADMIN("tenantAdmin"),
+        TENANT_ADMIN("TENANT_ADMIN"),
         /**
          * 平台管理员
          */
-        PLATFORM_ADMIN("platformAdmin");
+        PLATFORM_ADMIN("PLATFORM_ADMIN");
 
         private final String code;
 

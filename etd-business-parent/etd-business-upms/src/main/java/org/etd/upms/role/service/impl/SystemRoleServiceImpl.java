@@ -24,6 +24,9 @@ import java.util.Set;
 @Service
 public class SystemRoleServiceImpl implements SystemRoleService {
 
+    private static final String TENANT_ADMIN_ROLE_NAME = "管理员";
+    private static final String TENANT_ADMIN_ROLE_DESCRIPTION = "租户管理员，拥有租户内全部数据权限";
+
     @Autowired
     private SystemRoleMapper roleMapper;
 
@@ -162,20 +165,19 @@ public class SystemRoleServiceImpl implements SystemRoleService {
      * 创建 Tenant Admin Role
      *
      * @param tenantId 参数 tenantId
-     * @param tenantName 参数 tenantName
      * @return 处理结果
      */
     @IgnoreTenant
     @Override
-    public Long createTenantAdminRole(Long tenantId, String tenantName) {
+    public Long createTenantAdminRole(Long tenantId) {
         String roleCode = BasicConstant.SystemRole.TENANT_ADMIN.getCode();
         ensureTenantRoleCodeAvailable(tenantId, roleCode);
         SystemRoleEntity entity = new SystemRoleEntity();
         entity.setTenantId(tenantId);
         entity.setBuiltIn(true);
-        entity.setRoleName(tenantName + "管理员");
+        entity.setRoleName(TENANT_ADMIN_ROLE_NAME);
         entity.setRoleCode(roleCode);
-        entity.setRoleDesc(tenantName + "租户管理员，拥有租户内全部数据权限");
+        entity.setRoleDesc(TENANT_ADMIN_ROLE_DESCRIPTION);
         entity.setPermissionType(BasicConstant.PermissionType.ALL.getCode());
         entity.setDataStatus(BasicConstant.DataStatus.ENABLED.getCode());
         if (roleMapper.insert(entity) <= 0) {
@@ -256,8 +258,8 @@ public class SystemRoleServiceImpl implements SystemRoleService {
 
     private boolean isProtectedAdminRole(SystemRoleEntity role) {
         String roleCode = role.getRoleCode();
-        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equalsIgnoreCase(roleCode)
-                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equalsIgnoreCase(roleCode);
+        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equals(roleCode)
+                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equals(roleCode);
     }
 
     private SystemRoleEntity toEntity(SystemRoleSaveDTO dto) {

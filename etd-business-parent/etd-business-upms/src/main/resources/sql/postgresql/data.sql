@@ -23,7 +23,7 @@ on conflict (id) do nothing;
 insert into sys_role (id, create_time, create_by, update_time, update_by, data_status, tenant_id, built_in,
                       role_name, role_code, role_desc, permission_type)
 values (1, '2024-04-12 09:46:50.000000+08:00', 1, '2024-04-12 09:46:50.000000+08:00', 1, 1, 1, true,
-        '平台管理员', 'platformAdmin', '平台管理员，拥有系统最高权限', '1')
+        '平台管理员', 'PLATFORM_ADMIN', '平台管理员，拥有系统最高权限', '1')
 on conflict (id) do nothing;
 
 /*==============================================================*/

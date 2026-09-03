@@ -344,8 +344,8 @@ public class SystemUserBizService {
     }
 
     private boolean isAdministratorRole(String roleCode) {
-        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equalsIgnoreCase(roleCode)
-                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equalsIgnoreCase(roleCode);
+        return BasicConstant.SystemRole.PLATFORM_ADMIN.getCode().equals(roleCode)
+                || BasicConstant.SystemRole.TENANT_ADMIN.getCode().equals(roleCode);
     }
 
     private void revokeUserTokens(Long userId) {

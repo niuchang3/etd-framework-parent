@@ -74,7 +74,7 @@ public class SystemTenantBizService {
         SystemTenantEntity tenant = toTenantEntity(dto);
         Long tenantId = tenantService.insert(tenant);
         Long adminUserId = createAdminUser(tenantId, dto.getAdministrator());
-        Long adminRoleId = roleService.createTenantAdminRole(tenantId, dto.getTenantName());
+        Long adminRoleId = roleService.createTenantAdminRole(tenantId);
         userRoleRelService.assignRole(tenantId, adminUserId, adminRoleId);
         if (!tenantService.bindAdminUser(tenantId, adminUserId)) {
             throw new ApiRuntimeException("租户管理员绑定失败。");
