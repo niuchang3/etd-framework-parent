@@ -80,15 +80,6 @@ public class SystemDictTypeController {
     }
 
     /**
-     * 根据字典类型编码获取启用的字典数据列表
-     */
-    @GetMapping("/code/{typeCode}/data")
-    public ResultModel<List<SystemDictDataVO>> getEnabledDataList(@PathVariable String typeCode) {
-        SystemDictTypeVO type = dictTypeService.selectEnabledByCode(typeCode);
-        return ResultModel.success(type == null ? List.of() : dictDataService.selectEnabledByTypeId(type.getId()));
-    }
-
-    /**
      * 新增保存
      *
      * @param dto 参数 dto

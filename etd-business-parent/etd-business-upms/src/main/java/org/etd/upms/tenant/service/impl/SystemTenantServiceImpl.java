@@ -81,11 +81,7 @@ public class SystemTenantServiceImpl implements SystemTenantService {
      */
     @Override
     public IPage<SystemTenantVO> page(IPage<SystemTenantEntity> page, List<Instant> times, String keyword) {
-        UserDetails user = RequestContext.getUser();
         EtdLambdaQueryWrapper<SystemTenantEntity> wrapper = new EtdLambdaQueryWrapper<>();
-        if (!user.isPlatformAdmin()) {
-            wrapper.eq(SystemTenantEntity::getId, user.getTenantId());
-        }
         if(!ObjectUtils.isEmpty(times)){
             wrapper.between(SystemTenantEntity::getCreateTime,times.get(0),times.get(1));
         }

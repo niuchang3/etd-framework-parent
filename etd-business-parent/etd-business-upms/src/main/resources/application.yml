@@ -57,10 +57,8 @@ system:
 
     permissions:
       ignore:
-        - /public/**
         - /druid/**
         - /v1/config/values
-        - /h2-console/**
 
     oauth2:
       authorization-server:
