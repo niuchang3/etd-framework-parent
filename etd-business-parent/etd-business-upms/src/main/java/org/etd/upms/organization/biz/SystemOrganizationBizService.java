@@ -66,18 +66,17 @@ public class SystemOrganizationBizService {
         if (user.isAdmin()) {
             return organizationService.selectList(enabled);
         }
-        Set<String> permissionTypes = resolvePermissionTypes(user);
+        Set<String> permissionTypes = user.getPermissionTypes();
+        if (CollectionUtils.isEmpty(permissionTypes)) {
+            return Collections.emptyList();
+        }
         if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
             return organizationService.selectList(enabled);
         }
         if (hasOrganizationPermission(permissionTypes)) {
-            if (!CollectionUtils.isEmpty(user.getScopeOrgIds())) {
-                return organizationService.selectListByIds(user.getScopeOrgIds(), enabled);
-            }
-            if (user.getOrgId() != null) {
-                return organizationService.selectListByIds(Set.of(user.getOrgId()), enabled);
-            }
-            return organizationService.selectListByUserId(user.getId(), enabled);
+            // 空授权范围不能回退到所属部门，避免组织树与底层权限过滤口径不一致。
+            return CollectionUtils.isEmpty(user.getScopeOrgIds()) ? Collections.emptyList()
+                    : organizationService.selectListByIds(user.getScopeOrgIds(), enabled);
         }
         if (permissionTypes.contains(BasicConstant.PermissionType.SELF.getCode())) {
             if (user.getOrgId() != null) {
@@ -86,16 +85,6 @@ public class SystemOrganizationBizService {
             return organizationService.selectListByUserId(user.getId(), enabled);
         }
         return Collections.emptyList();
-    }
-
-    private Set<String> resolvePermissionTypes(UserDetails user) {
-        if (!CollectionUtils.isEmpty(user.getPermissionTypes())) {
-            return user.getPermissionTypes();
-        }
-        if (StringUtils.hasText(user.getPermissionType())) {
-            return Set.of(user.getPermissionType());
-        }
-        return Collections.emptySet();
     }
 
     private boolean hasOrganizationPermission(Set<String> permissionTypes) {

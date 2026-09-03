@@ -1,7 +1,6 @@
 package org.etd.upms.user.security;
 
 import com.etd.framework.starter.client.core.user.IUserService;
-import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.user.RoleAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.user.UserPermissions;
@@ -15,8 +14,6 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
-
-import java.util.Set;
 
 /**
  * 专门处理 Security 认证与用户信息加载的适配服务
@@ -114,23 +111,9 @@ public class SystemUserSecurityService implements IUserService {
         userDetails.setOrgId(permissions.getPrimaryOrganizationId());
         userDetails.setOrgIds(permissions.getOrganizationIds());
         userDetails.setPermissionTypes(permissions.getPermissionTypes());
-        userDetails.setPermissionType(resolveLegacyPermissionType(permissions.getPermissionTypes()));
         userDetails.setCustomOrgIds(permissions.getCustomOrganizationIds());
         userDetails.setScopeOrgIds(permissions.getScopeOrganizationIds());
         return userDetails;
-    }
-
-    /**
-     * 解析兼容旧版本的单数据权限类型编码
-     *
-     * @param permissionTypes 权限类型集合
-     * @return 优先返回 ALL 权限或唯一权限类型编码
-     */
-    private String resolveLegacyPermissionType(Set<String> permissionTypes) {
-        if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
-            return BasicConstant.PermissionType.ALL.getCode();
-        }
-        return permissionTypes.size() == 1 ? permissionTypes.iterator().next() : null;
     }
 
     /**

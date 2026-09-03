@@ -100,9 +100,9 @@ create unique index if not exists uk_sys_user_mobile
     on sys_user (mobile)
     where del_flag = 0 and mobile is not null and mobile <> '';
 
-create index if not exists idx_sys_user_tenant_org
-    on sys_user (tenant_id, org_id)
-    where del_flag = 0;
+CREATE INDEX IF NOT EXISTS idx_sys_user_tenant_org
+    ON sys_user (tenant_id, org_id, create_time DESC, id DESC)
+    WHERE del_flag = 0;
 
 /*==============================================================*/
 /* table: sys_role                                              */

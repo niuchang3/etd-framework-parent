@@ -14,7 +14,7 @@ import java.util.Set;
 public interface SystemUserMapper extends BaseMapper<SystemUserEntity> {
 
     /**
-     * 原生 SQL 用户关联分页查询
+     * 按用户主组织分页查询；orgIds 为 null 时不筛选组织，空集合时不返回数据
      */
     IPage<SystemUserEntity> selectUserPage(IPage<SystemUserEntity> page,
                                            @Param("keyword") String keyword,

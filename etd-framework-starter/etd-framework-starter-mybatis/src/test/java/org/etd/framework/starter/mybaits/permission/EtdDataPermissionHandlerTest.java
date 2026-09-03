@@ -75,7 +75,7 @@ class EtdDataPermissionHandlerTest {
     void testAllPermissionType() {
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.ALL.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.ALL.getCode()));
         RequestContext.setUser(user);
 
         Expression sqlSegment = permissionHandler.getSqlSegment(businessTable(), null, "com.example.Mapper.select");
@@ -87,7 +87,7 @@ class EtdDataPermissionHandlerTest {
     void testSelfPermissionType() {
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.SELF.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         RequestContext.setUser(user);
 
         Expression sqlSegment = permissionHandler.getSqlSegment(businessTable(), null, "com.example.Mapper.select");
@@ -102,7 +102,7 @@ class EtdDataPermissionHandlerTest {
         user.setId(100L);
         user.setOrgId(10L);
         user.setScopeOrgIds(Set.of(10L));
-        user.setPermissionType(BasicConstant.PermissionType.ORGANIZATION.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode()));
         RequestContext.setUser(user);
 
         Expression sqlSegment = permissionHandler.getSqlSegment(businessTable(), null, "com.example.Mapper.select");
@@ -117,7 +117,7 @@ class EtdDataPermissionHandlerTest {
         user.setId(100L);
         user.setOrgId(10L);
         user.setScopeOrgIds(Set.of(10L, 20L, 30L));
-        user.setPermissionType(BasicConstant.PermissionType.ORGANIZATION_AND_SUBORDINATE.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.ORGANIZATION_AND_SUBORDINATE.getCode()));
         RequestContext.setUser(user);
 
         Expression sqlSegment = permissionHandler.getSqlSegment(businessTable(), null, "com.example.Mapper.select");
@@ -132,7 +132,7 @@ class EtdDataPermissionHandlerTest {
     void testDataPermissionHelperIgnore() {
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.SELF.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         RequestContext.setUser(user);
 
         try (DataPermissionHelper.Scope ignore = DataPermissionHelper.ignore()) {
@@ -153,7 +153,7 @@ class EtdDataPermissionHandlerTest {
         user.setId(100L);
         user.setOrgId(10L);
         user.setScopeOrgIds(Set.of(10L));
-        user.setPermissionType(BasicConstant.PermissionType.ORGANIZATION.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode()));
         RequestContext.setUser(user);
 
         DataPermission mockAnnotation = new DataPermission() {
@@ -200,7 +200,7 @@ class EtdDataPermissionHandlerTest {
     void testPreserveOriginalWhere() {
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.SELF.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         RequestContext.setUser(user);
         DataPermissionInterceptor interceptor = new DataPermissionInterceptor(permissionHandler);
 
@@ -217,7 +217,7 @@ class EtdDataPermissionHandlerTest {
     void testUpdatePreservesPrimaryKeyCondition() {
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.SELF.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         RequestContext.setUser(user);
         DataPermissionInterceptor interceptor = new DataPermissionInterceptor(permissionHandler);
 
@@ -237,7 +237,7 @@ class EtdDataPermissionHandlerTest {
 
         UserDetails user = new UserDetails();
         user.setId(100L);
-        user.setPermissionType(BasicConstant.PermissionType.SELF.getCode());
+        user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         RequestContext.setUser(user);
 
         Expression sqlSegment = permissionHandler.getSqlSegment(

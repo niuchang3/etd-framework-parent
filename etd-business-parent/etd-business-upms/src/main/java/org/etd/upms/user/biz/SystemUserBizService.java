@@ -3,7 +3,6 @@ package org.etd.upms.user.biz;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.storage.UserLoginTokenStorage;
 import org.etd.framework.common.core.constants.BasicConstant;
-import org.etd.framework.common.core.context.DataPermissionHelper;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -73,17 +72,14 @@ public class SystemUserBizService {
     @Autowired
     private UserLoginTokenStorage userLoginTokenStorage;
 
+    /**
+     * 按选中组织及下级筛选用户，框架继续追加权限条件以收紧到授权范围内。
+     */
     public IPage<SystemUserVO> page(long current, long size, String keyword, Long organizationId,
                                     Boolean enabled, Boolean locked) {
-        IPage<SystemUserEntity> entityPage;
-        if (organizationId != null) {
-            Set<Long> targetOrgIds = organizationService.selectSubtreeIds(organizationId);
-            try (DataPermissionHelper.Scope ignore = DataPermissionHelper.ignore()) {
-                entityPage = userService.selectUserPage(current, size, keyword, targetOrgIds, enabled, locked);
-            }
-        } else {
-            entityPage = userService.selectUserPage(current, size, keyword, null, enabled, locked);
-        }
+        Set<Long> targetOrgIds = organizationId == null ? null : organizationService.selectSubtreeIds(organizationId);
+        IPage<SystemUserEntity> entityPage = userService.selectUserPage(
+                current, size, keyword, targetOrgIds, enabled, locked);
         IPage<SystemUserVO> page = entityPage.convert(this::toVO);
         populateAssignments(page.getRecords());
         return page;

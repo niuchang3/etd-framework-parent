@@ -104,11 +104,6 @@ public class UserDetails implements Serializable {
     private Set<Long> orgIds;
 
     /**
-     * 计算合并后的数据权限范围类型编码。
-     */
-    private String permissionType;
-
-    /**
      * 用户全部角色的数据权限类型编码，用于按并集合并多个角色的数据范围。
      */
     private Set<String> permissionTypes;

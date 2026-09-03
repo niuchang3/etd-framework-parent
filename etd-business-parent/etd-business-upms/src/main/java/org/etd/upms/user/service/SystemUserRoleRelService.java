@@ -1,11 +1,13 @@
 package org.etd.upms.user.service;
 
-import com.etd.framework.starter.client.core.user.PermissionsService;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import java.util.List;
 import java.util.Set;
 
-public interface SystemUserRoleRelService extends PermissionsService {
+/**
+ * 用户角色关系能力，权限聚合由安全权限服务统一负责。
+ */
+public interface SystemUserRoleRelService {
 
 
     /**

@@ -19,7 +19,6 @@ import org.etd.framework.starter.mybaits.permission.context.DataPermissionContex
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -89,7 +88,11 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
             return buildAlwaysFalseExpression();
         }
 
-        Set<String> permissionTypes = resolvePermissionTypes(user);
+        Set<String> permissionTypes = user.getPermissionTypes();
+        // 缺少权限类型时拒绝访问，只使用当前统一的权限集合。
+        if (CollectionUtils.isEmpty(permissionTypes)) {
+            return buildAlwaysFalseExpression();
+        }
         if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
             return null;
         }
@@ -110,18 +113,6 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
             permissionExpression = appendOr(permissionExpression, organizationExpression);
         }
         return permissionExpression == null ? buildAlwaysFalseExpression() : parenthesizeOr(permissionExpression);
-    }
-
-    private Set<String> resolvePermissionTypes(UserDetails user) {
-        Set<String> permissionTypes = user.getPermissionTypes();
-        if (!CollectionUtils.isEmpty(permissionTypes)) {
-            return permissionTypes;
-        }
-        Set<String> legacyPermissionTypes = new LinkedHashSet<>();
-        if (StringUtils.hasText(user.getPermissionType())) {
-            legacyPermissionTypes.add(user.getPermissionType());
-        }
-        return legacyPermissionTypes;
     }
 
     private boolean hasOrganizationPermission(Set<String> permissionTypes) {

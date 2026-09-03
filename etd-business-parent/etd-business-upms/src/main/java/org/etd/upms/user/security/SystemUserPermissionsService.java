@@ -2,8 +2,6 @@ package org.etd.upms.user.security;
 
 import com.etd.framework.starter.client.core.user.PermissionsService;
 import org.etd.framework.common.core.constants.BasicConstant;
-import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
 import org.etd.upms.organization.service.SystemOrganizationService;
@@ -131,7 +129,7 @@ public class SystemUserPermissionsService implements PermissionsService, OrgSubt
 
         // 计算最终合并后的有效可访问组织/部门 ID 集合
         permissions.setScopeOrganizationIds(resolveScopeOrganizationIds(
-                permissionTypes, primaryOrganizationId, customOrganizationIds));
+                permissionTypes, permissions.getOrganizationIds(), customOrganizationIds));
     }
 
     /**
@@ -177,34 +175,18 @@ public class SystemUserPermissionsService implements PermissionsService, OrgSubt
     }
 
     /**
-     * 根据数据权限类型及部门结构解析算出最终可访问的组织 ID 集合（包含主部门及下级部门节点树）
-     *
-     * @param permissionTypes 权限类型集合
-     * @param primaryOrganizationId 主部门 ID
-     * @param customOrganizationIds 自定义组织 ID 集合
-     * @return 合并算出的全部有权访问的组织 ID 集合
+     * 合并全部所属部门与角色自定义授权，生成不受页面选中节点影响的完整组织权限范围。
      */
-    private Set<Long> resolveScopeOrganizationIds(Set<String> permissionTypes, Long primaryOrganizationId,
+    private Set<Long> resolveScopeOrganizationIds(Set<String> permissionTypes, Set<Long> organizationIds,
                                                    Set<Long> customOrganizationIds) {
+        // 自定义权限仅包含明确授权的节点，不自动展开其下级。
         Set<Long> scopeOrganizationIds = new LinkedHashSet<>(customOrganizationIds);
-        if (primaryOrganizationId == null) {
-            return scopeOrganizationIds;
-        }
-        // 包含本部门权限
-        if (permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION.getCode())) {
-            scopeOrganizationIds.add(primaryOrganizationId);
-        }
-        // 包含本部门及下级部门权限：默认从主部门展开，若上下文传入指定选中节点且在主部门范围内则动态从选中节点展开
         if (permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION_AND_SUBORDINATE.getCode())) {
-            Long selectedOrgId = RequestContext.getOrganizationId();
-            if (selectedOrgId != null) {
-                Set<Long> primarySubtree = organizationService.selectSubtreeIds(primaryOrganizationId);
-                if (primarySubtree.contains(selectedOrgId)) {
-                    scopeOrganizationIds.addAll(organizationService.selectSubtreeIds(selectedOrgId));
-                }
-            } else {
-                scopeOrganizationIds.addAll(organizationService.selectSubtreeIds(primaryOrganizationId));
+            for (Long organizationId : organizationIds) {
+                scopeOrganizationIds.addAll(organizationService.selectSubtreeIds(organizationId));
             }
+        } else if (permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION.getCode())) {
+            scopeOrganizationIds.addAll(organizationIds);
         }
         return scopeOrganizationIds;
     }

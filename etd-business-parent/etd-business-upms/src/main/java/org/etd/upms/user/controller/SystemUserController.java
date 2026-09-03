@@ -60,7 +60,7 @@ public class SystemUserController {
     private SystemOrganizationBizService organizationBizService;
 
     /**
-     * 用户分页。组织参数为空时包含未分配组织的用户；传入时包含该组织及全部下级组织的用户。
+     * 用户分页。按主组织及其下级筛选，并始终受当前登录人的数据权限限制。
      */
     @GetMapping
     public ResultModel<IPage<SystemUserVO>> page(
