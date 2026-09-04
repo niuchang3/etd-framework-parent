@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.dict.biz.SystemDictBizService;
 import org.etd.upms.dict.controller.dto.SystemDictTypeSaveDTO;
 import org.etd.upms.dict.controller.vo.SystemDictDataVO;
@@ -50,6 +51,7 @@ public class SystemDictTypeController {
     @Autowired
     private SystemDictBizService dictBizService;
 
+    @AutoLog("分页查询字典类型列表")
     @GetMapping
     public ResultModel<IPage<SystemDictTypeVO>> page(
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") long current,
@@ -66,11 +68,13 @@ public class SystemDictTypeController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("获取字典类型详情")
     @GetMapping("/{id}")
     public ResultModel<SystemDictTypeVO> detail(@PathVariable Long id) {
         return ResultModel.success(dictTypeService.selectById(id));
     }
 
+    @AutoLog("批量获取字典数据映射")
     @GetMapping("/data")
     public ResultModel<Map<String, List<SystemDictDataVO>>> enabledData(
             @RequestParam("typeCodes") @NotEmpty(message = "字典类型编码不能为空")
@@ -85,6 +89,7 @@ public class SystemDictTypeController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增字典类型")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemDictTypeSaveDTO dto) {
         return ResultModel.success(dictTypeService.insert(dto));
@@ -97,6 +102,7 @@ public class SystemDictTypeController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("更新字典类型")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemDictTypeSaveDTO dto) {
         return ResultModel.success(dictTypeService.update(id, dto));
@@ -108,6 +114,7 @@ public class SystemDictTypeController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("删除字典类型")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(dictBizService.deleteType(id));
@@ -120,6 +127,7 @@ public class SystemDictTypeController {
      * @param enabled 参数 enabled
      * @return 处理结果
      */
+    @AutoLog("切换字典类型启用状态")
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(dictTypeService.switchEnabled(id, enabled));

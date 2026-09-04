@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.dict.biz.SystemDictBizService;
 import org.etd.upms.dict.controller.dto.SystemDictDataSaveDTO;
 import org.etd.upms.dict.controller.vo.SystemDictDataVO;
@@ -39,6 +40,7 @@ public class SystemDictDataController {
     @Autowired
     private SystemDictBizService dictBizService;
 
+    @AutoLog("分页查询字典数据列表")
     @GetMapping
     public ResultModel<IPage<SystemDictDataVO>> page(
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") long current,
@@ -56,6 +58,7 @@ public class SystemDictDataController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("获取字典数据项详情")
     @GetMapping("/{id}")
     public ResultModel<SystemDictDataVO> detail(@PathVariable Long id) {
         return ResultModel.success(dictDataService.selectById(id));
@@ -67,6 +70,7 @@ public class SystemDictDataController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增字典数据项")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemDictDataSaveDTO dto) {
         return ResultModel.success(dictBizService.insertData(dto));
@@ -79,6 +83,7 @@ public class SystemDictDataController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("更新字典数据项")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemDictDataSaveDTO dto) {
         return ResultModel.success(dictBizService.updateData(id, dto));
@@ -90,6 +95,7 @@ public class SystemDictDataController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("删除字典数据项")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(dictBizService.deleteData(id));
@@ -102,6 +108,7 @@ public class SystemDictDataController {
      * @param enabled 参数 enabled
      * @return 处理结果
      */
+    @AutoLog("切换字典数据项启用状态")
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(dictBizService.switchDataEnabled(id, enabled));

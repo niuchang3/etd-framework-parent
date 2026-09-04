@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.role.biz.SystemRoleBizService;
 import org.etd.upms.role.controller.dto.SystemRoleMenuAssignDTO;
 import org.etd.upms.role.controller.dto.SystemRoleOrganizationAssignDTO;
@@ -50,6 +51,7 @@ public class SystemRoleController {
     @Autowired
     private SystemRoleBizService roleBizService;
 
+    @AutoLog("分页查询系统角色列表")
     @GetMapping
     public ResultModel<IPage<SystemRoleVO>> page(
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") long current,
@@ -68,6 +70,7 @@ public class SystemRoleController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("获取系统角色详情")
     @GetMapping("/{id}")
     public ResultModel<SystemRoleVO> detail(@PathVariable Long id) {
         return ResultModel.success(roleService.selectById(id));
@@ -79,6 +82,7 @@ public class SystemRoleController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增系统角色")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemRoleSaveDTO dto) {
         return ResultModel.success(roleBizService.insert(dto));
@@ -91,6 +95,7 @@ public class SystemRoleController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("更新系统角色")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemRoleSaveDTO dto) {
         return ResultModel.success(roleBizService.update(id, dto));
@@ -102,11 +107,13 @@ public class SystemRoleController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("删除系统角色")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(roleBizService.delete(id));
     }
 
+    @AutoLog("切换系统角色状态")
     @PatchMapping("/{id}/status/{status}")
     public ResultModel<Boolean> switchStatus(
             @PathVariable Long id,
@@ -121,26 +128,30 @@ public class SystemRoleController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("获取角色关联菜单")
     @GetMapping("/{id}/menus")
     public ResultModel<List<SystemRoleMenuVO>> menus(@PathVariable Long id) {
         roleService.requireExists(id);
         return ResultModel.success(roleMenuService.selectByRoleId(id));
     }
 
+    @AutoLog("分配角色菜单权限")
     @PutMapping("/{id}/menus")
     public ResultModel<Boolean> replaceMenus(@PathVariable Long id,
-                                              @Valid @RequestBody SystemRoleMenuAssignDTO dto) {
+                                               @Valid @RequestBody SystemRoleMenuAssignDTO dto) {
         return ResultModel.success(roleBizService.replaceMenus(id, dto.getMenus()));
     }
 
     /**
      * 根据角色 ID 获取关联的组织机构 ID 集合
      */
+    @AutoLog("获取角色关联组织机构ID集合")
     @GetMapping("/{id}/organizations")
     public ResultModel<Set<Long>> getOrganizationIds(@PathVariable Long id) {
         return ResultModel.success(roleBizService.selectOrganizationIds(id));
     }
 
+    @AutoLog("分配角色数据权限")
     @PutMapping("/{id}/organizations")
     public ResultModel<Boolean> replaceOrganizations(
             @PathVariable Long id, @Valid @RequestBody SystemRoleOrganizationAssignDTO dto) {

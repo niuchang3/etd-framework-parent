@@ -2,6 +2,7 @@ package org.etd.framework.starter.log.dto;
 
 import cn.hutool.http.useragent.UserAgent;
 import cn.hutool.http.useragent.UserAgentUtil;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -38,6 +39,7 @@ import java.util.List;
  * @date 2020/12/14
  */
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class LogInfo {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -91,12 +93,7 @@ public class LogInfo {
 	private String urlMethod;
 
 	/**
-	 * 请求参数
-	 */
-	private Object parameters;
-
-	/**
-	 * 转换为可直接复制在终端执行的 cURL 命令（仅 HTTP 请求生成）
+	 * 转换为可直接复制在终端执行的 cURL 命令（仅在异常报错时生成）
 	 */
 	private String curl;
 
@@ -171,7 +168,6 @@ public class LogInfo {
 		fillMethodMetadata(logInfo, joinPoint);
 		fillTraceContext(logInfo);
 		fillRequestContext(logInfo);
-		fillCurlCommand(logInfo);
 
 		return logInfo;
 	}
@@ -189,14 +185,13 @@ public class LogInfo {
 	}
 
 	/**
-	 * 填充切点类方法与参数信息
+	 * 填充切点类方法信息
 	 */
 	private static void fillMethodMetadata(LogInfo logInfo, JoinPoint joinPoint) {
 		if (joinPoint.getSignature() instanceof MethodSignature methodSignature) {
 			logInfo.setClassName(methodSignature.getDeclaringTypeName());
 			logInfo.setClassMethodName(methodSignature.getName());
 		}
-		logInfo.setParameters(filterArgs(joinPoint.getArgs()));
 	}
 
 	/**
@@ -259,9 +254,9 @@ public class LogInfo {
 	}
 
 	/**
-	 * 将请求转换为能在终端直接粘帖运行的 cURL 命令字符串（仅限 Web HTTP 请求场景）
+	 * 仅在异常抛出时，将请求转换为能在终端直接粘帖运行的 cURL 命令字符串（帮助调试复现）
 	 */
-	private static void fillCurlCommand(LogInfo logInfo) {
+	public static void fillCurlCommandOnException(LogInfo logInfo, JoinPoint joinPoint) {
 		if (!StringUtils.hasText(logInfo.getUrl()) || !StringUtils.hasText(logInfo.getUrlMethod())) {
 			return;
 		}
@@ -294,13 +289,12 @@ public class LogInfo {
 			builder.append(" -H '").append(HeaderConstant.ACCEPT_LANGUAGE).append(": ").append(RequestContext.getLanguage()).append("'");
 		}
 
-		// 填充 Body 参数
-		Object params = logInfo.getParameters();
+		// 仅在异常报错生成 cURL 时解析请求 Body 参数
+		Object params = filterArgs(joinPoint.getArgs());
 		if (params != null) {
 			try {
 				String jsonBody = OBJECT_MAPPER.writeValueAsString(params);
 				if (StringUtils.hasText(jsonBody) && !"[]".equals(jsonBody) && !"{}".equals(jsonBody)) {
-					// 替换单引号防截断
 					String safeBody = jsonBody.replace("'", "'\\''");
 					builder.append(" --data-raw '").append(safeBody).append("'");
 				}

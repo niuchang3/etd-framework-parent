@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.config.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -24,6 +25,7 @@ public class PublicConfigController {
     private SystemConfigService configService;
 
     /** 查询允许公开读取的启用配置值。 */
+    @AutoLog("查询公开配置参数")
     @GetMapping("/values")
     public ResultModel<Map<String, String>> enabledValues(
             @RequestParam("parameterKeys") @NotEmpty(message = "参数键不能为空")

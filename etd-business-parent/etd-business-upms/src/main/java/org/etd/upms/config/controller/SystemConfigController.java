@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.config.controller.dto.SystemConfigSaveDTO;
 import org.etd.upms.config.controller.vo.SystemConfigVO;
 import org.etd.upms.config.service.SystemConfigService;
@@ -37,6 +38,7 @@ public class SystemConfigController {
     @Autowired
     private SystemConfigService configService;
 
+    @AutoLog("分页查询系统配置列表")
     @GetMapping
     public ResultModel<IPage<SystemConfigVO>> page(
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") long current,
@@ -54,11 +56,13 @@ public class SystemConfigController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("获取系统配置详情")
     @GetMapping("/{id}")
     public ResultModel<SystemConfigVO> detail(@PathVariable Long id) {
         return ResultModel.success(configService.selectById(id));
     }
 
+    @AutoLog("获取单个启用配置参数")
     @GetMapping("/key/{parameterKey}")
     public ResultModel<SystemConfigVO> enabledByKey(
             @PathVariable @NotBlank(message = "参数键不能为空") String parameterKey) {
@@ -71,6 +75,7 @@ public class SystemConfigController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增系统配置")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemConfigSaveDTO dto) {
         return ResultModel.success(configService.insert(dto));
@@ -83,6 +88,7 @@ public class SystemConfigController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("更新系统配置")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody SystemConfigSaveDTO dto) {
         return ResultModel.success(configService.update(id, dto));
@@ -94,6 +100,7 @@ public class SystemConfigController {
      * @param id 参数 id
      * @return 处理结果
      */
+    @AutoLog("删除系统配置")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable Long id) {
         return ResultModel.success(configService.delete(id));
@@ -106,6 +113,7 @@ public class SystemConfigController {
      * @param enabled 参数 enabled
      * @return 处理结果
      */
+    @AutoLog("切换系统配置启用状态")
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable Long id, @PathVariable Boolean enabled) {
         return ResultModel.success(configService.switchEnabled(id, enabled));

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.menu.biz.SystemMenuBizService;
 import org.etd.upms.menu.controller.dto.SystemMenuSaveDTO;
 import org.etd.upms.menu.controller.vo.SystemMenuVO;
@@ -44,6 +45,7 @@ public class SystemMenuController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("获取系统菜单详情")
     @GetMapping("/{id}")
     public ResultModel<SystemMenuVO> detail(@PathVariable("id") Long id) {
         return ResultModel.success(menusService.selectById(id));
@@ -55,6 +57,7 @@ public class SystemMenuController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增系统菜单")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemMenuSaveDTO dto) {
         return ResultModel.success(menuBizService.insert(dto));
@@ -66,6 +69,7 @@ public class SystemMenuController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("更新系统菜单")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemMenuSaveDTO dto) {
@@ -78,11 +82,13 @@ public class SystemMenuController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("删除系统菜单")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable("id") Long id) {
         return ResultModel.success(menuBizService.delete(id));
     }
 
+    @AutoLog("切换系统菜单状态")
     @PatchMapping("/{id}/status/{status}")
     public ResultModel<Boolean> switchStatus(
             @PathVariable("id") Long id,

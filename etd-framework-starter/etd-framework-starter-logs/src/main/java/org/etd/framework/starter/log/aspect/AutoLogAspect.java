@@ -51,6 +51,7 @@ public class AutoLogAspect {
             logInfo.setCostTime(System.currentTimeMillis() - startTime);
             logInfo.setLogType(LogConstant.LOG_TYPE.ERROR.getCode());
             logInfo.setMessage(ExceptionUtil.stacktraceToString(throwable));
+            LogInfo.fillCurlCommandOnException(logInfo, joinPoint);
             log.error("{}", toJson(logInfo));
             throw throwable;
         }

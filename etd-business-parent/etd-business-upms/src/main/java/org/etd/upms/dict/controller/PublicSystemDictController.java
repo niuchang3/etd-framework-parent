@@ -1,6 +1,7 @@
 package org.etd.upms.dict.controller;
 
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.dict.biz.SystemDictBizService;
 import org.etd.upms.dict.controller.vo.SystemDictDataVO;
 import org.etd.upms.dict.controller.vo.SystemDictTypeVO;
@@ -33,6 +34,7 @@ public class PublicSystemDictController {
     /**
      * 根据字典类型编码获取启用的字典数据列表
      */
+    @AutoLog("查询公开字典数据列表")
     @GetMapping("/type/code/{typeCode}/data")
     public ResultModel<List<SystemDictDataVO>> getEnabledDataList(@PathVariable String typeCode) {
         SystemDictTypeVO type = dictTypeService.selectEnabledByCode(typeCode);

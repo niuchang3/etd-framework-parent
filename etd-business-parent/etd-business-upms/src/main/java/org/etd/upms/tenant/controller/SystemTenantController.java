@@ -9,13 +9,14 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.Valid;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.tenant.biz.SystemTenantBizService;
 import org.etd.upms.tenant.controller.dto.SystemTenantCreateDTO;
 import org.etd.upms.tenant.controller.dto.SystemTenantMenuAssignDTO;
 import org.etd.upms.tenant.controller.dto.SystemTenantUpdateDTO;
 import org.etd.upms.tenant.controller.vo.SystemTenantMenuSettingsVO;
 import org.etd.upms.tenant.controller.vo.SystemTenantVO;
-import org.etd.framework.common.core.model.ResultModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -35,14 +36,13 @@ public class SystemTenantController {
     @Autowired
     private SystemTenantBizService tenantBizService;
 
-
-
     /**
      * 分页查询
      *
      * @param @RequestParam("current" 参数 @RequestParam("current"
      * @return 处理结果
      */
+    @AutoLog("分页查询租户列表")
     @GetMapping
     public ResultModel page(@RequestParam("current") Long current,
                             @RequestParam("size") Long size,
@@ -58,6 +58,7 @@ public class SystemTenantController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("创建系统租户")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemTenantCreateDTO dto) {
         return ResultModel.success(tenantBizService.insert(dto));
@@ -69,6 +70,7 @@ public class SystemTenantController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("更新系统租户")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemTenantUpdateDTO dto) {
@@ -81,6 +83,7 @@ public class SystemTenantController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("获取租户关联菜单配置")
     @GetMapping("/{id}/menus")
     public ResultModel<SystemTenantMenuSettingsVO> menus(@PathVariable("id") Long id) {
         return ResultModel.success(tenantBizService.selectMenuSettings(id));
@@ -92,12 +95,14 @@ public class SystemTenantController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("分配租户菜单权限")
     @PutMapping("/{id}/menus")
     public ResultModel<Boolean> replaceMenus(@PathVariable("id") Long id,
                                              @Valid @RequestBody SystemTenantMenuAssignDTO dto) {
         return ResultModel.success(tenantBizService.replaceMenus(id, dto.getMenuIds()));
     }
 
+    @AutoLog("切换租户启用状态")
     @PatchMapping("/{id}/status/{status}")
     public ResultModel<Boolean> switchStatus(
             @PathVariable("id") Long id,
@@ -113,6 +118,7 @@ public class SystemTenantController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("切换租户锁定状态")
     @PatchMapping("/{id}/locked/{locked}")
     public ResultModel<Boolean> switchLocked(@PathVariable("id") Long id,
                                              @PathVariable("locked") Boolean locked) {
@@ -125,6 +131,7 @@ public class SystemTenantController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("删除系统租户")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable("id") Long id) {
         return ResultModel.success(tenantBizService.delete(id));

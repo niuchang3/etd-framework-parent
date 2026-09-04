@@ -1,18 +1,20 @@
 package org.etd.upms.user.controller;
 
-
+import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.common.core.user.UserDetails;
+import org.etd.framework.starter.log.annotation.AutoLog;
+import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
+import org.etd.upms.organization.biz.SystemOrganizationBizService;
+import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 import org.etd.upms.tenant.biz.SystemTenantBizService;
-import org.etd.upms.user.biz.SystemUserBizService;
-import org.etd.upms.user.converter.SystemUserConverter;
-import org.etd.upms.user.service.SystemUserRoleRelService;
 import org.etd.upms.tenant.controller.vo.SystemTenantVO;
+import org.etd.upms.user.biz.SystemUserBizService;
 import org.etd.upms.user.controller.vo.SystemUserMenusVO;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import org.etd.upms.user.controller.vo.SystemUserVO;
-import org.etd.framework.common.core.context.model.RequestContext;
-import org.etd.framework.common.core.model.ResultModel;
-import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
+import org.etd.upms.user.converter.SystemUserConverter;
+import org.etd.upms.user.service.SystemUserRoleRelService;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -22,10 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-
-
-import org.etd.upms.organization.biz.SystemOrganizationBizService;
-import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
 
 /** 当前登录用户的个人信息和导航入口，仅要求登录，不继承管理权限。 */
 @Validated
@@ -45,6 +43,7 @@ public class CurrentUserController {
     /**
      * 获取当前登录人个人信息
      */
+    @AutoLog("获取当前登录人个人信息")
     @IgnoreTenant
     @GetMapping(value = "/me")
     public ResultModel<SystemUserVO> me() {
@@ -56,6 +55,7 @@ public class CurrentUserController {
     /**
      * 获取当前登录人租户列表
      */
+    @AutoLog("获取当前登录人可访问租户列表")
     @IgnoreTenant
     @GetMapping("/tenant")
     public ResultModel<List<SystemTenantVO>> getCurrentUserTenantList() {
@@ -66,6 +66,7 @@ public class CurrentUserController {
     /**
      * 获取当前登录人角色列表
      */
+    @AutoLog("获取当前登录人角色列表")
     @GetMapping("/role")
     public ResultModel<List<SystemUserRoleVO>> getCurrentUserRoleList() {
         UserDetails user = RequestContext.getUser();
@@ -79,6 +80,7 @@ public class CurrentUserController {
      *
      * @return 处理结果
      */
+    @AutoLog("获取当前登录人菜单权限列表")
     @GetMapping("/menus")
     public ResultModel<List<SystemUserMenusVO>> currentUserMenus() {
         List<SystemUserMenusVO> systemUserMenusVOS = userBizService.currentUserMenus();
@@ -88,6 +90,7 @@ public class CurrentUserController {
     /**
      * 获取当前登录人组织机构树列表
      */
+    @AutoLog("获取当前登录人组织机构树")
     @GetMapping("/organization/tree")
     public ResultModel<List<SystemOrganizationVO>> currentUserOrganizationTree(
             @RequestParam(name = "keyword", required = false) String keyword,

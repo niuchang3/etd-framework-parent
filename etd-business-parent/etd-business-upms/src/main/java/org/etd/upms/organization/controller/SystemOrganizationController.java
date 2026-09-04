@@ -4,6 +4,7 @@ import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import org.etd.upms.menu.constant.MenuPermissionCode;
 import jakarta.validation.Valid;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.upms.organization.biz.SystemOrganizationBizService;
 import org.etd.upms.organization.controller.dto.SystemOrganizationSaveDTO;
 import org.etd.upms.organization.controller.vo.SystemOrganizationVO;
@@ -41,6 +42,7 @@ public class SystemOrganizationController {
     /**
      * 查询组织机构树列表
      */
+    @AutoLog("获取组织机构树列表")
     @GetMapping("/tree")
     public ResultModel<List<SystemOrganizationVO>> tree(
             @RequestParam(name = "keyword", required = false) String keyword,
@@ -54,6 +56,7 @@ public class SystemOrganizationController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("获取组织机构详情")
     @GetMapping("/{id}")
     public ResultModel<SystemOrganizationVO> detail(@PathVariable("id") Long id) {
         return ResultModel.success(organizationService.selectById(id));
@@ -65,6 +68,7 @@ public class SystemOrganizationController {
      * @param dto 参数 dto
      * @return 处理结果
      */
+    @AutoLog("新增组织机构")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemOrganizationSaveDTO dto) {
         return ResultModel.success(organizationBizService.insert(dto));
@@ -76,6 +80,7 @@ public class SystemOrganizationController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("更新组织机构")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable("id") Long id,
                                        @Valid @RequestBody SystemOrganizationSaveDTO dto) {
@@ -88,6 +93,7 @@ public class SystemOrganizationController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("删除组织机构")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> delete(@PathVariable("id") Long id) {
         return ResultModel.success(organizationBizService.delete(id));
@@ -99,6 +105,7 @@ public class SystemOrganizationController {
      * @param @PathVariable("id" 参数 @PathVariable("id"
      * @return 处理结果
      */
+    @AutoLog("切换组织机构启用状态")
     @PatchMapping("/{id}/enabled/{enabled}")
     public ResultModel<Boolean> switchEnabled(@PathVariable("id") Long id,
                                                @PathVariable("enabled") Boolean enabled) {
