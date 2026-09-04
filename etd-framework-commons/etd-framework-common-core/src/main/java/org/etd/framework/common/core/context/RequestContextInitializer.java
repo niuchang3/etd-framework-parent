@@ -36,8 +36,21 @@ public class RequestContextInitializer {
         // 1. 进场清理：确保写入新数据前，当前线程无任何历史遗留数据
         RequestContext.clean();
 
-        // 2. 解析并设置 TraceId（为空时自动生成 UUID 补全）
-        String traceId = request.getHeader(HeaderConstant.TRACE_ID);
+        // 2. 解析并设置 TraceId（优先 SkyWalking TraceContext -> 其次 HTTP Header -> 最后 UUID 补全）
+        String traceId = null;
+        try {
+            Class<?> clazz = Class.forName("org.apache.skywalking.apm.toolkit.trace.TraceContext");
+            java.lang.reflect.Method method = clazz.getMethod("traceId");
+            Object result = method.invoke(null);
+            if (result instanceof String swTraceId && StringUtils.hasText(swTraceId)
+                    && !"IgnoredTraced".equalsIgnoreCase(swTraceId) && !"N/A".equalsIgnoreCase(swTraceId)) {
+                traceId = swTraceId;
+            }
+        } catch (Throwable ignored) {
+        }
+        if (!StringUtils.hasText(traceId)) {
+            traceId = request.getHeader(HeaderConstant.TRACE_ID);
+        }
         RequestContext.setTraceId(StringUtils.hasText(traceId) ? traceId.trim() : UUID.randomUUID().toString());
 
         // 3. 解析并设置租户编码

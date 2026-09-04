@@ -2,6 +2,7 @@ package org.etd.framework.starter.log.interceptor;
 
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.starter.log.constant.LogConstant;
 import org.slf4j.MDC;
@@ -30,13 +31,21 @@ public class TraceInterceptor implements HandlerInterceptor {
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String traceId = request.getHeader(HeaderConstant.TRACE_ID);
-        if (StrUtil.isNotEmpty(traceId)) {
-            MDC.put(LogConstant.LOG_TRACE_ID, traceId);
-        } else {
-            traceId = IdUtil.fastSimpleUUID();
-            MDC.put(LogConstant.LOG_TRACE_ID, traceId);
+        String traceId = null;
+        try {
+            String swTraceId = TraceContext.traceId();
+            if (StrUtil.isNotEmpty(swTraceId) && !"IgnoredTraced".equalsIgnoreCase(swTraceId) && !"N/A".equalsIgnoreCase(swTraceId)) {
+                traceId = swTraceId;
+            }
+        } catch (Throwable ignored) {
         }
+        if (StrUtil.isEmpty(traceId)) {
+            traceId = request.getHeader(HeaderConstant.TRACE_ID);
+        }
+        if (StrUtil.isEmpty(traceId)) {
+            traceId = IdUtil.fastSimpleUUID();
+        }
+        MDC.put(LogConstant.LOG_TRACE_ID, traceId);
         return true;
     }
 

@@ -54,6 +54,7 @@
         <lombok.version>1.18.38</lombok.version>
         <mysql.version>9.4.0</mysql.version>
         <ipaddress.version>5.5.1</ipaddress.version>
+        <skywalking.version>9.2.0</skywalking.version>
     </properties>
 
 
@@ -200,6 +201,18 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>transmittable-thread-local</artifactId>
                 <version>${alibaba.transmittable.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-logback-1.x</artifactId>
+                <version>${skywalking.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-trace</artifactId>
+                <version>${skywalking.version}</version>
             </dependency>
 
 

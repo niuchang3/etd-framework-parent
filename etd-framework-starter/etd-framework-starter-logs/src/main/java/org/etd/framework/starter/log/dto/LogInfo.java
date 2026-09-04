@@ -203,7 +203,17 @@ public class LogInfo {
 	 * 填充 MDC / 上下文链路追踪信息
 	 */
 	private static void fillTraceContext(LogInfo logInfo) {
-		logInfo.setTraceId(RequestContext.getTraceId());
+		String traceId = RequestContext.getTraceId();
+		if (!StringUtils.hasText(traceId) || "N/A".equalsIgnoreCase(traceId)) {
+			try {
+				String swTraceId = org.apache.skywalking.apm.toolkit.trace.TraceContext.traceId();
+				if (StringUtils.hasText(swTraceId) && !"IgnoredTraced".equalsIgnoreCase(swTraceId) && !"N/A".equalsIgnoreCase(swTraceId)) {
+					traceId = swTraceId;
+				}
+			} catch (Throwable ignored) {
+			}
+		}
+		logInfo.setTraceId(traceId);
 	}
 
 	/**

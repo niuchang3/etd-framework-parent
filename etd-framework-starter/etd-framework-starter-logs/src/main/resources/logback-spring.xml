@@ -22,14 +22,17 @@
     <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
     <conversionRule conversionWord="wEx"
                     class="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+    <!-- SkyWalking TraceId 转换扩展 -->
+    <conversionRule conversionWord="tid"
+                    class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.LogbackPatternConverter"/>
 
     <!-- 控制台彩色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN"
-              value="[${appName}:%ip:${port}] %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%level){blue} %clr(${PID}){magenta} %clr([%X{trace-id}]){yellow} %clr([%thread]){orange} %clr(%-40.40logger{39}){cyan} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+              value="[${appName}:%ip:${port}] %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%level){blue} %clr(${PID}){magenta} %clr([%X{traceId}]){yellow} %clr([%tid]){green} %clr([%thread]){orange} %clr(%-40.40logger{39}){cyan} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
 
     <!-- 物理文件无颜色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN_NO_COLOR"
-              value="[${appName}:%ip:${port}] %d{yyyy-MM-dd HH:mm:ss.SSS} %level ${PID} [%X{trace-id}] [%thread] %-40.40logger{0} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+              value="[${appName}:%ip:${port}] %d{yyyy-MM-dd HH:mm:ss.SSS} %level ${PID} [%X{traceId}] [%tid] [%thread] %-40.40logger{0} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
 
     <!-- 1. 控制台 Appender -->
     <appender name="consoleLog" class="ch.qos.logback.core.ConsoleAppender">
