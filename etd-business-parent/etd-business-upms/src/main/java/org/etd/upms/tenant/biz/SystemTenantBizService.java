@@ -185,7 +185,9 @@ public class SystemTenantBizService {
             requireNotCurrentTenant(operator, tenantId, "不能锁定当前登录租户。");
         }
         boolean updated = tenantService.switchLocked(tenantId, locked);
-        // TODO(租户安全锁定): 锁定不踢出用户且允许登录；后续权限模块需将该租户的页面操作权限强制降级为只读。
+        if (updated && locked) {
+            revokeTenantTokens(tenantId);
+        }
         return updated;
     }
 

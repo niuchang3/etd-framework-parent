@@ -44,7 +44,13 @@ public interface SystemTenantService {
 
     boolean delete(Long tenantId);
 
-    boolean isLoginEnabled(Long tenantId);
+    /**
+     * 按租户标识获取租户实体，用于租户安全状态判定。
+     *
+     * @param tenantId 租户标识
+     * @return 租户实体，不存在时返回 null
+     */
+    SystemTenantEntity fetchById(Long tenantId);
 
     void requireOrdinary(Long tenantId);
 }

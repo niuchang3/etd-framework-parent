@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.CredentialsExpiredException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.util.Assert;
@@ -82,6 +83,7 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
             verifyAccessToken(jwt);
 
             UserDetails userDetails = toUserDetails(jwt);
+            verifyLoginEnabled(userDetails);
             // 认证用户只归属一个租户，忽略客户端伪造的租户请求头。
             RequestContext.setTenantCode(userDetails.getTenantId());
             // Redis 中不存在或值不一致，都视为令牌已被后续登录或退出操作撤销。
@@ -143,6 +145,17 @@ public class BearerAuthenticationProvider implements AuthenticationProvider {
         String tokenType = (String) jwt.getHeader().getCustomParam(SecurityParameterConstant.TokenType.class.getName());
         if (!SecurityParameterConstant.TokenType.ACCESS_TOKEN.getCode().equals(tokenType)) {
             throw new BadCredentialsException(SecurityMessageCode.TOKEN_TYPE_INVALID);
+        }
+    }
+
+    /**
+     * 校验令牌内的用户与租户启用状态，缺失新状态字段的旧令牌按不可用处理。
+     *
+     * @param userDetails 令牌中的用户详情
+     */
+    private void verifyLoginEnabled(UserDetails userDetails) {
+        if (!userDetails.isLoginEnabled()) {
+            throw new DisabledException(SecurityMessageCode.ACCOUNT_DISABLED);
         }
     }
 

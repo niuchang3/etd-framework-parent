@@ -75,6 +75,16 @@ public class UserDetails implements Serializable {
     private Long tenantId;
 
     /**
+     * 所属租户是否锁定。
+     */
+    private Boolean tenantLocked;
+
+    /**
+     * 所属租户是否启用。
+     */
+    private Boolean tenantEnabled;
+
+    /**
      * 用户拥有的全部角色权限码。
      */
     private Set<String> roleCodes;
@@ -134,6 +144,24 @@ public class UserDetails implements Serializable {
      */
     public boolean isTenantAdmin() {
         return Boolean.TRUE.equals(tenantAdmin);
+    }
+
+    /**
+     * 判断当前用户是否允许登录。
+     *
+     * @return 用户和所属租户均启用时返回 true
+     */
+    public boolean isLoginEnabled() {
+        return Boolean.TRUE.equals(enabled) && Boolean.TRUE.equals(tenantEnabled);
+    }
+
+    /**
+     * 判断当前用户是否只能执行只读操作。
+     *
+     * @return 用户或所属租户锁定时返回 true
+     */
+    public boolean isReadOnly() {
+        return Boolean.TRUE.equals(locked) || Boolean.TRUE.equals(tenantLocked);
     }
 
     /**

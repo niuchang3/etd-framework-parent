@@ -92,11 +92,8 @@ public class RefreshTokenAuthenticationProvider implements AuthenticationProvide
         if (ObjectUtils.isEmpty(userDetails)) {
             throw new BadCredentialsException(SecurityMessageCode.USER_NOT_FOUND);
         }
-        if (!Boolean.TRUE.equals(userDetails.getEnabled())) {
+        if (!userDetails.isLoginEnabled()) {
             throw new DisabledException(SecurityMessageCode.ACCOUNT_DISABLED);
-        }
-        if (Boolean.TRUE.equals(userDetails.getLocked())) {
-            throw new LockedException(SecurityMessageCode.ACCOUNT_LOCKED);
         }
     }
 

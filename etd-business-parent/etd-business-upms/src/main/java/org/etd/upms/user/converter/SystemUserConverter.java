@@ -16,6 +16,8 @@ public interface SystemUserConverter {
      */
     @Mapping(target = "platformAdmin", ignore = true)
     @Mapping(target = "tenantAdmin", ignore = true)
+    @Mapping(target = "tenantLocked", ignore = true)
+    @Mapping(target = "tenantEnabled", ignore = true)
     @Mapping(target = "roleCodes", ignore = true)
     @Mapping(target = "authorities", ignore = true)
     @Mapping(target = "orgId", ignore = true)

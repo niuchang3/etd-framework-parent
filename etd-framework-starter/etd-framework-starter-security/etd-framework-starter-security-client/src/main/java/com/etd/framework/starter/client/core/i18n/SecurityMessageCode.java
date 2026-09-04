@@ -51,11 +51,6 @@ public interface SecurityMessageCode {
     String ACCOUNT_DISABLED = "security.account.disabled";
 
     /**
-     * 账号已被锁定
-     */
-    String ACCOUNT_LOCKED = "security.account.locked";
-
-    /**
      * 用户不存在
      */
     String USER_NOT_FOUND = "security.user.not-found";

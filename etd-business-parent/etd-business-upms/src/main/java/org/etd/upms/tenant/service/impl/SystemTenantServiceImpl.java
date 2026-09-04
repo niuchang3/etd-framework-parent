@@ -190,20 +190,17 @@ public class SystemTenantServiceImpl implements SystemTenantService {
     }
 
     /**
-     * 判断 LoginEnabled 状态
+     * 按租户标识获取租户实体。
      *
-     * @param tenantId 参数 tenantId
-     * @return 处理结果
+     * @param tenantId 租户标识
+     * @return 租户实体，不存在时返回 null
      */
     @Override
-    public boolean isLoginEnabled(Long tenantId) {
+    public SystemTenantEntity fetchById(Long tenantId) {
         if (tenantId == null) {
-            return false;
+            return null;
         }
-        SystemTenantEntity tenant = systemTenantMapper.selectById(tenantId);
-        // TODO(租户安全锁定): locked=true 仍允许登录；权限模块完善时需传递该状态，统一禁止写操作并保留查询权限。
-        return tenant != null
-                && Objects.equals(BasicConstant.DataStatus.ENABLED.getCode(), tenant.getDataStatus());
+        return systemTenantMapper.selectById(tenantId);
     }
 
     /**

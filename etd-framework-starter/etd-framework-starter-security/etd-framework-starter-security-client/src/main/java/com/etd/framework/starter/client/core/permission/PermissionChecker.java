@@ -32,6 +32,9 @@ public final class PermissionChecker {
         }
         String resource = resolveResource(classPermission, methodPermission);
         PermissionAction action = resolveAction(classPermission, methodPermission, request.getMethod());
+        if (action == PermissionAction.WRITE && isReadOnly(root)) {
+            return false;
+        }
         String authority = PermissionCode.createAuthority(resource, action);
         return isPlatformAdmin(root) || root.hasAuthority(authority);
     }
@@ -59,6 +62,11 @@ public final class PermissionChecker {
     /** 只有平台管理员享有接口权限豁免，租户管理员仍按权限码校验。 */
     private boolean isPlatformAdmin(MethodSecurityExpressionOperations root) {
         return root.getAuthentication().getDetails() instanceof UserDetails user && user.isPlatformAdmin();
+    }
+
+    /** 锁定用户或锁定租户统一回收写权限，平台管理员也不能绕过该安全状态。 */
+    private boolean isReadOnly(MethodSecurityExpressionOperations root) {
+        return root.getAuthentication().getDetails() instanceof UserDetails user && user.isReadOnly();
     }
 
     /** 方法填写资源码时覆盖类声明，否则继承类上的资源码。 */

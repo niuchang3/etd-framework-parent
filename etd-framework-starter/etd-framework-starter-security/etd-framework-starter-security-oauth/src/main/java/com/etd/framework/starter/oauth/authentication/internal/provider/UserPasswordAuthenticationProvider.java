@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -88,11 +87,8 @@ public class UserPasswordAuthenticationProvider implements AuthenticationProvide
         if (!matches) {
             throw new BadCredentialsException(SecurityMessageCode.PASSWORD_INVALID);
         }
-        if (!Boolean.TRUE.equals(userDetails.getEnabled())) {
+        if (!userDetails.isLoginEnabled()) {
             throw new DisabledException(SecurityMessageCode.ACCOUNT_DISABLED);
-        }
-        if (Boolean.TRUE.equals(userDetails.getLocked())) {
-            throw new LockedException(SecurityMessageCode.ACCOUNT_LOCKED);
         }
     }
 

@@ -133,6 +133,8 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         target.setLocked(source.getLocked());
         target.setEnabled(source.getEnabled());
         target.setTenantId(source.getTenantId());
+        target.setTenantLocked(source.getTenantLocked());
+        target.setTenantEnabled(source.getTenantEnabled());
         target.setRoleCodes(source.getRoleCodes());
         target.setPlatformAdmin(source.getPlatformAdmin());
         target.setTenantAdmin(source.getTenantAdmin());
@@ -167,6 +169,8 @@ public class JwtTokenEncoder implements TokenEncoder<Authentication, TokenValue>
         claim.put(SecurityParameterConstant.UserClaim.LOCKED, userDetails.getLocked());
         claim.put(SecurityParameterConstant.UserClaim.ENABLED, userDetails.getEnabled());
         claim.put(SecurityParameterConstant.UserClaim.TENANT_ID, userDetails.getTenantId());
+        claim.put(SecurityParameterConstant.UserClaim.TENANT_LOCKED, userDetails.getTenantLocked());
+        claim.put(SecurityParameterConstant.UserClaim.TENANT_ENABLED, userDetails.getTenantEnabled());
         claim.put(SecurityParameterConstant.UserClaim.ROLE_CODES, userDetails.getRoleCodes());
         claim.put(SecurityParameterConstant.UserClaim.PLATFORM_ADMIN, userDetails.getPlatformAdmin());
         claim.put(SecurityParameterConstant.UserClaim.TENANT_ADMIN, userDetails.getTenantAdmin());

@@ -1,11 +1,15 @@
 package org.etd.upms.user.security;
 
 import com.etd.framework.starter.client.core.user.IUserService;
+import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.constants.PermissionAction;
+import org.etd.framework.common.core.constants.PermissionCode;
 import org.etd.framework.common.core.user.PermissionAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.user.UserPermissions;
 import org.etd.framework.starter.mybaits.permission.annotation.IgnoreDataPermission;
 import org.etd.framework.starter.mybaits.tenant.annotation.IgnoreTenant;
+import org.etd.upms.tenant.entity.SystemTenantEntity;
 import org.etd.upms.tenant.service.SystemTenantService;
 import org.etd.upms.user.converter.SystemUserConverter;
 import org.etd.upms.user.entity.SystemUserEntity;
@@ -14,6 +18,10 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 专门处理 Security 认证与用户信息加载的适配服务
@@ -88,7 +96,8 @@ public class SystemUserSecurityService implements IUserService {
         UserPermissions permissions = permissionsService.loadPermissionsByUser(systemUserEntity.getId());
         validateTenant(systemUserEntity, permissions);
         UserDetails userDetails = toUserDetails(systemUserEntity, permissions);
-        disableUserWhenTenantUnavailable(userDetails);
+        populateTenantSecurityStatus(userDetails);
+        userDetails.setAuthorities(resolveAuthorities(permissions, userDetails.isReadOnly()));
         return userDetails;
     }
 
@@ -103,9 +112,6 @@ public class SystemUserSecurityService implements IUserService {
         UserDetails userDetails = Mappers.getMapper(SystemUserConverter.class).toUserDetails(systemUserEntity);
         userDetails.setTenantId(systemUserEntity.getTenantId());
         userDetails.setRoleCodes(permissions.getRoleCodes());
-        userDetails.setAuthorities(permissions.getAuthorityCodes().stream()
-                .map(PermissionAuthority::new)
-                .toList());
         userDetails.setPlatformAdmin(permissions.getPlatformAdmin());
         userDetails.setTenantAdmin(permissions.getTenantAdmin());
         userDetails.setOrgId(permissions.getPrimaryOrganizationId());
@@ -117,14 +123,35 @@ public class SystemUserSecurityService implements IUserService {
     }
 
     /**
-     * 当所属租户处于停用或不可登录状态时，禁用非平台管理员账号
+     * 填充租户启停与锁定状态，租户不存在时按不可登录处理。
      *
      * @param userDetails 用户详情
      */
-    private void disableUserWhenTenantUnavailable(UserDetails userDetails) {
-        if (!userDetails.isPlatformAdmin() && !tenantService.isLoginEnabled(userDetails.getTenantId())) {
-            userDetails.setEnabled(false);
+    private void populateTenantSecurityStatus(UserDetails userDetails) {
+        SystemTenantEntity tenant = tenantService.fetchById(userDetails.getTenantId());
+        boolean tenantEnabled = tenant != null && Objects.equals(
+                BasicConstant.DataStatus.ENABLED.getCode(), tenant.getDataStatus());
+        userDetails.setTenantEnabled(tenantEnabled);
+        userDetails.setTenantLocked(tenant != null && Boolean.TRUE.equals(tenant.getLocked()));
+    }
+
+    /**
+     * 锁定状态仅保留读取权限，防止其他授权入口继续取得写权限。
+     *
+     * @param permissions 用户权限集合
+     * @param readOnly 是否只读
+     * @return 生效的接口权限
+     */
+    private List<PermissionAuthority> resolveAuthorities(UserPermissions permissions, boolean readOnly) {
+        String writeSuffix = PermissionCode.SEPARATOR + PermissionAction.WRITE.getCode();
+        List<PermissionAuthority> authorities = new ArrayList<>();
+        for (String authorityCode : permissions.getAuthorityCodes()) {
+            if (readOnly && authorityCode.endsWith(writeSuffix)) {
+                continue;
+            }
+            authorities.add(new PermissionAuthority(authorityCode));
         }
+        return authorities;
     }
 
     /**

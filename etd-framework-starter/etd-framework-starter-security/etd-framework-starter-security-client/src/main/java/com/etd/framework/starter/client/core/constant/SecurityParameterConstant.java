@@ -53,6 +53,8 @@ public interface SecurityParameterConstant {
         String LOCKED = "locked";
         String ENABLED = "enabled";
         String TENANT_ID = "tenantId";
+        String TENANT_LOCKED = "tenantLocked";
+        String TENANT_ENABLED = "tenantEnabled";
         String ROLE_CODES = "roleCodes";
         String PLATFORM_ADMIN = "platformAdmin";
         String TENANT_ADMIN = "tenantAdmin";
