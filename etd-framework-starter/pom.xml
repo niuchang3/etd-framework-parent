@@ -26,6 +26,7 @@
         <module>etd-framework-starter-job</module>
         <module>etd-framework-starter-storage</module>
         <module>etd-framework-starter-rules</module>
+        <module>etd-framework-starter-event-bus</module>
     </modules>
 
 </project>

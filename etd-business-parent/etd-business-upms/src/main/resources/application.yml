@@ -13,6 +13,12 @@ spring:
     active: local
   application:
     name: upms
+  kafka:
+    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
   data:
     redis:
       host: 127.0.0.1
@@ -73,6 +79,11 @@ system:
         consent-page: "${UPMS_OAUTH2_CONSENT_PAGE:/consent}"
         redirect-parameter: "${UPMS_OAUTH2_REDIRECT_PARAMETER:redirect}"
 etd:
+  event:
+    bus:
+      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
+      partitions: ${ETD_EVENT_BUS_PARTITIONS:6}
+      replicas: ${ETD_EVENT_BUS_REPLICAS:1}
   mybatis:
     tenant:
       enabled: true
