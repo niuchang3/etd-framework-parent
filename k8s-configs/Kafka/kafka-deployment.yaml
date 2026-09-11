@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.4.0
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /tmp/kafka-secrets
+              cat <<EOF > /tmp/kafka-secrets/kafka_server_jaas.conf
+              KafkaServer {
+                  org.apache.kafka.common.security.plain.PlainLoginModule required
+                  username="admin"
+                  password="123456"
+                  user_admin="123456";
+              };
+              Client {
+                  org.apache.kafka.common.security.plain.PlainLoginModule required
+                  username="admin"
+                  password="123456";
+              };
+              EOF
+              export KAFKA_OPTS="-Djava.security.auth.login.config=/tmp/kafka-secrets/kafka_server_jaas.conf"
+              exec /etc/confluent/docker/run
+          ports:
+            - containerPort: 9092
+              name: client
+            - containerPort: 29092
+              name: external
+            - containerPort: 29093
+              name: controller
+          env:
+            # 动态获取当前 Pod 的 IP 地址（通过 Kubernetes 的 Downward API 机制获取）
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            # KRaft 模式集群唯一标识 ID
+            - name: CLUSTER_ID
+              value: "SXluMyf5T9i3hgJu1VyWgg"
+            # KRaft 模式下该节点的唯一标识符（类似于旧版本的 broker.id），单机节点通常设为 1
+            - name: KAFKA_NODE_ID
+              value: "1"
+            # 指定当前节点在集群中扮演的角色。这里为 "broker,controller"，说明是混合节点（既存储数据，又负责集群元数据控制）
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            # 控制器通信时使用的监听器名称，此处设为 "KAFKA_CONTROLLER"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "KAFKA_CONTROLLER"
+            # 控制器集群（仲裁者）的投票成员列表，格式为 "NodeID@IP:Port"。单机模式下指向本机 localhost:29093
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@127.0.0.1:29093"
+            # 定义各个监听器名称对应的安全传输协议类型（此处将客户端监听器映射为 SASL_PLAINTEXT 密码认证协议）
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:SASL_PLAINTEXT,PLAINTEXT_HOST:SASL_PLAINTEXT,KAFKA_CONTROLLER:PLAINTEXT"
+            # Kafka 服务在容器内实际监听并绑定的网卡地址及端口（0.0.0.0 代表监听容器内所有网卡）
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092,KAFKA_CONTROLLER://0.0.0.0:29093"
+            # 外部客户端（或其它服务）访问 Kafka 时，Kafka 返回的宣告连接地址。这里将 Pod 的实际 IP 宣告出去
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://$(POD_IP):9092,PLAINTEXT_HOST://localhost:29092"
+            # Broker 节点之间进行内部通信时所使用的监听器名称
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            # 内部 Broker 通信启用 SASL 时指定的认证机制
+            - name: KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL
+              value: "PLAIN"
+            # 消费者组首次启动时的重平衡延迟（毫秒）。设为 0 以允许消费者立即加入并开始消费，不进行额外等待
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            # 默认的消费者组重平衡延迟，同样设为 0 以提高本地开发时的响应速度
+            - name: KAFKA_DEFAULT_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            # 事务状态日志主题的最小同步副本数 (ISR)。因为单机只有一个节点，所以必须设为 1
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            # 事务状态日志主题的副本因子。单节点集群下必须设为 1
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            # 保存消费者消费进度的内部主题 (__consumer_offsets) 的副本因子。单机模式下设为 1
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            # JVM 启动参数设置。限制 JVM 堆内存（最大与初始 256MB），以防超出容器 512MB 限制导致 OOMKilled
+            - name: KAFKA_JVM_PERFORMANCE_OPTS
+              value: "-Xmx256m -Xms256m"
+            # 开启并指定启用的 SASL 认证机制为明文 PLAIN 方式
+            - name: KAFKA_SASL_ENABLED_MECHANISMS
+              value: "PLAIN"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /var/lib/kafka/data
+      volumes:
+        - name: kafka-data
+          hostPath:
+            path: /Users/a123/k8s-configs/Kafka/data
+            type: DirectoryOrCreate

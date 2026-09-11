@@ -3,6 +3,8 @@ package org.etd.framework.starter.event.client.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+
 /**
  * 事件总线客户端配置。
  *
@@ -18,12 +20,34 @@ public class EventBusProperties {
     private String topic = "etd.event.bus";
 
     /**
-     * Topic 分区数量。
+     * 是否在应用启动时验证 Kafka 连接和认证。
      */
-    private int partitions = 6;
+    private boolean verifyConnectionOnStartup;
 
     /**
-     * Topic 副本数量，本地单节点 Kafka 默认使用一个副本。
+     * 启动连接验证的最大等待时间。
      */
-    private int replicas = 1;
+    private Duration connectionTimeout = Duration.ofSeconds(10);
+
+    /**
+     * 雪花 ID 生成器配置。
+     */
+    private IdGenerator idGenerator = new IdGenerator();
+
+    /**
+     * 事件 ID 雪花节点配置，同一时刻运行的实例必须使用唯一的节点组合。
+     */
+    @Data
+    public static class IdGenerator {
+
+        /**
+         * 工作节点 ID。
+         */
+        private long workerId = 1;
+
+        /**
+         * 数据中心 ID。
+         */
+        private long datacenterId = 1;
+    }
 }

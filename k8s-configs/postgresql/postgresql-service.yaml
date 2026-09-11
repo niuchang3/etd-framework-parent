@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+spec:
+  type: NodePort
+  ports:
+    - port: 5432 # Service 暴露的端口
+      targetPort: 5432 # 转发给容器的端口
+      nodePort: 30432 # 对 Mac 本地暴露的端口
+  selector:
+    app: postgresql # 匹配绑定的 Pod 标签

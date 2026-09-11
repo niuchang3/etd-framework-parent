@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: provectuslabs/kafka-ui:latest
+          ports:
+            - containerPort: 9000
+          env:
+            # 修改 Spring Boot 容器内部 Web 端口为 9000，避开 8080 端口冲突
+            - name: SERVER_PORT
+              value: "9000"
+            # 定义在 UI 中显示的 Kafka 集群名称
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: "local-kafka"
+            # 指向你的 Kafka Service 服务名及端口
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: "kafka-service:9092"
+            # 开启 SASL_PLAINTEXT 协议以支持加密密码认证
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL
+              value: "SASL_PLAINTEXT"
+            # 指定 SASL 认证模式为明文 PLAIN
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM
+              value: "PLAIN"
+            # 填入连接 Kafka 所需的 admin 用户名及 123456 密码
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG
+              value: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="123456";'
+            # 开启 Kafka UI 网页自身的登录页面认证
+            - name: AUTH_TYPE
+              value: "LOGIN_FORM"
+            # 网页登录的用户名
+            - name: SPRING_SECURITY_USER_NAME
+              value: "admin"
+            # 网页登录的密码
+            - name: SPRING_SECURITY_USER_PASSWORD
+              value: "123456"
+          # 为本地开发机进行轻量资源限制，避免消耗过多系统资源
+          resources:
+            limits:
+              cpu: "500m"
+              memory: 512Mi
+            requests:
+              cpu: "100m"
+              memory: 256Mi

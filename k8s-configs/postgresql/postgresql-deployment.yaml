@@ -1,0 +1,42 @@
+apiVersion: apps/v1 # API 版本
+kind: Deployment # 资源类型为 Deployment
+metadata: # 资源的元数据
+  name: postgresql-deployment # Deployment 的名称
+spec: # 资源的规格定义
+  replicas: 1 # 副本数量
+  selector: # 标签选择器，用于确定此 Deployment 管理哪些 Pod
+    matchLabels:
+      app: postgresql
+  template: # 定义 Pod 模板
+    metadata:
+      labels:
+        app: "postgresql"
+    spec: # Pod 中容器的规格
+      containers: # 容器列表
+        - name: postgresql # 容器名称
+          image: pgvector/pgvector:pg16 # 使用 pgvector/pgvector:pg16 镜像（内置向量支持的 PostgreSQL 16）
+          resources: # 资源限制与请求
+            requests: # 容器启动时请求的最小资源
+              memory: "256Mi" # 内存请求 1Gi
+              cpu: "250m" # CPU 请求 1 核 (1000m)
+            limits: # 容器允许使用的最大资源限制
+              memory: "2Gi" # 内存限制 2Gi
+              cpu: "2000m" # CPU 限制 2 核 (2000m)
+          ports: # 容器需要暴露的端口
+            - containerPort: 5432 # 容器内 PostgreSQL 服务的默认端口
+          env: # 容器运行所需的环境变量
+            - name: POSTGRES_DB # 创建的默认数据库名称
+              value: "upms"
+            - name: POSTGRES_USER # 数据库管理员用户名
+              value: "root"
+            - name: POSTGRES_PASSWORD # 数据库管理员密码
+              value: "123456"
+          volumeMounts:
+            - name: postgres-data-volume
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+      volumes:
+        - name: postgres-data-volume
+          hostPath:
+            path: /Users/a123/k8s-configs/postgresql/postgresql-data
+            type: DirectoryOrCreate

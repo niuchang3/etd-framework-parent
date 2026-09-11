@@ -14,11 +14,26 @@ spring:
   application:
     name: upms
   kafka:
-    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:29092}
+    properties:
+      security.protocol: ${UPMS_KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+      sasl.mechanism: ${UPMS_KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${UPMS_KAFKA_USERNAME:admin}"
+        password="${UPMS_KAFKA_PASSWORD}";
     producer:
       acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
+    consumer:
+      group-id: ${UPMS_KAFKA_CONSUMER_GROUP:upms-event-client}
+      enable-auto-commit: false
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   data:
     redis:
       host: 127.0.0.1
@@ -82,8 +97,11 @@ etd:
   event:
     bus:
       topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
-      partitions: ${ETD_EVENT_BUS_PARTITIONS:6}
-      replicas: ${ETD_EVENT_BUS_REPLICAS:1}
+      verify-connection-on-startup: ${UPMS_KAFKA_VERIFY_CONNECTION:true}
+      connection-timeout: ${UPMS_KAFKA_CONNECTION_TIMEOUT:10s}
+      id-generator:
+        worker-id: ${ETD_EVENT_WORKER_ID:1}
+        datacenter-id: ${ETD_EVENT_DATACENTER_ID:1}
   mybatis:
     tenant:
       enabled: true
