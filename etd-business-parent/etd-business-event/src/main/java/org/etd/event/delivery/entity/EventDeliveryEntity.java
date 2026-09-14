@@ -14,8 +14,8 @@ import java.time.Instant;
 /**
  * 事件订阅投递任务实体，每条记录独立描述一个事件向一个业务订阅的 Kafka 发布结果。
  *
- * <p>投递记录复制原始消息的 {@code eventId} 和 {@code shardingKey}，确保两张逻辑表
- * 始终路由到编号相同的物理分表，并支持针对具体订阅独立重试和重播。</p>
+ * <p>投递记录复制原始消息的 {@code eventId}，确保消息和投递任务按照相同算法
+ * 路由到编号相同的物理分表，并支持针对具体订阅独立重试和重播。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -36,12 +36,6 @@ public class EventDeliveryEntity extends BaseEntity {
      */
     @TableField("event_id")
     private String eventId;
-
-    /**
-     * 从原始事件复制的固定分片编号。
-     */
-    @TableField("sharding_key")
-    private Short shardingKey;
 
     /**
      * 原始事件消息主键。

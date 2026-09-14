@@ -76,16 +76,16 @@ public class EventManagementBizService {
     /**
      * 聚合消息、类型定义以及面向各业务应用的投递结果。
      *
-     * @param shardingKey 消息分片键
+     * @param eventId 事件全局标识，同时作为物理分表路由键
      * @param messageId 消息主键
      * @return 消息聚合详情
      */
-    public EventMessageDetailVO fetchMessageDetail(Short shardingKey, Long messageId) {
-        EventMessageVO message = messageService.fetchByShardingKeyAndId(shardingKey, messageId);
+    public EventMessageDetailVO fetchMessageDetail(String eventId, Long messageId) {
+        EventMessageVO message = messageService.fetchByEventIdAndId(eventId, messageId);
         EventMessageDetailVO detail = new EventMessageDetailVO();
         detail.setMessage(message);
         detail.setEventType(eventTypeService.fetchById(message.getEventTypeId()));
-        detail.setDeliveryList(deliveryService.selectListByMessage(shardingKey, messageId));
+        detail.setDeliveryList(deliveryService.selectListByMessage(eventId, messageId));
         return detail;
     }
 

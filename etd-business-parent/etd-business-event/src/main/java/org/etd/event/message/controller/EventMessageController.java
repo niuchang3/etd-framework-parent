@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.etd.event.biz.EventManagementBizService;
 import org.etd.event.constant.EventPermissionCode;
-import org.etd.event.constant.EventShardingConstant;
 import org.etd.event.message.controller.vo.EventMessageDetailVO;
 import org.etd.event.message.controller.vo.EventMessageVO;
 import org.etd.event.message.service.EventMessageService;
@@ -58,11 +58,10 @@ public class EventMessageController {
     /**
      * 查询消息、事件类型和全部订阅投递结果的聚合详情。
      */
-    @GetMapping("/{shardingKey}/{id}")
+    @GetMapping("/{eventId}/{id}")
     public ResultModel<EventMessageDetailVO> get(
-                                                  @PathVariable @Min(0) @Max(EventShardingConstant.MAX_SHARDING_KEY)
-                                                  Short shardingKey,
+                                                  @PathVariable @NotBlank String eventId,
                                                   @PathVariable Long id) {
-        return ResultModel.success(eventManagementBizService.fetchMessageDetail(shardingKey, id));
+        return ResultModel.success(eventManagementBizService.fetchMessageDetail(eventId, id));
     }
 }

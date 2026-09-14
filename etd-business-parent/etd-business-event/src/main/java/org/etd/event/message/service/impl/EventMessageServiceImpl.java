@@ -40,9 +40,9 @@ public class EventMessageServiceImpl implements EventMessageService {
     }
 
     @Override
-    public EventMessageVO fetchByShardingKeyAndId(Short shardingKey, Long id) {
+    public EventMessageVO fetchByEventIdAndId(String eventId, Long id) {
         LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EventMessageEntity::getShardingKey, shardingKey)
+        wrapper.eq(EventMessageEntity::getEventId, eventId)
                 .eq(EventMessageEntity::getId, id);
         EventMessageEntity entity = messageMapper.selectOne(wrapper);
         if (entity == null) {
@@ -60,7 +60,6 @@ public class EventMessageServiceImpl implements EventMessageService {
         vo.setId(entity.getId());
         vo.setCreateTime(entity.getCreateTime());
         vo.setVersion(entity.getVersion());
-        vo.setShardingKey(entity.getShardingKey());
         vo.setEventId(entity.getEventId());
         vo.setEventTypeId(entity.getEventTypeId());
         vo.setEventVersion(entity.getEventVersion());

@@ -14,8 +14,8 @@ import java.time.Instant;
 /**
  * 原始事件消息实体，完整保存进入事件中心的统一事件协议内容。
  *
- * <p>原始消息字段写入后不可修改，{@code shardingKey} 由 {@code eventId}
- * 按框架统一算法计算，并作为 ShardingSphere 固定分表路由键。</p>
+ * <p>原始消息字段写入后不可修改，{@code eventId} 直接作为 ShardingSphere
+ * 分表路由键，同一个事件标识始终进入同一张物理表。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -29,12 +29,6 @@ public class EventMessageEntity extends BaseEntity {
     @Version
     @TableField("version")
     private Integer version;
-
-    /**
-     * 根据事件全局标识计算得到的固定分片编号。
-     */
-    @TableField("sharding_key")
-    private Short shardingKey;
 
     /**
      * 事件全局唯一标识，同时用于幂等判断和分片计算。

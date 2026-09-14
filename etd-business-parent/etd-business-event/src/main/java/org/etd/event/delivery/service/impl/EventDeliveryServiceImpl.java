@@ -35,21 +35,21 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
     }
 
     @Override
-    public EventDeliveryVO fetchByShardingKeyAndId(Short shardingKey, Long id) {
-        return toVO(requireDelivery(shardingKey, id));
+    public EventDeliveryVO fetchByEventIdAndId(String eventId, Long id) {
+        return toVO(requireDelivery(eventId, id));
     }
 
     @Override
-    public List<EventDeliveryVO> selectListByMessage(Short shardingKey, Long eventMessageId) {
-        return deliveryMapper.selectListByMessage(shardingKey, eventMessageId);
+    public List<EventDeliveryVO> selectListByMessage(String eventId, Long eventMessageId) {
+        return deliveryMapper.selectListByMessage(eventId, eventMessageId);
     }
 
     @Override
-    public boolean replayFailedDelivery(Short shardingKey, Long id) {
-        EventDeliveryEntity current = requireDelivery(shardingKey, id);
+    public boolean replayFailedDelivery(String eventId, Long id) {
+        EventDeliveryEntity current = requireDelivery(eventId, id);
         ensureReplayable(current);
         LambdaUpdateWrapper<EventDeliveryEntity> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(EventDeliveryEntity::getShardingKey, shardingKey)
+        wrapper.eq(EventDeliveryEntity::getEventId, eventId)
                 .eq(EventDeliveryEntity::getId, id)
                 .eq(EventDeliveryEntity::getVersion, current.getVersion())
                 .in(EventDeliveryEntity::getDeliveryStatus,
@@ -67,9 +67,9 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
         return true;
     }
 
-    private EventDeliveryEntity requireDelivery(Short shardingKey, Long id) {
+    private EventDeliveryEntity requireDelivery(String eventId, Long id) {
         LambdaQueryWrapper<EventDeliveryEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EventDeliveryEntity::getShardingKey, shardingKey)
+        wrapper.eq(EventDeliveryEntity::getEventId, eventId)
                 .eq(EventDeliveryEntity::getId, id);
         EventDeliveryEntity entity = deliveryMapper.selectOne(wrapper);
         if (entity == null) {
@@ -93,7 +93,6 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
         vo.setUpdateTime(entity.getUpdateTime());
         vo.setVersion(entity.getVersion());
         vo.setEventId(entity.getEventId());
-        vo.setShardingKey(entity.getShardingKey());
         vo.setEventMessageId(entity.getEventMessageId());
         vo.setSubscriptionId(entity.getSubscriptionId());
         vo.setTargetTopic(entity.getTargetTopic());

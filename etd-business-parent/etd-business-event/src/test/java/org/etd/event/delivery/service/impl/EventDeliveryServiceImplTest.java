@@ -39,7 +39,7 @@ class EventDeliveryServiceImplTest {
         when(deliveryMapper.selectOne(any())).thenReturn(entity);
         when(deliveryMapper.update(isNull(), any())).thenReturn(1);
 
-        assertTrue(deliveryService.replayFailedDelivery((short) 3, 100L));
+        assertTrue(deliveryService.replayFailedDelivery("event-100", 100L));
 
         verify(deliveryMapper).update(isNull(), any());
     }
@@ -50,13 +50,13 @@ class EventDeliveryServiceImplTest {
         when(deliveryMapper.selectOne(any())).thenReturn(entity);
 
         assertThrows(ApiRuntimeException.class,
-                () -> deliveryService.replayFailedDelivery((short) 3, 100L));
+                () -> deliveryService.replayFailedDelivery("event-100", 100L));
     }
 
     private EventDeliveryEntity createDelivery(EventDeliveryStatus status) {
         EventDeliveryEntity entity = new EventDeliveryEntity();
         entity.setId(100L);
-        entity.setShardingKey((short) 3);
+        entity.setEventId("event-100");
         entity.setVersion(2);
         entity.setDeliveryStatus(status.getCode());
         return entity;

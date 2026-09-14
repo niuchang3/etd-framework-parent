@@ -1,110 +1,139 @@
+# UPMS 服务公共配置，各环境差异连接信息应放入 application-{profile}.yml。
 server:
   servlet:
-    context-path: /
-  port: 8100
+    context-path: / # HTTP 接口使用根上下文路径。
+  port: 8100 # UPMS 服务监听端口。
 
 logging:
   level:
-    root: DEBUG
+    root: DEBUG # 默认根日志级别，具体环境可以覆盖。
 spring:
   jackson:
-    time-zone: Asia/Shanghai
+    time-zone: Asia/Shanghai # HTTP 时间字段统一按东八区序列化。
   profiles:
-    active: local
+    active: local # 默认启用本地环境，可由启动参数覆盖。
   application:
-    name: upms
+    name: upms # 应用名称，同时用于日志、注册发现和缓存键前缀。
+  datasource:
+    druid:
+      # 数据库驱动及连接池策略属于各环境共享配置，具体连接信息由环境配置提供。
+      driver-class-name: org.postgresql.Driver # PostgreSQL JDBC 驱动类。
+      max-active: 20 # 连接池允许的最大活动连接数。
+      initial-size: 1 # 连接池初始化时创建的连接数。
+      max-wait: 6000 # 连接池耗尽时获取连接的最大等待毫秒数。
+      min-idle: 1 # 连接池保持的最小空闲连接数。
+      time-between-eviction-runs-millis: 60000 # 空闲连接检测任务的执行间隔，单位毫秒。
+      min-evictable-idle-time-millis: 30000 # 连接允许被回收前的最小空闲时间，单位毫秒。
+      validation-query: SELECT 1 # 检测 PostgreSQL 连接有效性的 SQL。
+      test-while-idle: true # 空闲检测时校验连接有效性。
+      test-on-borrow: false # 借出连接时不额外执行检测 SQL，避免增加请求延迟。
+      test-on-return: false # 归还连接时不额外执行检测 SQL。
+      pool-prepared-statements: true # 缓存数据库预编译语句。
+      max-open-prepared-statements: 20 # 单个连接允许缓存的最大预编译语句数量。
+      async-init: true # 异步完成连接池初始化，缩短主线程阻塞时间。
+      filters: wall,stat # 启用 SQL 防火墙和统计过滤器。
+      filter:
+        stat:
+          enabled: true # 启用 Druid SQL 统计过滤器。
+          log-slow-sql: true # 将超过阈值的 SQL 记录为慢 SQL。
+          slow-sql-millis: 5000 # 慢 SQL 判定阈值，单位毫秒。
+          merge-sql: false # 不合并参数不同但结构相同的 SQL 统计。
   kafka:
-    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:29092}
-    properties:
-      security.protocol: ${UPMS_KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
-      sasl.mechanism: ${UPMS_KAFKA_SASL_MECHANISM:PLAIN}
-      sasl.jaas.config: >-
-        org.apache.kafka.common.security.plain.PlainLoginModule required
-        username="${UPMS_KAFKA_USERNAME:admin}"
-        password="${UPMS_KAFKA_PASSWORD}";
     producer:
-      acks: all
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all # 等待所有同步副本确认消息，提高发送可靠性。
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息体序列化器。
       properties:
-        enable.idempotence: true
+        enable.idempotence: true # 启用 Kafka Producer 幂等发送。
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      connect-timeout: 3s
-      database: 4
+      # Redis 客户端行为在各环境保持一致，连接地址和凭证由环境配置提供。
+      connect-timeout: 3s # Redis 建立连接的最大等待时间。
       lettuce:
         pool:
-          enabled: true
-          min-idle: 10
-          max-idle: 20
-          max-active: 20
-          max-wait: 5s
+          enabled: true # 启用 Lettuce 连接池。
+          min-idle: 10 # 连接池保持的最小空闲连接数。
+          max-idle: 20 # 连接池允许的最大空闲连接数。
+          max-active: 20 # 连接池允许的最大活动连接数。
+          max-wait: 5s # 连接池耗尽时获取连接的最大等待时间。
+  h2:
+    console:
+      enabled: false # 禁止暴露 H2 Web 控制台。
+  sql:
+    init:
+      mode: never # 禁止应用启动时自动执行初始化 SQL，由部署流程负责建表。
+      schema-locations:
+        - classpath:/sql/oauth2/postgresql/schema.sql # OAuth2 PostgreSQL 建表脚本位置。
+        - classpath:/sql/postgresql/schema.sql # UPMS PostgreSQL 建表脚本位置。
+      data-locations:
+        - classpath:/sql/postgresql/data.sql # UPMS 初始化数据脚本位置。
 
+# JetCache 同时启用进程内 Caffeine 一级缓存和 Redis 二级缓存。
 jetcache:
-  statIntervalMinutes: 15
-  areaInCacheName: false
+  statIntervalMinutes: 15 # 每 15 分钟输出一次缓存统计信息。
+  areaInCacheName: false # 缓存名称中不拼接 JetCache area，保持键名简洁。
   local:
     default:
-      type: caffeine
-      keyConvertor: fastjson2
-      limit: 1000
+      type: caffeine # 默认本地缓存实现。
+      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
+      limit: 1000 # 单个本地缓存实例允许保存的最大条目数。
   remote:
     default:
-      type: redis.springdata
-      keyPrefix: "${spring.application.name}:"
-      keyConvertor: fastjson2
-      valueEncoder: bean:jetCacheFastjson2ValueEncoder
-      valueDecoder: bean:jetCacheFastjson2ValueDecoder
+      type: redis.springdata # 通过 Spring Data Redis 实现远程缓存。
+      keyPrefix: "${spring.application.name}:" # 使用应用名称隔离不同服务的缓存键空间。
+      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
+      valueEncoder: bean:jetCacheFastjson2ValueEncoder # 使用框架提供的 Fastjson2 编码器写入缓存。
+      valueDecoder: bean:jetCacheFastjson2ValueDecoder # 使用框架提供的 Fastjson2 解码器读取缓存。
 
 
 
 system:
   security:
     access-token:
-      expired: 60
-      timeUnit: minutes
+      expired: 60 # 访问令牌有效期数值。
+      timeUnit: minutes # 访问令牌有效期单位。
 
     refresh-token:
-      expired: 7
-      timeUnit: days
+      expired: 7 # 刷新令牌有效期数值。
+      timeUnit: days # 刷新令牌有效期单位。
 
     permissions:
+      # 以下接口无需执行登录权限校验。
       ignore:
-        - /druid/**
-        - /v1/config/values
+        - /druid/** # Druid 本地监控页面路径。
+        - /v1/config/values # 前端读取公开配置值的接口路径。
 
     oauth2:
       authorization-server:
-        enabled: "${UPMS_OAUTH2_AUTHORIZATION_SERVER_ENABLED:false}"
-        issuer: "${UPMS_OAUTH2_ISSUER:http://127.0.0.1:${server.port}}"
+        enabled: "${UPMS_OAUTH2_AUTHORIZATION_SERVER_ENABLED:false}" # 是否启用 OAuth2 授权服务器。
+        issuer: "${UPMS_OAUTH2_ISSUER:http://127.0.0.1:${server.port}}" # OAuth2 令牌签发者地址。
       session:
-        enabled: "${ETD_JSESSIONID_ENABLED:true}"
-        timeout: "${ETD_JSESSIONID_TIMEOUT:30m}"
-        namespace: "${ETD_JSESSIONID_NAMESPACE:etd:upms:oauth2:session}"
-        cookie-name: "${ETD_JSESSIONID_COOKIE_NAME:ETD_JSESSIONID}"
-        login-page: "${UPMS_OAUTH2_LOGIN_PAGE:/login}"
-        consent-page: "${UPMS_OAUTH2_CONSENT_PAGE:/consent}"
-        redirect-parameter: "${UPMS_OAUTH2_REDIRECT_PARAMETER:redirect}"
+        enabled: "${ETD_JSESSIONID_ENABLED:true}" # 是否启用 OAuth2 登录会话。
+        timeout: "${ETD_JSESSIONID_TIMEOUT:30m}" # 登录会话空闲超时时间。
+        namespace: "${ETD_JSESSIONID_NAMESPACE:etd:upms:oauth2:session}" # Redis 会话键命名空间。
+        cookie-name: "${ETD_JSESSIONID_COOKIE_NAME:ETD_JSESSIONID}" # 浏览器会话 Cookie 名称。
+        login-page: "${UPMS_OAUTH2_LOGIN_PAGE:/login}" # 未登录用户跳转的登录页面路径。
+        consent-page: "${UPMS_OAUTH2_CONSENT_PAGE:/consent}" # OAuth2 授权确认页面路径。
+        redirect-parameter: "${UPMS_OAUTH2_REDIRECT_PARAMETER:redirect}" # 登录成功后的跳转地址参数名。
 etd:
   event:
     bus:
-      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
+      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus} # UPMS 向事件中心发送消息的统一 Kafka Topic。
       client:
-        verify-connection-on-startup: ${UPMS_KAFKA_VERIFY_CONNECTION:true}
-        connection-timeout: ${UPMS_KAFKA_CONNECTION_TIMEOUT:10s}
+        verify-connection-on-startup: ${UPMS_KAFKA_VERIFY_CONNECTION:true} # 启动时是否验证 Kafka 可连接。
+        connection-timeout: ${UPMS_KAFKA_CONNECTION_TIMEOUT:10s} # 启动连接验证的最大等待时间。
         id-generator:
-          worker-id: ${ETD_EVENT_WORKER_ID:1}
-          datacenter-id: ${ETD_EVENT_DATACENTER_ID:1}
+          worker-id: ${ETD_EVENT_WORKER_ID:1} # 事件 ID 生成器的工作节点编号。
+          datacenter-id: ${ETD_EVENT_DATACENTER_ID:1} # 事件 ID 生成器的数据中心编号。
         async:
-          core-pool-size: ${ETD_EVENT_ASYNC_CORE_POOL_SIZE:2}
-          max-pool-size: ${ETD_EVENT_ASYNC_MAX_POOL_SIZE:8}
-          queue-capacity: ${ETD_EVENT_ASYNC_QUEUE_CAPACITY:1000}
+          core-pool-size: ${ETD_EVENT_ASYNC_CORE_POOL_SIZE:2} # 异步事件发送线程池核心线程数。
+          max-pool-size: ${ETD_EVENT_ASYNC_MAX_POOL_SIZE:8} # 异步事件发送线程池最大线程数。
+          queue-capacity: ${ETD_EVENT_ASYNC_QUEUE_CAPACITY:1000} # 异步事件发送线程池队列容量。
   mybatis:
     tenant:
-      enabled: true
-      column-name: tenant_id
+      enabled: true # 启用 MyBatis-Plus 租户隔离插件。
+      column-name: tenant_id # 业务表统一使用的租户字段名。
+      # 以下系统公共表不追加 tenant_id 查询条件。
       ignore-tables:
         - sys_tenant
         - sys_menus
@@ -117,9 +146,10 @@ etd:
         - oauth2_authorization
         - oauth2_authorization_consent
     fill:
-      enabled: true
+      enabled: true # 启用框架实体字段自动填充能力。
     data-permission:
-      enabled: true
+      enabled: true # 启用组织和用户维度的数据权限过滤。
+      # 以下平台公共表不追加组织数据权限条件。
       ignore-tables:
         - sys_tenant
         - sys_role

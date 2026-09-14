@@ -56,7 +56,20 @@ values (1000001, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:
        (1000008, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
         '组织架构', '/system/organizations', '@/views/system/organizations/index.vue', 'ApartmentOutlined', 'MENU', 40, 'system:organization'),
        (1000009, 1000004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '系统配置', '/system/config', '@/views/system/config/index.vue', 'SettingOutlined', 'MENU', 50, 'system:config')
+        '系统配置', '/system/config', '@/views/system/config/index.vue', 'SettingOutlined', 'MENU', 50, 'system:config'),
+       (1000010, null, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件中心', '/event', null, 'NotificationOutlined', 'DIRECTORY', 50, null),
+       (1000011, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件类型', '/event/types', '@/views/event/types/index.vue', 'TagsOutlined', 'MENU', 10, 'event:type'),
+       (1000012, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件订阅', '/event/subscriptions', '@/views/event/subscriptions/index.vue', 'ApiOutlined', 'MENU', 20,
+        'event:subscription'),
+       (1000013, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件消息', '/event/messages', '@/views/event/messages/index.vue', 'MessageOutlined', 'MENU', 30,
+        'event:message'),
+       (1000014, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '投递管理', '/event/deliveries', '@/views/event/deliveries/index.vue', 'SendOutlined', 'MENU', 40,
+        'event:delivery')
 on conflict (id) do update
 set menu_router = excluded.menu_router, permission_code = excluded.permission_code;
 
@@ -72,7 +85,12 @@ values (1100001, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475
        (1100006, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000006),
        (1100007, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000007),
        (1100008, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000008),
-       (1100009, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000009)
+       (1100009, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000009),
+       (1100010, current_timestamp, 1, current_timestamp, 1, 1, 1, 1000010),
+       (1100011, current_timestamp, 1, current_timestamp, 1, 1, 1, 1000011),
+       (1100012, current_timestamp, 1, current_timestamp, 1, 1, 1, 1000012),
+       (1100013, current_timestamp, 1, current_timestamp, 1, 1, 1, 1000013),
+       (1100014, current_timestamp, 1, current_timestamp, 1, 1, 1, 1000014)
 on conflict (id) do nothing;
 
 /*==============================================================*/

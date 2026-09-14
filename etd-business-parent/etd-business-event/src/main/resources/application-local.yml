@@ -1,0 +1,12 @@
+# Event 服务本地环境差异配置，公共行为统一定义在 application.yml。
+spring:
+  datasource:
+    # 本地环境只负责选择对应的 ShardingSphere 数据源配置文件。
+    url: jdbc:shardingsphere:classpath:sharding-event-local.yaml?placeholder-type=environment
+  data:
+    redis:
+      # Event 本地 Redis 连接信息与其他环境隔离。
+      host: ${EVENT_REDIS_HOST:127.0.0.1}       # Redis 主机地址，默认连接本机。
+      port: ${EVENT_REDIS_PORT:30637}           # Redis 服务端口，默认使用本地容器映射端口。
+      password: ${EVENT_REDIS_PASSWORD:123456}  # Redis 认证密码，仅作为本地开发默认值。
+      database: ${EVENT_REDIS_DATABASE:4}       # Redis 逻辑库编号，缓存键仍按应用名称隔离。

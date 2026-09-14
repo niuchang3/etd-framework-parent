@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.etd.event.constant.EventPermissionCode;
-import org.etd.event.constant.EventShardingConstant;
 import org.etd.event.delivery.controller.vo.EventDeliveryVO;
 import org.etd.event.delivery.service.EventDeliveryService;
 import org.etd.framework.common.core.model.ResultModel;
@@ -53,25 +53,23 @@ public class EventDeliveryController {
     }
 
     /**
-     * 按分片键查询投递任务详情。
+     * 按事件标识精确路由物理分表并查询投递任务详情。
      */
-    @GetMapping("/{shardingKey}/{id}")
+    @GetMapping("/{eventId}/{id}")
     public ResultModel<EventDeliveryVO> get(
-                                             @PathVariable @Min(0) @Max(EventShardingConstant.MAX_SHARDING_KEY)
-                                             Short shardingKey,
+                                             @PathVariable @NotBlank String eventId,
                                              @PathVariable Long id) {
-        return ResultModel.success(deliveryService.fetchByShardingKeyAndId(shardingKey, id));
+        return ResultModel.success(deliveryService.fetchByEventIdAndId(eventId, id));
     }
 
     /**
      * 仅重播当前失败投递任务，不会让同一消息的其他消费组再次收到消息。
      */
     @AutoLog("人工重播事件投递任务")
-    @PostMapping("/{shardingKey}/{id}/replay")
+    @PostMapping("/{eventId}/{id}/replay")
     public ResultModel<Boolean> replay(
-                                        @PathVariable @Min(0) @Max(EventShardingConstant.MAX_SHARDING_KEY)
-                                        Short shardingKey,
+                                        @PathVariable @NotBlank String eventId,
                                         @PathVariable Long id) {
-        return ResultModel.success(deliveryService.replayFailedDelivery(shardingKey, id));
+        return ResultModel.success(deliveryService.replayFailedDelivery(eventId, id));
     }
 }

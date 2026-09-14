@@ -1,0 +1,61 @@
+# Event 本地环境的 ShardingSphere-JDBC 配置，由 ShardingSphere Driver 直接加载。
+# 事件中心逻辑数据库名称。当前版本仅分表，不分库。
+databaseName: etd_event
+
+dataSources:
+  event_ds:
+    # 与 UPMS 本地环境保持一致，物理连接池统一使用 Druid。
+    dataSourceClassName: com.alibaba.druid.pool.DruidDataSource # 真实物理数据源使用 Druid。
+    driverClassName: org.postgresql.Driver # PostgreSQL JDBC 驱动类。
+    # $${变量名::默认值} 是 ShardingSphere environment 占位符语法。
+    url: jdbc:postgresql://$${EVENT_DB_HOST::127.0.0.1}:$${EVENT_DB_PORT::30432}/$${EVENT_DB_NAME::event}
+    username: $${EVENT_DB_USERNAME::root} # PostgreSQL 用户名，未设置环境变量时使用本地默认值。
+    password: $${EVENT_DB_PASSWORD::123456} # PostgreSQL 密码，未设置环境变量时使用本地默认值。
+    maxActive: 20 # 连接池允许的最大活动连接数。
+    initialSize: 1 # 连接池初始化时创建的连接数。
+    maxWait: 6000 # 连接池耗尽时获取连接的最大等待毫秒数。
+    minIdle: 1 # 连接池保持的最小空闲连接数。
+    timeBetweenEvictionRunsMillis: 60000 # 空闲连接检测任务的执行间隔，单位毫秒。
+    minEvictableIdleTimeMillis: 30000 # 连接允许被回收前的最小空闲时间，单位毫秒。
+    validationQuery: SELECT 1 # 检测 PostgreSQL 连接有效性的 SQL。
+    testWhileIdle: true # 空闲检测时校验连接有效性。
+    testOnBorrow: false # 借出连接时不额外执行检测 SQL，避免增加请求延迟。
+    testOnReturn: false # 归还连接时不额外执行检测 SQL。
+    poolPreparedStatements: true # 缓存数据库预编译语句。
+    maxOpenPreparedStatements: 20 # 单个连接允许缓存的最大预编译语句数量。
+    asyncInit: true # 异步完成连接池初始化，缩短主线程阻塞时间。
+    filters: wall,stat # 启用 SQL 防火墙和统计过滤器。
+
+rules:
+  # 两张运行表使用相同 event_id 算法，确保消息及其投递记录落在同号分片。
+  - !SHARDING
+    autoTables:
+      evt_event_message:
+        actualDataSources: event_ds # 消息逻辑表只使用 event_ds 数据源。
+        shardingStrategy:
+          standard:
+            shardingColumn: event_id # 使用事件全局标识作为分片键。
+            shardingAlgorithmName: event_id_hash_mod # 引用下方 HASH_MOD 算法。
+      evt_event_delivery:
+        actualDataSources: event_ds # 投递逻辑表只使用 event_ds 数据源。
+        shardingStrategy:
+          standard:
+            shardingColumn: event_id # 与消息表使用相同分片键。
+            shardingAlgorithmName: event_id_hash_mod # 与消息表使用相同分片算法。
+    bindingTables:
+      - evt_event_message,evt_event_delivery # 声明绑定表，保证相同事件的关联查询同路由。
+    shardingAlgorithms:
+      event_id_hash_mod:
+        type: HASH_MOD # 使用 ShardingSphere 内置哈希取模算法。
+        props:
+          sharding-count: 2 # local 环境下两张运行表均固定路由到 2 张物理表。
+
+  # 配置表不分片，但仍交由同一个 ShardingSphere 逻辑数据源管理。
+  - !SINGLE
+    tables:
+      - event_ds.public.evt_event_type # 事件类型配置表不分片。
+      - event_ds.public.evt_event_subscription # 事件订阅配置表不分片。
+    defaultDataSource: event_ds # 未指定数据源的单表统一路由到 event_ds。
+
+props:
+  sql-show: $${EVENT_SHARDING_SQL_SHOW::false} # 是否输出 ShardingSphere 改写后的 SQL，默认关闭。

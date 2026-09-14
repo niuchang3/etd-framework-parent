@@ -17,7 +17,8 @@
 - 统一响应：`{ code, devMessage, message, data, url }`，业务数据读取 `data`。
 - MyBatis-Plus 分页数据位于 `data.records`，并同时返回 `total/current/size/pages`。
 - 所有时间均为带偏移量的 ISO-8601 时间点，例如 `2026-09-14T18:00:00.000+08:00`。筛选参数原样传递，不要在前端固定增减小时。
-- 运行大表后续固定分为 16 片，合法 `shardingKey` 为 `0..15`。进入消息详情或执行投递重播时，必须同时传递列表行中的 `shardingKey` 和 `id`，禁止只传主键。
+- local 环境下消息表和投递表已经按 `eventId` 固定分为 2 张物理表。进入消息详情或执行投递重播时，必须同时传递列表行中的 `eventId` 和 `id`，禁止只传主键；后端会使用 `eventId` 精确路由物理分表。
+- 将 `eventId` 放入路径前必须调用 `encodeURIComponent`，不要自行计算物理表后缀。
 - 事件类型编码和订阅编码创建后不可修改，编辑表单中应禁用对应输入框。
 - 更新事件类型和订阅时必须回传详情中的 `version`，发生并发冲突后提示用户刷新。
 
@@ -50,7 +51,7 @@
 ### 3. 事件消息 `/event/messages`
 
 - `GET /v1/event/messages`：分页查询。参数：`current`、`size`、精确匹配的 `eventId`、`eventTypeId`、`sourceApplication`、`startTime`、`endTime`。
-- `GET /v1/event/messages/{shardingKey}/{id}`：聚合详情，返回：
+- `GET /v1/event/messages/{eventId}/{id}`：聚合详情，返回：
   - `message`：原始消息、上下文和业务 JSON 载荷；
   - `eventType`：事件类型定义；
   - `deliveryList`：该消息面向每个业务订阅的独立投递结果。
@@ -60,8 +61,8 @@
 ### 4. 投递管理 `/event/deliveries`
 
 - `GET /v1/event/deliveries`：分页查询。参数：`current`、`size`、精确匹配的 `eventId`、`subscriptionId`、`deliveryStatus`、`startTime`、`endTime`。
-- `GET /v1/event/deliveries/{shardingKey}/{id}`：投递详情。
-- `POST /v1/event/deliveries/{shardingKey}/{id}/replay`：定向重播当前失败订阅。
+- `GET /v1/event/deliveries/{eventId}/{id}`：投递详情。
+- `POST /v1/event/deliveries/{eventId}/{id}/replay`：定向重播当前失败订阅。
 
 投递状态映射必须集中定义：`0 待投递`、`1 投递中`、`2 成功`、`3 等待重试`、`4 死信`。仅状态 `3`、`4` 展示“重播”按钮。重播前弹出二次确认，明确显示事件 ID、订阅名称、订阅应用和目标 Topic；成功后刷新当前列表与详情。不要实现“整条消息全部重播”或批量重播。
 

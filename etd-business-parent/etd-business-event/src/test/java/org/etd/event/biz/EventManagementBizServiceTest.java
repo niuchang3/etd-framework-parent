@@ -35,11 +35,11 @@ class EventManagementBizServiceTest {
         message.setEventTypeId(20L);
         EventTypeVO type = new EventTypeVO();
         List<EventDeliveryVO> deliveryList = List.of(new EventDeliveryVO());
-        when(messageService.fetchByShardingKeyAndId((short) 2, 10L)).thenReturn(message);
+        when(messageService.fetchByEventIdAndId("event-10", 10L)).thenReturn(message);
         when(typeService.fetchById(20L)).thenReturn(type);
-        when(deliveryService.selectListByMessage((short) 2, 10L)).thenReturn(deliveryList);
+        when(deliveryService.selectListByMessage("event-10", 10L)).thenReturn(deliveryList);
 
-        EventMessageDetailVO detail = service.fetchMessageDetail((short) 2, 10L);
+        EventMessageDetailVO detail = service.fetchMessageDetail("event-10", 10L);
 
         assertSame(message, detail.getMessage());
         assertSame(type, detail.getEventType());

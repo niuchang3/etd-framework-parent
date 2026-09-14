@@ -11,5 +11,5 @@ import java.time.Instant;
 public interface EventMessageService {
     IPage<EventMessageVO> page(long current, long size, String eventId, Long eventTypeId,
                                String sourceApplication, Instant startTime, Instant endTime);
-    EventMessageVO fetchByShardingKeyAndId(Short shardingKey, Long id);
+    EventMessageVO fetchByEventIdAndId(String eventId, Long id);
 }

@@ -12,7 +12,7 @@ import java.util.List;
 public interface EventDeliveryService {
     IPage<EventDeliveryVO> page(long current, long size, String eventId, Long subscriptionId,
                                 Integer deliveryStatus, Instant startTime, Instant endTime);
-    EventDeliveryVO fetchByShardingKeyAndId(Short shardingKey, Long id);
-    List<EventDeliveryVO> selectListByMessage(Short shardingKey, Long eventMessageId);
-    boolean replayFailedDelivery(Short shardingKey, Long id);
+    EventDeliveryVO fetchByEventIdAndId(String eventId, Long id);
+    List<EventDeliveryVO> selectListByMessage(String eventId, Long eventMessageId);
+    boolean replayFailedDelivery(String eventId, Long id);
 }

@@ -7,7 +7,6 @@
                d.update_time,
                d.version,
                d.event_id,
-               d.sharding_key,
                d.event_message_id,
                d.subscription_id,
                s.subscription_code,
@@ -49,7 +48,7 @@
 
     <select id="selectListByMessage" resultType="org.etd.event.delivery.controller.vo.EventDeliveryVO">
         <include refid="deliveryColumns"/>
-        where d.sharding_key = #{shardingKey}
+        where d.event_id = #{eventId}
           and d.event_message_id = #{eventMessageId}
           and d.del_flag = 0
         order by d.id

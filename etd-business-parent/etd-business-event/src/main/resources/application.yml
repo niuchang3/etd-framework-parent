@@ -1,13 +1,72 @@
+# Event 服务公共配置，各环境差异连接信息应放入 application-{profile}.yml。
 server:
-  port: 8200
+  port: 8200 # Event 服务监听端口。
 
 spring:
+  profiles:
+    active: local # 默认启用本地环境，可由启动参数覆盖。
   application:
-    name: event
+    name: event # 应用名称，同时用于日志、注册发现和缓存键前缀。
+  datasource:
+    # 所有环境统一通过 ShardingSphere Driver 访问逻辑数据源。
+    driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
+  h2:
+    console:
+      enabled: false # 禁止暴露 H2 Web 控制台。
+  sql:
+    init:
+      mode: never # 禁止应用启动时自动执行初始化 SQL，由部署流程负责建表。
+      schema-locations:
+        - classpath:/sql/postgresql/schema.sql # Event PostgreSQL 建表脚本位置。
+  data:
+    redis:
+      # Redis 客户端行为在各环境保持一致，连接地址和凭证由环境配置提供。
+      connect-timeout: 3s # Redis 建立连接的最大等待时间。
+      lettuce:
+        pool:
+          enabled: true # 启用 Lettuce 连接池。
+          min-idle: 10 # 连接池保持的最小空闲连接数。
+          max-idle: 20 # 连接池允许的最大空闲连接数。
+          max-active: 20 # 连接池允许的最大活动连接数。
+          max-wait: 5s # 连接池耗尽时获取连接的最大等待时间。
   jackson:
-    time-zone: Asia/Shanghai
+    time-zone: Asia/Shanghai # HTTP 时间字段统一按东八区序列化。
+
+# JetCache 同时启用进程内 Caffeine 一级缓存和 Redis 二级缓存。
+jetcache:
+  statIntervalMinutes: 15 # 每 15 分钟输出一次缓存统计信息。
+  areaInCacheName: false # 缓存名称中不拼接 JetCache area，保持键名简洁。
+  local:
+    default:
+      type: caffeine # 默认本地缓存实现。
+      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
+      limit: 1000 # 单个本地缓存实例允许保存的最大条目数。
+  remote:
+    default:
+      type: redis.springdata # 通过 Spring Data Redis 实现远程缓存。
+      keyPrefix: "${spring.application.name}:" # 使用应用名称隔离不同服务的缓存键空间。
+      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
+      valueEncoder: bean:jetCacheFastjson2ValueEncoder # 使用框架提供的 Fastjson2 编码器写入缓存。
+      valueDecoder: bean:jetCacheFastjson2ValueDecoder # 使用框架提供的 Fastjson2 解码器读取缓存。
 
 etd:
   event:
     bus:
-      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
+      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus} # Event 服务接收客户端事件的统一 Kafka Topic。
+  mybatis:
+    fill:
+      enabled: true # 启用框架实体字段自动填充能力。
+    # 事件中心是平台级基础设施，四张逻辑表不参与租户与组织数据隔离。
+    tenant:
+      ignore-tables:
+        - evt_event_type
+        - evt_event_message
+        - evt_event_subscription
+        - evt_event_delivery
+    data-permission:
+      # 事件中心运行数据不追加组织数据权限条件。
+      ignore-tables:
+        - evt_event_type
+        - evt_event_message
+        - evt_event_subscription
+        - evt_event_delivery

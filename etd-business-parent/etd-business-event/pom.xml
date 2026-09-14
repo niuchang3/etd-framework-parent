@@ -24,6 +24,11 @@
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-web</artifactId>
         </dependency>
+        <!-- 事件中心显式使用框架统一的 Redis 与 JetCache 能力，不依赖其他 starter 间接传递。 -->
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-cache</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-mybatis</artifactId>
@@ -43,6 +48,28 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- ShardingSphere Driver 读取 YAML，具体能力模块负责分表、PostgreSQL 方言和本地元数据。 -->
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-sharding-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-jdbc-dialect-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-standalone-mode-repository-memory</artifactId>
+        </dependency>
+        <!-- ShardingSphere JDBC 默认 ALL_PERMITTED 权限规则需要此 SPI 实现。 -->
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-authority-simple</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

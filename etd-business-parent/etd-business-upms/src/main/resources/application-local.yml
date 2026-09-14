@@ -1,49 +1,32 @@
+# UPMS 服务本地环境差异配置，公共行为统一定义在 application.yml。
 spring:
   datasource:
     druid:
-      driver-class-name: org.postgresql.Driver
+      # 本地环境只定义 PostgreSQL 连接信息，连接池公共参数位于 application.yml。
       url: jdbc:postgresql://${UPMS_DB_HOST:127.0.0.1}:${UPMS_DB_PORT:30432}/${UPMS_DB_NAME:upms}
-      username: ${UPMS_DB_USERNAME:root}
-      password: ${UPMS_DB_PASSWORD:123456}
-      max-active: 20
-      initial-size: 1
-      max-wait: 6000
-      min-idle: 1
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 30000
-      validation-query: SELECT 1
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      max-open-prepared-statements: 20
-      async-init: true
-      filters: wall,stat
+      username: ${UPMS_DB_USERNAME:root} # PostgreSQL 用户名，仅提供本地开发默认值。
+      password: ${UPMS_DB_PASSWORD:123456} # PostgreSQL 密码，仅提供本地开发默认值。
       stat-view-servlet:
-        enabled: true                                       # 是否开启 StatViewServlet
-        allow: 127.0.0.1                                    # 访问监控页面 白名单，默认127.0.0.1
-        deny: 192.168.56.1                                  # 访问监控页面 黑名单
-        login-username: admin                               # 访问监控页面 登陆账号
-        login-password: admin                               # 访问监控页面 登陆密码
-      filter:
-        stat:
-          enabled: true                                     # 是否开启 FilterStat，默认true
-          log-slow-sql: true                                # 是否开启 慢SQL 记录，默认false
-          slow-sql-millis: 5000                             # 慢 SQL 的标准，默认 3000，单位：毫秒
-          merge-sql: false
-  h2:
-    console:
-      enabled: false
-  sql:
-    init:
-      mode: never
-      schema-locations:
-        - classpath:/sql/oauth2/postgresql/schema.sql
-        - classpath:/sql/postgresql/schema.sql
-      data-locations:
-        - classpath:/sql/postgresql/data.sql
+        enabled: true # 本地环境开启 Druid 监控页面。
+        allow: 127.0.0.1 # 只允许本机访问 Druid 监控页面。
+        deny: 192.168.56.1 # 明确拒绝该本地虚拟网卡地址访问。
+        login-username: admin # 本地 Druid 监控页面登录账号。
+        login-password: admin # 本地 Druid 监控页面登录密码。
+  kafka:
+    # Kafka 集群地址及认证信息按环境隔离。
+    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:29092} # Kafka 集群引导地址。
+    properties:
+      security.protocol: ${UPMS_KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT} # 使用 SASL 认证且默认不启用 TLS。
+      sasl.mechanism: ${UPMS_KAFKA_SASL_MECHANISM:PLAIN} # 使用用户名和密码执行 PLAIN 认证。
+      # JAAS 登录串由 Kafka 客户端直接读取，密码不设置默认值。
+      sasl.jaas.config: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${UPMS_KAFKA_USERNAME:admin}"
+        password="${UPMS_KAFKA_PASSWORD}";
   data:
     redis:
-      host: ${UPMS_REDIS_HOST:127.0.0.1}
-      port: ${UPMS_REDIS_PORT:30637}
-      password: ${UPMS_REDIS_PASSWORD:123456}
+      # Redis 连接地址及凭证按环境隔离。
+      host: ${UPMS_REDIS_HOST:127.0.0.1} # Redis 主机地址，默认连接本机。
+      port: ${UPMS_REDIS_PORT:30637} # Redis 服务端口，默认使用本地容器映射端口。
+      password: ${UPMS_REDIS_PASSWORD:123456} # Redis 认证密码，仅作为本地开发默认值。
+      database: 4 # UPMS 使用的 Redis 逻辑库编号。
