@@ -103,6 +103,10 @@ etd:
         id-generator:
           worker-id: ${ETD_EVENT_WORKER_ID:1}
           datacenter-id: ${ETD_EVENT_DATACENTER_ID:1}
+        async:
+          core-pool-size: ${ETD_EVENT_ASYNC_CORE_POOL_SIZE:2}
+          max-pool-size: ${ETD_EVENT_ASYNC_MAX_POOL_SIZE:8}
+          queue-capacity: ${ETD_EVENT_ASYNC_QUEUE_CAPACITY:1000}
   mybatis:
     tenant:
       enabled: true

@@ -35,6 +35,11 @@ public class EventClientProperties {
     private IdGenerator idGenerator = new IdGenerator();
 
     /**
+     * 事件异步发送线程池配置。
+     */
+    private Async async = new Async();
+
+    /**
      * 事件 ID 雪花节点配置，同一时刻运行的实例必须使用唯一的节点组合。
      */
     @Data
@@ -49,5 +54,27 @@ public class EventClientProperties {
          * 数据中心 ID。
          */
         private long datacenterId = 1;
+    }
+
+    /**
+     * 事件异步发送线程池配置。
+     */
+    @Data
+    public static class Async {
+
+        /**
+         * 常驻工作线程数。
+         */
+        private int corePoolSize = 2;
+
+        /**
+         * 最大工作线程数。
+         */
+        private int maxPoolSize = 8;
+
+        /**
+         * 等待发送任务队列容量。
+         */
+        private int queueCapacity = 1000;
     }
 }

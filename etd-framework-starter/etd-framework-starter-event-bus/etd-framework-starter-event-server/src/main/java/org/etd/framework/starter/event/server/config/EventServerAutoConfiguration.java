@@ -8,12 +8,16 @@ import org.etd.framework.starter.event.client.config.EventClientAutoConfiguratio
 import org.etd.framework.starter.event.server.consumer.EventConsumerInvoker;
 import org.etd.framework.starter.event.server.consumer.KafkaEventConsumerAdapter;
 import org.etd.framework.starter.event.server.forward.EventMessageForwarder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskExecutor;
+
+import static org.etd.framework.starter.event.client.config.EventClientAutoConfiguration.EVENT_BUS_TASK_EXECUTOR;
 
 /**
  * 事件总线消费端 Kafka 自动配置。
@@ -57,7 +61,9 @@ public class EventServerAutoConfiguration {
     @Bean
     @ConditionalOnBean(EventMessageSender.class)
     @ConditionalOnMissingBean(EventMessageForwarder.class)
-    public EventMessageForwarder eventMessageForwarder(EventMessageSender eventMessageSender) {
-        return new EventMessageForwarder(eventMessageSender);
+    public EventMessageForwarder eventMessageForwarder(EventMessageSender eventMessageSender,
+                                                       @Qualifier(EVENT_BUS_TASK_EXECUTOR)
+                                                       TaskExecutor taskExecutor) {
+        return new EventMessageForwarder(eventMessageSender, taskExecutor);
     }
 }

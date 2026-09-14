@@ -12,10 +12,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 /**
  * 发送端统一事件消息构建测试。
@@ -55,12 +55,24 @@ class EventMessageFactoryTest {
                 () -> "1000002", new ObjectMapper(), "upms");
         DefaultEventPublisher publisher = new DefaultEventPublisher(factory, (destination, message) -> {
             sentMessage.set(message);
-            return CompletableFuture.completedFuture(new EventSendResult(message.eventId(), destination));
-        }, properties);
+            return java.util.concurrent.CompletableFuture.completedFuture(
+                    new EventSendResult(message.eventId(), destination));
+        }, properties, Runnable::run);
 
-        String eventId = publisher.publish("upms.user.created", Map.of("userId", 2L)).join();
+        publisher.publish("upms.user.created", Map.of("userId", 2L));
 
-        assertThat(eventId).isEqualTo("1000002");
+        assertThat(sentMessage.get().eventId()).isEqualTo("1000002");
         assertThat(sentMessage.get().context()).containsEntry(HeaderConstant.TRACE_ID, "trace-002");
     }
+
+    @Test
+    void shouldNotInterruptCallerWhenEventIsInvalid() {
+        DefaultEventMessageFactory factory = new DefaultEventMessageFactory(
+                () -> "1000003", new ObjectMapper(), "upms");
+        DefaultEventPublisher publisher = new DefaultEventPublisher(factory,
+                (destination, message) -> null, new EventClientProperties(), Runnable::run);
+
+        assertThatNoException().isThrownBy(() -> publisher.publish(null, null));
+    }
+
 }

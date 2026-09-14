@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.framework.event.core.codec.EventMessageCodec;
 import org.etd.framework.event.core.id.EventIdGenerator;
 import org.etd.framework.event.core.sender.EventMessageSender;
+import org.etd.framework.starter.event.client.core.async.EventContextTaskDecorator;
+import org.etd.framework.starter.event.client.core.aspect.EventAspect;
 import org.etd.framework.starter.event.client.core.connection.KafkaConnectionVerifier;
 import org.etd.framework.starter.event.client.core.id.SnowflakeEventIdGenerator;
 import org.etd.framework.starter.event.client.core.message.DefaultEventMessageFactory;
@@ -16,10 +18,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.core.env.Environment;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * 事件总线发送端 Kafka 自动配置。
@@ -28,6 +33,25 @@ import org.springframework.kafka.core.KafkaTemplate;
 @ConditionalOnClass(KafkaTemplate.class)
 @EnableConfigurationProperties(EventClientProperties.class)
 public class EventClientAutoConfiguration {
+
+    public static final String EVENT_BUS_TASK_EXECUTOR = "eventBusTaskExecutor";
+
+    /**
+     * 创建事件专用异步线程池，队列满时拒绝任务并由发布入口记录失败日志。
+     */
+    @Bean(name = EVENT_BUS_TASK_EXECUTOR)
+    @ConditionalOnMissingBean(name = EVENT_BUS_TASK_EXECUTOR)
+    public ThreadPoolTaskExecutor eventBusTaskExecutor(EventClientProperties properties) {
+        EventClientProperties.Async async = properties.getAsync();
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(async.getCorePoolSize());
+        executor.setMaxPoolSize(async.getMaxPoolSize());
+        executor.setQueueCapacity(async.getQueueCapacity());
+        executor.setThreadNamePrefix("event-bus-sender-");
+        executor.setTaskDecorator(new EventContextTaskDecorator());
+        executor.setWaitForTasksToCompleteOnShutdown(false);
+        return executor;
+    }
 
     /**
      * 创建统一事件消息 JSON 编解码器。
@@ -77,8 +101,18 @@ public class EventClientAutoConfiguration {
     @ConditionalOnMissingBean(EventPublisher.class)
     public EventPublisher eventPublisher(EventMessageFactory eventMessageFactory,
                                          EventMessageSender eventMessageSender,
-                                         EventClientProperties properties) {
-        return new DefaultEventPublisher(eventMessageFactory, eventMessageSender, properties);
+                                         EventClientProperties properties,
+                                         @Qualifier(EVENT_BUS_TASK_EXECUTOR) TaskExecutor taskExecutor) {
+        return new DefaultEventPublisher(eventMessageFactory, eventMessageSender, properties, taskExecutor);
+    }
+
+    /**
+     * 创建业务方法注解事件切面。
+     */
+    @Bean
+    @ConditionalOnMissingBean(EventAspect.class)
+    public EventAspect eventAspect(EventPublisher eventPublisher) {
+        return new EventAspect(eventPublisher);
     }
 
     /**

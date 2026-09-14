@@ -33,8 +33,8 @@ class EventMessageForwarderTest {
         };
         EventMessage message = createMessage();
 
-        EventSendResult result = new EventMessageForwarder(sender)
-                .forward("etd.event.delivery.upms", message).join();
+        new EventMessageForwarder(sender, Runnable::run)
+                .forward("etd.event.delivery.upms", message);
 
         EventMessage forwarded = forwardedMessage.get();
         assertThat(forwarded.eventId()).isEqualTo(message.eventId());
@@ -46,7 +46,6 @@ class EventMessageForwarderTest {
         assertThat(forwarded.payload().get("userId").asLong()).isEqualTo(1L);
         assertThat(forwarded.context())
                 .containsEntry(HeaderConstant.TRACE_ID, "trace-001");
-        assertThat(result.eventId()).isEqualTo(message.eventId());
     }
 
     private EventMessage createMessage() {
