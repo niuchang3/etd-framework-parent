@@ -1,6 +1,7 @@
 package org.etd.framework.starter.event.client.core.id;
 
 import cn.hutool.core.lang.Snowflake;
+import org.etd.framework.event.core.id.EventIdGenerator;
 
 /**
  * 基于雪花算法的事件唯一标识生成器。

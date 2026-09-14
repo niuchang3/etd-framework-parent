@@ -1,6 +1,6 @@
 package org.etd.framework.starter.event.client.core.message;
 
-import org.etd.framework.starter.event.client.core.model.EventMessage;
+import org.etd.framework.event.core.model.EventMessage;
 
 /**
  * 统一事件消息工厂，在发布边界补齐总线元数据。

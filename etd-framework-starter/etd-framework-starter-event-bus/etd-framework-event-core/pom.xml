@@ -9,21 +9,9 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>etd-framework-starter-event-client</artifactId>
+    <artifactId>etd-framework-event-core</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-event-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -31,23 +19,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-common-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -62,5 +33,4 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
 </project>

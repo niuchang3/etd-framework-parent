@@ -124,6 +124,18 @@
                 <version>${etd.framework.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-event-core</artifactId>
+                <version>${etd.framework.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-starter-event-server</artifactId>
+                <version>${etd.framework.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>org.etd.framework</groupId>

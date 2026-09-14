@@ -3,8 +3,8 @@ package org.etd.framework.starter.event.client.core.message;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.framework.common.core.context.RequestContextInitializer;
-import org.etd.framework.starter.event.client.core.id.EventIdGenerator;
-import org.etd.framework.starter.event.client.core.model.EventMessage;
+import org.etd.framework.event.core.id.EventIdGenerator;
+import org.etd.framework.event.core.model.EventMessage;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 

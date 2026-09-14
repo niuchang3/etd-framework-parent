@@ -13,8 +13,9 @@
     <name>etd-framework-starter-event-bus</name>
 
     <modules>
-
+        <module>etd-framework-event-core</module>
         <module>etd-framework-starter-event-client</module>
+        <module>etd-framework-starter-event-server</module>
     </modules>
 
 
