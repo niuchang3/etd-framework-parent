@@ -3,6 +3,7 @@ package org.etd.framework.starter.event.server.consumer;
 import org.etd.framework.common.core.context.RequestContextInitializer;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.event.core.model.EventMessage;
+import org.etd.framework.starter.event.server.listener.EventTypeDispatcher;
 import org.slf4j.MDC;
 import org.springframework.util.StringUtils;
 
@@ -13,26 +14,20 @@ import java.util.List;
  */
 public class EventConsumerInvoker {
 
-    /**
-     * 在事件自身的请求上下文中处理单条消息。
-     */
-    public void invoke(EventMessage message, EventMessageHandler handler) throws Exception {
-        RequestContextInitializer.init(message.context());
-        setTraceIdToMdc();
-        try {
-            handler.handle(message);
-        } finally {
-            cleanContext();
-        }
+    private final EventTypeDispatcher eventTypeDispatcher;
+
+    public EventConsumerInvoker(EventTypeDispatcher eventTypeDispatcher) {
+        this.eventTypeDispatcher = eventTypeDispatcher;
     }
 
     /**
-     * 处理完整批次。批次可能包含多个上下文，因此不会写入任意一条消息的上下文。
+     * 在事件自身的请求上下文中处理单条消息。
      */
-    public void invokeBatch(List<EventMessage> messages, BatchEventMessageHandler handler) throws Exception {
-        cleanContext();
+    public void invoke(EventMessage message) throws Exception {
+        RequestContextInitializer.init(message.context());
+        setTraceIdToMdc();
         try {
-            handler.handle(List.copyOf(messages));
+            eventTypeDispatcher.dispatch(message);
         } finally {
             cleanContext();
         }
@@ -41,9 +36,9 @@ public class EventConsumerInvoker {
     /**
      * 使用批量拉取、逐条处理模式消费消息，每条消息均具有独立上下文作用域。
      */
-    public void invokeEach(List<EventMessage> messages, EventMessageHandler handler) throws Exception {
+    public void invokeEach(List<EventMessage> messages) throws Exception {
         for (EventMessage message : messages) {
-            invoke(message, handler);
+            invoke(message);
         }
     }
 

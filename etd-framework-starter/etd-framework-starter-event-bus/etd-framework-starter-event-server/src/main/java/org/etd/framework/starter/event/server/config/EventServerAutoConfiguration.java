@@ -9,7 +9,10 @@ import org.etd.framework.starter.event.client.config.EventClientAutoConfiguratio
 import org.etd.framework.starter.event.server.consumer.EventConsumerInvoker;
 import org.etd.framework.starter.event.server.consumer.KafkaEventConsumerAdapter;
 import org.etd.framework.starter.event.server.forward.EventMessageForwarder;
+import org.etd.framework.starter.event.server.listener.EventTypeDispatcher;
+import org.etd.framework.starter.event.server.listener.EventTypeListener;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -51,12 +54,21 @@ public class EventServerAutoConfiguration {
     }
 
     /**
-     * 创建单条和批量消费共用的上下文调用器。
+     * 收集全部事件类型监听器，并按 Spring 顺序规则创建事件分发器。
+     */
+    @Bean
+    @ConditionalOnMissingBean(EventTypeDispatcher.class)
+    public EventTypeDispatcher eventTypeDispatcher(ObjectProvider<EventTypeListener> listenerProvider) {
+        return new EventTypeDispatcher(listenerProvider.orderedStream().toList());
+    }
+
+    /**
+     * 创建单条和批量拉取逐条消费共用的上下文调用器。
      */
     @Bean
     @ConditionalOnMissingBean(EventConsumerInvoker.class)
-    public EventConsumerInvoker eventConsumerInvoker() {
-        return new EventConsumerInvoker();
+    public EventConsumerInvoker eventConsumerInvoker(EventTypeDispatcher eventTypeDispatcher) {
+        return new EventConsumerInvoker(eventTypeDispatcher);
     }
 
     /**

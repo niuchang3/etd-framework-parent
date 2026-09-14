@@ -31,11 +31,11 @@ public class KafkaEventConsumerAdapter {
     /**
      * 解码并消费单条 Kafka 消息。
      */
-    public void consume(String messageJson, EventMessageHandler handler) throws Exception {
+    public void consume(String messageJson) throws Exception {
         EventMessage message = decodeMessage(messageJson);
         logReceivedMessage(message);
         try {
-            eventConsumerInvoker.invoke(message, handler);
+            eventConsumerInvoker.invoke(message);
         } catch (Exception exception) {
             logHandleFailure(message, exception);
             throw exception;
@@ -43,27 +43,13 @@ public class KafkaEventConsumerAdapter {
     }
 
     /**
-     * 解码后将完整批次交给批量处理器，处理器通过每条消息读取独立上下文。
-     */
-    public void consumeBatch(List<String> messageJsonList, BatchEventMessageHandler handler) throws Exception {
-        List<EventMessage> messages = decodeMessages(messageJsonList);
-        logReceivedMessages(messages);
-        try {
-            eventConsumerInvoker.invokeBatch(messages, handler);
-        } catch (Exception exception) {
-            LOGGER.error("批量事件处理失败 count={}", messages.size(), exception);
-            throw exception;
-        }
-    }
-
-    /**
      * 批量拉取后逐条消费，每条消息均自动恢复并清理自己的请求上下文。
      */
-    public void consumeEach(List<String> messageJsonList, EventMessageHandler handler) throws Exception {
+    public void consumeEach(List<String> messageJsonList) throws Exception {
         List<EventMessage> messages = decodeMessages(messageJsonList);
         logReceivedMessages(messages);
         try {
-            eventConsumerInvoker.invokeEach(messages, handler);
+            eventConsumerInvoker.invokeEach(messages);
         } catch (Exception exception) {
             LOGGER.error("逐条事件处理失败 count={}", messages.size(), exception);
             throw exception;
