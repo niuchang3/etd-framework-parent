@@ -6,7 +6,6 @@ import org.etd.framework.common.core.context.RequestContextInitializer;
 import org.etd.framework.event.core.id.EventIdGenerator;
 import org.etd.framework.event.core.model.EventMessage;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -17,8 +16,6 @@ import java.util.Map;
  */
 public class DefaultEventMessageFactory implements EventMessageFactory {
 
-    private static final String UNKNOWN_SOURCE = "unknown";
-
     private final EventIdGenerator eventIdGenerator;
 
     private final ObjectMapper objectMapper;
@@ -26,9 +23,10 @@ public class DefaultEventMessageFactory implements EventMessageFactory {
     private final String source;
 
     public DefaultEventMessageFactory(EventIdGenerator eventIdGenerator, ObjectMapper objectMapper, String source) {
+        Assert.hasText(source, "事件来源应用名不能为空，请配置 spring.application.name");
         this.eventIdGenerator = eventIdGenerator;
         this.objectMapper = objectMapper;
-        this.source = StringUtils.hasText(source) ? source : UNKNOWN_SOURCE;
+        this.source = source;
     }
 
     @Override

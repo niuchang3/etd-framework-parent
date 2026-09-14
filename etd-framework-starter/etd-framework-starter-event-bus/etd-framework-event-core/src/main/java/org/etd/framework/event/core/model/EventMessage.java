@@ -48,7 +48,7 @@ public record EventMessage(
         if (source == null || source.isBlank()) {
             throw new IllegalArgumentException("事件来源不能为空");
         }
-        context = context == null ? Map.of() : Map.copyOf(context);
+        context = Map.copyOf(Objects.requireNonNull(context, "事件上下文不能为空"));
         payload = Objects.requireNonNull(payload, "事件主体不能为空");
     }
 }

@@ -5,7 +5,7 @@ import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.event.core.model.EventMessage;
 import org.etd.framework.event.core.sender.EventSendResult;
-import org.etd.framework.starter.event.client.config.EventClientProperties;
+import org.etd.framework.starter.event.client.config.EventBusProperties;
 import org.etd.framework.starter.event.client.core.message.DefaultEventMessageFactory;
 import org.etd.framework.starter.event.client.core.publisher.DefaultEventPublisher;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 发送端统一事件消息构建测试。
@@ -50,7 +51,7 @@ class EventMessageFactoryTest {
     void shouldPublishNewEventWithCapturedContext() {
         RequestContext.setTraceId("trace-002");
         AtomicReference<EventMessage> sentMessage = new AtomicReference<>();
-        EventClientProperties properties = new EventClientProperties();
+        EventBusProperties properties = new EventBusProperties();
         DefaultEventMessageFactory factory = new DefaultEventMessageFactory(
                 () -> "1000002", new ObjectMapper(), "upms");
         DefaultEventPublisher publisher = new DefaultEventPublisher(factory, (destination, message) -> {
@@ -70,9 +71,17 @@ class EventMessageFactoryTest {
         DefaultEventMessageFactory factory = new DefaultEventMessageFactory(
                 () -> "1000003", new ObjectMapper(), "upms");
         DefaultEventPublisher publisher = new DefaultEventPublisher(factory,
-                (destination, message) -> null, new EventClientProperties(), Runnable::run);
+                (destination, message) -> null, new EventBusProperties(), Runnable::run);
 
         assertThatNoException().isThrownBy(() -> publisher.publish(null, null));
+    }
+
+    @Test
+    void shouldRejectMissingSourceInsteadOfUsingFallbackValue() {
+        assertThatThrownBy(() -> new DefaultEventMessageFactory(
+                () -> "1000004", new ObjectMapper(), null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("事件来源应用名不能为空，请配置 spring.application.name");
     }
 
 }

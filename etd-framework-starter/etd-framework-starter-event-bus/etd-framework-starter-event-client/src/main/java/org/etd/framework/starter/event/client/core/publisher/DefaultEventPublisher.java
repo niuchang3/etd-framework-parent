@@ -3,7 +3,7 @@ package org.etd.framework.starter.event.client.core.publisher;
 import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.event.core.model.EventMessage;
 import org.etd.framework.event.core.sender.EventMessageSender;
-import org.etd.framework.starter.event.client.config.EventClientProperties;
+import org.etd.framework.starter.event.client.config.EventBusProperties;
 import org.etd.framework.starter.event.client.core.message.EventMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,13 +23,13 @@ public class DefaultEventPublisher implements EventPublisher {
 
     private final EventMessageSender eventMessageSender;
 
-    private final EventClientProperties properties;
+    private final EventBusProperties properties;
 
     private final TaskExecutor taskExecutor;
 
     public DefaultEventPublisher(EventMessageFactory eventMessageFactory,
                                  EventMessageSender eventMessageSender,
-                                 EventClientProperties properties,
+                                 EventBusProperties properties,
                                  TaskExecutor taskExecutor) {
         this.eventMessageFactory = eventMessageFactory;
         this.eventMessageSender = eventMessageSender;

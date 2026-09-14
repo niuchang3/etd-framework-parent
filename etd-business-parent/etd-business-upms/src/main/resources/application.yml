@@ -28,12 +28,6 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
-    consumer:
-      group-id: ${UPMS_KAFKA_CONSUMER_GROUP:upms-event-client}
-      enable-auto-commit: false
-      auto-offset-reset: latest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   data:
     redis:
       host: 127.0.0.1
@@ -96,8 +90,8 @@ system:
 etd:
   event:
     bus:
+      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
       client:
-        topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}
         verify-connection-on-startup: ${UPMS_KAFKA_VERIFY_CONNECTION:true}
         connection-timeout: ${UPMS_KAFKA_CONNECTION_TIMEOUT:10s}
         id-generator:

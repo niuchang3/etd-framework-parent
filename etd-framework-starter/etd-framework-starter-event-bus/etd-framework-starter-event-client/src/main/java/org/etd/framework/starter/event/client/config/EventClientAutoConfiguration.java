@@ -25,13 +25,14 @@ import org.springframework.core.env.Environment;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.util.Assert;
 
 /**
  * 事件总线发送端 Kafka 自动配置。
  */
 @AutoConfiguration
 @ConditionalOnClass(KafkaTemplate.class)
-@EnableConfigurationProperties(EventClientProperties.class)
+@EnableConfigurationProperties({EventBusProperties.class, EventClientProperties.class})
 public class EventClientAutoConfiguration {
 
     public static final String EVENT_BUS_TASK_EXECUTOR = "eventBusTaskExecutor";
@@ -43,6 +44,7 @@ public class EventClientAutoConfiguration {
     @ConditionalOnMissingBean(name = EVENT_BUS_TASK_EXECUTOR)
     public ThreadPoolTaskExecutor eventBusTaskExecutor(EventClientProperties properties) {
         EventClientProperties.Async async = properties.getAsync();
+        validateAsyncProperties(async);
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(async.getCorePoolSize());
         executor.setMaxPoolSize(async.getMaxPoolSize());
@@ -101,8 +103,9 @@ public class EventClientAutoConfiguration {
     @ConditionalOnMissingBean(EventPublisher.class)
     public EventPublisher eventPublisher(EventMessageFactory eventMessageFactory,
                                          EventMessageSender eventMessageSender,
-                                         EventClientProperties properties,
+                                         EventBusProperties properties,
                                          @Qualifier(EVENT_BUS_TASK_EXECUTOR) TaskExecutor taskExecutor) {
+        Assert.hasText(properties.getTopic(), "事件总线入口 Topic 不能为空");
         return new DefaultEventPublisher(eventMessageFactory, eventMessageSender, properties, taskExecutor);
     }
 
@@ -125,5 +128,12 @@ public class EventClientAutoConfiguration {
     public KafkaConnectionVerifier kafkaConnectionVerifier(KafkaAdmin kafkaAdmin,
                                                            EventClientProperties properties) {
         return new KafkaConnectionVerifier(kafkaAdmin, properties.getConnectionTimeout());
+    }
+
+    private void validateAsyncProperties(EventClientProperties.Async async) {
+        Assert.isTrue(async.getCorePoolSize() > 0, "事件发送核心线程数必须大于 0");
+        Assert.isTrue(async.getMaxPoolSize() >= async.getCorePoolSize(),
+                "事件发送最大线程数不能小于核心线程数");
+        Assert.isTrue(async.getQueueCapacity() >= 0, "事件发送队列容量不能小于 0");
     }
 }

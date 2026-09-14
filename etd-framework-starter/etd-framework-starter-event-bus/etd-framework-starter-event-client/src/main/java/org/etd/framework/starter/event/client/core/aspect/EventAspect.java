@@ -14,6 +14,7 @@ import org.springframework.core.BridgeMethodResolver;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -21,6 +22,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 解析 {@link Event} 并在业务成功后发布事件。
@@ -34,6 +37,11 @@ public class EventAspect {
     private static final String RESULT_VARIABLE = "result";
 
     private final ExpressionParser expressionParser = new SpelExpressionParser();
+
+    /**
+     * 注解表达式在应用运行期间保持不变，缓存编译结果可避免每次方法调用都重新解析。
+     */
+    private final Map<String, Expression> expressionCache = new ConcurrentHashMap<>();
 
     private final DefaultParameterNameDiscoverer parameterNameDiscoverer =
             new DefaultParameterNameDiscoverer();
@@ -51,8 +59,8 @@ public class EventAspect {
     public Object publishEvent(ProceedingJoinPoint joinPoint, Event event) throws Throwable {
         Object result = joinPoint.proceed();
         try {
-            EventPublication publication = resolvePublication(joinPoint, event, result);
-            publishAfterTransactionCommit(publication);
+            PendingEvent pendingEvent = resolvePendingEvent(joinPoint, event, result);
+            publishAfterTransactionCommit(pendingEvent);
         } catch (RuntimeException exception) {
             LOGGER.error("注解事件解析失败 eventType={}, method={}",
                     event.type(), joinPoint.getSignature().toShortString(), exception);
@@ -60,14 +68,14 @@ public class EventAspect {
         return result;
     }
 
-    private EventPublication resolvePublication(ProceedingJoinPoint joinPoint, Event event, Object result) {
+    private PendingEvent resolvePendingEvent(ProceedingJoinPoint joinPoint, Event event, Object result) {
         Method method = resolveMethod(joinPoint);
         MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(
                 joinPoint.getTarget(), method, joinPoint.getArgs(), parameterNameDiscoverer);
         context.setVariable(RESULT_VARIABLE, result);
-        Object payload = expressionParser.parseExpression(event.payload()).getValue(context);
+        Object payload = getExpression(event.payload()).getValue(context);
         String partitionKey = evaluatePartitionKey(event.partitionKey(), context);
-        return new EventPublication(event.type(), event.version(), partitionKey, payload);
+        return new PendingEvent(event.type(), event.version(), partitionKey, payload);
     }
 
     private Method resolveMethod(ProceedingJoinPoint joinPoint) {
@@ -80,19 +88,23 @@ public class EventAspect {
         if (!StringUtils.hasText(expression)) {
             return null;
         }
-        Object value = expressionParser.parseExpression(expression).getValue(context);
+        Object value = getExpression(expression).getValue(context);
         return value == null ? null : String.valueOf(value);
     }
 
-    private void publishAfterTransactionCommit(EventPublication publication) {
+    private Expression getExpression(String expression) {
+        return expressionCache.computeIfAbsent(expression, expressionParser::parseExpression);
+    }
+
+    private void publishAfterTransactionCommit(PendingEvent pendingEvent) {
         if (!isTransactionActive()) {
-            publishSafely(publication);
+            publishSafely(pendingEvent);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                publishSafely(publication);
+                publishSafely(pendingEvent);
             }
         });
     }
@@ -102,19 +114,19 @@ public class EventAspect {
                 && TransactionSynchronizationManager.isSynchronizationActive();
     }
 
-    private void publishSafely(EventPublication publication) {
+    private void publishSafely(PendingEvent pendingEvent) {
         try {
-            eventPublisher.publish(publication.eventType(), publication.eventVersion(),
-                    publication.partitionKey(), publication.payload());
+            eventPublisher.publish(pendingEvent.eventType(), pendingEvent.eventVersion(),
+                    pendingEvent.partitionKey(), pendingEvent.payload());
         } catch (RuntimeException exception) {
-            LOGGER.error("注解事件发布失败 eventType={}", publication.eventType(), exception);
+            LOGGER.error("注解事件发布失败 eventType={}", pendingEvent.eventType(), exception);
         }
     }
 
     /**
      * 保存一次已完成表达式求值、等待发布的事件参数。
      */
-    private record EventPublication(
+    private record PendingEvent(
             String eventType,
             int eventVersion,
             String partitionKey,

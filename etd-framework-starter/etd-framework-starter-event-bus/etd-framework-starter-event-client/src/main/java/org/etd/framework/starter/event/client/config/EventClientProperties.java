@@ -15,11 +15,6 @@ import java.time.Duration;
 public class EventClientProperties {
 
     /**
-     * 新事件默认发送到的总线入口 Topic。
-     */
-    private String topic = "etd.event.bus";
-
-    /**
      * 是否在应用启动时验证 Kafka 连接和认证。
      */
     private boolean verifyConnectionOnStartup;

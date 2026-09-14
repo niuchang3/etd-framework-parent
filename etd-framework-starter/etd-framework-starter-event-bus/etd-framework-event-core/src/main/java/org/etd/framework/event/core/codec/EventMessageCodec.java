@@ -1,7 +1,10 @@
 package org.etd.framework.event.core.codec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.etd.framework.event.core.model.EventMessage;
 
 import java.util.ArrayList;
@@ -12,10 +15,15 @@ import java.util.List;
  */
 public class EventMessageCodec {
 
-    private final ObjectMapper objectMapper;
+    private final ObjectReader eventMessageReader;
+
+    private final ObjectWriter eventMessageWriter;
 
     public EventMessageCodec(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+        // Event Bus 明确忽略未知字段，避免业务应用的全局 Jackson 配置改变协议升级策略。
+        this.eventMessageReader = objectMapper.readerFor(EventMessage.class)
+                .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        this.eventMessageWriter = objectMapper.writerFor(EventMessage.class);
     }
 
     /**
@@ -23,7 +31,7 @@ public class EventMessageCodec {
      */
     public String encode(EventMessage message) {
         try {
-            return objectMapper.writeValueAsString(message);
+            return eventMessageWriter.writeValueAsString(message);
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("事件消息无法序列化为 JSON", exception);
         }
@@ -34,7 +42,7 @@ public class EventMessageCodec {
      */
     public EventMessage decode(String messageJson) {
         try {
-            return objectMapper.readValue(messageJson, EventMessage.class);
+            return eventMessageReader.readValue(messageJson);
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Kafka 消息不是有效的统一事件消息", exception);
         }

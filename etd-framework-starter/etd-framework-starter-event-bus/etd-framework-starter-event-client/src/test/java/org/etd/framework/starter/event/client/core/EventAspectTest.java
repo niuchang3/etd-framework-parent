@@ -8,9 +8,11 @@ import org.etd.framework.starter.event.client.core.publisher.EventPublisher;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -82,6 +84,24 @@ class EventAspectTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("业务执行失败");
         verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void shouldCacheParsedSpelExpressions() throws Throwable {
+        EventPublisher publisher = mock(EventPublisher.class);
+        EventAspect aspect = new EventAspect(publisher);
+        TestEventService target = new TestEventService();
+        Method method = TestEventService.class.getMethod("createUser", TestCommand.class);
+        TestResult result = new TestResult(1004L, "cache");
+        ProceedingJoinPoint joinPoint = createJoinPoint(target, method,
+                new Object[]{new TestCommand(1004L)}, result);
+        Event event = method.getAnnotation(Event.class);
+
+        aspect.publishEvent(joinPoint, event);
+        aspect.publishEvent(joinPoint, event);
+
+        Map<?, ?> expressionCache = (Map<?, ?>) ReflectionTestUtils.getField(aspect, "expressionCache");
+        assertThat(expressionCache).hasSize(2);
     }
 
     private ProceedingJoinPoint createJoinPoint(Object target, Method method,

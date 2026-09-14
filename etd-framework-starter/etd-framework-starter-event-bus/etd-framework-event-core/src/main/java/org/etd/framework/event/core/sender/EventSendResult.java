@@ -1,7 +1,5 @@
 package org.etd.framework.event.core.sender;
 
-import java.util.Objects;
-
 /**
  * 事件发送完成后的传输无关结果。
  *
@@ -14,6 +12,8 @@ public record EventSendResult(String eventId, String destination) {
         if (eventId == null || eventId.isBlank()) {
             throw new IllegalArgumentException("事件 ID 不能为空");
         }
-        destination = Objects.requireNonNull(destination, "事件发送目的地不能为空");
+        if (destination == null || destination.isBlank()) {
+            throw new IllegalArgumentException("事件发送目的地不能为空");
+        }
     }
 }
