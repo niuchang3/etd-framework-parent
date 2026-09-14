@@ -1,0 +1,13 @@
+server:
+  port: 8200
+
+spring:
+  application:
+    name: event
+  jackson:
+    time-zone: Asia/Shanghai
+
+etd:
+  event:
+    bus:
+      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus}

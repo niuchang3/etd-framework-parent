@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.event.subscription.mapper.EventSubscriptionMapper">
+
+    <sql id="subscriptionColumns">
+        select s.id,
+               s.create_time,
+               s.update_time,
+               s.version,
+               s.subscription_code,
+               s.subscription_name,
+               s.event_type_id,
+               t.event_type,
+               t.event_name,
+               s.subscriber_application,
+               s.target_topic,
+               s.consumer_group,
+               s.data_status = 1 as enabled,
+               s.description
+        from evt_event_subscription s
+        join evt_event_type t on t.id = s.event_type_id and t.del_flag = 0
+    </sql>
+
+    <select id="selectSubscriptionPage" resultType="org.etd.event.subscription.controller.vo.EventSubscriptionVO">
+        <include refid="subscriptionColumns"/>
+        where s.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and (s.subscription_code ilike concat('%', #{keyword}, '%')
+                or s.subscription_name ilike concat('%', #{keyword}, '%'))
+        </if>
+        <if test="eventTypeId != null">
+            and s.event_type_id = #{eventTypeId}
+        </if>
+        <if test="subscriberApplication != null and subscriberApplication != ''">
+            and s.subscriber_application = #{subscriberApplication}
+        </if>
+        <if test="dataStatus != null">
+            and s.data_status = #{dataStatus}
+        </if>
+        order by s.update_time desc, s.id desc
+    </select>
+
+    <select id="countByEventTypeId" resultType="long">
+        select count(1)
+        from evt_event_subscription
+        where event_type_id = #{eventTypeId}
+          and del_flag = 0
+    </select>
+
+    <select id="selectEnabledList" resultType="org.etd.event.subscription.controller.vo.EventSubscriptionVO">
+        <include refid="subscriptionColumns"/>
+        where s.del_flag = 0
+          and s.data_status = 1
+        order by s.subscription_code
+    </select>
+
+    <select id="selectSubscriptionById" resultType="org.etd.event.subscription.controller.vo.EventSubscriptionVO">
+        <include refid="subscriptionColumns"/>
+        where s.id = #{id}
+          and s.del_flag = 0
+    </select>
+</mapper>

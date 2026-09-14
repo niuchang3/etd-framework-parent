@@ -20,6 +20,7 @@
 
     <modules>
         <module>etd-business-upms</module>
+        <module>etd-business-event</module>
     </modules>
 
 

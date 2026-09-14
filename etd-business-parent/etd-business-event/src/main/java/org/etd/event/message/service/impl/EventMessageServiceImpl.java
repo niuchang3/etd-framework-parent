@@ -1,0 +1,76 @@
+package org.etd.event.message.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.etd.event.message.controller.vo.EventMessageVO;
+import org.etd.event.message.entity.EventMessageEntity;
+import org.etd.event.message.mapper.EventMessageMapper;
+import org.etd.event.message.service.EventMessageService;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.time.Instant;
+
+/**
+ * 持久化事件消息只读查询能力实现。
+ */
+@Service
+public class EventMessageServiceImpl implements EventMessageService {
+
+    private final EventMessageMapper messageMapper;
+
+    public EventMessageServiceImpl(EventMessageMapper messageMapper) {
+        this.messageMapper = messageMapper;
+    }
+
+    @Override
+    public IPage<EventMessageVO> page(long current, long size, String eventId, Long eventTypeId,
+                                      String sourceApplication, Instant startTime, Instant endTime) {
+        LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(StringUtils.hasText(eventId), EventMessageEntity::getEventId, eventId)
+                .eq(eventTypeId != null, EventMessageEntity::getEventTypeId, eventTypeId)
+                .eq(StringUtils.hasText(sourceApplication), EventMessageEntity::getSourceApplication, sourceApplication)
+                .ge(startTime != null, EventMessageEntity::getCreateTime, startTime)
+                .lt(endTime != null, EventMessageEntity::getCreateTime, endTime)
+                .orderByDesc(EventMessageEntity::getCreateTime)
+                .orderByDesc(EventMessageEntity::getId);
+        return messageMapper.selectPage(new Page<>(current, size), wrapper).convert(this::toVOWithoutPayload);
+    }
+
+    @Override
+    public EventMessageVO fetchByShardingKeyAndId(Short shardingKey, Long id) {
+        LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EventMessageEntity::getShardingKey, shardingKey)
+                .eq(EventMessageEntity::getId, id);
+        EventMessageEntity entity = messageMapper.selectOne(wrapper);
+        if (entity == null) {
+            throw new ApiRuntimeException("事件消息不存在。");
+        }
+        return toVO(entity, true);
+    }
+
+    private EventMessageVO toVOWithoutPayload(EventMessageEntity entity) {
+        return toVO(entity, false);
+    }
+
+    private EventMessageVO toVO(EventMessageEntity entity, boolean includePayload) {
+        EventMessageVO vo = new EventMessageVO();
+        vo.setId(entity.getId());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setVersion(entity.getVersion());
+        vo.setShardingKey(entity.getShardingKey());
+        vo.setEventId(entity.getEventId());
+        vo.setEventTypeId(entity.getEventTypeId());
+        vo.setEventVersion(entity.getEventVersion());
+        vo.setOccurredAt(entity.getOccurredAt());
+        vo.setSourceApplication(entity.getSourceApplication());
+        vo.setPartitionKey(entity.getPartitionKey());
+        if (includePayload) {
+            vo.setEventContext(entity.getEventContext());
+            vo.setEventPayload(entity.getEventPayload());
+        }
+        return vo;
+    }
+}

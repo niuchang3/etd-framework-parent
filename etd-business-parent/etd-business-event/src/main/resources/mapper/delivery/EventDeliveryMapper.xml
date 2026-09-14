@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.event.delivery.mapper.EventDeliveryMapper">
+    <sql id="deliveryColumns">
+        select d.id,
+               d.create_time,
+               d.update_time,
+               d.version,
+               d.event_id,
+               d.sharding_key,
+               d.event_message_id,
+               d.subscription_id,
+               s.subscription_code,
+               s.subscription_name,
+               s.subscriber_application,
+               s.consumer_group,
+               d.target_topic,
+               d.delivery_status,
+               d.attempt_count,
+               d.next_retry_at,
+               d.last_error,
+               d.kafka_partition,
+               d.kafka_offset,
+               d.published_at
+        from evt_event_delivery d
+        join evt_event_subscription s on s.id = d.subscription_id
+    </sql>
+
+    <select id="selectDeliveryPage" resultType="org.etd.event.delivery.controller.vo.EventDeliveryVO">
+        <include refid="deliveryColumns"/>
+        where d.del_flag = 0
+        <if test="eventId != null and eventId != ''">
+            and d.event_id = #{eventId}
+        </if>
+        <if test="subscriptionId != null">
+            and d.subscription_id = #{subscriptionId}
+        </if>
+        <if test="deliveryStatus != null">
+            and d.delivery_status = #{deliveryStatus}
+        </if>
+        <if test="startTime != null">
+            and d.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            and d.create_time &lt; #{endTime}
+        </if>
+        order by d.create_time desc, d.id desc
+    </select>
+
+    <select id="selectListByMessage" resultType="org.etd.event.delivery.controller.vo.EventDeliveryVO">
+        <include refid="deliveryColumns"/>
+        where d.sharding_key = #{shardingKey}
+          and d.event_message_id = #{eventMessageId}
+          and d.del_flag = 0
+        order by d.id
+    </select>
+</mapper>
