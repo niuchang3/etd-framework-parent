@@ -97,17 +97,9 @@ public class RequestContextInitializer {
             }
         }
     }
-
-    /**
-     * Map / MQ / RPC / 异构请求全量与动态上下文初始化
-     * 一键无损还原所有传输消息头与扩展属性
-     *
-     * @param headers 标头映射 Map
-     */
     /**
      * 初始化
      *
-     * @param Map<String 参数 Map<String
      * @param headers 参数 headers
      * @return 处理结果
      */
