@@ -32,9 +32,11 @@ public class EventTypeServiceImpl implements EventTypeService {
     public IPage<EventTypeVO> page(long current, long size, String keyword,
                                    String sourceApplication, Boolean enabled) {
         LambdaQueryWrapper<EventTypeEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(sourceApplication), EventTypeEntity::getSourceApplication, sourceApplication)
-                .eq(enabled != null, EventTypeEntity::getDataStatus, statusCode(enabled))
-                .and(StringUtils.hasText(keyword), query -> query
+        wrapper.eq(StringUtils.hasText(sourceApplication), EventTypeEntity::getSourceApplication, sourceApplication);
+        if (enabled != null) {
+            wrapper.eq(EventTypeEntity::getDataStatus, statusCode(enabled));
+        }
+        wrapper.and(StringUtils.hasText(keyword), query -> query
                         .like(EventTypeEntity::getEventType, keyword)
                         .or().like(EventTypeEntity::getEventName, keyword))
                 .orderByDesc(EventTypeEntity::getUpdateTime)

@@ -186,6 +186,11 @@
                 <artifactId>shardingsphere-jdbc</artifactId>
                 <version>${shardingsphere.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.shardingsphere</groupId>
+                <artifactId>shardingsphere-infra-url-classpath</artifactId>
+                <version>${shardingsphere.version}</version>
+            </dependency>
             <!-- ShardingSphere 5.5.x 已将具体分片能力和数据库方言拆为独立运行模块。 -->
             <dependency>
                 <groupId>org.apache.shardingsphere</groupId>

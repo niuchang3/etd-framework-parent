@@ -1,7 +1,9 @@
 package org.etd.event.sharding;
 
-import org.junit.jupiter.api.Test;
 import org.apache.shardingsphere.driver.api.yaml.YamlShardingSphereDataSourceFactory;
+import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
+import org.apache.shardingsphere.infra.url.spi.ShardingSphereLocalFileURLLoader;
+import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +21,9 @@ class EventShardingYamlConfigurationTest {
     /** 本地分表配置声明的物理分片数量。 */
     private static final int SHARD_COUNT = 2;
 
+    /** ShardingSphere classpath 配置加载器的 SPI 类型。 */
+    private static final String CLASSPATH_URL_LOADER_TYPE = "classpath:";
+
     /** 测试中需要替换的本地 PostgreSQL 环境变量连接模板。 */
     private static final String LOCAL_DATABASE_URL =
             "jdbc:postgresql://$${EVENT_DB_HOST::127.0.0.1}:$${EVENT_DB_PORT::30432}/$${EVENT_DB_NAME::event}";
@@ -27,6 +32,20 @@ class EventShardingYamlConfigurationTest {
     private static final String DATABASE_URL =
             "jdbc:h2:mem:event_sharding_test;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false";
 
+    /**
+     * classpath Driver URL 必须存在对应的配置加载 SPI，防止应用启动时无法读取 YAML。
+     */
+    @Test
+    void shouldLoadClasspathUrlLoader() {
+        ShardingSphereLocalFileURLLoader loader = TypedSPILoader.getService(
+                ShardingSphereLocalFileURLLoader.class, CLASSPATH_URL_LOADER_TYPE);
+
+        assertNotNull(loader);
+    }
+
+    /**
+     * 使用真实 YAML 创建逻辑数据源，并校验配置声明的物理表可以完成装配。
+     */
     @Test
     void shouldCreateShardingSphereDataSourceWithAllPhysicalTables() throws Exception {
         createPhysicalTables();
