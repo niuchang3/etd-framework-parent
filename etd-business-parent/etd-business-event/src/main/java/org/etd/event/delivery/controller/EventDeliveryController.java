@@ -63,7 +63,7 @@ public class EventDeliveryController {
     }
 
     /**
-     * 仅重播当前失败投递任务，不会让同一消息的其他消费组再次收到消息。
+     * 仅重播当前失败投递任务，不会触发同一消息的其他订阅重新投递。
      */
     @AutoLog("人工重播事件投递任务")
     @PostMapping("/{eventId}/{id}/replay")

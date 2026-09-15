@@ -31,17 +31,11 @@ public class EventDeliveryVO {
     /** 目标订阅配置的主键。 */
     private Long subscriptionId;
 
-    /** 目标订阅编码快照。 */
-    private String subscriptionCode;
-
     /** 目标订阅的显示名称。 */
     private String subscriptionName;
 
     /** 接收本次投递的业务应用标识。 */
     private String subscriberApplication;
-
-    /** 业务客户端消费目标 Topic 时使用的消费组。 */
-    private String consumerGroup;
 
     /** 本次投递使用的 Kafka Topic 快照。 */
     private String targetTopic;

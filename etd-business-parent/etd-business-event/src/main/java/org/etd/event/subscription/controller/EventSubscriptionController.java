@@ -86,7 +86,7 @@ public class EventSubscriptionController {
     }
 
     /**
-     * 更新业务事件订阅，订阅编码创建后不可修改。
+     * 更新业务事件订阅。
      */
     @AutoLog("更新事件订阅")
     @PutMapping("/{id}")

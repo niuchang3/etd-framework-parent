@@ -96,12 +96,10 @@ create table evt_event_subscription
     version                integer not null default 0,
     data_status            integer not null default 1,
     del_flag               smallint not null default 0,
-    subscription_code      varchar(100) not null,
     subscription_name      varchar(150) not null,
     event_type_id          bigint not null references evt_event_type (id),
     subscriber_application varchar(100) not null,
     target_topic           varchar(250) not null,
-    consumer_group         varchar(150) not null,
     description            varchar(500),
     primary key (id)
 );
@@ -115,16 +113,11 @@ comment on column evt_event_subscription.update_by is '修改人';
 comment on column evt_event_subscription.version is '数据库记录乐观锁版本';
 comment on column evt_event_subscription.data_status is '订阅状态：0禁用，1启用';
 comment on column evt_event_subscription.del_flag is '逻辑删除标识：0未删除，1已删除';
-comment on column evt_event_subscription.subscription_code is '全局唯一且稳定的订阅编码';
 comment on column evt_event_subscription.subscription_name is '订阅显示名称';
 comment on column evt_event_subscription.event_type_id is '订阅的事件类型主键';
 comment on column evt_event_subscription.subscriber_application is '订阅事件的业务应用';
 comment on column evt_event_subscription.target_topic is '业务应用独立的 Kafka 接收 Topic';
-comment on column evt_event_subscription.consumer_group is '业务客户端约定使用的 Kafka 消费组';
 comment on column evt_event_subscription.description is '订阅用途说明';
-
-create unique index uk_evt_event_subscription_code
-    on evt_event_subscription (subscription_code);
 
 create unique index uk_evt_event_subscription_application_type
     on evt_event_subscription (subscriber_application, event_type_id)

@@ -7,9 +7,9 @@
 事件中心管理四类数据：
 
 1. 事件类型：定义稳定的事件协议编码及当前协议版本。
-2. 事件订阅：配置哪个业务应用订阅哪个事件类型，以及事件中心需要投递到的 Kafka Topic 和客户端 Consumer Group。
+2. 事件订阅：配置哪个业务应用订阅哪个事件类型，以及事件中心需要投递到的 Kafka Topic。
 3. 事件消息：只读查看服务端持久化的原始消息。
-4. 投递任务：一条消息针对一个订阅生成一条投递记录。人工重播只操作当前失败投递记录，不能重播该消息的其他订阅，也不能让其他消费组重复收到消息。
+4. 投递任务：一条消息针对一个订阅生成一条投递记录。人工重播只操作当前失败投递记录，不能重播该消息的其他订阅。
 
 ## 后端统一约定
 
@@ -19,7 +19,9 @@
 - 所有时间均为带偏移量的 ISO-8601 时间点，例如 `2026-09-14T18:00:00.000+08:00`。筛选参数原样传递，不要在前端固定增减小时。
 - local 环境下消息表和投递表已经按 `eventId` 固定分为 2 张物理表。进入消息详情或执行投递重播时，必须同时传递列表行中的 `eventId` 和 `id`，禁止只传主键；后端会使用 `eventId` 精确路由物理分表。
 - 将 `eventId` 放入路径前必须调用 `encodeURIComponent`，不要自行计算物理表后缀。
-- 事件类型编码和订阅编码创建后不可修改，编辑表单中应禁用对应输入框。
+- 事件类型编码创建后不可修改，编辑表单中应禁用对应输入框。
+- 订阅使用后端生成的雪花 `id` 作为唯一标识，不存在 `subscriptionCode` 字段；前端不得自行生成或展示订阅编码。
+- Consumer Group 属于业务消费端 Kafka 配置，不属于事件订阅 API；订阅表单、列表、详情和 TypeScript 类型中不得保留 `consumerGroup` 字段。
 - 更新事件类型和订阅时必须回传详情中的 `version`，发生并发冲突后提示用户刷新。
 
 ## 页面与接口
@@ -41,12 +43,14 @@
 - `GET /v1/event/subscriptions`：分页查询。参数：`current`、`size`、`keyword`、`eventTypeId`、`subscriberApplication`、`enabled`。
 - `GET /v1/event/subscriptions/options`：启用订阅筛选选项。
 - `GET /v1/event/subscriptions/{id}`：详情。
-- `POST /v1/event/subscriptions`：新增，请求字段：`subscriptionCode`、`subscriptionName`、`eventTypeId`、`subscriberApplication`、`targetTopic`、`consumerGroup`、`description`。
+- `POST /v1/event/subscriptions`：新增，请求字段：`subscriptionName`、`eventTypeId`、`subscriberApplication`、`targetTopic`、`description`。
 - `PUT /v1/event/subscriptions/{id}`：更新，请求体为 `{ "content": {上述字段}, "version": 0 }`。
 - `PATCH /v1/event/subscriptions/{id}/enabled/{enabled}`：切换状态。
 - `DELETE /v1/event/subscriptions/{id}`：逻辑删除。
 
-列表同时展示事件名称/编码、订阅应用、Kafka Topic、Consumer Group、状态和更新时间。事件类型必须使用 options 接口选择，不允许自由填写 ID。增加说明提示：同一业务应用的多个实例使用同一个 Consumer Group；不同业务应用使用不同订阅和消费组。
+列表展示订阅名称、事件名称/编码、订阅应用、Kafka Topic、状态和更新时间，不展示订阅编码或 Consumer Group。分页查询的 `keyword` 仅匹配订阅名称。事件类型必须调用 `/v1/event/types/options` 下拉选择，不允许自由填写 ID；选项使用事件名称作为主标签、事件类型编码作为辅助信息、事件类型 `id` 作为提交值。订阅自身的 `/options` 接口使用订阅名称作为标签、雪花 `id` 作为值。新增和编辑表单都不得提交后端契约以外的旧字段。
+
+Consumer Group 由各业务应用的 Kafka 消费端配置，同一业务应用的多个部署实例使用相同 Group，由 Kafka 完成分区分配；该配置不在事件中心管理页面维护。
 
 ### 3. 事件消息 `/event/messages`
 

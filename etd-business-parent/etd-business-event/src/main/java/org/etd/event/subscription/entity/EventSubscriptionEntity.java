@@ -23,12 +23,6 @@ public class EventSubscriptionEntity extends BaseEntity {
     private Integer version;
 
     /**
-     * 全局唯一且不可复用的订阅编码。
-     */
-    @TableField("subscription_code")
-    private String subscriptionCode;
-
-    /**
      * 订阅页面显示名称。
      */
     @TableField("subscription_name")
@@ -51,12 +45,6 @@ public class EventSubscriptionEntity extends BaseEntity {
      */
     @TableField("target_topic")
     private String targetTopic;
-
-    /**
-     * 业务应用全部实例约定使用的 Kafka 消费组。
-     */
-    @TableField("consumer_group")
-    private String consumerGroup;
 
     /**
      * 订阅业务用途说明。

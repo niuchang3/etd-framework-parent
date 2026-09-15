@@ -7,14 +7,12 @@
                s.create_time,
                s.update_time,
                s.version,
-               s.subscription_code,
                s.subscription_name,
                s.event_type_id,
                t.event_type,
                t.event_name,
                s.subscriber_application,
                s.target_topic,
-               s.consumer_group,
                s.data_status = 1 as enabled,
                s.description
         from evt_event_subscription s
@@ -25,8 +23,7 @@
         <include refid="subscriptionColumns"/>
         where s.del_flag = 0
         <if test="keyword != null and keyword != ''">
-            and (s.subscription_code ilike concat('%', #{keyword}, '%')
-                or s.subscription_name ilike concat('%', #{keyword}, '%'))
+            and s.subscription_name ilike concat('%', #{keyword}, '%')
         </if>
         <if test="eventTypeId != null">
             and s.event_type_id = #{eventTypeId}
@@ -51,7 +48,7 @@
         <include refid="subscriptionColumns"/>
         where s.del_flag = 0
           and s.data_status = 1
-        order by s.subscription_code
+        order by s.subscription_name, s.id
     </select>
 
     <select id="selectSubscriptionById" resultType="org.etd.event.subscription.controller.vo.EventSubscriptionVO">

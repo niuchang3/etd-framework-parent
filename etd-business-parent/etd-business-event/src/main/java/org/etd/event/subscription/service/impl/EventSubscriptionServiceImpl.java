@@ -65,7 +65,7 @@ public class EventSubscriptionServiceImpl implements EventSubscriptionService {
 
     @Override
     public Long create(EventSubscriptionSaveDTO dto) {
-        ensureUnique(dto, null);
+        ensureApplicationTypeAvailable(dto, null);
         EventSubscriptionEntity entity = toEntity(dto);
         subscriptionMapper.insert(entity);
         return entity.getId();
@@ -73,11 +73,8 @@ public class EventSubscriptionServiceImpl implements EventSubscriptionService {
 
     @Override
     public boolean modify(Long id, EventSubscriptionUpdateDTO dto) {
-        EventSubscriptionEntity current = requireEntity(id);
-        if (!current.getSubscriptionCode().equals(dto.getContent().getSubscriptionCode())) {
-            throw new ApiRuntimeException("订阅编码创建后不允许修改。");
-        }
-        ensureUnique(dto.getContent(), id);
+        requireEntity(id);
+        ensureApplicationTypeAvailable(dto.getContent(), id);
         EventSubscriptionEntity entity = toEntity(dto.getContent());
         entity.setId(id);
         entity.setVersion(dto.getVersion());
@@ -102,16 +99,6 @@ public class EventSubscriptionServiceImpl implements EventSubscriptionService {
         return subscriptionMapper.deleteById(id) > 0;
     }
 
-    private void ensureUnique(EventSubscriptionSaveDTO dto, Long excludedId) {
-        LambdaQueryWrapper<EventSubscriptionEntity> codeQuery = new LambdaQueryWrapper<>();
-        codeQuery.eq(EventSubscriptionEntity::getSubscriptionCode, dto.getSubscriptionCode())
-                .ne(excludedId != null, EventSubscriptionEntity::getId, excludedId);
-        if (subscriptionMapper.selectCount(codeQuery) > 0) {
-            throw new ApiRuntimeException("订阅编码已存在。");
-        }
-        ensureApplicationTypeAvailable(dto, excludedId);
-    }
-
     private void ensureApplicationTypeAvailable(EventSubscriptionSaveDTO dto, Long excludedId) {
         LambdaQueryWrapper<EventSubscriptionEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EventSubscriptionEntity::getSubscriberApplication, dto.getSubscriberApplication())
@@ -124,12 +111,10 @@ public class EventSubscriptionServiceImpl implements EventSubscriptionService {
 
     private EventSubscriptionEntity toEntity(EventSubscriptionSaveDTO dto) {
         EventSubscriptionEntity entity = new EventSubscriptionEntity();
-        entity.setSubscriptionCode(dto.getSubscriptionCode());
         entity.setSubscriptionName(dto.getSubscriptionName());
         entity.setEventTypeId(dto.getEventTypeId());
         entity.setSubscriberApplication(dto.getSubscriberApplication());
         entity.setTargetTopic(dto.getTargetTopic());
-        entity.setConsumerGroup(dto.getConsumerGroup());
         entity.setDescription(dto.getDescription());
         return entity;
     }
