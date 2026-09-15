@@ -8,6 +8,15 @@ spring:
   application:
     name: event # 应用名称，同时用于日志、注册发现和缓存键前缀。
   kafka:
+    consumer:
+      group-id: ${EVENT_KAFKA_SERVER_CONSUMER_GROUP:etd-event-server} # Event Server 多实例共享同一 Kafka 消费组。
+      enable-auto-commit: false # 仅在入口消息处理成功后由监听容器提交消费进度。
+      auto-offset-reset: earliest # 新建入口消费组时从最早事件开始，避免跳过服务启动前已发送的消息。
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 入口消息键按字符串解码。
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 统一事件协议按 JSON 字符串接收。
+    listener:
+      type: ${EVENT_KAFKA_LISTENER_TYPE:single} # 使用 Spring Kafka 原生配置切换 single 或 batch 监听模式。
+      ack-mode: record # 单条模式逐条确认；批量模式由 Event Server 专用容器工厂覆盖为 BATCH。
     producer:
       acks: all # 事件转发等待所有同步副本确认，提高发送可靠性。
       key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。

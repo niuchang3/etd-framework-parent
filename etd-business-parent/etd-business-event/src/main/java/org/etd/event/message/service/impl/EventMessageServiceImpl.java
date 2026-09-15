@@ -3,11 +3,13 @@ package org.etd.event.message.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.event.message.controller.vo.EventMessageVO;
 import org.etd.event.message.entity.EventMessageEntity;
 import org.etd.event.message.mapper.EventMessageMapper;
 import org.etd.event.message.service.EventMessageService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.event.core.model.EventMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -21,8 +23,11 @@ public class EventMessageServiceImpl implements EventMessageService {
 
     private final EventMessageMapper messageMapper;
 
-    public EventMessageServiceImpl(EventMessageMapper messageMapper) {
+    private final ObjectMapper objectMapper;
+
+    public EventMessageServiceImpl(EventMessageMapper messageMapper, ObjectMapper objectMapper) {
         this.messageMapper = messageMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -49,6 +54,28 @@ public class EventMessageServiceImpl implements EventMessageService {
             throw new ApiRuntimeException("事件消息不存在。");
         }
         return toVO(entity, true);
+    }
+
+    @Override
+    public EventMessageEntity fetchMessageEntityByEventId(String eventId) {
+        LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EventMessageEntity::getEventId, eventId);
+        return messageMapper.selectOne(wrapper);
+    }
+
+    @Override
+    public Long createEventMessage(EventMessage message, Long eventTypeId) {
+        EventMessageEntity entity = new EventMessageEntity();
+        entity.setEventId(message.eventId());
+        entity.setEventTypeId(eventTypeId);
+        entity.setEventVersion(message.eventVersion());
+        entity.setOccurredAt(message.occurredAt());
+        entity.setSourceApplication(message.source());
+        entity.setPartitionKey(message.partitionKey());
+        entity.setEventContext(objectMapper.valueToTree(message.context()));
+        entity.setEventPayload(message.payload());
+        messageMapper.insert(entity);
+        return entity.getId();
     }
 
     private EventMessageVO toVOWithoutPayload(EventMessageEntity entity) {

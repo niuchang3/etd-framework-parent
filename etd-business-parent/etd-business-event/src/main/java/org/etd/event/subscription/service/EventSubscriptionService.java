@@ -15,6 +15,15 @@ public interface EventSubscriptionService {
     IPage<EventSubscriptionVO> page(long current, long size, String keyword, Long eventTypeId,
                                     String subscriberApplication, Boolean enabled);
     List<EventSubscriptionVO> selectEnabledList();
+
+    /**
+     * 查询指定事件类型当前启用的业务订阅，用于创建投递任务快照。
+     *
+     * @param eventTypeId 事件类型主键
+     * @return 启用订阅实体列表
+     */
+    List<EventSubscriptionEntity> selectEnabledSubscriptionListByEventTypeId(Long eventTypeId);
+
     EventSubscriptionVO fetchById(Long id);
     EventSubscriptionEntity requireEntity(Long id);
     boolean existsByEventTypeId(Long eventTypeId);

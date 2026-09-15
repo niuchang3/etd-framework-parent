@@ -24,4 +24,5 @@ public class EventServerProperties {
      * 入口 Topic 副本数；本地单节点默认使用 1，生产环境通常配置为 3。
      */
     private int replicas = 1;
+
 }

@@ -9,7 +9,9 @@ import org.etd.event.delivery.controller.vo.EventDeliveryVO;
 import org.etd.event.delivery.entity.EventDeliveryEntity;
 import org.etd.event.delivery.mapper.EventDeliveryMapper;
 import org.etd.event.delivery.service.EventDeliveryService;
+import org.etd.event.subscription.entity.EventSubscriptionEntity;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.event.core.model.EventMessage;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -42,6 +44,19 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
     @Override
     public List<EventDeliveryVO> selectListByMessage(String eventId, Long eventMessageId) {
         return deliveryMapper.selectListByMessage(eventId, eventMessageId);
+    }
+
+    @Override
+    public void createDeliveryList(EventMessage message, Long eventMessageId,
+                                   List<EventSubscriptionEntity> subscriptionList) {
+        for (EventSubscriptionEntity subscription : subscriptionList) {
+            EventDeliveryEntity delivery = new EventDeliveryEntity();
+            delivery.setEventId(message.eventId());
+            delivery.setEventMessageId(eventMessageId);
+            delivery.setSubscriptionId(subscription.getId());
+            delivery.setTargetTopic(subscription.getTargetTopic());
+            deliveryMapper.insert(delivery);
+        }
     }
 
     @Override

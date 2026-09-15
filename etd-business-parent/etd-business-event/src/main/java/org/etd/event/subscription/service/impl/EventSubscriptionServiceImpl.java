@@ -41,6 +41,15 @@ public class EventSubscriptionServiceImpl implements EventSubscriptionService {
     }
 
     @Override
+    public List<EventSubscriptionEntity> selectEnabledSubscriptionListByEventTypeId(Long eventTypeId) {
+        LambdaQueryWrapper<EventSubscriptionEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EventSubscriptionEntity::getEventTypeId, eventTypeId)
+                .eq(EventSubscriptionEntity::getDataStatus, BasicConstant.DataStatus.ENABLED_CODE)
+                .orderByAsc(EventSubscriptionEntity::getId);
+        return subscriptionMapper.selectList(wrapper);
+    }
+
+    @Override
     public EventSubscriptionVO fetchById(Long id) {
         EventSubscriptionVO vo = subscriptionMapper.selectSubscriptionById(id);
         if (vo == null) {

@@ -11,6 +11,7 @@ import org.etd.framework.starter.event.server.listener.EventTypeListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.kafka.annotation.KafkaListener;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -66,6 +67,26 @@ class KafkaEventConsumerAdapterTest {
 
         assertThat(traceIds).containsExactly("trace-001", "trace-002");
         assertThat(RequestContext.getTraceId()).isNull();
+    }
+
+    @Test
+    void shouldProvideMutuallySelectableSingleAndBatchListeners() throws Exception {
+        KafkaListener singleListener = SingleKafkaEventListener.class
+                .getMethod("consume", String.class)
+                .getAnnotation(KafkaListener.class);
+        KafkaListener batchListener = BatchKafkaEventListener.class
+                .getMethod("consume", List.class)
+                .getAnnotation(KafkaListener.class);
+
+        assertThat(singleListener).isNotNull();
+        assertThat(singleListener.topics()).containsExactly("${etd.event.bus.topic:etd.event.bus}");
+        assertThat(singleListener.groupId())
+                .isEqualTo("${spring.kafka.consumer.group-id:etd-event-server}");
+        assertThat(batchListener).isNotNull();
+        assertThat(batchListener.topics()).isEqualTo(singleListener.topics());
+        assertThat(batchListener.groupId()).isEqualTo(singleListener.groupId());
+        assertThat(batchListener.containerFactory())
+                .isEqualTo("eventBatchKafkaListenerContainerFactory");
     }
 
     private EventMessage createMessage(String eventId, String traceId) {
