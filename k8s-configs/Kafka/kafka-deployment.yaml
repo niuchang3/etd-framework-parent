@@ -43,11 +43,6 @@ spec:
             - containerPort: 29093
               name: controller
           env:
-            # 动态获取当前 Pod 的 IP 地址（通过 Kubernetes 的 Downward API 机制获取）
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
             # KRaft 模式集群唯一标识 ID
             - name: CLUSTER_ID
               value: "SXluMyf5T9i3hgJu1VyWgg"
@@ -69,9 +64,9 @@ spec:
             # Kafka 服务在容器内实际监听并绑定的网卡地址及端口（0.0.0.0 代表监听容器内所有网卡）
             - name: KAFKA_LISTENERS
               value: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092,KAFKA_CONTROLLER://0.0.0.0:29093"
-            # 外部客户端（或其它服务）访问 Kafka 时，Kafka 返回的宣告连接地址。这里将 Pod 的实际 IP 宣告出去
+            # 集群内客户端使用稳定的 Service 地址，本机客户端通过固定 NodePort 访问
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://$(POD_IP):9092,PLAINTEXT_HOST://localhost:29092"
+              value: "PLAINTEXT://kafka-service:9092,PLAINTEXT_HOST://localhost:30092"
             # Broker 节点之间进行内部通信时所使用的监听器名称
             - name: KAFKA_INTER_BROKER_LISTENER_NAME
               value: "PLAINTEXT"

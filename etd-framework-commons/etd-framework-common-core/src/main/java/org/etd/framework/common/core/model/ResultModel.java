@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.constants.RequestCodeConverter;
 import org.etd.framework.common.core.spring.SpringContextHelper;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.util.ObjectUtils;
 
 import java.io.Serializable;
@@ -25,6 +27,8 @@ import java.io.Serializable;
 @Data
 public class ResultModel<T> implements Serializable {
 
+    /** 开发环境 Profile，用于控制异常堆栈是否写入响应。 */
+    private static final String DEVELOPMENT_PROFILE = "dev";
 
     /**
      * 操作码
@@ -110,15 +114,15 @@ public class ResultModel<T> implements Serializable {
      * @return
      */
     private static String getDevMessage(Throwable throwable) {
-        if(ObjectUtils.isEmpty(throwable)){
+        if (ObjectUtils.isEmpty(throwable)) {
             return null;
         }
-        Environment environment = SpringContextHelper.getApplicationContext().getEnvironment();
-        String[] activeProfiles = environment.getActiveProfiles();
-        if (ObjectUtils.isEmpty(activeProfiles)) {
+        ApplicationContext applicationContext = SpringContextHelper.getApplicationContext();
+        if (applicationContext == null) {
             return null;
         }
-        if ("dev".equals(activeProfiles[0])) {
+        Environment environment = applicationContext.getEnvironment();
+        if (environment.acceptsProfiles(Profiles.of(DEVELOPMENT_PROFILE))) {
             return ExceptionUtil.stacktraceToString(throwable);
         }
         return null;

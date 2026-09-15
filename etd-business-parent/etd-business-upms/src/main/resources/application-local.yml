@@ -14,7 +14,7 @@ spring:
         login-password: admin # 本地 Druid 监控页面登录密码。
   kafka:
     # Kafka 集群地址及认证信息按环境隔离。
-    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:29092} # Kafka 集群引导地址。
+    bootstrap-servers: ${UPMS_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:30092} # 本地默认通过 Kubernetes NodePort 访问 Kafka。
     properties:
       security.protocol: ${UPMS_KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT} # 使用 SASL 认证且默认不启用 TLS。
       sasl.mechanism: ${UPMS_KAFKA_SASL_MECHANISM:PLAIN} # 使用用户名和密码执行 PLAIN 认证。
@@ -22,7 +22,7 @@ spring:
       sasl.jaas.config: >-
         org.apache.kafka.common.security.plain.PlainLoginModule required
         username="${UPMS_KAFKA_USERNAME:admin}"
-        password="${UPMS_KAFKA_PASSWORD}";
+        password="${UPMS_KAFKA_PASSWORD:123456}";
   data:
     redis:
       # Redis 连接地址及凭证按环境隔离。

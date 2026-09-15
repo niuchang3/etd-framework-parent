@@ -1,8 +1,10 @@
 package org.etd.framework.starter.web;
 
+import org.etd.framework.common.core.spring.SpringContextHelper;
 import org.etd.framework.starter.web.interceptor.EtdFrameworkHttpRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.Order;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -15,6 +17,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @Order(0)
 @AutoConfiguration
+@Import(SpringContextHelper.class)
 public class WebAppConfig implements WebMvcConfigurer {
 
     @Autowired

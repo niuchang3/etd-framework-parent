@@ -3,6 +3,16 @@ spring:
   datasource:
     # 本地环境只负责选择对应的 ShardingSphere 数据源配置文件。
     url: jdbc:shardingsphere:classpath:sharding-event-local.yaml?placeholder-type=environment
+  kafka:
+    # 本地通过 Kubernetes NodePort 访问 Kafka，凭证必须由环境变量注入。
+    bootstrap-servers: ${EVENT_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:30092}
+    properties:
+      security.protocol: ${EVENT_KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT} # 使用 SASL 认证且默认不启用 TLS。
+      sasl.mechanism: ${EVENT_KAFKA_SASL_MECHANISM:PLAIN} # 使用用户名和密码执行 PLAIN 认证。
+      sasl.jaas.config: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${EVENT_KAFKA_USERNAME:admin}"
+        password="${EVENT_KAFKA_PASSWORD:123456}";
   data:
     redis:
       # Event 本地 Redis 连接信息与其他环境隔离。

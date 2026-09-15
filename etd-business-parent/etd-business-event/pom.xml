@@ -29,6 +29,11 @@
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-cache</artifactId>
         </dependency>
+        <!-- 显式接入框架统一日志、操作审计、MDC 和链路追踪能力。 -->
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-logs</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-mybatis</artifactId>

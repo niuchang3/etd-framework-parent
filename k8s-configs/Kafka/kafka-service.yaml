@@ -10,12 +10,24 @@ spec:
       protocol: TCP
       port: 9092
       targetPort: 9092
-    - name: external
-      protocol: TCP
-      port: 29092
-      targetPort: 29092
     - name: controller
       protocol: TCP
       port: 29093
       targetPort: 29093
   type: ClusterIP
+---
+# 仅向本机开发环境暴露 Kafka 外部监听器，避免将控制器端口一并开放。
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-external-service
+spec:
+  selector:
+    app: kafka
+  ports:
+    - name: external
+      protocol: TCP
+      port: 29092
+      targetPort: 29092
+      nodePort: 30092
+  type: NodePort
