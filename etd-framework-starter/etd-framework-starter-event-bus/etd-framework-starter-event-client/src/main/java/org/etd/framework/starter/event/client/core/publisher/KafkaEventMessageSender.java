@@ -35,7 +35,10 @@ public class KafkaEventMessageSender implements EventMessageSender {
         String messageJson = eventMessageCodec.encode(message);
         String kafkaKey = resolveKafkaKey(message);
         return kafkaTemplate.send(destination, kafkaKey, messageJson)
-                .thenApply(result -> new EventSendResult(message.eventId(), destination));
+                .thenApply(result -> new EventSendResult(
+                        message.eventId(), destination,
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset()));
     }
 
     private String resolveKafkaKey(EventMessage message) {

@@ -5,8 +5,8 @@ import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import org.etd.event.biz.EventManagementBizService;
 import org.etd.event.constant.EventPermissionCode;
+import org.etd.event.subscription.biz.EventSubscriptionBizService;
 import org.etd.event.subscription.controller.dto.EventSubscriptionSaveDTO;
 import org.etd.event.subscription.controller.dto.EventSubscriptionUpdateDTO;
 import org.etd.event.subscription.controller.vo.EventSubscriptionVO;
@@ -37,12 +37,12 @@ import java.util.List;
 public class EventSubscriptionController {
 
     private final EventSubscriptionService subscriptionService;
-    private final EventManagementBizService eventManagementBizService;
+    private final EventSubscriptionBizService subscriptionBizService;
 
     public EventSubscriptionController(EventSubscriptionService subscriptionService,
-                                       EventManagementBizService eventManagementBizService) {
+                                       EventSubscriptionBizService subscriptionBizService) {
         this.subscriptionService = subscriptionService;
-        this.eventManagementBizService = eventManagementBizService;
+        this.subscriptionBizService = subscriptionBizService;
     }
 
     /**
@@ -82,7 +82,7 @@ public class EventSubscriptionController {
     @AutoLog("新增事件订阅")
     @PostMapping
     public ResultModel<Long> save(@Valid @RequestBody EventSubscriptionSaveDTO dto) {
-        return ResultModel.success(eventManagementBizService.createSubscription(dto));
+        return ResultModel.success(subscriptionBizService.createSubscription(dto));
     }
 
     /**
@@ -92,7 +92,7 @@ public class EventSubscriptionController {
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id,
                                        @Valid @RequestBody EventSubscriptionUpdateDTO dto) {
-        return ResultModel.success(eventManagementBizService.modifySubscription(id, dto));
+        return ResultModel.success(subscriptionBizService.modifySubscription(id, dto));
     }
 
     /**

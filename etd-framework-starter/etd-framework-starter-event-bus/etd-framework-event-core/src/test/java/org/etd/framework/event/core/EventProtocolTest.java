@@ -29,7 +29,7 @@ class EventProtocolTest {
 
     @Test
     void shouldRejectBlankDestination() {
-        assertThatThrownBy(() -> new EventSendResult("event-1", " "))
+        assertThatThrownBy(() -> new EventSendResult("event-1", " ", 0, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("事件发送目的地不能为空");
     }

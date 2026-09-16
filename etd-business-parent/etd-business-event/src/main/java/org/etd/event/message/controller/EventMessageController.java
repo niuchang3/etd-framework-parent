@@ -5,8 +5,8 @@ import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import org.etd.event.biz.EventManagementBizService;
 import org.etd.event.constant.EventPermissionCode;
+import org.etd.event.message.biz.EventMessageBizService;
 import org.etd.event.message.controller.vo.EventMessageDetailVO;
 import org.etd.event.message.controller.vo.EventMessageVO;
 import org.etd.event.message.service.EventMessageService;
@@ -31,12 +31,12 @@ import java.time.Instant;
 public class EventMessageController {
 
     private final EventMessageService messageService;
-    private final EventManagementBizService eventManagementBizService;
+    private final EventMessageBizService messageBizService;
 
     public EventMessageController(EventMessageService messageService,
-                                  EventManagementBizService eventManagementBizService) {
+                                  EventMessageBizService messageBizService) {
         this.messageService = messageService;
-        this.eventManagementBizService = eventManagementBizService;
+        this.messageBizService = messageBizService;
     }
 
     /**
@@ -62,6 +62,6 @@ public class EventMessageController {
     public ResultModel<EventMessageDetailVO> get(
                                                   @PathVariable @NotBlank String eventId,
                                                   @PathVariable Long id) {
-        return ResultModel.success(eventManagementBizService.fetchMessageDetail(eventId, id));
+        return ResultModel.success(messageBizService.fetchMessageDetail(eventId, id));
     }
 }

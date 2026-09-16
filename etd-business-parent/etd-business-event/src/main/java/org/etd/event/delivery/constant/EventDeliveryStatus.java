@@ -11,7 +11,7 @@ public enum EventDeliveryStatus {
     PENDING(0),
 
     /**
-     * 已被调度实例领取并正在发布。
+     * 已被 Kafka 投递任务消费者领取并正在发布。
      */
     PUBLISHING(1),
 

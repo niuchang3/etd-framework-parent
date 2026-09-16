@@ -1,1 +1,2 @@
+org.etd.framework.starter.event.server.config.EventDeliveryAutoConfiguration
 org.etd.framework.starter.event.server.config.EventServerAutoConfiguration

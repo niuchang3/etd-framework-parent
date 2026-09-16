@@ -67,23 +67,6 @@ public class EventTypeServiceImpl implements EventTypeService {
     }
 
     @Override
-    public EventTypeEntity requireEventTypeByMessage(String eventType, String sourceApplication, int eventVersion) {
-        LambdaQueryWrapper<EventTypeEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EventTypeEntity::getEventType, eventType);
-        EventTypeEntity entity = eventTypeMapper.selectOne(wrapper);
-        if (entity == null || entity.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
-            throw new ApiRuntimeException("事件类型不存在或未启用：" + eventType);
-        }
-        if (!entity.getSourceApplication().equals(sourceApplication)) {
-            throw new ApiRuntimeException("事件来源应用与事件类型定义不一致。");
-        }
-        if (eventVersion > entity.getLatestVersion()) {
-            throw new ApiRuntimeException("事件协议版本高于事件中心登记的最新版本。");
-        }
-        return entity;
-    }
-
-    @Override
     public Long create(EventTypeSaveDTO dto) {
         ensureTypeAvailable(dto.getEventType(), null);
         EventTypeEntity entity = toEntity(dto);

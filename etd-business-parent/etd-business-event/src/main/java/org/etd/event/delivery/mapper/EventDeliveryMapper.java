@@ -28,6 +28,7 @@ public interface EventDeliveryMapper extends BaseMapper<EventDeliveryEntity> {
     /**
      * 查询一条事件消息面向各业务订阅的全部投递结果。
      */
-    List<EventDeliveryVO> selectListByMessage(@Param("eventId") String eventId,
-                                              @Param("eventMessageId") Long eventMessageId);
+    List<EventDeliveryVO> selectDeliveryListByMessageId(
+            @Param("eventId") String eventId,
+            @Param("eventMessageId") Long eventMessageId);
 }

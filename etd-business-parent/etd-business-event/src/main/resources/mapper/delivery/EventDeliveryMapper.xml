@@ -44,7 +44,7 @@
         order by d.create_time desc, d.id desc
     </select>
 
-    <select id="selectListByMessage" resultType="org.etd.event.delivery.controller.vo.EventDeliveryVO">
+    <select id="selectDeliveryListByMessageId" resultType="org.etd.event.delivery.controller.vo.EventDeliveryVO">
         <include refid="deliveryColumns"/>
         where d.event_id = #{eventId}
           and d.event_message_id = #{eventMessageId}

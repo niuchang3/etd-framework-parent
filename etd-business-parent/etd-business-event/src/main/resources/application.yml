@@ -14,10 +14,13 @@ spring:
       auto-offset-reset: earliest # 新建入口消费组时从最早事件开始，避免跳过服务启动前已发送的消息。
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 入口消息键按字符串解码。
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 统一事件协议按 JSON 字符串接收。
+      properties:
+        isolation.level: read_committed # 入口、投递和状态消费者只读取已经提交的 Kafka 事务消息。
     listener:
       type: ${EVENT_KAFKA_LISTENER_TYPE:single} # 使用 Spring Kafka 原生配置切换 single 或 batch 监听模式。
       ack-mode: record # 单条模式逐条确认；批量模式由 Event Server 专用容器工厂覆盖为 BATCH。
     producer:
+      transaction-id-prefix: ${EVENT_KAFKA_TRANSACTION_ID_PREFIX:${spring.application.name}-${random.uuid}-} # 每个实例使用唯一事务前缀，支持消费后原子转发。
       acks: all # 事件转发等待所有同步副本确认，提高发送可靠性。
       key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。
       value-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息体序列化器。
@@ -83,6 +86,18 @@ etd:
         create-topic: ${EVENT_KAFKA_CREATE_TOPIC:true} # 启动时幂等创建事件总线入口 Topic。
         partitions: ${EVENT_KAFKA_TOPIC_PARTITIONS:6} # 入口 Topic 分区数，应与目标消费并发度匹配。
         replicas: ${EVENT_KAFKA_TOPIC_REPLICAS:1} # 本地单节点 Kafka 使用一个副本。
+        delivery:
+          task-topic: ${EVENT_KAFKA_DELIVERY_TASK_TOPIC:etd.event.delivery.task} # 一个事件面向一个订阅生成一条内部投递任务。
+          status-topic: ${EVENT_KAFKA_DELIVERY_STATUS_TOPIC:etd.event.delivery.status} # 异步投影 Delivery 状态的内部 Topic。
+          dead-letter-topic: ${EVENT_KAFKA_DELIVERY_DLT_TOPIC:etd.event.delivery.task.dlt} # 自动重试耗尽后的死信 Topic。
+          task-consumer-group: ${EVENT_KAFKA_DELIVERY_TASK_GROUP:etd-event-delivery-dispatcher} # 多实例共享投递任务消费组。
+          status-consumer-group: ${EVENT_KAFKA_DELIVERY_STATUS_GROUP:etd-event-delivery-status-projector} # 多实例共享状态投影消费组。
+          partitions: ${EVENT_KAFKA_DELIVERY_PARTITIONS:16} # 内部 Topic 分区数，生产环境可与目标并发规划保持一致。
+          replicas: ${EVENT_KAFKA_DELIVERY_REPLICAS:1} # 本地单节点 Kafka 使用一个副本，生产环境通常配置为 3。
+          max-attempts: ${EVENT_KAFKA_DELIVERY_MAX_ATTEMPTS:4} # 包含首次发送在内的最大投递次数。
+          initial-backoff: ${EVENT_KAFKA_DELIVERY_INITIAL_BACKOFF:1s} # 首次失败后的等待时间。
+          backoff-multiplier: ${EVENT_KAFKA_DELIVERY_BACKOFF_MULTIPLIER:2.0} # 后续失败使用指数退避。
+          max-backoff: ${EVENT_KAFKA_DELIVERY_MAX_BACKOFF:30s} # 单次退避最长等待时间。
   mybatis:
     fill:
       enabled: true # 启用框架实体字段自动填充能力。

@@ -57,7 +57,7 @@ class EventMessageFactoryTest {
         DefaultEventPublisher publisher = new DefaultEventPublisher(factory, (destination, message) -> {
             sentMessage.set(message);
             return java.util.concurrent.CompletableFuture.completedFuture(
-                    new EventSendResult(message.eventId(), destination));
+                    new EventSendResult(message.eventId(), destination, 0, 0));
         }, properties, Runnable::run);
 
         publisher.publish("upms.user.created", Map.of("userId", 2L));

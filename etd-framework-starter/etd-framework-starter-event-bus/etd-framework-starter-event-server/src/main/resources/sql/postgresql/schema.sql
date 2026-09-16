@@ -165,12 +165,6 @@ begin
             comment on table evt_event_delivery_%1$s is '事件订阅投递任务物理分表 %1$s';
             create unique index uk_evt_event_delivery_%1$s_message_subscription
                 on evt_event_delivery_%1$s (event_id, event_message_id, subscription_id);
-            create index idx_evt_event_delivery_%1$s_pending
-                on evt_event_delivery_%1$s (next_retry_at, id)
-                where del_flag = 0 and delivery_status in (0, 3);
-            create index idx_evt_event_delivery_%1$s_processing
-                on evt_event_delivery_%1$s (update_time, id)
-                where del_flag = 0 and delivery_status = 1;
             create index idx_evt_event_delivery_%1$s_message
                 on evt_event_delivery_%1$s (event_message_id, id)
                 where del_flag = 0;

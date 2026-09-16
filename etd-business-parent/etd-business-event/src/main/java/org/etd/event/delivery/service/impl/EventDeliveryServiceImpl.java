@@ -1,24 +1,20 @@
 package org.etd.event.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.etd.event.delivery.constant.EventDeliveryStatus;
 import org.etd.event.delivery.controller.vo.EventDeliveryVO;
 import org.etd.event.delivery.entity.EventDeliveryEntity;
 import org.etd.event.delivery.mapper.EventDeliveryMapper;
 import org.etd.event.delivery.service.EventDeliveryService;
-import org.etd.event.subscription.entity.EventSubscriptionEntity;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.event.core.model.EventMessage;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
 
 /**
- * 事件投递任务查询与人工重播能力实现。
+ * 事件投递记录查询能力实现。
  */
 @Service
 public class EventDeliveryServiceImpl implements EventDeliveryService {
@@ -37,49 +33,18 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
     }
 
     @Override
-    public EventDeliveryVO fetchByEventIdAndId(String eventId, Long id) {
-        return toVO(requireDelivery(eventId, id));
+    public EventDeliveryVO fetchDeliveryById(String eventId, Long deliveryId) {
+        return toVO(requireDelivery(eventId, deliveryId));
     }
 
     @Override
-    public List<EventDeliveryVO> selectListByMessage(String eventId, Long eventMessageId) {
-        return deliveryMapper.selectListByMessage(eventId, eventMessageId);
+    public EventDeliveryEntity requireDeliveryById(String eventId, Long deliveryId) {
+        return requireDelivery(eventId, deliveryId);
     }
 
     @Override
-    public void createDeliveryList(EventMessage message, Long eventMessageId,
-                                   List<EventSubscriptionEntity> subscriptionList) {
-        for (EventSubscriptionEntity subscription : subscriptionList) {
-            EventDeliveryEntity delivery = new EventDeliveryEntity();
-            delivery.setEventId(message.eventId());
-            delivery.setEventMessageId(eventMessageId);
-            delivery.setSubscriptionId(subscription.getId());
-            delivery.setTargetTopic(subscription.getTargetTopic());
-            deliveryMapper.insert(delivery);
-        }
-    }
-
-    @Override
-    public boolean replayFailedDelivery(String eventId, Long id) {
-        EventDeliveryEntity current = requireDelivery(eventId, id);
-        ensureReplayable(current);
-        LambdaUpdateWrapper<EventDeliveryEntity> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(EventDeliveryEntity::getEventId, eventId)
-                .eq(EventDeliveryEntity::getId, id)
-                .eq(EventDeliveryEntity::getVersion, current.getVersion())
-                .in(EventDeliveryEntity::getDeliveryStatus,
-                        EventDeliveryStatus.RETRY_WAITING.getCode(), EventDeliveryStatus.DEAD.getCode())
-                .set(EventDeliveryEntity::getDeliveryStatus, EventDeliveryStatus.PENDING.getCode())
-                .set(EventDeliveryEntity::getNextRetryAt, Instant.now())
-                .set(EventDeliveryEntity::getLastError, null)
-                .set(EventDeliveryEntity::getKafkaPartition, null)
-                .set(EventDeliveryEntity::getKafkaOffset, null)
-                .set(EventDeliveryEntity::getPublishedAt, null)
-                .set(EventDeliveryEntity::getVersion, current.getVersion() + 1);
-        if (deliveryMapper.update(null, wrapper) == 0) {
-            throw new ApiRuntimeException("投递任务状态已变化，请刷新后重试。");
-        }
-        return true;
+    public List<EventDeliveryVO> selectDeliveryListByMessageId(String eventId, Long eventMessageId) {
+        return deliveryMapper.selectDeliveryListByMessageId(eventId, eventMessageId);
     }
 
     private EventDeliveryEntity requireDelivery(String eventId, Long id) {
@@ -91,14 +56,6 @@ public class EventDeliveryServiceImpl implements EventDeliveryService {
             throw new ApiRuntimeException("事件投递任务不存在。");
         }
         return entity;
-    }
-
-    private void ensureReplayable(EventDeliveryEntity entity) {
-        int status = entity.getDeliveryStatus();
-        if (status != EventDeliveryStatus.RETRY_WAITING.getCode()
-                && status != EventDeliveryStatus.DEAD.getCode()) {
-            throw new ApiRuntimeException("仅等待重试或死信状态的投递任务允许人工重播。");
-        }
     }
 
     private EventDeliveryVO toVO(EventDeliveryEntity entity) {

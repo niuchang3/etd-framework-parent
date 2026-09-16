@@ -5,8 +5,8 @@ import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import org.etd.event.biz.EventManagementBizService;
 import org.etd.event.constant.EventPermissionCode;
+import org.etd.event.type.biz.EventTypeBizService;
 import org.etd.event.type.controller.dto.EventTypeSaveDTO;
 import org.etd.event.type.controller.dto.EventTypeUpdateDTO;
 import org.etd.event.type.controller.vo.EventTypeVO;
@@ -37,12 +37,12 @@ import java.util.List;
 public class EventTypeController {
 
     private final EventTypeService eventTypeService;
-    private final EventManagementBizService eventManagementBizService;
+    private final EventTypeBizService eventTypeBizService;
 
     public EventTypeController(EventTypeService eventTypeService,
-                               EventManagementBizService eventManagementBizService) {
+                               EventTypeBizService eventTypeBizService) {
         this.eventTypeService = eventTypeService;
-        this.eventManagementBizService = eventManagementBizService;
+        this.eventTypeBizService = eventTypeBizService;
     }
 
     /**
@@ -108,6 +108,6 @@ public class EventTypeController {
     @AutoLog("删除事件类型")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> remove(@PathVariable Long id) {
-        return ResultModel.success(eventManagementBizService.removeEventType(id));
+        return ResultModel.success(eventTypeBizService.removeEventType(id));
     }
 }

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.etd.event.constant.EventPermissionCode;
 import org.etd.event.delivery.controller.vo.EventDeliveryVO;
+import org.etd.event.delivery.biz.EventDeliveryReplayBizService;
 import org.etd.event.delivery.service.EventDeliveryService;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
@@ -31,9 +32,12 @@ import java.time.Instant;
 public class EventDeliveryController {
 
     private final EventDeliveryService deliveryService;
+    private final EventDeliveryReplayBizService replayBizService;
 
-    public EventDeliveryController(EventDeliveryService deliveryService) {
+    public EventDeliveryController(EventDeliveryService deliveryService,
+                                   EventDeliveryReplayBizService replayBizService) {
         this.deliveryService = deliveryService;
+        this.replayBizService = replayBizService;
     }
 
     /**
@@ -59,7 +63,7 @@ public class EventDeliveryController {
     public ResultModel<EventDeliveryVO> get(
                                              @PathVariable @NotBlank String eventId,
                                              @PathVariable Long id) {
-        return ResultModel.success(deliveryService.fetchByEventIdAndId(eventId, id));
+        return ResultModel.success(deliveryService.fetchDeliveryById(eventId, id));
     }
 
     /**
@@ -70,6 +74,6 @@ public class EventDeliveryController {
     public ResultModel<Boolean> replay(
                                         @PathVariable @NotBlank String eventId,
                                         @PathVariable Long id) {
-        return ResultModel.success(deliveryService.replayFailedDelivery(eventId, id));
+        return ResultModel.success(replayBizService.replayDelivery(eventId, id));
     }
 }
