@@ -31,13 +31,15 @@ public class EventMessageServiceImpl implements EventMessageService {
             long current, long size, String eventId, String eventType,
             Long eventTypeId, EventMessageStatus messageStatus,
             String sourceApplication, Instant startTime, Instant endTime) {
+        Integer messageStatusCode = messageStatus == null ? null : messageStatus.getCode();
         LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(eventId), EventMessageEntity::getEventId, eventId)
                 .eq(StringUtils.hasText(eventType), EventMessageEntity::getEventType, eventType)
                 .eq(eventTypeId != null, EventMessageEntity::getEventTypeId, eventTypeId)
-                .eq(messageStatus != null, EventMessageEntity::getMessageStatus,
-                        messageStatus == null ? null : messageStatus.getCode())
-                .eq(StringUtils.hasText(sourceApplication), EventMessageEntity::getSourceApplication, sourceApplication)
+                .eq(messageStatusCode != null,
+                        EventMessageEntity::getMessageStatus, messageStatusCode)
+                .eq(StringUtils.hasText(sourceApplication),
+                        EventMessageEntity::getSourceApplication, sourceApplication)
                 .ge(startTime != null, EventMessageEntity::getCreateTime, startTime)
                 .lt(endTime != null, EventMessageEntity::getCreateTime, endTime)
                 .orderByDesc(EventMessageEntity::getCreateTime)
