@@ -90,4 +90,18 @@ public final class HeaderConstant {
      * RabbitMQ 延迟队列消息头
      */
     public static final String X_DELAY = "x-delay";
+
+    /**
+     * 框架内部上下文透传非标准 Header 定义
+     */
+    public static final class InternalHeader {
+
+        private InternalHeader() {
+        }
+
+        /**
+         * 用户详情 UserDetails Header
+         */
+        public static final String X_USER_DETAILS = "x-user-details";
+    }
 }

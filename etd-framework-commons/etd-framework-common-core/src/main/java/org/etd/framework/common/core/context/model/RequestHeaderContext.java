@@ -267,7 +267,8 @@ public class RequestHeaderContext implements Serializable {
                headerName.equalsIgnoreCase(HeaderConstant.DEVICE_FINGERPRINT) ||
                headerName.equalsIgnoreCase(HeaderConstant.DEVICE_ID) ||
                headerName.equalsIgnoreCase(HeaderConstant.X_REAL_IP) ||
-               headerName.equalsIgnoreCase(HeaderConstant.X_FORWARDED_FOR);
+               headerName.equalsIgnoreCase(HeaderConstant.X_FORWARDED_FOR) ||
+               headerName.equalsIgnoreCase(HeaderConstant.InternalHeader.X_USER_DETAILS);
     }
 
     /**

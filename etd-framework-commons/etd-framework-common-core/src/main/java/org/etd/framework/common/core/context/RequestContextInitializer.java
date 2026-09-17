@@ -3,15 +3,20 @@ package org.etd.framework.common.core.context;
 import jakarta.servlet.http.HttpServletRequest;
 import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.context.model.RequestControlFlags;
 import org.etd.framework.common.core.context.model.RequestHeaderContext;
+import org.etd.framework.common.core.user.PermissionAuthority;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.utils.ip.IpUtil;
+import org.etd.framework.common.utils.json.JsonUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.UUID;
 
@@ -97,11 +102,12 @@ public class RequestContextInitializer {
             }
         }
     }
+
     /**
-     * 初始化
+     * Map 标头与序列化数据的全量上下文初始化与还原
+     * 支持包含 headers、userDetails 及 controlFlags 的完整上下文还原
      *
-     * @param headers 参数 headers
-     * @return 处理结果
+     * @param headers 包含上下文信息的 Map
      */
     public static void init(Map<String, ?> headers) {
         RequestContext.clean();
@@ -110,37 +116,91 @@ public class RequestContextInitializer {
             return;
         }
 
-        // 直接调用 RequestHeaderContext 自身的无损还原与大小写兼容能力
+        // 1. 调用 RequestHeaderContext 的无损还原与大小写兼容能力
         RequestHeaderContext headerContext = RequestContext.getHeaderContext();
         headerContext.fromMap(headers);
 
-        // 如果传入标头中缺乏 traceId，进行 UUID 兜底补全
+        // 2. 还原安全与用户身份领域模型 (UserDetails)
+        Object userDetailsObj = getHeaderValue(headers, HeaderConstant.InternalHeader.X_USER_DETAILS);
+        if (userDetailsObj instanceof UserDetails userDetails) {
+            RequestContext.setUser(userDetails);
+        } else if (userDetailsObj != null) {
+            String userJson = userDetailsObj instanceof String str ? str : JsonUtils.toJson(userDetailsObj);
+            if (StringUtils.hasText(userJson)) {
+                UserDetails deserializedUser = JsonUtils.fromJson(userJson, UserDetails.class);
+                if (deserializedUser != null) {
+                    RequestContext.setUser(deserializedUser);
+                }
+            }
+        }
+
+        // 3. 如果传入标头中缺乏 traceId，进行 UUID 兜底补全
         if (!StringUtils.hasText(headerContext.getTraceId())) {
             headerContext.setTraceId(UUID.randomUUID().toString());
         }
     }
 
     /**
-     * 导出当前 RequestContext 中的全量及动态扩展 Header 标头，用于 MQ 发送、RPC 远程调用、线程池透传
-     * 干净、全量导出网络传输标头，绝对不混入复杂的 UserDetails 对象
+     * 导出 RequestContextModel 的全量上下文为 Map 结构。
+     * 包含传输标头 (Headers，自动去除敏感 Token) 以及安全用户模型 (UserDetails，去敏感密码)。
      *
-     * @return 包含全量核心 Header 及动态扩展 Header 的 Map
+     * @return 包含全量 RequestContextModel 的 Map 结构
      */
-    /**
-     * export Headers
-     *
-     * @return 处理结果
-     */
-    public static Map<String, Object> exportHeaders() {
-        return RequestContext.getHeaderContext().toMap();
+    public static Map<String, Object> exportMessageHeaders() {
+        // 1. 导出消息头上下文
+        Map<String, Object> map = RequestContext.getHeaderContext().toMap();
+        map.keySet().removeIf(key -> HeaderConstant.AUTHORIZATION.equalsIgnoreCase(key));
+
+        // 2. 导出安全与用户身份领域模型（安全去敏感密码）
+        UserDetails userDetails = RequestContext.getUser();
+        if (userDetails != null) {
+            UserDetails safeUserDetails = copySafeUserDetails(userDetails);
+            String userJson = JsonUtils.toJson(safeUserDetails);
+            if (StringUtils.hasText(userJson)) {
+                map.put(HeaderConstant.InternalHeader.X_USER_DETAILS, userJson);
+            }
+        }
+
+        return map;
     }
 
     /**
-     * 导出消息队列安全上下文。消息中不传递用户认证 Token，但保留标准化请求 IP。
+     * 大小写不敏感地从 Map 中提取属性值
      */
-    public static Map<String, Object> exportMessageHeaders() {
-        Map<String, Object> headers = RequestContext.getHeaderContext().toMap();
-        headers.keySet().removeIf(key -> HeaderConstant.AUTHORIZATION.equalsIgnoreCase(key));
-        return headers;
+    private static Object getHeaderValue(Map<String, ?> map, String key) {
+        if (map == null || key == null) {
+            return null;
+        }
+        Object val = map.get(key);
+        if (val != null) {
+            return val;
+        }
+        for (Map.Entry<String, ?> entry : map.entrySet()) {
+            if (key.equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 复制安全的 UserDetails 副本（清空密码敏感字段）
+     */
+    private static UserDetails copySafeUserDetails(UserDetails source) {
+        if (source == null) {
+            return null;
+        }
+        UserDetails copy = new UserDetails();
+        BeanUtils.copyProperties(source, copy);
+        copy.setPassword(null);
+        if (source.getRoleCodes() != null) {
+            copy.setRoleCodes(new LinkedHashSet<>(source.getRoleCodes()));
+        }
+        if (source.getAuthorities() != null) {
+            copy.setAuthorities(source.getAuthorities().stream()
+                    .map(authority -> new PermissionAuthority(authority.getAuthority()))
+                    .toList());
+        }
+        return copy;
     }
 }
