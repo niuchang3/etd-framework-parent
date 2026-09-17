@@ -66,8 +66,8 @@ begin
                 occurred_at        timestamp(6) with time zone not null,
                 source_application varchar(100) not null,
                 partition_key      varchar(250),
-                event_context      jsonb not null default '{}'::jsonb,
-                event_payload      jsonb not null,
+                event_context      text not null default '{}',
+                event_payload      text not null,
                 message_status     integer not null default 1
                     check (message_status in (0, 1)),
                 failure_reason     varchar(2000),
