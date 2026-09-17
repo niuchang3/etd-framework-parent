@@ -94,7 +94,13 @@ public class EventBusSubscriberTemplate {
             return EventMessageDecision.error(
                     definition.eventTypeId(), "事件协议版本高于事件中心登记的最新版本。");
         }
-        return EventMessageDecision.normal(definition.eventTypeId());
+        List<EventSubscriptionTarget> targetList =
+                subscriptionResolver.resolveSubscriptionTargetList(definition.eventTypeId());
+        if (targetList.isEmpty()) {
+            return EventMessageDecision.error(
+                    definition.eventTypeId(), "事件类型未配置启用的订阅关系：" + message.eventType());
+        }
+        return EventMessageDecision.normal(definition.eventTypeId(), targetList);
     }
 
     private List<EventDeliveryTask> createDeliveryTaskList(
@@ -102,10 +108,8 @@ public class EventBusSubscriberTemplate {
         if (decision.status() == EventMessageStatus.ERROR) {
             return List.of();
         }
-        List<EventSubscriptionTarget> targetList =
-                subscriptionResolver.resolveSubscriptionTargetList(decision.eventTypeId());
         return deliveryTaskRegistrar.createDeliveryTaskList(
-                message, messageId, targetList);
+                message, messageId, decision.targetList());
     }
 
     /**
@@ -114,17 +118,21 @@ public class EventBusSubscriberTemplate {
      * @param eventTypeId 事件类型主键，仅在类型不存在时为空
      * @param status 消息处理状态
      * @param failureReason 业务校验失败原因，正常消息为空
+     * @param targetList 首次接收时解析到的启用订阅目标，错误消息为空列表
      */
     private record EventMessageDecision(
-            Long eventTypeId, EventMessageStatus status, String failureReason) {
+            Long eventTypeId, EventMessageStatus status, String failureReason,
+            List<EventSubscriptionTarget> targetList) {
 
-        private static EventMessageDecision normal(Long eventTypeId) {
-            return new EventMessageDecision(eventTypeId, EventMessageStatus.NORMAL, null);
+        private static EventMessageDecision normal(
+                Long eventTypeId, List<EventSubscriptionTarget> targetList) {
+            return new EventMessageDecision(
+                    eventTypeId, EventMessageStatus.NORMAL, null, List.copyOf(targetList));
         }
 
         private static EventMessageDecision error(Long eventTypeId, String failureReason) {
             return new EventMessageDecision(
-                    eventTypeId, EventMessageStatus.ERROR, failureReason);
+                    eventTypeId, EventMessageStatus.ERROR, failureReason, List.of());
         }
     }
 }

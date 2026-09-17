@@ -92,6 +92,25 @@ class EventBusSubscriberTemplateTest {
     }
 
     @Test
+    void shouldStoreErrorMessageWithoutCreatingTasksWhenSubscriptionDoesNotExist() {
+        EventTypeDefinition definition = createTypeDefinition(true);
+        when(typeResolver.selectEventType(message.eventType())).thenReturn(definition);
+        when(subscriptionResolver.resolveSubscriptionTargetList(10L)).thenReturn(List.of());
+        when(messageRegistrar.createEventMessage(
+                message, 10L, EventMessageStatus.ERROR,
+                "事件类型未配置启用的订阅关系：upms.user.created")).thenReturn(30L);
+
+        EventBusSubscriberResult result = template.receiveEvent(message);
+
+        assertThat(result.deliveryTaskList()).isEmpty();
+        verify(messageRegistrar).createEventMessage(
+                message, 10L, EventMessageStatus.ERROR,
+                "事件类型未配置启用的订阅关系：upms.user.created");
+        verify(taskRegistrar, never()).createDeliveryTaskList(
+                message, 30L, List.of());
+    }
+
+    @Test
     void shouldLoadExistingTasksForRepeatedNormalMessage() {
         EventDeliveryTask task = createTask();
         EventMessageRegistration registration = new EventMessageRegistration(
