@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.etd.event.message.entity.EventMessageEntity;
 import org.etd.event.message.mapper.EventMessageMapper;
-import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.event.core.model.EventMessage;
 import org.etd.framework.starter.event.server.eventbus.model.EventMessageRegistration;
+import org.etd.framework.starter.event.server.eventbus.model.EventMessageStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -16,15 +16,13 @@ import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 入口事件消息幂等登记测试。
+ * 入口事件消息查询与持久化适配测试。
  */
 class EventMessageRegistrarAdapterTest {
 
@@ -42,7 +40,7 @@ class EventMessageRegistrarAdapterTest {
     }
 
     @Test
-    void shouldCreateMessageForFirstRegistration() {
+    void shouldCreateMessageUsingStarterDecision() {
         EventMessage message = createMessage();
         when(messageMapper.insert(any(EventMessageEntity.class))).thenAnswer(invocation -> {
             EventMessageEntity entity = invocation.getArgument(0);
@@ -50,37 +48,30 @@ class EventMessageRegistrarAdapterTest {
             return 1;
         });
 
-        EventMessageRegistration registration =
-                messageRegistrar.registerEventMessage(message, 10L);
+        Long messageId = messageRegistrar.createEventMessage(
+                message, null, EventMessageStatus.ERROR, "事件类型不存在");
 
-        assertThat(registration.messageId()).isEqualTo(30L);
-        assertThat(registration.created()).isTrue();
+        assertThat(messageId).isEqualTo(30L);
         verify(messageMapper).insert(any(EventMessageEntity.class));
     }
 
     @Test
-    void shouldReuseMessageWhenRepeatedContentIsIdentical() {
+    void shouldReturnPersistedMessageSnapshotWithoutValidation() {
         EventMessage message = createMessage();
         when(messageMapper.selectOne(any())).thenReturn(createPersistedMessage(message));
 
         EventMessageRegistration registration =
-                messageRegistrar.registerEventMessage(message, 10L);
+                messageRegistrar.selectEventMessage(message.eventId());
 
         assertThat(registration.messageId()).isEqualTo(30L);
-        assertThat(registration.created()).isFalse();
-        verify(messageMapper, never()).insert(any(EventMessageEntity.class));
+        assertThat(registration.message()).isEqualTo(message);
+        assertThat(registration.eventTypeId()).isEqualTo(10L);
+        assertThat(registration.status()).isEqualTo(EventMessageStatus.NORMAL);
     }
 
     @Test
-    void shouldRejectDifferentContentUsingExistingEventId() {
-        EventMessage message = createMessage();
-        EventMessageEntity persisted = createPersistedMessage(message);
-        persisted.setSourceApplication("order");
-        when(messageMapper.selectOne(any())).thenReturn(persisted);
-
-        assertThatThrownBy(() -> messageRegistrar.registerEventMessage(message, 10L))
-                .isInstanceOf(ApiRuntimeException.class)
-                .hasMessageContaining("事件 ID 已被不同的消息内容使用");
+    void shouldReturnNullWhenMessageDoesNotExist() {
+        assertThat(messageRegistrar.selectEventMessage("event-404")).isNull();
     }
 
     private EventMessage createMessage() {
@@ -95,6 +86,7 @@ class EventMessageRegistrarAdapterTest {
         EventMessageEntity entity = new EventMessageEntity();
         entity.setId(30L);
         entity.setEventId(message.eventId());
+        entity.setEventType(message.eventType());
         entity.setEventTypeId(10L);
         entity.setEventVersion(message.eventVersion());
         entity.setOccurredAt(message.occurredAt());
@@ -102,6 +94,7 @@ class EventMessageRegistrarAdapterTest {
         entity.setPartitionKey(message.partitionKey());
         entity.setEventContext(objectMapper.valueToTree(message.context()));
         entity.setEventPayload(message.payload());
+        entity.setMessageStatus(EventMessageStatus.NORMAL.getCode());
         return entity;
     }
 }

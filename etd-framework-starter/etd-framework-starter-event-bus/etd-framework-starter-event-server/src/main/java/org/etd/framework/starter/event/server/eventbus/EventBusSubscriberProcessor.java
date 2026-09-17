@@ -34,7 +34,9 @@ public class EventBusSubscriberProcessor {
         setTraceIdToMdc();
         try {
             EventBusSubscriberResult result = subscriberTemplate.receiveEvent(message);
-            taskPublisher.publishDeliveryTaskList(result.deliveryTaskList());
+            if (!result.deliveryTaskList().isEmpty()) {
+                taskPublisher.publishDeliveryTaskList(result.deliveryTaskList());
+            }
         } finally {
             cleanContext();
         }

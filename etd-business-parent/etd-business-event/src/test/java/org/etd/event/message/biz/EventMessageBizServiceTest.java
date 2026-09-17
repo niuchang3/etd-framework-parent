@@ -14,6 +14,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -42,5 +43,25 @@ class EventMessageBizServiceTest {
         assertSame(message, detail.getMessage());
         assertSame(type, detail.getEventType());
         assertEquals(deliveryList, detail.getDeliveryList());
+    }
+
+    @Test
+    void shouldReturnErrorMessageDetailWithoutTypeDefinition() {
+        EventTypeService typeService = mock(EventTypeService.class);
+        EventMessageService messageService = mock(EventMessageService.class);
+        EventDeliveryService deliveryService = mock(EventDeliveryService.class);
+        EventMessageBizService service = new EventMessageBizService(
+                typeService, messageService, deliveryService);
+        EventMessageVO message = new EventMessageVO();
+        message.setId(10L);
+        when(messageService.fetchMessageById("event-10", 10L)).thenReturn(message);
+        when(deliveryService.selectDeliveryListByMessageId("event-10", 10L))
+                .thenReturn(List.of());
+
+        EventMessageDetailVO detail = service.fetchMessageDetail("event-10", 10L);
+
+        assertSame(message, detail.getMessage());
+        assertEquals(List.of(), detail.getDeliveryList());
+        verifyNoInteractions(typeService);
     }
 }

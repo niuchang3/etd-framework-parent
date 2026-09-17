@@ -37,7 +37,13 @@ public class EventMessageEntity extends BaseEntity {
     private String eventId;
 
     /**
-     * 事件类型定义主键。
+     * 消息携带的原始事件类型编码，类型解析失败时仍完整保留。
+     */
+    @TableField("event_type")
+    private String eventType;
+
+    /**
+     * 事件类型定义主键，类型不存在时为空。
      */
     @TableField("event_type_id")
     private Long eventTypeId;
@@ -77,4 +83,16 @@ public class EventMessageEntity extends BaseEntity {
      */
     @TableField(value = "event_payload", typeHandler = JacksonTypeHandler.class)
     private JsonNode eventPayload;
+
+    /**
+     * 入口消息处理状态：1 表示正常，0 表示业务校验失败。
+     */
+    @TableField("message_status")
+    private Integer messageStatus;
+
+    /**
+     * 业务校验失败原因，正常消息为空。
+     */
+    @TableField("failure_reason")
+    private String failureReason;
 }

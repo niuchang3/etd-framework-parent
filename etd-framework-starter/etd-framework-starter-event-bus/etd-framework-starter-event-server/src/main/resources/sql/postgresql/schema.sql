@@ -60,13 +60,19 @@ begin
                 version            integer not null default 0,
                 del_flag           smallint not null default 0,
                 event_id           varchar(100) not null,
-                event_type_id      bigint not null references evt_event_type (id),
+                event_type         varchar(150) not null,
+                event_type_id      bigint references evt_event_type (id),
                 event_version      integer not null,
                 occurred_at        timestamp(6) with time zone not null,
                 source_application varchar(100) not null,
                 partition_key      varchar(250),
                 event_context      jsonb not null default '{}'::jsonb,
                 event_payload      jsonb not null,
+                message_status     integer not null default 1
+                    check (message_status in (0, 1)),
+                failure_reason     varchar(2000),
+                check ((message_status = 1 and failure_reason is null)
+                    or (message_status = 0 and failure_reason is not null)),
                 primary key (id)
             );
             comment on table evt_event_message_%1$s is '事件中心原始消息物理分表 %1$s';
@@ -75,8 +81,14 @@ begin
             create index idx_evt_event_message_%1$s_type_time
                 on evt_event_message_%1$s (event_type_id, create_time desc, id desc)
                 where del_flag = 0;
+            create index idx_evt_event_message_%1$s_type_code_time
+                on evt_event_message_%1$s (event_type, create_time desc, id desc)
+                where del_flag = 0;
             create index idx_evt_event_message_%1$s_source_time
                 on evt_event_message_%1$s (source_application, create_time desc, id desc)
+                where del_flag = 0;
+            create index idx_evt_event_message_%1$s_status_time
+                on evt_event_message_%1$s (message_status, create_time desc, id desc)
                 where del_flag = 0;
         $ddl$, shard_suffix);
     end loop;

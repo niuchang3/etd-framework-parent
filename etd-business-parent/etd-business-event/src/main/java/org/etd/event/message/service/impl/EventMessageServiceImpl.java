@@ -8,6 +8,7 @@ import org.etd.event.message.entity.EventMessageEntity;
 import org.etd.event.message.mapper.EventMessageMapper;
 import org.etd.event.message.service.EventMessageService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.starter.event.server.eventbus.model.EventMessageStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -26,11 +27,16 @@ public class EventMessageServiceImpl implements EventMessageService {
     }
 
     @Override
-    public IPage<EventMessageVO> page(long current, long size, String eventId, Long eventTypeId,
-                                      String sourceApplication, Instant startTime, Instant endTime) {
+    public IPage<EventMessageVO> page(
+            long current, long size, String eventId, String eventType,
+            Long eventTypeId, EventMessageStatus messageStatus,
+            String sourceApplication, Instant startTime, Instant endTime) {
         LambdaQueryWrapper<EventMessageEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(eventId), EventMessageEntity::getEventId, eventId)
+                .eq(StringUtils.hasText(eventType), EventMessageEntity::getEventType, eventType)
                 .eq(eventTypeId != null, EventMessageEntity::getEventTypeId, eventTypeId)
+                .eq(messageStatus != null, EventMessageEntity::getMessageStatus,
+                        messageStatus == null ? null : messageStatus.getCode())
                 .eq(StringUtils.hasText(sourceApplication), EventMessageEntity::getSourceApplication, sourceApplication)
                 .ge(startTime != null, EventMessageEntity::getCreateTime, startTime)
                 .lt(endTime != null, EventMessageEntity::getCreateTime, endTime)
@@ -68,11 +74,14 @@ public class EventMessageServiceImpl implements EventMessageService {
         vo.setCreateTime(entity.getCreateTime());
         vo.setVersion(entity.getVersion());
         vo.setEventId(entity.getEventId());
+        vo.setEventType(entity.getEventType());
         vo.setEventTypeId(entity.getEventTypeId());
         vo.setEventVersion(entity.getEventVersion());
         vo.setOccurredAt(entity.getOccurredAt());
         vo.setSourceApplication(entity.getSourceApplication());
         vo.setPartitionKey(entity.getPartitionKey());
+        vo.setMessageStatus(EventMessageStatus.fromCode(entity.getMessageStatus()));
+        vo.setFailureReason(entity.getFailureReason());
         if (includePayload) {
             vo.setEventContext(entity.getEventContext());
             vo.setEventPayload(entity.getEventPayload());

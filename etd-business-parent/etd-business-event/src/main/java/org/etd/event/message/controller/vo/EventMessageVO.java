@@ -2,6 +2,7 @@ package org.etd.event.message.controller.vo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
+import org.etd.framework.starter.event.server.eventbus.model.EventMessageStatus;
 
 import java.time.Instant;
 
@@ -23,7 +24,10 @@ public class EventMessageVO {
     /** 事件全局唯一标识，同时作为消息表和投递表的分片键。 */
     private String eventId;
 
-    /** 关联的事件类型主键。 */
+    /** 消息携带的原始事件类型编码。 */
+    private String eventType;
+
+    /** 关联的事件类型主键，类型解析失败时为空。 */
     private Long eventTypeId;
 
     /** 当前消息使用的事件协议版本。 */
@@ -43,4 +47,10 @@ public class EventMessageVO {
 
     /** 原始事件业务载荷。 */
     private JsonNode eventPayload;
+
+    /** 入口消息处理状态，异常消息不会生成后续投递任务。 */
+    private EventMessageStatus messageStatus;
+
+    /** 业务校验失败原因，正常消息为空。 */
+    private String failureReason;
 }

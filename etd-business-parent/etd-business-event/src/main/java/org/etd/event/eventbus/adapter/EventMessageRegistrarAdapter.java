@@ -1,19 +1,18 @@
 package org.etd.event.eventbus.adapter;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.event.message.entity.EventMessageEntity;
 import org.etd.event.message.mapper.EventMessageMapper;
-import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.event.core.model.EventMessage;
 import org.etd.framework.starter.event.server.eventbus.model.EventMessageRegistration;
+import org.etd.framework.starter.event.server.eventbus.model.EventMessageStatus;
 import org.etd.framework.starter.event.server.eventbus.port.EventMessageRegistrar;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
-
 /**
- * 基于事件消息表的事件总线幂等登记适配器。
+ * 基于事件消息表的入口消息查询与持久化适配器。
  */
 @Component
 public class EventMessageRegistrarAdapter implements EventMessageRegistrar {
@@ -27,23 +26,42 @@ public class EventMessageRegistrarAdapter implements EventMessageRegistrar {
     }
 
     /**
-     * 首次接收时创建消息记录，重复接收时校验事件内容未发生变化。
+     * 查询已经持久化的入口消息并转换为 starter-server 统一模型。
      *
-     * @param message 统一事件消息
-     * @param eventTypeId 事件类型主键
-     * @return 消息登记结果
+     * @param eventId 事件全局唯一标识及分片键
+     * @return 已持久化消息快照，不存在时返回 {@code null}
      */
     @Override
-    public EventMessageRegistration registerEventMessage(
-            EventMessage message, Long eventTypeId) {
-        EventMessageEntity persisted = selectMessageByEventId(message.eventId());
-        if (persisted != null) {
-            ensureSameMessage(persisted, message, eventTypeId);
-            return new EventMessageRegistration(persisted.getId(), false);
+    public EventMessageRegistration selectEventMessage(String eventId) {
+        EventMessageEntity entity = selectMessageByEventId(eventId);
+        if (entity == null) {
+            return null;
         }
-        EventMessageEntity entity = createMessageEntity(message, eventTypeId);
+        EventMessage message = restoreEventMessage(entity);
+        EventMessageStatus status = EventMessageStatus.fromCode(entity.getMessageStatus());
+        return new EventMessageRegistration(
+                entity.getId(), message, entity.getEventTypeId(), status,
+                entity.getFailureReason());
+    }
+
+    /**
+     * 按 starter-server 给出的最终处理结果创建入口消息。
+     *
+     * @param message 原始事件消息
+     * @param eventTypeId 事件类型主键，类型无法解析时为空
+     * @param status 消息处理状态
+     * @param failureReason 业务校验失败原因，正常消息为空
+     * @return 新建消息的持久化标识
+     */
+    @Override
+    public Long createEventMessage(EventMessage message,
+                                   Long eventTypeId,
+                                   EventMessageStatus status,
+                                   String failureReason) {
+        EventMessageEntity entity = createMessageEntity(
+                message, eventTypeId, status, failureReason);
         messageMapper.insert(entity);
-        return new EventMessageRegistration(entity.getId(), true);
+        return entity.getId();
     }
 
     private EventMessageEntity selectMessageByEventId(String eventId) {
@@ -52,23 +70,14 @@ public class EventMessageRegistrarAdapter implements EventMessageRegistrar {
         return messageMapper.selectOne(wrapper);
     }
 
-    private void ensureSameMessage(
-            EventMessageEntity persisted, EventMessage message, Long eventTypeId) {
-        boolean sameMessage = persisted.getEventTypeId().equals(eventTypeId)
-                && persisted.getEventVersion() == message.eventVersion()
-                && persisted.getSourceApplication().equals(message.source())
-                && persisted.getOccurredAt().equals(message.occurredAt())
-                && Objects.equals(persisted.getPartitionKey(), message.partitionKey())
-                && persisted.getEventContext().equals(objectMapper.valueToTree(message.context()))
-                && persisted.getEventPayload().equals(message.payload());
-        if (!sameMessage) {
-            throw new ApiRuntimeException("事件 ID 已被不同的消息内容使用：" + message.eventId());
-        }
-    }
-
-    private EventMessageEntity createMessageEntity(EventMessage message, Long eventTypeId) {
+    private EventMessageEntity createMessageEntity(
+            EventMessage message,
+            Long eventTypeId,
+            EventMessageStatus status,
+            String failureReason) {
         EventMessageEntity entity = new EventMessageEntity();
         entity.setEventId(message.eventId());
+        entity.setEventType(message.eventType());
         entity.setEventTypeId(eventTypeId);
         entity.setEventVersion(message.eventVersion());
         entity.setOccurredAt(message.occurredAt());
@@ -76,6 +85,16 @@ public class EventMessageRegistrarAdapter implements EventMessageRegistrar {
         entity.setPartitionKey(message.partitionKey());
         entity.setEventContext(objectMapper.valueToTree(message.context()));
         entity.setEventPayload(message.payload());
+        entity.setMessageStatus(status.getCode());
+        entity.setFailureReason(failureReason);
         return entity;
+    }
+
+    private EventMessage restoreEventMessage(EventMessageEntity entity) {
+        return new EventMessage(
+                entity.getEventId(), entity.getEventType(), entity.getEventVersion(),
+                entity.getOccurredAt(), entity.getSourceApplication(), entity.getPartitionKey(),
+                objectMapper.convertValue(entity.getEventContext(), new TypeReference<>() { }),
+                entity.getEventPayload());
     }
 }

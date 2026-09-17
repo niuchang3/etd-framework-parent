@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.event.core.model.EventMessage;
+import org.etd.framework.starter.event.server.delivery.model.EventDeliveryTask;
 import org.etd.framework.starter.event.server.delivery.producer.EventDeliveryTaskPublisher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -32,7 +34,7 @@ class EventBusSubscriberProcessorTest {
     }
 
     @Test
-    void shouldReceiveEventAndPublishDeliveryTasks() throws Exception {
+    void shouldReceiveEventAndSkipPublishingWhenNoTaskCreated() throws Exception {
         String[] receivedTraceId = new String[1];
         EventDeliveryTaskPublisher taskPublisher = mock(EventDeliveryTaskPublisher.class);
         EventBusSubscriberTemplate subscriberTemplate = mock(EventBusSubscriberTemplate.class);
@@ -48,7 +50,7 @@ class EventBusSubscriberProcessorTest {
 
         assertThat(receivedTraceId[0]).isEqualTo("trace-001");
         assertThat(RequestContext.getTraceId()).isNull();
-        verify(taskPublisher).publishDeliveryTaskList(List.of());
+        verifyNoInteractions(taskPublisher);
     }
 
     @Test
@@ -63,6 +65,21 @@ class EventBusSubscriberProcessorTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("数据库不可用");
         assertThat(RequestContext.getTraceId()).isNull();
+    }
+
+    @Test
+    void shouldPublishCreatedDeliveryTasks() throws Exception {
+        EventDeliveryTask task = mock(EventDeliveryTask.class);
+        EventDeliveryTaskPublisher taskPublisher = mock(EventDeliveryTaskPublisher.class);
+        EventBusSubscriberTemplate subscriberTemplate = mock(EventBusSubscriberTemplate.class);
+        when(subscriberTemplate.receiveEvent(any()))
+                .thenReturn(new EventBusSubscriberResult(List.of(task)));
+        EventBusSubscriberProcessor processor =
+                new EventBusSubscriberProcessor(subscriberTemplate, taskPublisher);
+
+        processor.processEvent(createMessage());
+
+        verify(taskPublisher).publishDeliveryTaskList(List.of(task));
     }
 
     private EventMessage createMessage() {

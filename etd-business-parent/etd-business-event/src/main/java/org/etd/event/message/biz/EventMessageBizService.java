@@ -36,7 +36,9 @@ public class EventMessageBizService {
         EventMessageVO message = messageService.fetchMessageById(eventId, messageId);
         EventMessageDetailVO detail = new EventMessageDetailVO();
         detail.setMessage(message);
-        detail.setEventType(eventTypeService.fetchById(message.getEventTypeId()));
+        if (message.getEventTypeId() != null) {
+            detail.setEventType(eventTypeService.fetchById(message.getEventTypeId()));
+        }
         detail.setDeliveryList(deliveryService.selectDeliveryListByMessageId(eventId, messageId));
         return detail;
     }
