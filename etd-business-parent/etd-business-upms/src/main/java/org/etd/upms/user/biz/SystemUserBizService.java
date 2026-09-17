@@ -6,8 +6,10 @@ import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.starter.event.client.annotation.Event;
 import org.etd.upms.organization.service.SystemOrganizationService;
 import org.etd.upms.role.service.SystemRoleService;
+import org.etd.upms.user.constant.SystemUserEventType;
 import org.etd.upms.user.controller.dto.SystemUserCreateDTO;
 import org.etd.upms.user.controller.dto.SystemUserOrganizationAssignDTO;
 import org.etd.upms.user.controller.dto.SystemUserRoleAssignDTO;
@@ -17,6 +19,7 @@ import org.etd.upms.user.controller.vo.SystemUserOrganizationVO;
 import org.etd.upms.user.controller.vo.SystemUserRoleVO;
 import org.etd.upms.user.controller.vo.SystemUserVO;
 import org.etd.upms.user.entity.SystemUserEntity;
+import org.etd.upms.user.event.SystemUserCreatedEvent;
 import org.etd.upms.menu.service.SystemMenusService;
 import org.etd.upms.role.service.SystemRoleMenuService;
 import org.etd.upms.tenant.service.SystemTenantMenuService;
@@ -98,14 +101,16 @@ public class SystemUserBizService {
     }
 
     /**
-     * 新增保存
+     * 创建用户及其初始角色、组织关系，并在事务提交后发送用户创建事件。
      *
-     * @param dto 参数 dto
-     * @return 处理结果
+     * @param dto 用户创建参数
+     * @return 用户创建事件载荷
      */
+    @Event(type = SystemUserEventType.USER_CREATED,
+            payload = "#result", partitionKey = "#result.userId")
     @Transactional(rollbackFor = Exception.class)
-    public Long insert(SystemUserCreateDTO dto) {
-        requireTenantId();
+    public SystemUserCreatedEvent insert(SystemUserCreateDTO dto) {
+        Long tenantId = requireTenantId();
         Set<Long> roleIds = normalizedIds(dto.getRoleIds());
         Set<Long> organizationIds = normalizedIds(dto.getOrganizationIds());
         validateAssignments(roleIds, organizationIds, dto.getPrimaryOrganizationId());
@@ -114,7 +119,10 @@ public class SystemUserBizService {
         Long userId = userService.insert(entity, dto.getPassword());
         userRoleRelService.replace(userId, roleIds);
         userOrganizationService.replace(userId, organizationIds, dto.getPrimaryOrganizationId());
-        return userId;
+        return new SystemUserCreatedEvent(
+                userId, tenantId, entity.getAccount(), entity.getUserName(),
+                dto.getPrimaryOrganizationId(), List.copyOf(roleIds),
+                List.copyOf(organizationIds));
     }
 
     /**

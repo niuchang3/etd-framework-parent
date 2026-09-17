@@ -79,7 +79,7 @@ public class SystemUserController {
     @AutoLog("新增系统用户")
     @PostMapping
     public ResultModel<Long> insert(@Valid @RequestBody SystemUserCreateDTO dto) {
-        return ResultModel.success(userBizService.insert(dto));
+        return ResultModel.success(userBizService.insert(dto).userId());
     }
 
     /**
