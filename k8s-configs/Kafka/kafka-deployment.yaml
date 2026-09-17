@@ -43,6 +43,9 @@ spec:
             - containerPort: 29093
               name: controller
           env:
+            # 禁用 Kafka Broker 自动创建 Topic
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "false"
             # KRaft 模式集群唯一标识 ID
             - name: CLUSTER_ID
               value: "SXluMyf5T9i3hgJu1VyWgg"

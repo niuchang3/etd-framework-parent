@@ -39,6 +39,9 @@ spring:
           slow-sql-millis: 5000 # 慢 SQL 判定阈值，单位毫秒。
           merge-sql: false # 不合并参数不同但结构相同的 SQL 统计。
   kafka:
+    consumer:
+      properties:
+        allow.auto.create.topics: false # 禁止 Consumer 端请求自动创建 Topic。
     producer:
       acks: all # 等待所有同步副本确认消息，提高发送可靠性。
       key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。
