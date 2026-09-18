@@ -6,7 +6,7 @@ server:
 
 logging:
   level:
-    root: DEBUG # 默认根日志级别，具体环境可以覆盖。
+    root: INFO # 默认根日志级别，具体环境可以覆盖。
 spring:
   jackson:
     time-zone: Asia/Shanghai # HTTP 时间字段统一按东八区序列化。
