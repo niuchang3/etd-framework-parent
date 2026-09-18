@@ -114,12 +114,6 @@
 
             <dependency>
                 <groupId>org.etd.framework</groupId>
-                <artifactId>etd-framework-starter-message</artifactId>
-                <version>${etd.framework.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-event-client</artifactId>
                 <version>${etd.framework.version}</version>
             </dependency>
