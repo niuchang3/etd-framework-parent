@@ -1,0 +1,9 @@
+# 阿里云 OSS 接入配置，物理连接与凭证全部由部署环境注入。
+storage:
+  alibaba:
+    enabled: true
+    endpoint: ${AI_STORAGE_OSS_ENDPOINT} # OSS 所在地域的服务地址。
+    access-key: ${AI_STORAGE_OSS_ACCESS_KEY} # OSS 访问标识。
+    secret-key: ${AI_STORAGE_OSS_SECRET_KEY} # OSS 访问密钥。
+    default-bucket: ${AI_STORAGE_OSS_BUCKET} # 智能体文件默认存储桶。
+    policy: private # 智能体附件默认私有读写。

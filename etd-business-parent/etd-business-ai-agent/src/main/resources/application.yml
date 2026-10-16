@@ -1,0 +1,103 @@
+# 智能体服务公共配置，外部凭证不提供本地假值。
+server:
+  port: ${AI_AGENT_PORT:8300} # 智能体服务独立端口，可由环境变量覆盖。
+spring:
+  application:
+    name: ai-agent # 用于框架日志标识与应用识别。
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource # 与其他业务模块保持相同连接池实现。
+    druid:
+      driver-class-name: org.postgresql.Driver # 正式运行只使用 PostgreSQL 驱动。
+      url: ${AI_DB_URL} # 必填 PostgreSQL JDBC 地址，数据库由部署环境提前创建。
+      username: ${AI_DB_USERNAME} # 必填数据库账号。
+      password: ${AI_DB_PASSWORD} # 必填数据库密码，不设置默认凭证。
+      initial-size: 1 # 启动时创建一个连接，及时发现错误的数据库配置。
+      min-idle: 1 # 保留的最小空闲连接数。
+      max-active: 20 # 单实例允许的最大活动连接数。
+      max-wait: 6000 # 获取连接最长等待毫秒数。
+      validation-query: SELECT 1 # PostgreSQL 连接有效性检查 SQL。
+      test-while-idle: true # 空闲检测时清理失效连接。
+      test-on-borrow: false # 借出连接时不额外增加探测请求。
+      test-on-return: false # 归还连接时不重复检测。
+      stat-view-servlet:
+        enabled: false # 不开放连接池管理页面。
+  sql:
+    init:
+      mode: never # 当前没有业务表，由后续明确的初始化 SQL 管理最终结构。
+  data:
+    redis:
+      host: ${AI_REDIS_HOST} # 必须指向 UPMS 登录令牌所在的 Redis 实例。
+      port: ${AI_REDIS_PORT} # Redis 连接端口，避免假定部署环境端口。
+      database: ${AI_REDIS_DATABASE} # 必须与 UPMS 登录令牌所在逻辑库一致。
+      connect-timeout: 3s
+      timeout: 3s
+      # 需要认证时通过 SPRING_DATA_REDIS_PASSWORD 注入；无密码时不设置此变量。
+  jackson:
+    time-zone: Asia/Shanghai # 复用框架 HTTP 时间序列化规则。
+  ai:
+    model:
+      chat: dashscope # 当前只启用 DashScope 对话模型。
+      embedding: none # 尚未接入知识库，避免自动创建未使用的向量模型。
+      image: none # 尚未接入图像生成能力。
+      video: none # 尚未接入视频生成能力。
+      rerank: none # 尚未接入检索重排能力。
+      audio:
+        speech: none # 尚未接入语音合成能力。
+        transcription: none # 尚未接入语音识别能力。
+    dashscope:
+      api-key: ${AI_DASHSCOPE_API_KEY} # 必填，使用运行环境提供的百炼 API Key。
+      agent:
+        enabled: false # 使用本地 Agent Framework 编排，暂不接入百炼托管应用 API。
+      chat:
+        options:
+          model: ${AI_DASHSCOPE_MODEL:qwen-plus} # 可按实际开通的模型调整。
+
+# 存储复用框架 starter；按需激活 minio 或 oss profile，并提供对应环境变量。
+storage:
+  minio:
+    enabled: false
+  alibaba:
+    enabled: false
+
+system:
+  security:
+    key:
+      public-key-path: ${AI_SECURITY_PUBLIC_KEY_PATH} # 必须使用 UPMS 签发访问令牌对应的 RSA 公钥文件。
+    permissions:
+      ignore:
+        - /actuator/health # 仅健康检查允许匿名访问，其余路径统一校验 Bearer 令牌。
+
+# 缓存按应用名隔离；登录令牌仍按框架统一键规则访问同一 Redis 库。
+jetcache:
+  statIntervalMinutes: 15
+  areaInCacheName: false
+  local:
+    default:
+      type: caffeine
+      keyConvertor: fastjson2
+      limit: 1000
+  remote:
+    default:
+      type: redis.springdata
+      keyPrefix: "${spring.application.name}:"
+      keyConvertor: fastjson2
+      valueEncoder: bean:jetCacheFastjson2ValueEncoder
+      valueDecoder: bean:jetCacheFastjson2ValueDecoder
+
+etd:
+  mybatis:
+    fill:
+      enabled: true # 启用框架实体声明式默认值填充。
+    tenant:
+      enabled: true # 后续租户业务表统一使用 tenant_id 隔离。
+    data-permission:
+      enabled: true # 后续组织业务实体须继承 OrgScopedEntity。
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # 骨架阶段仅开放健康检查。
+  endpoint:
+    health:
+      show-details: never # 健康响应不返回内部连接细节。

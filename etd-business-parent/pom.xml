@@ -21,6 +21,7 @@
     <modules>
         <module>etd-business-upms</module>
         <module>etd-business-event</module>
+        <module>etd-business-ai-agent</module>
     </modules>
 
 

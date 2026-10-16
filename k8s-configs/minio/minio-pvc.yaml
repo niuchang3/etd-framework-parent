@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  labels:
+    app: minio
+spec:
+  # 使用集群默认 StorageClass；OrbStack 当前提供 local-path 动态持久化存储。
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi # 本地学习用容量，Pod 重建后继续复用已有文件。

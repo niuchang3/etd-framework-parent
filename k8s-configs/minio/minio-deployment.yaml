@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-deployment
+  labels:
+    app: minio
+spec:
+  replicas: 1 # 本地学习采用单节点、单数据卷模式。
+  strategy:
+    type: Recreate # 更新时先停止旧 Pod，避免两个实例同时使用同一数据目录。
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000 # 让非 root 进程可以写入 PVC 挂载的数据目录。
+      containers:
+        - name: minio
+          # 使用 docker/minio/Dockerfile 从官方固定版本源码构建的本地镜像。
+          image: etd/minio:RELEASE.2025-10-15T17-29-55Z
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              # 优先使用容器环境变量；缺失或为空时使用用户指定的本地学习默认值。
+              export MINIO_ROOT_USER="${MINIO_ROOT_USER:-root}"
+              export MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-12345678}"
+              exec /usr/local/bin/minio server /data --address :9000 --console-address :9001
+          ports:
+            - name: s3-api
+              containerPort: 9000 # SDK、文件上传下载及预签名链接使用的 S3 API。
+            - name: console
+              containerPort: 9001 # 浏览器管理控制台。
+          env:
+            # Secret 或对应键不存在时不注入变量，由启动脚本设置本地默认值。
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+                  optional: true
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+                  optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /minio/health/live
+              port: s3-api
+            periodSeconds: 5
+            failureThreshold: 30 # 为首次挂载存储和初始化保留最多约 150 秒。
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: s3-api
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: s3-api
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-data
