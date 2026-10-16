@@ -1,0 +1,31 @@
+# Kafka 公共配置，只有显式导入的应用才使用这些参数。
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:127.0.0.1:30092} # 本地默认通过 Kubernetes NodePort 访问 Kafka。
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT} # 使用 SASL 认证且默认不启用 TLS。
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN} # 使用用户名和密码执行 PLAIN 认证。
+      # JAAS 登录串由 Kafka 客户端读取，默认凭证仅用于本地学习。
+      sasl.jaas.config: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="${KAFKA_USERNAME:admin}"
+        password="${KAFKA_PASSWORD:123456}";
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:${spring.application.name}} # 优先使用环境变量，未设置时使用当前应用名称。
+      enable-auto-commit: false # 仅在入口消息处理成功后由监听容器提交消费进度。
+      auto-offset-reset: earliest # 新建入口消费组时从最早事件开始，避免跳过服务启动前已发送的消息。
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 入口消息键按字符串解码。
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 统一事件协议按 JSON 字符串接收。
+      properties:
+        isolation.level: read_committed # 入口、投递和状态消费者只读取已经提交的 Kafka 事务消息。
+        allow.auto.create.topics: false # 禁止 Consumer 端请求自动创建 Topic。
+    listener:
+      type: ${EVENT_KAFKA_LISTENER_TYPE:single} # 使用 Spring Kafka 原生配置切换 single 或 batch 监听模式。
+      ack-mode: record # 单条模式逐条确认；批量模式由 Event Server 专用容器工厂覆盖为 BATCH。
+    producer:
+      transaction-id-prefix: ${EVENT_KAFKA_TRANSACTION_ID_PREFIX:${spring.application.name}-${random.uuid}-} # 每个实例使用唯一事务前缀，支持消费后原子转发。
+      acks: all # 事件转发等待所有同步副本确认，提高发送可靠性。
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息体序列化器。
+      properties:
+        enable.idempotence: true # 启用 Kafka Producer 幂等发送，避免重试造成重复写入。

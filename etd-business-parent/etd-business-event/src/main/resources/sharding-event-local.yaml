@@ -1,9 +1,9 @@
 # Event 本地环境的 ShardingSphere-JDBC 配置，由 ShardingSphere Driver 直接加载。
-# 事件中心逻辑数据库名称。当前版本仅分表，不分库。
-databaseName: etd_event
+# 逻辑库及数据源标识统一命名为 event，与 JDBC URL 的默认物理库名一致。
+databaseName: event
 
 dataSources:
-  event_ds:
+  event:
     # 与 UPMS 本地环境保持一致，物理连接池统一使用 Druid。
     dataSourceClassName: com.alibaba.druid.pool.DruidDataSource # 真实物理数据源使用 Druid。
     driverClassName: org.postgresql.Driver # PostgreSQL JDBC 驱动类。
@@ -31,13 +31,13 @@ rules:
   - !SHARDING
     autoTables:
       evt_event_message:
-        actualDataSources: event_ds # 消息逻辑表只使用 event_ds 数据源。
+        actualDataSources: event # 消息逻辑表只使用 event 数据源。
         shardingStrategy:
           standard:
             shardingColumn: event_id # 使用事件全局标识作为分片键。
             shardingAlgorithmName: event_id_hash_mod # 引用下方 HASH_MOD 算法。
       evt_event_delivery:
-        actualDataSources: event_ds # 投递逻辑表只使用 event_ds 数据源。
+        actualDataSources: event # 投递逻辑表只使用 event 数据源。
         shardingStrategy:
           standard:
             shardingColumn: event_id # 与消息表使用相同分片键。
@@ -53,9 +53,9 @@ rules:
   # 配置表不分片，但仍交由同一个 ShardingSphere 逻辑数据源管理。
   - !SINGLE
     tables:
-      - event_ds.public.evt_event_type # 事件类型配置表不分片。
-      - event_ds.public.evt_event_subscription # 事件订阅配置表不分片。
-    defaultDataSource: event_ds # 未指定数据源的单表统一路由到 event_ds。
+      - event.public.evt_event_type # 事件类型配置表不分片。
+      - event.public.evt_event_subscription # 事件订阅配置表不分片。
+    defaultDataSource: event # 未指定数据源的单表统一路由到 event。
 
 props:
   sql-show: $${EVENT_SHARDING_SQL_SHOW::false} # 是否输出 ShardingSphere 改写后的 SQL，默认关闭。

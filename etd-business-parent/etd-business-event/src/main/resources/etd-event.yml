@@ -1,0 +1,18 @@
+etd:
+  mybatis:
+    fill:
+      enabled: true # 启用框架实体字段自动填充能力。
+    # 事件中心是平台级基础设施，四张逻辑表不参与租户与组织数据隔离。
+    tenant:
+      ignore-tables:
+        - evt_event_type
+        - evt_event_message
+        - evt_event_subscription
+        - evt_event_delivery
+    data-permission:
+      # 事件中心运行数据不追加组织数据权限条件。
+      ignore-tables:
+        - evt_event_type
+        - evt_event_message
+        - evt_event_subscription
+        - evt_event_delivery

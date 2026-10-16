@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    druid:
+      # 本地环境只定义 PostgreSQL 连接信息，连接池公共参数位于 config/druid.yml。
+      url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:30432}/${DB_NAME:ai-agent}
+      username: ${DB_USERNAME:root} # PostgreSQL 用户名，仅提供本地开发默认值。
+      password: ${DB_PASSWORD:123456} # PostgreSQL 密码，仅提供本地开发默认值。
+      stat-view-servlet:
+        enabled: true # 本地环境开启 Druid 监控页面。
+        allow: 127.0.0.1 # 只允许本机访问 Druid 监控页面。
+        deny: 192.168.56.1 # 明确拒绝该本地虚拟网卡地址访问。
+        login-username: admin # 本地 Druid 监控页面登录账号。
+        login-password: admin # 本地 Druid 监控页面登录密码。

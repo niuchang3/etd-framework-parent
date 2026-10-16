@@ -1,0 +1,8 @@
+etd:
+  mybatis:
+    fill:
+      enabled: true # 启用框架实体声明式默认值填充。
+    tenant:
+      enabled: true # 后续租户业务表统一使用 tenant_id 隔离。
+    data-permission:
+      enabled: true # 后续组织业务实体须继承 OrgScopedEntity。

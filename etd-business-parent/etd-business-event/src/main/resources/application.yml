@@ -8,112 +8,14 @@ spring:
   profiles:
     active: local # 默认启用本地环境，可由启动参数覆盖。
   application:
-    name: event # 应用名称，同时用于日志、注册发现和缓存键前缀。
-  kafka:
-    consumer:
-      group-id: ${EVENT_KAFKA_SERVER_CONSUMER_GROUP:etd-event-server} # Event Server 多实例共享同一 Kafka 消费组。
-      enable-auto-commit: false # 仅在入口消息处理成功后由监听容器提交消费进度。
-      auto-offset-reset: earliest # 新建入口消费组时从最早事件开始，避免跳过服务启动前已发送的消息。
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 入口消息键按字符串解码。
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 统一事件协议按 JSON 字符串接收。
-      properties:
-        isolation.level: read_committed # 入口、投递和状态消费者只读取已经提交的 Kafka 事务消息。
-    listener:
-      type: ${EVENT_KAFKA_LISTENER_TYPE:single} # 使用 Spring Kafka 原生配置切换 single 或 batch 监听模式。
-      ack-mode: record # 单条模式逐条确认；批量模式由 Event Server 专用容器工厂覆盖为 BATCH。
-    producer:
-      transaction-id-prefix: ${EVENT_KAFKA_TRANSACTION_ID_PREFIX:${spring.application.name}-${random.uuid}-} # 每个实例使用唯一事务前缀，支持消费后原子转发。
-      acks: all # 事件转发等待所有同步副本确认，提高发送可靠性。
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息键序列化器。
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer # Kafka 消息体序列化器。
-      properties:
-        enable.idempotence: true # 启用 Kafka Producer 幂等发送，避免重试造成重复写入。
-  datasource:
-    # 所有环境统一通过 ShardingSphere Driver 访问逻辑数据源。
-    driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
-  h2:
-    console:
-      enabled: false # 禁止暴露 H2 Web 控制台。
-  sql:
-    init:
-      mode: never # 禁止应用启动时自动执行初始化 SQL，由部署流程负责建表。
-      schema-locations:
-        - classpath:/sql/postgresql/schema.sql # Event PostgreSQL 建表脚本位置。
-  data:
-    redis:
-      # Redis 客户端行为在各环境保持一致，连接地址和凭证由环境配置提供。
-      connect-timeout: 3s # Redis 建立连接的最大等待时间。
-      lettuce:
-        pool:
-          enabled: true # 启用 Lettuce 连接池。
-          min-idle: 10 # 连接池保持的最小空闲连接数。
-          max-idle: 20 # 连接池允许的最大空闲连接数。
-          max-active: 20 # 连接池允许的最大活动连接数。
-          max-wait: 5s # 连接池耗尽时获取连接的最大等待时间。
+    name: etd-event-server # 应用名称，同时用于日志、注册发现和缓存键前缀。
   jackson:
     time-zone: Asia/Shanghai # HTTP 时间字段统一按东八区序列化。
-
-# JetCache 同时启用进程内 Caffeine 一级缓存和 Redis 二级缓存。
-jetcache:
-  statIntervalMinutes: 15 # 每 15 分钟输出一次缓存统计信息。
-  areaInCacheName: false # 缓存名称中不拼接 JetCache area，保持键名简洁。
-  local:
-    default:
-      type: caffeine # 默认本地缓存实现。
-      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
-      limit: 1000 # 单个本地缓存实例允许保存的最大条目数。
-  remote:
-    default:
-      type: redis.springdata # 通过 Spring Data Redis 实现远程缓存。
-      keyPrefix: "${spring.application.name}:" # 使用应用名称隔离不同服务的缓存键空间。
-      keyConvertor: fastjson2 # 使用 Fastjson2 将方法参数转换为缓存键。
-      valueEncoder: bean:jetCacheFastjson2ValueEncoder # 使用框架提供的 Fastjson2 编码器写入缓存。
-      valueDecoder: bean:jetCacheFastjson2ValueDecoder # 使用框架提供的 Fastjson2 解码器读取缓存。
-
-etd:
-  event:
-    bus:
-      topic: ${ETD_EVENT_BUS_TOPIC:etd.event.bus} # Event 服务接收客户端事件的统一 Kafka Topic。
-      client:
-        verify-connection-on-startup: ${EVENT_KAFKA_VERIFY_CONNECTION:true} # 启动时验证 Kafka 地址和认证配置。
-        connection-timeout: ${EVENT_KAFKA_CONNECTION_TIMEOUT:10s} # 启动连接验证的最大等待时间。
-        id-generator:
-          worker-id: ${EVENT_EVENT_WORKER_ID:2} # Event 服务事件 ID 工作节点，本地默认避免与 UPMS 的节点 1 冲突。
-          datacenter-id: ${EVENT_EVENT_DATACENTER_ID:1} # Event 服务事件 ID 数据中心编号。
-        async:
-          core-pool-size: ${EVENT_EVENT_ASYNC_CORE_POOL_SIZE:2} # 异步事件转发线程池核心线程数。
-          max-pool-size: ${EVENT_EVENT_ASYNC_MAX_POOL_SIZE:8} # 异步事件转发线程池最大线程数。
-          queue-capacity: ${EVENT_EVENT_ASYNC_QUEUE_CAPACITY:1000} # 异步事件转发线程池等待队列容量。
-      server:
-        create-topic: ${EVENT_KAFKA_CREATE_TOPIC:true} # 启动时幂等创建事件总线入口 Topic。
-        partitions: ${EVENT_KAFKA_TOPIC_PARTITIONS:6} # 入口 Topic 分区数，应与目标消费并发度匹配。
-        replicas: ${EVENT_KAFKA_TOPIC_REPLICAS:1} # 本地单节点 Kafka 使用一个副本。
-        delivery:
-          task-topic: ${EVENT_KAFKA_DELIVERY_TASK_TOPIC:etd.event.delivery.task} # 一个事件面向一个订阅生成一条内部投递任务。
-          status-topic: ${EVENT_KAFKA_DELIVERY_STATUS_TOPIC:etd.event.delivery.status} # 异步投影 Delivery 状态的内部 Topic。
-          dead-letter-topic: ${EVENT_KAFKA_DELIVERY_DLT_TOPIC:etd.event.delivery.task.dlt} # 自动重试耗尽后的死信 Topic。
-          task-consumer-group: ${EVENT_KAFKA_DELIVERY_TASK_GROUP:etd-event-delivery-dispatcher} # 多实例共享投递任务消费组。
-          status-consumer-group: ${EVENT_KAFKA_DELIVERY_STATUS_GROUP:etd-event-delivery-status-projector} # 多实例共享状态投影消费组。
-          partitions: ${EVENT_KAFKA_DELIVERY_PARTITIONS:16} # 内部 Topic 分区数，生产环境可与目标并发规划保持一致。
-          replicas: ${EVENT_KAFKA_DELIVERY_REPLICAS:1} # 本地单节点 Kafka 使用一个副本，生产环境通常配置为 3。
-          max-attempts: ${EVENT_KAFKA_DELIVERY_MAX_ATTEMPTS:4} # 包含首次发送在内的最大投递次数。
-          initial-backoff: ${EVENT_KAFKA_DELIVERY_INITIAL_BACKOFF:1s} # 首次失败后的等待时间。
-          backoff-multiplier: ${EVENT_KAFKA_DELIVERY_BACKOFF_MULTIPLIER:2.0} # 后续失败使用指数退避。
-          max-backoff: ${EVENT_KAFKA_DELIVERY_MAX_BACKOFF:30s} # 单次退避最长等待时间。
-  mybatis:
-    fill:
-      enabled: true # 启用框架实体字段自动填充能力。
-    # 事件中心是平台级基础设施，四张逻辑表不参与租户与组织数据隔离。
-    tenant:
-      ignore-tables:
-        - evt_event_type
-        - evt_event_message
-        - evt_event_subscription
-        - evt_event_delivery
-    data-permission:
-      # 事件中心运行数据不追加组织数据权限条件。
-      ignore-tables:
-        - evt_event_type
-        - evt_event_message
-        - evt_event_subscription
-        - evt_event_delivery
+  config:
+    # 物理连接池由 ShardingSphere YAML 管理，不导入普通 Druid 数据源配置。
+    import:
+      - classpath:redis.yml
+      - classpath:kafka.yml
+      - classpath:event-client.yml
+      - classpath:event-server.yml
+      - classpath:etd-event.yml

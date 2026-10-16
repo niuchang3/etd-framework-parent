@@ -53,17 +53,19 @@ kubectl rollout status deployment/minio-deployment --timeout=180s
 
 ## 访问与检查
 
-| 用途 | 本机地址 | 同命名空间的集群内地址 |
+| 用途 | OrbStack 本机地址（default 命名空间） | 同命名空间的集群内地址 |
 | --- | --- | --- |
-| S3 API / SDK | `http://localhost:30900` | `http://minio-service:9000` |
-| 浏览器控制台 | `http://localhost:30901` | `http://minio-service:9001` |
+| S3 API / SDK | `http://minio-service.default.svc.cluster.local:9000` | `http://minio-service:9000` |
+| 浏览器控制台 | `http://minio-service.default.svc.cluster.local:9001` | `http://minio-service:9001` |
+
+OrbStack 支持从 Mac 直接访问上述 Service 域名；使用其他命名空间时，将域名中的 `default` 替换为实际命名空间。NodePort 使用节点 IP 访问：API 为 `http://<节点IP>:30900`，控制台为 `http://<节点IP>:30901`，节点 IP 可通过 `kubectl get nodes -o wide` 查看。当前环境的 `localhost:30900/30901` 不会自动转发到 NodePort。
 
 在控制台使用实际生效的账号密码登录（未配置时为 `root / 12345678`），创建私有存储桶 `ai-agent`，即可用于文件上传下载练习。
 
 ```bash
 kubectl get pods,pvc,svc -l app=minio
 kubectl get pvc minio-data
-curl --fail http://localhost:30900/minio/health/ready
+curl --fail http://minio-service.default.svc.cluster.local:9000/minio/health/ready
 ```
 
 如果所在本地 Kubernetes 环境不把 NodePort 转发到 localhost，可以运行：
@@ -79,7 +81,7 @@ kubectl port-forward service/minio-service 9000:9000 9001:9001
 使用默认凭证时，在应用启动终端中设置：
 
 ```bash
-export AI_STORAGE_MINIO_ENDPOINT=http://localhost:30900
+export AI_STORAGE_MINIO_ENDPOINT=http://minio-service.default.svc.cluster.local:9000
 export AI_STORAGE_MINIO_ACCESS_KEY=root
 export AI_STORAGE_MINIO_SECRET_KEY=12345678
 export AI_STORAGE_MINIO_BUCKET=ai-agent
@@ -89,10 +91,10 @@ export AI_STORAGE_MINIO_BUCKET=ai-agent
 
 使用 `port-forward` 时，改用 `http://localhost:9000`。应用本身部署在同一命名空间时，使用 `http://minio-service:9000`；如果要把预签名 URL 直接交给本机浏览器访问，还需确保签名所用地址可由浏览器解析并访问。
 
-另外通过环境注入 `AI_DASHSCOPE_API_KEY`，按[智能体应用说明](../../etd-business-parent/etd-business-ai-agent/README.md)构建，然后启用 MinIO profile：
+另外通过环境注入 `AI_DASHSCOPE_API_KEY`，按[智能体应用说明](../../etd-business-parent/etd-business-ai-agent/README.md)构建，然后使用默认启用 MinIO 的 local 环境：
 
 ```bash
-java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar --spring.profiles.active=minio
+java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
 ```
 
 SDK 连接 S3 API 端口，不要填写控制台端口。

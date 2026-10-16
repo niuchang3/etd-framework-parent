@@ -34,7 +34,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -55,7 +54,6 @@ import static org.mockito.Mockito.when;
 /**
  * 智能体应用集成冒烟测试，验证真实自动配置与健康接口，不调用外部模型或对象存储。
  */
-@ActiveProfiles("minio")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"logging.file=${java.io.tmpdir}/etd-ai-agent-tests",
                 "spring.datasource.druid.driver-class-name=org.h2.Driver",
@@ -96,12 +94,14 @@ class AgentApplicationTest {
         registry.add("AI_STORAGE_MINIO_ACCESS_KEY", () -> UUID.randomUUID().toString());
         registry.add("AI_STORAGE_MINIO_SECRET_KEY", () -> UUID.randomUUID().toString());
         registry.add("AI_STORAGE_MINIO_BUCKET", () -> "agent-test");
-        registry.add("AI_DB_URL", () -> "jdbc:h2:mem:agent-test;DB_CLOSE_DELAY=-1");
+        // 测试直接覆盖最终连接属性，正式 local 配置仍使用 PostgreSQL 的 host/port/name。
+        registry.add("spring.datasource.druid.url", () -> "jdbc:h2:mem:agent-test;DB_CLOSE_DELAY=-1");
         registry.add("AI_DB_USERNAME", () -> "sa");
         registry.add("AI_DB_PASSWORD", () -> UUID.randomUUID().toString());
-        registry.add("AI_REDIS_HOST", () -> "127.0.0.1");
-        registry.add("AI_REDIS_PORT", () -> 16379);
-        registry.add("AI_REDIS_DATABASE", () -> 0);
+        // Redis 连接由公共 YAML 解析通用环境变量，测试只覆盖逻辑库以隔离运行状态。
+        registry.add("REDIS_HOST", () -> "127.0.0.1");
+        registry.add("REDIS_PORT", () -> 16379);
+        registry.add("spring.data.redis.database", () -> 0);
         registry.add("AI_SECURITY_PUBLIC_KEY_PATH", AgentApplicationTest::writeTestPublicKey);
     }
 
@@ -114,6 +114,11 @@ class AgentApplicationTest {
         ReactAgent agent = ReactAgent.builder().name("startup_probe").model(model).build();
 
         assertThat(agent).isNotNull();
+        assertThat(applicationContext.getEnvironment().getActiveProfiles()).contains("local");
+        assertThat(applicationContext.getEnvironment().getProperty("spring.data.redis.port")).isEqualTo("16379");
+        assertThat(applicationContext.getEnvironment().getProperty("jetcache.remote.default.keyPrefix"))
+                .isEqualTo("ai-agent:");
+        assertThat(applicationContext.getEnvironment().getProperty("spring.kafka.bootstrap-servers")).isNull();
         assertThat(applicationContext.getBeansOfType(ChatModel.class)).hasSize(1);
         assertThat(applicationContext.getBeansOfType(EmbeddingModel.class)).isEmpty();
         assertThat(applicationContext.getBeansOfType(ImageModel.class)).isEmpty();

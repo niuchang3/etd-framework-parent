@@ -1,9 +1,0 @@
-# MinIO 接入配置，物理连接与凭证全部由部署环境注入。
-storage:
-  minio:
-    enabled: true
-    endpoint: ${AI_STORAGE_MINIO_ENDPOINT} # MinIO 服务地址，需包含协议与端口。
-    access-key: ${AI_STORAGE_MINIO_ACCESS_KEY} # MinIO 访问标识。
-    secret-key: ${AI_STORAGE_MINIO_SECRET_KEY} # MinIO 访问密钥。
-    default-bucket: ${AI_STORAGE_MINIO_BUCKET} # 智能体文件默认存储桶。
-    policy: private # 智能体附件默认私有读写。

@@ -1,6 +1,7 @@
 package org.etd.event.sharding;
 
 import org.apache.shardingsphere.driver.api.yaml.YamlShardingSphereDataSourceFactory;
+import org.apache.shardingsphere.driver.jdbc.core.connection.ShardingSphereConnection;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.infra.url.spi.ShardingSphereLocalFileURLLoader;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -55,6 +57,7 @@ class EventShardingYamlConfigurationTest {
             // 数据源启动阶段会校验逻辑表、单表、物理节点和算法配置能否完整装配。
             try (Connection connection = dataSource.getConnection()) {
                 assertNotNull(connection);
+                assertEquals("event", ((ShardingSphereConnection) connection).getCurrentDatabaseName());
             }
         } finally {
             if (dataSource instanceof AutoCloseable closeable) {
@@ -63,6 +66,7 @@ class EventShardingYamlConfigurationTest {
         }
     }
 
+    /** 创建与 YAML 节点数量一致的单表和物理分片，供真实逻辑数据源加载。 */
     private void createPhysicalTables() throws Exception {
         try (Connection connection = DriverManager.getConnection(DATABASE_URL, "sa", "");
              Statement statement = connection.createStatement()) {
@@ -78,6 +82,7 @@ class EventShardingYamlConfigurationTest {
         }
     }
 
+    /** 只替换测试数据库连接与 schema，保留正式 YAML 的数据源名称和分片规则。 */
     private byte[] createTestYaml() throws Exception {
         try (var inputStream = getClass().getClassLoader().getResourceAsStream("sharding-event-local.yaml")) {
             assertNotNull(inputStream);
@@ -87,8 +92,8 @@ class EventShardingYamlConfigurationTest {
                     .replace("$${EVENT_DB_USERNAME::root}", "sa")
                     .replace("$${EVENT_DB_PASSWORD::123456}", "")
                     .replace("$${EVENT_SHARDING_SQL_SHOW::false}", "false")
-                    .replace("event_ds.public.evt_event_type", "event_ds.evt_event_type")
-                    .replace("event_ds.public.evt_event_subscription", "event_ds.evt_event_subscription");
+                    .replace("event.public.evt_event_type", "event.evt_event_type")
+                    .replace("event.public.evt_event_subscription", "event.evt_event_subscription");
             return yaml.getBytes(StandardCharsets.UTF_8);
         }
     }

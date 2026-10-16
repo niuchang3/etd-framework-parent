@@ -1,0 +1,27 @@
+system:
+  security:
+    access-token:
+      expired: 60 # 访问令牌有效期数值。
+      timeUnit: minutes # 访问令牌有效期单位。
+
+    refresh-token:
+      expired: 7 # 刷新令牌有效期数值。
+      timeUnit: days # 刷新令牌有效期单位。
+
+    permissions:
+      # 以下接口无需执行登录权限校验。
+      ignore:
+        - /druid/** # Druid 本地监控页面路径。
+        - /v1/config/values # 前端读取公开配置值的接口路径。
+    oauth2:
+      authorization-server:
+        enabled: "${UPMS_OAUTH2_AUTHORIZATION_SERVER_ENABLED:false}" # 是否启用 OAuth2 授权服务器。
+        issuer: "${UPMS_OAUTH2_ISSUER:http://127.0.0.1:${server.port}}" # OAuth2 令牌签发者地址。
+      session:
+        enabled: "${ETD_JSESSIONID_ENABLED:true}" # 是否启用 OAuth2 登录会话。
+        timeout: "${ETD_JSESSIONID_TIMEOUT:30m}" # 登录会话空闲超时时间。
+        namespace: "${ETD_JSESSIONID_NAMESPACE:etd:upms:oauth2:session}" # Redis 会话键命名空间。
+        cookie-name: "${ETD_JSESSIONID_COOKIE_NAME:ETD_JSESSIONID}" # 浏览器会话 Cookie 名称。
+        login-page: "${UPMS_OAUTH2_LOGIN_PAGE:/login}" # 未登录用户跳转的登录页面路径。
+        consent-page: "${UPMS_OAUTH2_CONSENT_PAGE:/consent}" # OAuth2 授权确认页面路径。
+        redirect-parameter: "${UPMS_OAUTH2_REDIRECT_PARAMETER:redirect}" # 登录成功后的跳转地址参数名。

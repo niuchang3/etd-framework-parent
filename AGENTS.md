@@ -89,6 +89,59 @@
 - 新增配置项时，要判断是否应该放入 `@ConfigurationProperties`。
 - 未经用户要求，不要悄悄修改 Redis database、数据源地址、端口、安全路径等行为性配置。
 
+### YAML 配置组织与资源加载
+
+- 业务应用共享的组件配置统一维护在 `etd-business-parent/config/`，按职责拆分为 `redis.yml`、`druid.yml`、`kafka.yml`、`event-client.yml`、`event-server.yml` 等文件；不要恢复到 `src/main/resources/common/`，也不要另建配置子模块或复制多份公共配置。
+- `etd-business-parent/pom.xml` 统一声明共享资源规则，各业务子项目继承：保留自身的 `src/main/resources`，同时将 `${project.basedir}/../config` 作为资源根目录，包含 YAML 文件并设置 `filtering=false`，保留 Spring 运行时解析的 `${...}` 占位符。
+- 共享目录中的文件直接打包到 classpath 根目录，例如源码 `etd-business-parent/config/redis.yml` 对应 `classpath:redis.yml`。不得添加 `targetPath=config`、使用 `classpath:config/redis.yml` 或使用依赖开发机绝对路径的导入方式，保持 IDE 与 Maven 的资源路径一致。
+- 每个应用通过 `spring.config.import` 显式导入实际需要的组件。文件被打包不代表必须加载，禁止为了统一外观而给未使用 Kafka、事件服务、存储等能力的应用引入相应配置或依赖。
+- 应用自身的 `application.yml` 作为启动入口，集中声明服务端口、日志级别、profile、应用名称、时区和配置导入；应用专属策略优先维护在自身 `src/main/resources/etd-<业务模块>.yml`，独立功能可以继续拆分，例如 UPMS 的 `etd-oauth.yml`、`etd-upms.yml`，Event 的 `etd-event.yml`，AI 的 `etd-ai-agent.yml`。
+- `application-{profile}.yml` 只维护确有环境差异的连接信息、凭证占位符和环境开关；不要重复声明已经由共享组件文件维护的相同配置。迁移到公共配置时，应同步移除本次范围内已失效的本地重复项，避免 profile 配置覆盖公共环境变量。
+- 跨应用通用环境变量沿用对应组件文件的统一命名，例如 `REDIS_*`、`KAFKA_*`；确有独立连接或身份需求时在对应应用中明确声明，不得自行增加旧变量别名或兼容回退链。
+- 占位符优先读取环境变量，允许使用已经确认的本地开发默认值，例如 `${REDIS_HOST:127.0.0.1}`；真实模型密钥、生产凭证等不得提供伪造默认值。嵌套默认值用于已经确认的实际需求，例如消费组 `${KAFKA_CONSUMER_GROUP_ID:${spring.application.name}}`；显式空字符串不等于未配置。
+- 导入文件中的同名配置优先于声明该导入的文档，同一导入列表中后导入的文件优先；从 `application.yml` 导入公共配置时，激活的 `application-{profile}.yml` 可以覆盖对应公共配置。必须检查最终生效值，不能仅凭 YAML 的书写位置推断优先级。
+- 消费组、事件 ID 工作节点、数据库名称、安全策略等应用专属约定不能被公共默认值意外覆盖。公共配置在前、专属配置在后；不得单纯为了调整展示顺序改变已经确认的覆盖关系。
+- Event 等使用 ShardingSphere 的应用不导入普通数据源的连接池配置，真实连接池由对应 `sharding-<业务域>-<profile>.yaml` 管理；遵循下方 ShardingSphere 专项规范。
+
+### YAML 排列顺序与书写风格
+
+- 所有应用的 `application.yml` 使用相同的基础排列顺序：顶层先 `server`，再 `logging`，再 `spring`；其他确有需要的顶层配置放在其后，相同职责在不同应用中保持一致的位置。不要为了凑模板新增未使用的配置项。
+- `server` 下先写 `port`，再写 `servlet` 等其他服务配置；`logging` 下先写 `level.root`，再写具体包的日志级别。
+- `spring` 内固定先后顺序为：`profiles` → `application` → `jackson` → `config`。额外必需的 Spring 配置（例如 `spring.ai`）放在 `config` 后，按组件聚合，禁止将相同组件拆散穿插。
+- `spring.config.import` 按以下顺序选取实际需要的文件：`redis.yml` → `druid.yml` → `kafka.yml` → 其他已使用的公共组件配置 → `event-client.yml` → `event-server.yml` → 应用专属配置。独立专属功能配置在主业务配置前，例如 `etd-oauth.yml` 在 `etd-upms.yml` 前；缺少某项时直接省略，保留其他项的相对顺序。
+- YAML 使用两个空格缩进，不使用 Tab；列表项与同类文件保持一致缩进。同一 YAML 文档内，同一级配置键只声明一次，例如不得重复出现两个 `spring:`；同一配置块内不得用多余空行拆散紧密相关的属性。
+- 顶层配置块之间统一空一行，不连续堆积空行；普通配置使用嵌套结构，不混用整段点号展开和嵌套写法。Kafka 原生 `security.protocol`、`sasl.jaas.config` 等官方要求的点号属性及第三方规定的属性名保持原样。
+- 配置文件名使用清晰的英文小写及中划线，Spring Boot 配置统一使用 `.yml`；ShardingSphere 专项已采用的 `.yaml` 文件遵循其现有规范。不要随意重命名框架规定的配置键。
+- 配置项必须有准确的中文注释，解释用途、默认值或必要限制；短注释放在同行，整块说明放在配置块上方。例如 Redis `timeout` 应说明为“客户端等待命令响应的超时时间”，不得误写为“Redis 服务端执行时长限制”。
+- 以下为 Event 启动入口的基础顺序示例；其他应用复用顺序，根据自身职责调整端口、名称和实际导入项，不得照搬未使用的组件：
+
+```yaml
+server:
+  port: 8200 # Event 服务监听端口。
+
+logging:
+  level:
+    root: INFO # 默认根日志级别，具体环境可以覆盖。
+
+spring:
+  profiles:
+    active: local # 默认启用本地环境，可由启动参数覆盖。
+  application:
+    name: etd-event-server # 应用名称，同时用于日志、注册发现和缓存键前缀。
+  jackson:
+    time-zone: Asia/Shanghai # HTTP 时间字段统一按东八区序列化。
+  config:
+    # 物理连接池由 ShardingSphere YAML 管理，不导入普通 Druid 数据源配置。
+    import:
+      - classpath:redis.yml
+      - classpath:kafka.yml
+      - classpath:event-client.yml
+      - classpath:event-server.yml
+      - classpath:etd-event.yml
+```
+
+- 新增或调整 YAML 后，检查资源是否按预期进入构建产物、导入路径能否解析、环境变量能否覆盖以及最终生效值；仅调整排版时不得改变应用行为。修改导入顺序时必须核对同名配置的覆盖结果，不得依靠关闭 IDE 检查或添加 `optional:` 掩盖必须配置文件的缺失。
+
 ## ShardingSphere-JDBC 使用规范
 
 - 项目中的 `sharding-jdbc` 统一指 ShardingSphere-JDBC。分库分表规则必须优先使用官方 YAML 配置，不得把可声明在 YAML 中的标准分片策略改写为 Java 配置类或自定义算法。

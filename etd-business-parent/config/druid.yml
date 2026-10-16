@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      # 数据库驱动及连接池策略属于各环境共享配置，具体连接信息由环境配置提供。
+      driver-class-name: org.postgresql.Driver # PostgreSQL JDBC 驱动类。
+      max-active: 20 # 连接池允许的最大活动连接数。
+      initial-size: 1 # 连接池初始化时创建的连接数。
+      max-wait: 6000 # 连接池耗尽时获取连接的最大等待毫秒数。
+      min-idle: 1 # 连接池保持的最小空闲连接数。
+      time-between-eviction-runs-millis: 60000 # 空闲连接检测任务的执行间隔，单位毫秒。
+      min-evictable-idle-time-millis: 30000 # 连接允许被回收前的最小空闲时间，单位毫秒。
+      validation-query: SELECT 1 # 检测 PostgreSQL 连接有效性的 SQL。
+      test-while-idle: true # 空闲检测时校验连接有效性。
+      test-on-borrow: false # 借出连接时不额外执行检测 SQL，避免增加请求延迟。
+      test-on-return: false # 归还连接时不额外执行检测 SQL。
+      pool-prepared-statements: true # 缓存数据库预编译语句。
+      max-open-prepared-statements: 20 # 单个连接允许缓存的最大预编译语句数量。
+      async-init: true # 异步完成连接池初始化，缩短主线程阻塞时间。
+      filters: wall,stat # 启用 SQL 防火墙和统计过滤器。
+      filter:
+        stat:
+          enabled: true # 启用 Druid SQL 统计过滤器。
+          log-slow-sql: true # 将超过阈值的 SQL 记录为慢 SQL。
+          slow-sql-millis: 5000 # 慢 SQL 判定阈值，单位毫秒。
+          merge-sql: false # 不合并参数不同但结构相同的 SQL 统计。

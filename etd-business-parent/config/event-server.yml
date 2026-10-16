@@ -1,0 +1,20 @@
+etd:
+  event:
+    bus:
+      topic: ${ETD_EVENT_TOPIC:etd.event.bus} # Event 服务接收客户端事件的统一 Kafka Topic。
+      server:
+        create-topic: ${ETD_EVENT_CREATE_TOPIC:true} # 启动时幂等创建事件总线入口 Topic。
+        partitions: ${ETD_EVENT_TOPIC_PARTITIONS:6} # 入口 Topic 分区数，应与目标消费并发度匹配。
+        replicas: ${ETD_EVENT_TOPIC_REPLICAS:1} # 本地单节点 Kafka 使用一个副本。
+        delivery:
+          task-topic: ${ETD_EVENT_DELIVERY_TASK_TOPIC:etd.event.delivery.task} # 一个事件面向一个订阅生成一条内部投递任务。
+          status-topic: ${ETD_EVENT_DELIVERY_STATUS_TOPIC:etd.event.delivery.status} # 异步投影 Delivery 状态的内部 Topic。
+          dead-letter-topic: ${ETD_EVENT_DELIVERY_DLT_TOPIC:etd.event.delivery.task.dlt} # 自动重试耗尽后的死信 Topic。
+          task-consumer-group: ${ETD_EVENT_DELIVERY_TASK_GROUP:etd-event-delivery-dispatcher} # 多实例共享投递任务消费组。
+          status-consumer-group: ${ETD_EVENT_DELIVERY_STATUS_GROUP:etd-event-delivery-status-projector} # 多实例共享状态投影消费组。
+          partitions: ${ETD_EVENT_DELIVERY_PARTITIONS:16} # 内部 Topic 分区数，生产环境可与目标并发规划保持一致。
+          replicas: ${ETD_EVENT_DELIVERY_REPLICAS:1} # 本地单节点 Kafka 使用一个副本，生产环境通常配置为 3。
+          max-attempts: ${ETD_EVENT_DELIVERY_MAX_ATTEMPTS:4} # 包含首次发送在内的最大投递次数。
+          initial-backoff: ${ETD_EVENT_DELIVERY_INITIAL_BACKOFF:1s} # 首次失败后的等待时间。
+          backoff-multiplier: ${ETD_EVENT_DELIVERY_BACKOFF_MULTIPLIER:2.0} # 后续失败使用指数退避。
+          max-backoff: ${ETD_EVENT_DELIVERY_MAX_BACKOFF:30s} # 单次退避最长等待时间。

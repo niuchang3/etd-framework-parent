@@ -25,24 +25,26 @@ BOM 统一管理依赖版本，不会自动引入所有实现。目前不接入 
 ./mvnw -pl etd-business-parent/etd-business-ai-agent -am -DskipTests package
 ```
 
-通过部署环境或本地安全的环境变量管理方式注入以下配置后启动，不要把凭证写入仓库：
+配置通过父 POM 打包公共资源：`application.yml` 导入 `classpath:redis.yml` 和 `classpath:druid.yml`，默认启用 `local`；`application-local.yml` 保存 AI 独立数据库、模型和 MinIO 连接信息。环境变量未设置时使用本地默认值；真实模型凭证仍须注入。
 
-| 环境变量 | 用途 |
+| 环境变量 | 本地默认值 / 用途 |
 | --- | --- |
-| `AI_DASHSCOPE_API_KEY` | 百炼模型凭证 |
-| `AI_DB_URL` | PostgreSQL JDBC 地址，数据库需提前创建 |
-| `AI_DB_USERNAME`、`AI_DB_PASSWORD` | PostgreSQL 账号和密码 |
-| `AI_REDIS_HOST`、`AI_REDIS_PORT`、`AI_REDIS_DATABASE` | 必须与 UPMS 登录令牌所在 Redis 实例、端口和逻辑库一致 |
-| `SPRING_DATA_REDIS_PASSWORD` | Redis 需要密码时设置，无密码时省略 |
-| `AI_SECURITY_PUBLIC_KEY_PATH` | UPMS 签发访问令牌对应的 RSA 公钥文件路径，支持绝对路径或 `classpath:` |
+| `AI_DASHSCOPE_API_KEY` | 必填的百炼模型凭证，无默认值 |
+| `AI_DB_HOST`、`AI_DB_PORT`、`AI_DB_NAME` | `127.0.0.1`、`30432`、`ai_agent`，数据库需提前创建 |
+| `AI_DB_USERNAME`、`AI_DB_PASSWORD` | `root`、`123456`，与 UPMS 本地 PostgreSQL 保持一致 |
+| `REDIS_HOST`、`REDIS_PORT` | `127.0.0.1`、`30637`，公共配置沿用逻辑库 `4`，需与 UPMS 登录令牌所在实例和逻辑库一致 |
+| `REDIS_PASSWORD` | `123456`，与 UPMS 本地 Redis 保持一致 |
+| `AI_SECURITY_PUBLIC_KEY_PATH` | `conf/rsaPublicKey.pem`，复用 UPMS 的 RSA 公钥；支持绝对路径或 `classpath:` |
 
-本地 Kubernetes PostgreSQL 的地址格式为 `jdbc:postgresql://127.0.0.1:30432/ai_agent`；请提前创建 `ai_agent` 数据库。当前 UPMS 本地 Redis 配置使用端口 `30637`、逻辑库 `4`，AI 服务应按实际运行环境与其保持一致。公钥必须来自令牌签发端，不要给 AI 服务重新生成一套不匹配的公钥；AI 服务只负责验签，无需配置私钥。
+本地 PostgreSQL 默认地址为 `jdbc:postgresql://127.0.0.1:30432/ai_agent`；请提前创建 `ai_agent` 数据库。若本机无法通过 localhost 访问 Kubernetes NodePort，可覆盖数据库、Redis 的主机和端口。无密码 Redis 环境应在对应环境文件中省略 password 配置。公钥必须来自令牌签发端，AI 服务只负责验签，无需配置私钥。
 
 ```bash
 java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar
 ```
 
 `AI_AGENT_PORT` 可覆盖监听端口。健康检查包含数据库与 Redis 的连通性，不代表模型调用或文件读写已经通过外部服务验证。
+
+需要其他运行环境时，新增对应的 `application-{profile}.yml` 并通过 `--spring.profiles.active=<环境名>` 选择；本地默认连接和账号密码只放在 local 文件中。
 
 ## 接口鉴权与数据访问
 
@@ -54,17 +56,21 @@ MyBatis 复用框架的租户、组织数据权限拦截器和自动填充。业
 
 ## 文件存储
 
-默认不启用存储客户端。使用时选择一种 profile，连接信息由所在环境注入：
+本地 `local` 环境默认启用 MinIO，无需再指定存储厂商 profile。存储开关、私有访问策略和连接信息统一放在 `application-local.yml`，公共配置不再重复声明；未配置的存储厂商由框架默认保持关闭。
 
-| Profile | 必填环境变量 |
+| MinIO 环境变量 | 未设置时的默认值 |
 | --- | --- |
-| `minio` | `AI_STORAGE_MINIO_ENDPOINT`、`AI_STORAGE_MINIO_ACCESS_KEY`、`AI_STORAGE_MINIO_SECRET_KEY`、`AI_STORAGE_MINIO_BUCKET` |
-| `oss` | `AI_STORAGE_OSS_ENDPOINT`、`AI_STORAGE_OSS_ACCESS_KEY`、`AI_STORAGE_OSS_SECRET_KEY`、`AI_STORAGE_OSS_BUCKET` |
+| `AI_STORAGE_MINIO_ENDPOINT` | `http://minio-service.default.svc.cluster.local:9000` |
+| `AI_STORAGE_MINIO_ACCESS_KEY` | `root` |
+| `AI_STORAGE_MINIO_SECRET_KEY` | `12345678` |
+| `AI_STORAGE_MINIO_BUCKET` | `ai-agent` |
 
-例如启用 MinIO：
+默认连接对应当前 OrbStack 本地学习环境，账号密码与 MinIO Deployment 的默认值一致。如果服务端通过 Secret 修改了账号密码，这里也需用环境变量同步覆盖。其他 Kubernetes 环境或命名空间通过 `AI_STORAGE_MINIO_ENDPOINT` 指定可访问的 S3 API 地址。环境变量未设置时才使用默认值，显式设置为空字符串不会触发默认值。
+
+显式选择本地环境启动（也可省略该参数，默认已经是 local）：
 
 ```bash
-java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar --spring.profiles.active=minio
+java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
 ```
 
 启用后可在实际业务 Service 中注入框架的 `FileUpload` / `FileDownload`。文件使用私有访问策略；上传、下载和预签名接口的完整说明见[存储 starter 文档](../../etd-framework-starter/etd-framework-starter-storage/README.md)。后续业务按 `org.etd.ai.<功能域>.<技术分层>` 组织。
