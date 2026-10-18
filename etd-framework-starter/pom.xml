@@ -15,6 +15,7 @@
 
 
     <modules>
+        <module>etd-framework-starter-ai</module>
         <module>etd-framework-starter-mybatis</module>
         <module>etd-framework-starter-cache</module>
         <module>etd-framework-starter-elasticsearch</module>

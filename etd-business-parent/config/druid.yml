@@ -19,6 +19,9 @@ spring:
       async-init: true # 异步完成连接池初始化，缩短主线程阻塞时间。
       filters: wall,stat # 启用 SQL 防火墙和统计过滤器。
       filter:
+        wall:
+          config:
+            condition-and-alway-false-allow: true # 允许框架用AND 1=0拒绝无数据范围请求，仍保留SQL防火墙。
         stat:
           enabled: true # 启用 Druid SQL 统计过滤器。
           log-slow-sql: true # 将超过阈值的 SQL 记录为慢 SQL。

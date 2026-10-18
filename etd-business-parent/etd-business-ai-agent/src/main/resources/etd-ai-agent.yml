@@ -1,8 +1,41 @@
 etd:
   mybatis:
     fill:
-      enabled: true # 启用框架实体声明式默认值填充。
+      enabled: true # 框架填充租户、主组织、状态及审计字段。
+    logic-delete:
+      enabled: true # 自定义SELECT按实体@TableLogic自动排除已删除记录，不影响物理清理SQL。
     tenant:
-      enabled: true # 后续租户业务表统一使用 tenant_id 隔离。
+      enabled: true # 所有业务表保留租户隔离。
     data-permission:
-      enabled: true # 后续组织业务实体须继承 OrgScopedEntity。
+      enabled: true # 目录及文档管理沿用角色数据范围。
+      ignore-tables:
+        - ai_model_connection # 租户级配置，无独立组织归属。
+        - ai_model_config # 租户级配置，无独立组织归属。
+        - ai_knowledge_base # 容器不额外阻断公开文件读取。
+        - ai_file_upload # 由后端按创建人、租户及知识库精确校验。
+        - ai_storage_cleanup # 仅由内部维护入口消费。
+        - ai_knowledge_chunk # 明细权限由关联文档提供。
+        - ai_vector_768 # 向量投影继承文档权限。
+        - ai_vector_1024 # 向量投影继承文档权限。
+        - ai_vector_1536 # 向量投影继承文档权限。
+  ai:
+    credentials:
+      key: ${AI_CREDENTIAL_ENCRYPTION_KEY:ZXRkLWFpLWxvY2FsLWRldmVsb3BtZW50LWtleS0wMDE=} # 仅供本地开发的固定32字节AES密钥，部署环境必须自行注入。
+      key-id: ${AI_CREDENTIAL_KEY_ID:ai-local-01} # 本地默认密钥标识，与本地密钥固定配套使用。
+    upload:
+      cleanup-interval-ms: 60000 # 后台扫描过期上传及失败清理的间隔毫秒。
+
+system:
+  security:
+    permissions:
+      ignore:
+        - /actuator/health # 仅健康检查允许匿名。
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # 仅开放健康端点。
+  endpoint:
+    health:
+      show-details: never # 不向外暴露连接或依赖详情。

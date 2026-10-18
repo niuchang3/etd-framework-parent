@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.upload.mapper.UploadSessionMapper">
+    <!-- 跨租户维护入口固定按到期状态扫描，不接收客户端租户范围。 -->
+    <select id="selectExpiredSessionList" resultType="org.etd.ai.upload.entity.UploadSessionEntity">
+        select *
+        from ai_file_upload
+        where state in ('initializing', 'uploading')
+          and expires_at &lt;= current_timestamp
+        order by expires_at, id
+        limit 20
+        for update skip locked
+    </select>
+
+    <update id="updateExpiredSession">
+        update ai_file_upload
+        set state = 'cancelled',
+            update_time = current_timestamp
+        where id = #{id}
+          and state in ('initializing', 'uploading')
+          and expires_at &lt;= current_timestamp
+    </update>
+</mapper>

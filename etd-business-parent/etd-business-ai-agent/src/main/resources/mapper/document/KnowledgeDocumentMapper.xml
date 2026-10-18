@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.document.mapper.KnowledgeDocumentMapper">
+    <!-- 与实体原生UUID映射保持一致，其他字段仍按下划线转驼峰自动映射。 -->
+    <resultMap id="documentRecord" type="org.etd.ai.document.entity.KnowledgeDocumentEntity" autoMapping="true">
+        <id column="id" property="id"/>
+        <result column="processing_owner" property="processingOwner" javaType="java.util.UUID"
+                typeHandler="org.apache.ibatis.type.ObjectTypeHandler"/>
+    </resultMap>
+
+    <!-- 公开读取及角色范围由Service注解交给框架追加，XML仅维护业务条件。 -->
+    <sql id="readDocument">
+        from ai_knowledge_document d
+        join ai_knowledge_base k on k.id = d.knowledge_base_id
+        where d.knowledge_base_id = #{baseId}
+    </sql>
+
+    <select id="selectReadablePage" resultMap="documentRecord">
+        select d.*
+        <include refid="readDocument"/>
+        <if test="dataStatus != null">
+            and d.data_status = #{dataStatus}
+        </if>
+        <if test="uncategorized">
+            and d.folder_id is null
+        </if>
+        <if test="folderId != null">
+            and d.folder_id = #{folderId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and strpos(lower(d.document_name), lower(#{keyword})) &gt; 0
+        </if>
+        order by d.create_time desc, d.id desc
+    </select>
+
+    <select id="selectReadableById" resultMap="documentRecord">
+        select d.*
+        <include refid="readDocument"/>
+        and d.id = #{id}
+    </select>
+
+    <!-- 按已授权并锁定的全局文档ID删除，租户过滤统一交给框架。 -->
+    <delete id="deleteVector768">
+        delete from ai_vector_768
+        where document_id = #{id}
+    </delete>
+
+    <!-- 按已授权并锁定的全局文档ID删除，租户过滤统一交给框架。 -->
+    <delete id="deleteVector1024">
+        delete from ai_vector_1024
+        where document_id = #{id}
+    </delete>
+
+    <!-- 按已授权并锁定的全局文档ID删除，租户过滤统一交给框架。 -->
+    <delete id="deleteVector1536">
+        delete from ai_vector_1536
+        where document_id = #{id}
+    </delete>
+
+    <!-- 按已授权并锁定的全局文档ID删除，租户过滤统一交给框架。 -->
+    <delete id="deleteChunkList">
+        delete from ai_knowledge_chunk
+        where document_id = #{id}
+    </delete>
+</mapper>

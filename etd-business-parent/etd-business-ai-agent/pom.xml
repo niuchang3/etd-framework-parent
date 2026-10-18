@@ -29,18 +29,10 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- 智能体编排与图工作流均为当前应用的直接能力，显式声明以避免依赖隐式传递。 -->
+        <!-- AI 编排与模型 SDK 由框架 starter 统一提供，不装配依赖全局密钥的默认模型客户端。 -->
         <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-graph-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-ai</artifactId>
         </dependency>
 
         <!-- 复用框架统一的数据访问、令牌鉴权和 Redis 登录状态校验能力。 -->

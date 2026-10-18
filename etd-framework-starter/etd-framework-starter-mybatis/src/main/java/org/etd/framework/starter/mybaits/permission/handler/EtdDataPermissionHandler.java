@@ -3,6 +3,7 @@ package org.etd.framework.starter.mybaits.permission.handler;
 import com.baomidou.mybatisplus.extension.plugins.handler.MultiDataPermissionHandler;
 import com.google.common.collect.Sets;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.BooleanValue;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
@@ -10,12 +11,13 @@ import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.starter.mybaits.EtdMyBatisPlusProperties;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.etd.framework.starter.mybaits.permission.context.DataPermissionContextHolder;
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -32,9 +34,15 @@ import java.util.stream.Collectors;
  */
 public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
 
+    /** 全局数据权限开关及默认字段配置。 */
     private final EtdMyBatisPlusProperties.DataPermissionProperties properties;
+    /** 由应用显式声明不参与数据权限过滤的表。 */
     private final Set<String> ignoreTables = Sets.newHashSet();
 
+    /**
+     * 初始化数据权限处理器。
+     * @param properties 数据权限配置；为空时关闭过滤
+     */
     public EtdDataPermissionHandler(EtdMyBatisPlusProperties.DataPermissionProperties properties) {
         this.properties = properties;
         if (properties != null && !CollectionUtils.isEmpty(properties.getIgnoreTables())) {
@@ -42,6 +50,11 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
         }
     }
 
+    /**
+     * 注册无需组织或本人过滤的表，不影响独立的租户拦截器。
+     * @param tableNames 后端配置的忽略表名集合
+     * @return 当前处理器，便于初始化配置
+     */
     public EtdDataPermissionHandler addIgnoreTables(List<String> tableNames) {
         if (tableNames != null) {
             for (String tableName : tableNames) {
@@ -61,72 +74,125 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      * @param mappedStatementId Mapper 方法 ID
      * @return 增强的数据权限 SQL 条件 Expression（返回 null 表示无视数据权限）
      */
-    /**
-     * 获取 SqlSegment 属性值
-     *
-     * @param table 参数 table
-     * @param where 参数 where
-     * @param mappedStatementId 参数 mappedStatementId
-     * @return 处理结果
-     */
     @Override
     public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
+        // 标准处理器入口保持严格数据范围；只有框架SELECT入口允许公开读取。
+        return getSqlSegment(table, where, mappedStatementId, false);
+    }
+
+    /**
+     * 为指定表生成数据权限条件，使用SQL解析得到的真实表名及别名。
+     *
+     * @param table 当前SQL中的表引用
+     * @param where 原查询条件，由拦截器负责AND合并
+     * @param mappedStatementId Mapper语句标识
+     * @param publicRead 是否为允许公开扩展的SELECT入口，写操作必须为false
+     * @return 权限表达式；null表示该表无需追加限制
+     */
+    public Expression getSqlSegment(Table table, Expression where, String mappedStatementId, boolean publicRead) {
         if (!shouldApplyDataPermission() || isIgnoreTable(table.getName())) {
             return null;
         }
-
-        UserDetails user = RequestContext.getUser();
-        if (user != null && user.isAdmin()) {
-            return null;
-        }
-
         DataPermission annotation = DataPermissionContextHolder.peek();
         if (annotation != null && (!annotation.enable() || !matchesTargetTable(table, annotation.alias()))) {
             return null;
         }
+        DataPermissionTable rule = resolveTableRule(table, annotation);
+        if (annotation != null && annotation.tables().length > 0 && rule == null) {
+            return null;
+        }
+        UserDetails user = RequestContext.getUser();
         if (user == null) {
             return buildAlwaysFalseExpression();
         }
-
-        Set<String> permissionTypes = user.getPermissionTypes();
-        // 缺少权限类型时拒绝访问，只使用当前统一的权限集合。
-        if (CollectionUtils.isEmpty(permissionTypes)) {
-            return buildAlwaysFalseExpression();
-        }
-        if (permissionTypes.contains(BasicConstant.PermissionType.ALL.getCode())) {
+        DataPermissionScope scope = DataPermissionScope.from(user);
+        if (scope.all()) {
             return null;
         }
-        String orgColumnName = (annotation != null && StringUtils.hasText(annotation.orgColumn()))
-                ? annotation.orgColumn()
-                : properties.getDefaultOrgColumn();
-        String userColumnName = (annotation != null && StringUtils.hasText(annotation.userColumn()))
-                ? annotation.userColumn()
-                : properties.getDefaultUserColumn();
-
-        Expression permissionExpression = null;
-        if (permissionTypes.contains(BasicConstant.PermissionType.SELF.getCode()) && user.getId() != null) {
-            permissionExpression = new EqualsTo(buildColumn(table, userColumnName), new LongValue(user.getId()));
-        }
-        if (hasOrganizationPermission(permissionTypes) && !CollectionUtils.isEmpty(user.getScopeOrgIds())) {
-            Expression organizationExpression = buildOrganizationExpression(
-                    buildColumn(table, orgColumnName), user.getScopeOrgIds());
-            permissionExpression = appendOr(permissionExpression, organizationExpression);
-        }
-        return permissionExpression == null ? buildAlwaysFalseExpression() : parenthesizeOr(permissionExpression);
+        return buildAccessExpression(table, scope, annotation, rule, publicRead);
     }
 
-    private boolean hasOrganizationPermission(Set<String> permissionTypes) {
-        return permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION.getCode())
-                || permissionTypes.contains(BasicConstant.PermissionType.ORGANIZATION_AND_SUBORDINATE.getCode())
-                || permissionTypes.contains(BasicConstant.PermissionType.CUSTOM_ORGANIZATION.getCode());
+    /** 将可选公开读取与角色范围组成一个括号表达式，避免OR改变原查询条件优先级。 */
+    private Expression buildAccessExpression(Table table, DataPermissionScope scope, DataPermission annotation,
+            DataPermissionTable rule, boolean publicRead) {
+        Expression permission = buildRoleExpression(table, scope, annotation, rule);
+        if (publicRead && rule != null && StringUtils.hasText(rule.publicColumn())) {
+            // 公开列必须为布尔类型，NULL不会被认作公开。
+            Column publicField = buildColumn(table, rule.publicColumn());
+            var publicValue = new BooleanValue(true);
+            Expression published = new EqualsTo(publicField, publicValue);
+            permission = appendOr(published, permission);
+        }
+        return permission == null ? buildAlwaysFalseExpression() : parenthesizeOr(permission);
+    }
+
+    /** 只复用可信登录上下文的角色范围，公开读取不依赖用户拥有本人或部门范围。 */
+    private Expression buildRoleExpression(Table table, DataPermissionScope scope, DataPermission annotation,
+            DataPermissionTable rule) {
+        String orgColumn = resolveColumn(rule == null ? "" : rule.orgColumn(),
+                annotation == null ? "" : annotation.orgColumn(), properties.getDefaultOrgColumn());
+        String userColumn = resolveColumn(rule == null ? "" : rule.userColumn(),
+                annotation == null ? "" : annotation.userColumn(), properties.getDefaultUserColumn());
+        Expression permission = null;
+        if (scope.self() && scope.userId() != null) {
+            Column userField = buildColumn(table, userColumn);
+            var userId = new LongValue(scope.userId());
+            permission = new EqualsTo(userField, userId);
+        }
+        if (!scope.orgIds().isEmpty()) {
+            Column organizationField = buildColumn(table, orgColumn);
+            Expression organizationPermission = buildOrganizationExpression(organizationField, scope.orgIds());
+            permission = appendOr(permission, organizationPermission);
+        }
+        return permission;
+    }
+
+    /** 多条规则匹配同一表引用时拒绝执行，避免依赖规则顺序意外改变授权。 */
+    private DataPermissionTable resolveTableRule(Table table, DataPermission annotation) {
+        DataPermissionTable matched = null;
+        if (annotation == null) {
+            return null;
+        }
+        for (DataPermissionTable rule : annotation.tables()) {
+            validateTableRule(rule);
+            String actual = rule.table().contains(".") ? table.getFullyQualifiedName() : table.getName();
+            if (rule.table().equalsIgnoreCase(actual.replace("\"", ""))
+                    && matchesTargetTable(table, rule.alias())) {
+                if (matched != null) {
+                    throw new IllegalArgumentException("同一SQL表引用匹配了多条数据权限规则");
+                }
+                matched = rule;
+            }
+        }
+        return matched;
+    }
+
+    /** 声明仅接受普通标识符，禁止将表达式、限定列或动态SQL注入规则。 */
+    private void validateTableRule(DataPermissionTable rule) {
+        if (!rule.table().matches("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?")) {
+            throw new IllegalArgumentException("数据权限表名必须为普通表名或schema.table");
+        }
+        for (String column : List.of(rule.alias(), rule.publicColumn(), rule.orgColumn(), rule.userColumn())) {
+            if (!column.isEmpty() && !column.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                throw new IllegalArgumentException("数据权限别名及字段必须为普通标识符");
+            }
+        }
+    }
+
+    /** 表级字段优先于外层声明，未声明时使用框架默认字段。 */
+    private String resolveColumn(String column, String annotationColumn, String defaultColumn) {
+        return StringUtils.hasText(column) ? column
+                : (StringUtils.hasText(annotationColumn) ? annotationColumn : defaultColumn);
     }
 
     private Expression buildOrganizationExpression(Column orgColumn, Set<Long> scopeOrgIds) {
         if (scopeOrgIds.size() == 1) {
-            return new EqualsTo(orgColumn, new LongValue(scopeOrgIds.iterator().next()));
+            var organizationId = new LongValue(scopeOrgIds.iterator().next());
+            return new EqualsTo(orgColumn, organizationId);
         }
         List<Expression> expressions = scopeOrgIds.stream().map(LongValue::new).collect(Collectors.toList());
-        return new InExpression(orgColumn, new ParenthesedExpressionList<>(expressions));
+        var organizationIds = new ParenthesedExpressionList<>(expressions);
+        return new InExpression(orgColumn, organizationIds);
     }
 
     /**
@@ -157,7 +223,8 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      */
     private Column buildColumn(Table table, String columnName) {
         String qualifier = table.getAlias() == null ? table.getName() : table.getAlias().getName();
-        return new Column(new Table(qualifier), columnName);
+        var qualifiedTable = new Table(qualifier);
+        return new Column(qualifiedTable, columnName);
     }
 
     private boolean matchesTargetTable(Table table, String configuredAlias) {
@@ -181,6 +248,8 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      * 当权限范围内无任何可用 ID 时，生成 1 = 0 恒假表达式阻断数据访问
      */
     private Expression buildAlwaysFalseExpression() {
-        return new EqualsTo(new LongValue(1), new LongValue(0));
+        var one = new LongValue(1);
+        var zero = new LongValue(0);
+        return new EqualsTo(one, zero);
     }
 }

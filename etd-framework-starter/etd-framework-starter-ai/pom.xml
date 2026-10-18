@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.etd.framework</groupId>
+        <artifactId>etd-framework-starter</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>etd-framework-starter-ai</artifactId>
+    <description>面向 SaaS 的 Spring AI Alibaba 编排与模型 SDK 依赖入口</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- AI 版本统一由框架 BOM 管理，业务应用不单独指定版本。 -->
+            <dependency>
+                <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-dependencies</artifactId>
+                <version>${etd.framework.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- 提供 Agent 和 Graph 编排 API，不预先创建绑定全局模型的实例。 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+        </dependency>
+        <!-- 使用底层 SDK，避免供应商 starter 启动时要求全局 API Key。 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-dashscope</artifactId>
+            <!-- 上游 BOM 将 SDK 标记为可选，本 starter 必须向业务应用传递该能力。 -->
+            <optional>false</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

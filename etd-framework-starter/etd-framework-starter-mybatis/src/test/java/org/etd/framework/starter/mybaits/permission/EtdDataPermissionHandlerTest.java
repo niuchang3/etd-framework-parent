@@ -163,6 +163,11 @@ class EtdDataPermissionHandlerTest {
             }
 
             @Override
+            public org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable[] tables() {
+                return new org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable[0];
+            }
+
+            @Override
             public boolean enable() {
                 return true;
             }

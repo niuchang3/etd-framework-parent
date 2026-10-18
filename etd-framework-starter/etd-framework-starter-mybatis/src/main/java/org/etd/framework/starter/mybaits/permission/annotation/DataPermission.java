@@ -26,6 +26,14 @@ public @interface DataPermission {
     boolean enable() default true;
 
     /**
+     * 按真实表名声明参与过滤的表；非空时只过滤匹配表，别名默认从SQL自动取得。
+     * 未声明时沿用原有全表或alias范围；各表条件的连接位置由SQL拦截器决定。
+     *
+     * @return 表级权限规则
+     */
+    DataPermissionTable[] tables() default {};
+
+    /**
      * 主表别名，如 SQL 中的 "t." 或 "user."
      *
      * @return 表别名

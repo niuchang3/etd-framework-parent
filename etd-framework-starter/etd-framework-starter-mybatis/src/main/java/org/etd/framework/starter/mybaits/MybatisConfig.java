@@ -1,19 +1,18 @@
 package org.etd.framework.starter.mybaits;
 
-import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import org.etd.framework.starter.mybaits.permission.handler.EtdDataPermissionInterceptor;
+import org.etd.framework.starter.mybaits.logic.EtdLogicDeleteInterceptor;
 import org.etd.framework.starter.mybaits.permission.aspect.DataPermissionAspect;
 import org.etd.framework.starter.mybaits.permission.handler.EtdDataPermissionHandler;
 import org.etd.framework.starter.mybaits.tenant.EtdTenantLineHandler;
 import org.etd.framework.starter.mybaits.tenant.aspect.IgnoreTenantAspect;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -60,12 +59,25 @@ public class MybatisConfig {
 
         if (Boolean.TRUE.equals(properties.getDataPermission().getEnabled())) {
             EtdDataPermissionHandler dataPermissionHandler = new EtdDataPermissionHandler(properties.getDataPermission());
-            DataPermissionInterceptor dataPermissionInterceptor = new DataPermissionInterceptor(dataPermissionHandler);
+            EtdDataPermissionInterceptor dataPermissionInterceptor = new EtdDataPermissionInterceptor(dataPermissionHandler);
             interceptor.addInnerInterceptor(dataPermissionInterceptor);
         }
 
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
-        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        // 与组织数据权限独立执行，确保公开读取、忽略组织权限时仍排除已删除资料。
+        if (Boolean.TRUE.equals(properties.getLogicDelete().getEnabled())) {
+            var logicDeleteInterceptor = new EtdLogicDeleteInterceptor();
+            interceptor.addInnerInterceptor(logicDeleteInterceptor);
+        }
+
+        // 仅对显式声明@Version的实体生效；缺少版本时拒绝更新，禁止静默跳过并发保护。
+        var optimisticLocker = new OptimisticLockerInnerInterceptor();
+        var missingVersionException = new IllegalArgumentException("更新实体必须提供version");
+        optimisticLocker.setException(missingVersionException);
+        interceptor.addInnerInterceptor(optimisticLocker);
+        var paginationInterceptor = new PaginationInnerInterceptor();
+        interceptor.addInnerInterceptor(paginationInterceptor);
+        var blockAttackInterceptor = new BlockAttackInnerInterceptor();
+        interceptor.addInnerInterceptor(blockAttackInterceptor);
 
         return interceptor;
     }

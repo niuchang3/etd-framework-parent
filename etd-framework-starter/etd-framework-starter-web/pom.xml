@@ -23,6 +23,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- 全局处理器直接使用 Spring DAO 异常层级；仅引入类型所在库，不引入 JDBC 或数据源自动配置。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>

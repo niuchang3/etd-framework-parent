@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeFolderMapper">
+    <!-- 两个可见来源分别由框架过滤；entry和p只提供导航，不按其自身权限阻断可读文件。 -->
+    <select id="selectReadableFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
+        with recursive visible as (
+            select f.*
+            from ai_knowledge_folder f
+            where f.knowledge_base_id = #{baseId}
+            <if test="dataStatus != null">
+                and f.data_status = #{dataStatus}
+            </if>
+            union
+            select entry.*
+            from ai_knowledge_folder entry
+            join ai_knowledge_document d on d.folder_id = entry.id
+                                         and d.knowledge_base_id = entry.knowledge_base_id
+            where entry.knowledge_base_id = #{baseId}
+            <if test="dataStatus != null">
+                and entry.data_status = #{dataStatus}
+            </if>
+        ), paths as (
+            select *
+            from visible
+            union
+            select p.*
+            from ai_knowledge_folder p
+            join paths child on p.id = child.parent_id
+                             and p.knowledge_base_id = child.knowledge_base_id
+            where p.knowledge_base_id = #{baseId}
+        )
+        select *
+        from paths
+        order by sort_order, id
+    </select>
+
+    <select id="selectAncestorCount" resultType="java.lang.Long">
+        with recursive ancestors as (
+            select id, parent_id, tenant_id, knowledge_base_id
+            from ai_knowledge_folder
+            where id = #{targetId}
+              and knowledge_base_id = #{baseId}
+            union
+            select p.id, p.parent_id, p.tenant_id, p.knowledge_base_id
+            from ai_knowledge_folder p
+            join ancestors a on p.id = a.parent_id
+            where p.knowledge_base_id = #{baseId}
+        )
+        select count(*)
+        from ancestors
+        where id = #{folderId}
+    </select>
+
+    <!-- 使用可遍历的集合分支统计，租户及逻辑删除条件由框架分别追加。 -->
+    <select id="selectChildCount" resultType="java.lang.Long">
+        with occupied as (
+            select id, tenant_id
+            from ai_knowledge_folder
+            where knowledge_base_id = #{baseId}
+            <if test="folderId != null">
+                and parent_id = #{folderId}
+            </if>
+            union all
+            select id, tenant_id
+            from ai_knowledge_document
+            where knowledge_base_id = #{baseId}
+            <if test="folderId != null">
+                and folder_id = #{folderId}
+            </if>
+        )
+        select count(*)
+        from occupied
+    </select>
+</mapper>

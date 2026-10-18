@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.upload.mapper.StorageCleanupMapper">
+    <select id="selectDueCleanupList" resultType="org.etd.ai.upload.entity.StorageCleanupEntity">
+        select q.*
+        from ai_storage_cleanup q
+        where q.next_attempt_at &lt;= current_timestamp
+          and not exists (
+              select 1
+              from ai_knowledge_document d
+              where d.storage_bucket = q.bucket
+                and d.storage_object_key = q.object_key
+          )
+        order by q.next_attempt_at, q.id
+        limit 20
+        for update skip locked
+    </select>
+
+    <delete id="deleteCompleted">
+        delete from ai_storage_cleanup
+        where id = #{id}
+    </delete>
+
+    <update id="updateRetry">
+        update ai_storage_cleanup
+        set attempts = attempts + 1,
+            next_attempt_at = current_timestamp + interval '1 minute'
+        where id = #{id}
+    </update>
+</mapper>

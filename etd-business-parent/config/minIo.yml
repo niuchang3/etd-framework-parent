@@ -1,0 +1,8 @@
+storage:
+  minio:
+    enabled: true # 本地基础文件管理使用MinIO。
+    policy: private # 业务公开资料仍需SaaS认证，不开放匿名桶。
+    endpoint: ${AI_STORAGE_MINIO_ENDPOINT:http://localhost:30900} # 浏览器和后端都必须能够访问的S3 API地址。
+    access-key: ${AI_STORAGE_MINIO_ACCESS_KEY:root} # 本地学习默认账号。
+    secret-key: ${AI_STORAGE_MINIO_SECRET_KEY:12345678} # 本地学习默认密码。
+    default-bucket: ${AI_STORAGE_MINIO_BUCKET:ai-agent} # AI原件专用桶。

@@ -39,6 +39,17 @@ public class EtdMyBatisPlusProperties {
     @NestedConfigurationProperty
     private DataPermissionProperties dataPermission = new DataPermissionProperties();
 
+    /** 自定义SELECT逻辑删除过滤；默认关闭，由应用明确启用。 */
+    @NestedConfigurationProperty
+    private LogicDeleteProperties logicDelete = new LogicDeleteProperties();
+
+    /** 根据已注册实体的@TableLogic声明过滤自定义查询，不自动转换物理删除SQL。 */
+    @Data
+    public class LogicDeleteProperties {
+        /** 是否为自定义SELECT追加未删除条件，默认false。 */
+        private Boolean enabled = false;
+    }
+
     /**
      * 数据快照配置
      */

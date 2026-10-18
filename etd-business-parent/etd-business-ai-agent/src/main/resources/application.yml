@@ -17,22 +17,5 @@ spring:
     import:
       - classpath:redis.yml
       - classpath:druid.yml
+      - classpath:minIo.yml
       - classpath:etd-ai-agent.yml
-
-  ai:
-    model:
-      chat: dashscope # 当前只启用 DashScope 对话模型。
-      embedding: none # 尚未接入知识库，避免自动创建未使用的向量模型。
-      image: none # 尚未接入图像生成能力。
-      video: none # 尚未接入视频生成能力。
-      rerank: none # 尚未接入检索重排能力。
-      audio:
-        speech: none # 尚未接入语音合成能力。
-        transcription: none # 尚未接入语音识别能力。
-    dashscope:
-      agent:
-        enabled: false # 使用本地 Agent Framework 编排，暂不接入百炼托管应用 API。
-      chat:
-        options:
-          model: ${AI_DASHSCOPE_MODEL:qwen-plus} # 可按实际开通的模型调整。
-

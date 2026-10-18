@@ -124,6 +124,11 @@
             <!--   本地工程jar包管理     -->
             <dependency>
                 <groupId>org.etd.framework</groupId>
+                <artifactId>etd-framework-starter-ai</artifactId>
+                <version>${etd.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.etd.framework</groupId>
                 <artifactId>etd-framework-starter-mybatis</artifactId>
                 <version>${etd.framework.version}</version>
             </dependency>

@@ -12,7 +12,6 @@
   - `etd-framework-starter`
   - `etd-framework-dependencies`
   - `etd-business-parent`
-  - `demo`
 - 优先使用仓库根目录下的 Maven Wrapper：
   - macOS/Linux：`./mvnw`
   - Windows：`mvnw.cmd`
@@ -91,7 +90,7 @@
 
 ### YAML 配置组织与资源加载
 
-- 业务应用共享的组件配置统一维护在 `etd-business-parent/config/`，按职责拆分为 `redis.yml`、`druid.yml`、`kafka.yml`、`event-client.yml`、`event-server.yml` 等文件；不要恢复到 `src/main/resources/common/`，也不要另建配置子模块或复制多份公共配置。
+- 业务应用共享的组件配置统一维护在 `etd-business-parent/config/`，按职责拆分为 `redis.yml`、`druid.yml`、`kafka.yml`、`event-client.yml`、`event-server.yml` 等文件；不要另建配置子模块或复制多份公共配置。
 - `etd-business-parent/pom.xml` 统一声明共享资源规则，各业务子项目继承：保留自身的 `src/main/resources`，同时将 `${project.basedir}/../config` 作为资源根目录，包含 YAML 文件并设置 `filtering=false`，保留 Spring 运行时解析的 `${...}` 占位符。
 - 共享目录中的文件直接打包到 classpath 根目录，例如源码 `etd-business-parent/config/redis.yml` 对应 `classpath:redis.yml`。不得添加 `targetPath=config`、使用 `classpath:config/redis.yml` 或使用依赖开发机绝对路径的导入方式，保持 IDE 与 Maven 的资源路径一致。
 - 每个应用通过 `spring.config.import` 显式导入实际需要的组件。文件被打包不代表必须加载，禁止为了统一外观而给未使用 Kafka、事件服务、存储等能力的应用引入相应配置或依赖。
@@ -178,29 +177,40 @@ spring:
 
 ## 代码风格
 
+### 基本书写规范
+
 - 遵循项目现有包名、类名和代码组织风格。
-- 包命名必须遵循项目现有根命名空间：
-  - 框架公共模块使用 `org.etd.framework.common.*`；
-  - 框架 starter 模块使用 `org.etd.framework.starter.*`；
-  - 业务模块使用 `org.etd.<业务模块名>.<功能域>.<技术分层>`，例如用户管理 Controller 使用 `org.etd.upms.user.controller`，订单退款 Service 使用 `org.etd.order.refund.service`；
-  - 业务模块包路径不要包含 `framework`、`business` 这类框架层级，例如不要使用 `org.etd.framework.business.upms.controller`；
-  - 已存在的历史包名在未重构前保持兼容，不要为了统一命名擅自搬迁。
-- 业务模块必须采用“业务模块优先、功能域其次、技术分层最后”的纵向切片结构：
-  - 第一层是业务模块，例如 `upms`、`order`、`product`；
-  - 第二层是具体功能域，例如 `user`、`role`、`menu`、`tenant`、`refund`、`payment`；
-  - 第三层才是 `controller`、`biz`、`service`、`entity`、`mapper`、`converter` 等技术分层；
-  - 不要使用 `org.etd.upms.controller.user`、`org.etd.upms.service.user` 这类技术分层优先的包路径；
+- 修改要小而聚焦。
+- 优先写清楚直接的代码，不要炫技。
+- Java 类型必须通过 `import` 导入并使用简名，包括类、接口、注解、属性类型、方法签名和方法体中的类型引用；禁止在上述位置直接书写完整包路径。包声明、导入声明以及配置字符串中必须保留的类全名不受此限制。
+- 方法调用的对象入参必须先通过语义明确的局部变量承接，再传入方法；禁止在参数位置直接 `new` 对象、内联 Builder / 查询构造器链或嵌套组装 DTO、集合等对象。已有变量、常量和简单属性读取可直接传入，不要为其机械增加临时变量。
+- 所有 `if` 判断必须使用 `{}` 包裹语句块，即使只有一行也不得省略。
+- 避免使用过度复杂、多层嵌套或难以维护的 Stream 流式写法：
+  - 严禁在 Stream 算子内部（如 `.filter()`、`.map()`）引入修改外部变量状态或集合的副作用（side-effects）；
+  - 严禁为了单纯的集合遍历或带 `try-catch` 的副作用循环而滥用 `.stream().forEach(...)`，纯副作用迭代应直接使用标准的 `for` 循环；
+  - 包含 2 个及以上中间算子（如同时包含 `filter` + `map` + `groupingBy`）、涉及算法/复杂分组或业务规则判断的 Stream 表达式，**必须提取为独立且语义明确的私有辅助方法**（如 `groupOrganizationsByUserId`），避免在主业务逻辑中内联长流；仅涉及单一属性映射（如 `list.stream().map(X::getId).toList()`）或简单 `anyMatch` 的极简单行流，允许直接内联。
+- 单个方法理论上不超过 30 行。超过 30 行时，必须优先考虑提取私有方法、规则方法、转换方法或独立组件承接复杂逻辑。
+
+### 包结构与模块边界
+
+- 包命名和类放置必须符合模块职责及现有根命名空间：
+  - 框架公共模块使用 `org.etd.framework.common.*`；通用工具放在 `etd-framework-commons` 下合适的 `common` 包。
+  - 框架 starter 模块使用 `org.etd.framework.starter.*`；自动配置放在对应 starter 的 `config` 或 `autoconfigure` 包。
+  - 业务模块使用 `org.etd.<业务模块名>.<功能域>.<技术分层>`，必须采用“业务模块优先、功能域其次、技术分层最后”的纵向切片结构。业务模块例如 `upms`、`order`、`product`，功能域例如 `user`、`role`、`menu`、`tenant`、`refund`、`payment`，技术分层例如 `controller`、`biz`、`service`、`entity`、`mapper`、`converter`。
+  - 业务类必须位于对应功能域内部，例如 `org.etd.upms.user.controller`、`org.etd.upms.user.biz`、`org.etd.upms.user.service`、`org.etd.upms.user.entity`、`org.etd.upms.user.mapper`、`org.etd.upms.user.converter`，订单退款 Service 使用 `org.etd.order.refund.service`。
+  - 不要使用 `org.etd.upms.controller.user`、`org.etd.upms.service.user` 这类技术分层优先的包路径；业务模块包路径不要包含 `framework`、`business` 这类框架层级，例如不要使用 `org.etd.framework.business.upms.controller`。
   - 功能域名称应直接表达业务概念，优先使用 `user`、`role`，不要使用含义宽泛的 `usermanage`、`rolemanage`。
+  - 已存在的历史包名在未重构前保持兼容，不要为了统一命名擅自搬迁。
 - 新增包名前必须先检查同模块是否已有相同职责的包，优先放入已有包结构，不要随意创造 `utils`、`helper`、`common`、`config2`、`new`、`test` 等含义模糊的包。
 - 包名只使用小写字母和点号，不使用大写、下划线、中划线、拼音缩写或无意义缩写。
 - 包层级要表达业务或技术职责，不要过深。以 `org.etd.<业务模块名>` 为业务模块根包（如 `org.etd.upms`），根包之后的标准层级结构为 3 层（即 `1.<功能域> -> 2.<技术分层> -> 3.<子包(如 dto/vo/impl)>`，如 `dict.controller.dto`）；只有在 Controller 下针对极复杂页面继续拆分子功能入口时，才允许扩展至 4 层。
 - starter 模块内不要引用业务模块包；common 模块不要反向引用 starter 或 business 包；business 模块可以依赖 starter 和 common 暴露的能力。
-- 新增类时，包路径必须和模块职责一致。例如：
-  - 通用工具放在 `etd-framework-commons` 下合适的 `common` 包；
-  - 自动配置放在对应 starter 的 `config` 或 `autoconfigure` 包；
-  - 业务控制器、服务、实体、转换器放在对应功能域下，例如 `org.etd.upms.user.controller`、`org.etd.upms.user.service`、`org.etd.upms.user.entity`、`org.etd.upms.user.converter`。
-- 业务模块的 Controller 层按页面或功能入口组织，不要把一个功能域的所有接口都堆进同一个大 Controller。
-- Controller 位于对应功能域内部，例如 `user.controller`、`role.controller`、`menu.controller`、`tenant.controller`；页面进一步复杂时，可以在 `controller` 下继续拆分更具体的功能入口。
+
+### 分层职责
+
+#### Controller
+
+- 业务模块的 Controller 层按页面或功能入口组织，不要把一个功能域的所有接口都堆进同一个大 Controller；页面进一步复杂时，可以在 `controller` 下继续拆分更具体的功能入口。
 - Controller 层使用的请求 DTO、响应 VO 应放在对应功能域的 Controller 包下，例如：
   - `user.controller.dto`
   - `user.controller.vo`
@@ -208,48 +218,75 @@ spring:
   - `role.controller.vo`
 - DTO/VO 以接口场景为边界，不要为了复用制造字段过多的全局大 DTO 或大 VO。
 - Controller 只负责接口入口、参数校验、DTO/VO 转换和调用 biz/service，不要直接调用 mapper，不要直接写数据库、Redis、MQ 或复杂业务规则。
-- 每个功能域可以设置 `biz` 包作为业务编排层，例如 `user.biz`、`role.biz`、`menu.biz`、`tenant.biz`。
-- `biz` 层负责完整业务用例编排，例如创建用户并分配角色、角色授权菜单、初始化租户、导入用户、删除菜单并清理关系。
+- Controller 对外暴露的接口方法必须使用框架 `etd-framework-starter-logs` 提供的 `@AutoLog` 注解记录日志，并通过 `value` 填写准确的中文操作描述，例如 `@AutoLog("分页查询系统用户列表")`、`@AutoLog("分配用户角色")`；查询和写操作均须覆盖，不得仅使用手写 `log.info(...)` 等日志代替框架日志记录功能。
+- Controller 在简单同业务域只读组装场景下可直接调用多个 Service；必须使用 Biz 的场景统一遵循下方 Biz 编排边界。
+
+#### Biz
+
+- 每个功能域可以设置 `biz` 包作为业务编排层，负责完整业务用例，例如创建用户并分配角色、角色授权菜单、初始化租户、导入用户、删除菜单并清理关系。跨多个 Service 的写流程、事务控制或复杂业务组装必须放在 `biz` 包，由 Controller 调用，不要塞进某个大 Service。
 - `biz` 层可以控制事务，可以调用多个 service，但不直接调用 mapper，不写 SQL 细节，不放 Controller DTO/VO。
-- 跨多个 Service 的写流程、事务控制或复杂业务组装必须放在 `biz` 包，不要塞进某个大 Service。
 - `biz` 层命名使用 `XxxBizService`；复杂到需要独立表达场景时，可以使用 `XxxActionBizService`，例如 `UserImportBizService`、`TenantInitBizService`、`RoleAuthorizeBizService`。
-- Service 必须位于对应功能域内部，例如 `user.service`、`role.service`、`menu.service`、`tenant.service`。
-- Service 类按业务能力或业务关系拆分，不要把同一业务类型下的所有能力都塞进一个大 Service。
+
+#### Service
+
+- Service 层是能力服务层，负责单一业务能力，可以调用 mapper，但不调用 biz；默认不承担跨多个 Service 的完整流程编排。
+- Service 类按业务能力或业务关系拆分，不要把同一业务类型下的所有能力都塞进一个大 Service。单个 Service 不要同时处理基础信息、关系绑定、密码、安全、日志、导入导出、页面展示组装等多个不相关职责；出现明显不相关职责时必须拆分。
 - 允许使用类似 `UserService` 的基础能力 Service，但它只应承载用户基础信息相关能力，例如新增、修改、详情、启用、禁用；关系绑定、密码、安全、日志、导出等独立能力应拆成单独 Service。
 - 业务关系应使用明确的 Service 表达，例如 `UserRoleService`、`RoleMenuService`、`TenantPackageService`。不要机械拼接表名，类名必须表达真实业务语义。
 - 能力明显独立时应单独成 Service，例如 `UserPasswordService`、`MenuTreeService`、`UserLoginLogService`。
 - 不要创建 `SystemService`、`CommonService`、`BaseService`、`ManageService` 这类职责过宽、容易膨胀的业务 Service。
-- 单个 Service 不要同时处理基础信息、关系绑定、密码、安全、日志、导入导出、页面展示组装等多个不相关职责。出现明显不相关职责时必须拆分。
-- Service 层是能力服务层，负责单一业务能力，可以调用 mapper，但不调用 biz；默认不承担跨多个 Service 的完整流程编排。
 - 能力型 Service 默认不相互调用，避免形成循环依赖和隐式调用链。确需组合多个 Service 时，应上移到 `biz` 层。
+
+#### Mapper
+
+- Mapper 保持简单，负责对应表或关系表的数据访问，例如 `UserMapper`、`UserRoleMapper`、`RoleMapper`、`RoleMenuMapper`；不写业务规则，不做业务编排，不直接返回 Controller VO。
+
+#### 缓存职责
+
 - 能力型 Service 可以承接 JetCache 缓存职责。稳定查询方法可以使用 `@Cached`，写方法必须同步设计 `@CacheInvalidate` 或主动缓存失效策略。
 - `biz` 层不直接添加 JetCache 缓存注解，mapper 层不添加缓存注解。缓存应围绕稳定业务能力，而不是围绕 SQL 细节或编排流程。
 - 涉及用户权限、用户角色、角色菜单、菜单树等关联缓存时，必须明确失效范围，不能只加缓存不处理失效。
-- Controller 在简单同业务域只读组装场景下可直接调用多个 Service；凡涉及多个 Service 的写流程、事务控制或复杂业务组装时，必须调用 `biz` 层。
-- Mapper 必须位于对应功能域内部，例如 `user.mapper`、`role.mapper`、`menu.mapper`、`tenant.mapper`。
-- Mapper 保持简单，负责对应表或关系表的数据访问，例如 `UserMapper`、`UserRoleMapper`、`RoleMapper`、`RoleMenuMapper`。
-- Mapper XML 必须和 Java Mapper 一一对应。Java Mapper 如何拆，XML 就如何拆。
-- Mapper XML 按功能域放在 `resources/mapper/<功能域>`，并与 Java Mapper 一一对应，例如：
+
+### 数据访问与 SQL
+
+#### Mapper XML 组织与排版
+
+- Mapper XML 必须和 Java Mapper 一一对应，Java Mapper 如何拆，XML 就如何拆；不允许多个 Mapper 共用一个大 XML，不允许一个 XML 中混写多个不同业务类型或关系类型的 SQL。
+- Mapper XML 按功能域放在 `resources/mapper/<功能域>`，例如：
   - `user/mapper/UserMapper.java` 对应 `resources/mapper/user/UserMapper.xml`
   - `user/mapper/UserRoleMapper.java` 对应 `resources/mapper/user/UserRoleMapper.xml`
   - `role/mapper/RoleMapper.java` 对应 `resources/mapper/role/RoleMapper.xml`
-- 不允许多个 Mapper 共用一个大 XML，不允许一个 XML 中混写多个不同业务类型或关系类型的 SQL。
 - 不要提前为了可能存在的复杂查询创建大量 QueryMapper。复杂查询真实出现，且明显不适合放入基础 Mapper 时，再按查询场景新增对应的 `XxxQueryMapper.java` 和 `XxxQueryMapper.xml`。
-- Mapper 不写业务规则，不做业务编排，不直接返回 Controller VO。
+- Mapper XML 排版统一参考 `etd-business-parent/etd-business-event/src/main/resources/mapper/delivery/EventDeliveryMapper.xml`，新增或修改时必须遵循以下规范：
+  - XML 每层缩进 4 个空格，不使用 Tab；`mapper` 下的语句标签缩进 4 个空格，标签内 SQL 缩进 8 个空格，动态标签及嵌套 SQL 按层级递进。
+  - SQL 关键字统一使用小写，例如 `select`、`from`、`join`、`where`、`and`、`order by`；不要为统一大小写改动字符串字面量、参数名或有大小写语义的标识符。
+  - 查询字段较多时逐行书写并对齐；`from`、`join`、`where`、`order by`、`limit` 等子句分别换行，不将完整 SQL 压缩在一行。
+  - `where` 后的连续 `and`、`or` 条件逐行书写并对齐；多行 `join ... on` 条件与首个连接条件对齐，保留原有逻辑括号，不通过排版改变条件优先级。
+  - `=`、比较符及算术运算符两侧保留空格，逗号后保留空格；`update ... set` 的多个赋值按字段换行并对齐。
+  - `<if>`、`<foreach>`、`<choose>`、`<where>`、`<set>` 等动态标签单独成行，标签内的 SQL 按层级缩进，不将动态标签与完整条件挤在一行；`<include .../>` 单独成行。
+  - 相邻的 `<sql>`、`<select>`、`<insert>`、`<update>`、`<delete>` 语句块之间保留一个空行；相关中文注释紧邻对应语句块，不堆积空行。
+  - 子查询及 CTE 按查询层级缩进，结束括号与对应起始结构对齐，避免递归、多表查询的层级混乱。
+  - 仅调整排版时，必须核对 SQL、参数绑定和动态节点保持一致，禁止顺带修改查询条件、排序、分页、加锁或权限行为。
+
+#### 查询与更新约束
+
 - 凡是通过多表关联（JOIN）或过滤就能完成的查询，严禁在 Java 代码/内存中进行硬编码拼接或多表循环拼接；应优先在对应的 Mapper XML 中编写标准 SQL 直接查询完成。
 - 凡是编写或重构涉及多表关联（JOIN）或复杂查询的 Mapper XML SQL，必须主动审查并识别 SQL 中的连接字段（ON）、筛选条件（WHERE）及排序字段（ORDER BY）是否具备对应的索引支持（索引覆盖 / Index Range Scan）；若识别到缺失索引或未实现索引覆盖，必须在方案与回复中明确提出，并给出对应的索引 DDL 补齐建议。
+- MyBatis-Plus 更新已映射字段时，必须优先使用 Lambda Wrapper 的实体方法引用，禁止用 `setSql` 拼接普通字段赋值或批量清空 SQL；不能为省事而省略实体字段映射。只有无法通过标准 Wrapper 表达的真实 SQL 表达式才可使用 `setSql`，并必须说明原因，不得拼接外部输入。
+- 需要将数据库字段清空时，必须显式声明更新为 `null`，不得仅依赖实体 Setter，因为默认更新策略可能忽略空值；实体更新与 Wrapper 更新必须避免重复赋值同一列，不得为局部清空需求将字段全局更新策略改为 `ALWAYS`。
+
+### 实体与数据权限
+
 - 需要支持组织数据权限过滤（包含 `org_id` 字段）的业务实体类，必须继承 `org.etd.framework.starter.mybaits.core.OrgScopedEntity` 基类，不得重复定义 `orgId` 字段；无需组织权限过滤的公共系统实体类继续使用 `BaseEntity`。
-- 平台管理员（`platformAdmin = true`）具备最高系统权限，框架层自动跳过多租户隔离（`EtdTenantLineHandler` 不追加 `tenant_id` 条件）以及组织数据权限隔离（`EtdDataPermissionHandler` 不追加部门/用户过滤条件），实现跨租户、跨组织的全局系统管理。
 - 凡是实体基础通用属性新增插入（INSERT）时的初始化默认值（如 `locked`、`enabled`、`builtIn`、`dataStatus` 等），统一通过框架层的 `@TableField(value = "...", fill = FieldFill.INSERT)` 结合 `@TableFieldExtend(...)` 注解（使用 SpEL 表达式如 `"false"`、`"true"` 或枚举代码）实现声明式自动填充。严禁在业务代码/Service 中显式编写 `entity.setLocked(...)`、`entity.setEnabled(...)` 等新增插入时的初始化硬编码代码，保持业务代码干净纯粹，必须严格参考 `BaseEntity` 规范（在启用/禁用、锁定/解锁等状态更新业务方法中的 Setter 调用不受此限制）。
-- 修改要小而聚焦。
-- 优先写清楚直接的代码，不要炫技。
-- 所有 `if` 判断必须使用 `{}` 包裹语句块，即使只有一行也不得省略。
-- 避免使用过度复杂、多层嵌套或难以维护的 Stream 流式写法：
-  - 严禁在 Stream 算子内部（如 `.filter()`、`.map()`）引入修改外部变量状态或集合的副作用（side-effects）；
-  - 严禁为了单纯的集合遍历或带 `try-catch` 的副作用循环而滥用 `.stream().forEach(...)`，纯副作用迭代应直接使用标准的 `for` 循环；
-  - 包含 2 个及以上中间算子（如同时包含 `filter` + `map` + `groupingBy`）、涉及算法/复杂分组或业务规则判断的 Stream 表达式，**必须提取为独立且语义明确的私有辅助方法**（如 `groupOrganizationsByUserId`），避免在主业务逻辑中内联长流；仅涉及单一属性映射（如 `list.stream().map(X::getId).toList()`）或简单 `anyMatch` 的极简单行流，允许直接内联。
-- 单个方法理论上不超过 30 行。超过 30 行时，必须优先考虑提取私有方法、规则方法、转换方法或独立组件承接复杂逻辑。
-- 提取方法时，方法名必须表达业务语义或技术语义，不要用 `handle`、`process`、`doSomething`、`buildData` 这类含糊命名。
+- 平台管理员（`platformAdmin = true`）具备最高系统权限，框架层自动跳过多租户隔离（`EtdTenantLineHandler` 不追加 `tenant_id` 条件）以及组织数据权限隔离（`EtdDataPermissionHandler` 不追加部门/用户过滤条件），实现跨租户、跨组织的全局系统管理。
+- 平台管理员不受租户、组织、本人或公开范围等数据访问权限限制。不得以防止平台管理员跨租户访问或误关联为由，在业务 XML 中额外保留 `a.tenant_id = b.tenant_id` 或手写当前租户条件来限制其最高权限；普通用户的数据隔离统一由框架拦截器负责。全局雪花主键足以定位后台任务和业务记录时，不重复附加租户限制。此规则针对权限隔离，不改变业务对象定位、版本校验和默认逻辑删除等业务语义。
+
+### 命名与中文注释
+
+#### 方法命名
+
+- 方法名必须表达业务语义或技术语义；提取方法时，不要用 `handle`、`process`、`doSomething`、`buildData` 这类含糊命名。业务模块及公共模块（不含 `etd-framework-starter`）严禁使用 `handleData`、`processUser`、`doSomething`、`buildData` 这类无法看出实际逻辑的含糊无意义词汇。
 - **业务函数命名规范（适用于业务模块及公共模块，`etd-framework-starter` 模块不在本命名规范约束范围内）**：
   - **语序结构**：必须遵循 `[核心动作(动词)] + [操作对象(目标名词)] + [限定条件/维度(如 By/With)]` 的自然语序（如 `createTenantAdmin`、`switchStatus`、`getUserPage`），严禁使用名词开头的颠倒命名（如 `tenantAdminCreate`）。
   - **单复数显式修饰**：为了符合中文阅读习惯，返回集合/批量查询的方法必须在名称中显式带上集合特征（如 `selectUserList`、`selectUserIds`、`groupOrganizationsByUserId`），避免仅靠结尾 `s` 区分单复数；返回数量的方法使用 `count` 前缀（如 `countAccount`）。
@@ -259,7 +296,9 @@ spring:
     - BizService 层：表达完整业务流程，推荐使用 `init` / `grant` / `import` / `assign` / `bind` / `create` / `modify` / `cancel` / `approve` / `reject` / `export` / `remove`；
     - Service 层：表达单一能力或规则，推荐使用 `create` / `modify` / `fetch` / `enable` / `disable` / `switch` / `require` / `populate` / `resolve`；
     - Mapper 层：表达基础 SQL 动作，统一使用 `select` / `insert` / `update` / `delete`。
-  - **禁忌**：严禁使用 `handleData`、`processUser`、`doSomething`、`buildData` 这类无法看出实际逻辑的含糊无意义词汇。
+
+#### 中文注释
+
 - **AI 新增或修改的代码必须包含清晰、准确且有实际说明价值的中文注释，此要求为强制规范，不得省略**：
   - 新增类、接口、注解、枚举、Record、配置类、切面和关键方法必须编写中文 JavaDoc；
   - DTO、VO、Entity 中声明的每一个属性都必须紧邻编写中文 JavaDoc，准确说明字段的业务含义、单位、格式、取值约束或协议语义；不得只给类写注释而省略属性注释，也不得用字段名的机械翻译敷衍。继承自基类的属性无需在子类重复声明或重复注释；
@@ -269,10 +308,14 @@ spring:
   - 修改已有代码时，如果被修改区域缺少必要的中文注释，应在本次改动范围内一并补齐；
   - 提交前必须主动检查本次新增和修改的代码是否满足中文注释要求；
   - 不要为了满足注释要求添加无意义注释，例如“设置用户名”“调用方法”“返回结果”这类代码本身已经清楚表达的内容。
+
+### 复用、异常与日志
+
 - 不要随意新增宽泛的工具类。只有至少两个真实调用点需要复用时，才考虑抽取。
 - 不要在多个 starter 里复制逻辑。确实需要复用时，应放到合适的 common 模块。
 - 异常处理要明确，不要静默吞异常。
 - 日志要提供有用上下文，但绝不能打印密钥、密码、私钥或访问令牌。
+
 
 ## 测试与验证
 

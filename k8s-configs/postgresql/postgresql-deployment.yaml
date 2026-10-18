@@ -4,6 +4,8 @@ metadata: # 资源的元数据
   name: postgresql-deployment # Deployment 的名称
 spec: # 资源的规格定义
   replicas: 1 # 副本数量
+  strategy:
+    type: Recreate # 单实例使用同一数据目录，更新时先停旧 Pod，避免两个 PostgreSQL 进程同时写入。
   selector: # 标签选择器，用于确定此 Deployment 管理哪些 Pod
     matchLabels:
       app: postgresql
@@ -14,7 +16,8 @@ spec: # 资源的规格定义
     spec: # Pod 中容器的规格
       containers: # 容器列表
         - name: postgresql # 容器名称
-          image: pgvector/pgvector:pg16 # 使用 pgvector/pgvector:pg16 镜像（内置向量支持的 PostgreSQL 16）
+          image: etd/postgresql:16-vector0.8.6-zhparser2.4 # 同目录 Dockerfile 构建，包含向量和中文全文分词扩展。
+          imagePullPolicy: IfNotPresent # 本地 OrbStack 复用已构建镜像；其他集群需先推送到可访问的镜像仓库。
           resources: # 资源限制与请求
             requests: # 容器启动时请求的最小资源
               memory: "256Mi" # 内存请求 1Gi

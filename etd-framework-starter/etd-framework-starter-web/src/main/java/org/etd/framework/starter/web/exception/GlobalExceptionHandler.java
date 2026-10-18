@@ -2,25 +2,23 @@ package org.etd.framework.starter.web.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.common.core.constants.RequestCodeConstant;
 import org.etd.framework.common.core.model.ResultModel;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.stream.Collectors;
 
 /**
  * 统一异常处理
@@ -48,45 +46,81 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 拦截 @Valid / @Validated Body 参数校验失败异常 (400)
+     * 拦截请求体校验失败；异常可能包含被拒绝的凭证值，不返回原始异常。
+     *
+     * @param request 当前请求
+     * @param response 当前响应
+     * @param e 请求体字段校验异常，仅记录异常类型
+     * @return 脱敏的 HTTP 400 业务响应
      */
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, MethodArgumentNotValidException e) {
-        BindingResult bindingResult = e.getBindingResult();
-        String message = bindingResult.getFieldErrors().stream()
-                .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining("; "));
-        log.warn("请求 Body 参数校验失败, 路径: {}, 错误信息: {}", request.getRequestURI(), message);
-        return ResultModel.failed(HttpStatus.BAD_REQUEST.value(), e, message, request.getRequestURI());
+    public ResultModel<Void> handle(HttpServletRequest request, HttpServletResponse response, MethodArgumentNotValidException e) {
+        return rejectInvalidRequest(request, e);
     }
 
     /**
-     * 拦截 @Validated 单个路径/查询参数校验失败异常 (400)
+     * 拦截路径及查询参数校验失败；自定义校验消息也可能插入原始值，因此统一脱敏。
+     *
+     * @param request 当前请求
+     * @param response 当前响应
+     * @param e 参数约束异常，不记录原始值或约束消息
+     * @return 脱敏的 HTTP 400 业务响应
      */
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(value = ConstraintViolationException.class)
-    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, ConstraintViolationException e) {
-        String message = e.getConstraintViolations().stream()
-                .map(ConstraintViolation::getMessage)
-                .collect(Collectors.joining("; "));
-        log.warn("URL/Query 参数校验失败, 路径: {}, 错误信息: {}", request.getRequestURI(), message);
-        return ResultModel.failed(HttpStatus.BAD_REQUEST.value(), e, message, request.getRequestURI());
+    public ResultModel<Void> handle(HttpServletRequest request, HttpServletResponse response, ConstraintViolationException e) {
+        return rejectInvalidRequest(request, e);
     }
 
     /**
-     * 拦截请求 Body 解析失败异常 (400)
+     * 拦截请求体解析失败；Jackson 异常可能携带原始报文，开发环境同样不回显堆栈。
+     *
+     * @param request 当前请求
+     * @param response 当前响应
+     * @param e 请求体解析异常，不读取或记录其消息
+     * @return 脱敏的 HTTP 400 业务响应
      */
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(value = HttpMessageNotReadableException.class)
-    public ResultModel handle(HttpServletRequest request, HttpServletResponse response, HttpMessageNotReadableException e) {
-        log.warn("请求 Body 格式错误或缺失, 路径: {}, 异常信息: {}", request.getRequestURI(), e.getMessage());
-        String errorMsg = "请求 Body 格式错误或缺失，请检查 JSON 格式与数据类型";
+    public ResultModel<Void> handle(HttpServletRequest request, HttpServletResponse response, HttpMessageNotReadableException e) {
+        return rejectInvalidRequest(request, e);
+    }
 
-        if (e.getMessage() != null && e.getMessage().contains("Required request body is missing")) {
-            errorMsg = "缺少必要的请求 Body 报文";
-        }
-        return ResultModel.failed(HttpStatus.BAD_REQUEST.value(), e, errorMsg, request.getRequestURI());
+    /** 只记录请求路径及异常类型，禁止把原始报文、凭证或被拒绝值带入日志和响应。 */
+    private ResultModel<Void> rejectInvalidRequest(HttpServletRequest request, Exception exception) {
+        log.warn("请求参数校验或解析失败，路径：{}，异常类型：{}",
+                request.getRequestURI(), exception.getClass().getSimpleName());
+        return ResultModel.failed(HttpStatus.BAD_REQUEST.value(), null,
+                "请求参数不合法，请检查必填项、字段长度和JSON格式", request.getRequestURI());
+    }
+
+    /**
+     * 数据库唯一约束冲突的通用保护，不把 SQL、字段值或约束名暴露给调用方。
+     *
+     * @param request 当前请求
+     * @param exception 唯一约束异常，不输出其消息或堆栈
+     * @return 统一业务失败响应，具体业务规则应提前在业务层校验
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResultModel<Void> handleDuplicateKey(HttpServletRequest request, DuplicateKeyException exception) {
+        log.warn("数据库唯一约束冲突，路径：{}", request.getRequestURI());
+        return ResultModel.failed(RequestCodeConstant.FAILED, null,
+                "数据已存在，请检查唯一性约束", request.getRequestURI());
+    }
+
+    /**
+     * 数据库引用和字段约束的通用保护，业务专属提示仍由 ApiRuntimeException 表达。
+     *
+     * @param request 当前请求
+     * @param exception 完整性约束异常，不输出 SQL 或字段值
+     * @return 不包含数据库内部信息的统一业务失败响应
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResultModel<Void> handleDataIntegrityViolation(HttpServletRequest request, DataIntegrityViolationException exception) {
+        log.warn("数据库完整性约束冲突，路径：{}", request.getRequestURI());
+        return ResultModel.failed(RequestCodeConstant.FAILED, null,
+                "数据不符合约束或仍被引用，请检查后重试", request.getRequestURI());
     }
 
     /**

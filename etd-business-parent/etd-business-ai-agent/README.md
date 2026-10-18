@@ -1,87 +1,103 @@
-# 智能体业务应用
+# AI 基础管理服务
 
-`etd-business-ai-agent` 是独立 Spring Boot 应用，入口为 `org.etd.ai.AgentApplication`，默认端口为 `8300`。
+入口 `org.etd.ai.AgentApplication`，默认端口8300，Java21 / Spring Boot3.5，依赖版本沿用框架BOM。
 
-## 已接入能力
+当前实现租户模型连接与模型草稿、知识库配置、多级目录、私有MinIO原件分片上传、替换、下载、元数据维护和删除。目录与文件使用“租户内公开 OR 现有角色数据范围”，写操作不会因公开标记而扩大权限。分片传输使用持久化任务，支持幂等完成确认、取消、过期回收及原件清理重试。
 
-- Spring AI Alibaba Agent Framework：智能体与多智能体编排。
-- Spring AI Alibaba Graph Core：图工作流运行时。
-- DashScope：百炼对话模型，默认 `qwen-plus`，通过 `AI_DASHSCOPE_MODEL` 调整。
-- 框架 Web、日志、参数校验、HTTP 时间序列化与 MinIO / OSS 文件存储。
-- 框架 MyBatis Plus、Druid 与 PostgreSQL JDBC 驱动；按功能域扫描 `org.etd.ai.**.mapper`。
-- 框架 Security 客户端：验证 UPMS 签发的 Bearer 访问令牌，并通过 Redis 校验登录状态。
-- 框架 Redis / JetCache 缓存、租户隔离、组织数据权限与实体字段自动填充。
-- Actuator：仅暴露 `/actuator/health`，不输出健康详情。
+目录与文档读取统一通过Service方法上的 `@DataPermission(tables = ...)` 声明公开字段，框架负责在SQL中追加角色范围；Mapper XML不再维护 `readScope`。目录查询分别收集可读目录和可读文件所在目录，再递归补齐导航祖先，祖先不因此获得管理权限。循环检查、目录非空检查及已授权后的投影清理仍使用其原有业务边界。
 
-版本统一由 `etd-framework-dependencies` 管理，导入官方 `spring-ai-alibaba-bom`、`spring-ai-bom` 和 `spring-ai-alibaba-extensions-bom`。版本组合依据[官方版本说明](https://java2ai.com/docs/versions/)，保留项目 Java 21 / Spring Boot 3.5 基线。
+**不调用模型，不执行文档解析、文本分片、向量化或检索。**AI 依赖由 `etd-framework-starter-ai` 统一提供，使用底层模型 SDK，不引入 DashScope 模型自动配置，启动和文件管理不需要全局 DashScope API Key。页面保存的模型均为未验证草稿，实测维度当前为空且页面不可编辑；知识库模型绑定和模型测试尚未开放。
 
-BOM 统一管理依赖版本，不会自动引入所有实现。目前不接入 Nacos、MCP 服务端、VectorStore 或事件客户端；实际业务需要时再添加对应能力。本模块当前只提供应用骨架，尚未提供聊天、文件上传等业务 HTTP 接口。PostgreSQL 已接入，但尚未创建向量表或启用 Embedding / pgvector 检索；这些需要按后续确定的模型维度、数据隔离和索引方案配置。
+## 初始化与运行
 
-## 编译与启动
+1. 创建AI数据库（本地默认 `ai-agent`），PostgreSQL16服务需已安装vector和zhparser扩展文件。
+2. 连接AI库依次显式执行 `src/main/resources/sql/postgresql/extensions.sql`、`schema.sql`。schema为最终首次建库结构，不是增量迁移脚本，不可在已有同名表的库里直接重复运行。
+3. 连接UPMS系统表所在库执行本模块的 `src/main/resources/sql/postgresql/init.sql`，前提是已完成UPMS建表。本模块不复制sys_dict/sys_config表、不在启动时自动执行初始化脚本。
+4. 准备与UPMS一致的Redis登录状态存储、RSA验签公钥，以及私有MinIO。浏览器直传需额外配置前端Origin的CORS及ETag暴露。
+5. 目录、上传新文件要求用户已配置主组织。AI接口使用框架@Permission校验read/write，注解直接填写资源码，目录与文件继续叠加框架数据权限。
 
-在仓库根目录执行：
+在仓库根目录：
 
 ```bash
 ./mvnw -pl etd-business-parent/etd-business-ai-agent -am -DskipTests package
-```
-
-配置通过父 POM 打包公共资源：`application.yml` 导入 `classpath:redis.yml` 和 `classpath:druid.yml`，默认启用 `local`；`application-local.yml` 保存 AI 独立数据库、模型和 MinIO 连接信息。环境变量未设置时使用本地默认值；真实模型凭证仍须注入。
-
-| 环境变量 | 本地默认值 / 用途 |
-| --- | --- |
-| `AI_DASHSCOPE_API_KEY` | 必填的百炼模型凭证，无默认值 |
-| `AI_DB_HOST`、`AI_DB_PORT`、`AI_DB_NAME` | `127.0.0.1`、`30432`、`ai_agent`，数据库需提前创建 |
-| `AI_DB_USERNAME`、`AI_DB_PASSWORD` | `root`、`123456`，与 UPMS 本地 PostgreSQL 保持一致 |
-| `REDIS_HOST`、`REDIS_PORT` | `127.0.0.1`、`30637`，公共配置沿用逻辑库 `4`，需与 UPMS 登录令牌所在实例和逻辑库一致 |
-| `REDIS_PASSWORD` | `123456`，与 UPMS 本地 Redis 保持一致 |
-| `AI_SECURITY_PUBLIC_KEY_PATH` | `conf/rsaPublicKey.pem`，复用 UPMS 的 RSA 公钥；支持绝对路径或 `classpath:` |
-
-本地 PostgreSQL 默认地址为 `jdbc:postgresql://127.0.0.1:30432/ai_agent`；请提前创建 `ai_agent` 数据库。若本机无法通过 localhost 访问 Kubernetes NodePort，可覆盖数据库、Redis 的主机和端口。无密码 Redis 环境应在对应环境文件中省略 password 配置。公钥必须来自令牌签发端，AI 服务只负责验签，无需配置私钥。
-
-```bash
 java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar
 ```
 
-`AI_AGENT_PORT` 可覆盖监听端口。健康检查包含数据库与 Redis 的连通性，不代表模型调用或文件读写已经通过外部服务验证。
+共享组件配置由父POM将 `etd-business-parent/config/` 打包到classpath根目录。application.yml只负责入口及导入；应用策略在etd-ai-agent.yml，本地连接信息在application-local.yml。租户模型连接由数据库管理，不通过公共 YAML 配置全局模型凭证。
 
-需要其他运行环境时，新增对应的 `application-{profile}.yml` 并通过 `--spring.profiles.active=<环境名>` 选择；本地默认连接和账号密码只放在 local 文件中。
-
-## 接口鉴权与数据访问
-
-只有 `/actuator/health` 允许匿名访问，其他路径必须提供 `Authorization: Bearer <UPMS访问令牌>`。客户端不提供登录或令牌签发接口。后续业务 Controller 使用框架 `@Permission` 声明资源权限，用户需在 UPMS 获授对应读写权限；权限变化的生效时间遵循 UPMS 既有的令牌更新和撤销机制。
-
-MyBatis 复用框架的租户、组织数据权限拦截器和自动填充。业务实体包含组织权限时继承 `OrgScopedEntity`，其他实体按实际隔离范围选择基类；Mapper XML 按功能域放到 `resources/mapper/<功能域>`。本模块不引入未使用的 ShardingSphere、MySQL 或运行时 H2，也不会在启动时自动建表。
-
-以后接入 Spring AI PgVectorStore 时，需要单独设计租户、组织和文档权限过滤；框架 MyBatis 拦截器不能自动保护绕过 MyBatis 的 JDBC / VectorStore 查询。
-
-## 文件存储
-
-本地 `local` 环境默认启用 MinIO，无需再指定存储厂商 profile。存储开关、私有访问策略和连接信息统一放在 `application-local.yml`，公共配置不再重复声明；未配置的存储厂商由框架默认保持关闭。
-
-| MinIO 环境变量 | 未设置时的默认值 |
+| 环境变量 | 本地默认值/作用 |
 | --- | --- |
-| `AI_STORAGE_MINIO_ENDPOINT` | `http://minio-service.default.svc.cluster.local:9000` |
-| `AI_STORAGE_MINIO_ACCESS_KEY` | `root` |
-| `AI_STORAGE_MINIO_SECRET_KEY` | `12345678` |
-| `AI_STORAGE_MINIO_BUCKET` | `ai-agent` |
+| AI_AGENT_PORT | 8300 |
+| DB_HOST / DB_PORT / DB_NAME | 127.0.0.1 / 30432 / ai-agent |
+| DB_USERNAME / DB_PASSWORD | root / 123456，仅本地学习 |
+| REDIS_* | 复用父级redis.yml，必须与UPMS登录状态存储一致 |
+| AI_SECURITY_PUBLIC_KEY_PATH | conf/rsaPublicKey.pem，使用UPMS对应公钥 |
+| AI_STORAGE_MINIO_ENDPOINT | http://localhost:30900，浏览器与服务端都必须可达的S3 API地址 |
+| AI_STORAGE_MINIO_ACCESS_KEY / AI_STORAGE_MINIO_SECRET_KEY | root / 12345678，仅本地学习 |
+| AI_STORAGE_MINIO_BUCKET | ai-agent |
+| AI_CREDENTIAL_ENCRYPTION_KEY | local环境提供固定开发默认值；其他环境必须注入Base64编码的随机32字节AES主密钥 |
+| AI_CREDENTIAL_KEY_ID | local默认ai-local-01；其他环境必须注入与主密钥配套的标识 |
 
-默认连接对应当前 OrbStack 本地学习环境，账号密码与 MinIO Deployment 的默认值一致。如果服务端通过 Secret 修改了账号密码，这里也需用环境变量同步覆盖。其他 Kubernetes 环境或命名空间通过 `AI_STORAGE_MINIO_ENDPOINT` 指定可访问的 S3 API 地址。环境变量未设置时才使用默认值，显式设置为空字符串不会触发默认值。
+凭证使用AES-GCM随机nonce，并以租户和连接ID绑定AAD。local环境提供固定开发密钥，支持直接保存API Key；该公开默认值仅用于本地开发。其他环境必须注入独立主密钥并稳定保管，不能在每次重启时重新生成，也不能提交到仓库。当前没有主密钥轮换/旧密钥兼容链。未配置时无认证连接仍可维护，但拒绝保存API Key。所有接口均不回显凭证明文或密文。
 
-显式选择本地环境启动（也可省略该参数，默认已经是 local）：
+## 接口与前端交付
 
-```bash
-java -jar etd-business-parent/etd-business-ai-agent/target/etd-business-ai-agent-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
-```
+可以直接交给前端AI的完整提示词：[frontend-ai-prompt.md](docs/frontend-ai-prompt.md)。包含全部实际接口、请求响应、五类功能页面、六种字典、两个上传系统参数，以及必须返回的菜单清单格式。
 
-启用后可在实际业务 Service 中注入框架的 `FileUpload` / `FileDownload`。文件使用私有访问策略；上传、下载和预签名接口的完整说明见[存储 starter 文档](../../etd-framework-starter/etd-framework-starter-storage/README.md)。后续业务按 `org.etd.ai.<功能域>.<技术分层>` 组织。
+- [知识库结构及权限方案](docs/knowledge-base-schema.md)
+- [文件上传组件约定](docs/file-upload-component.md)
+- [客户端上传校验实施说明](docs/frontend-upload-client-validation.md)
+- [租户模型结构](docs/tenant-model-schema.md)
+- [本轮前端增量：保留框架接口权限](docs/frontend-permission-resource.md)
+
+除了 `/actuator/health`，所有AI业务接口都需要UPMS Bearer令牌，并校验对应read/write authority；数据访问继续由框架租户及组织/公开规则控制。统一业务成功码2000，HTTP200不必然成功。平台管理员按最高系统权限处理，XML不为其额外追加租户或组织范围限制。
+
+上传参数仍在sys_config维护：`ai-agent-file-type`、`ai-agent-file-upload`，由客户端直接读取并校验文件类型、文件大小和参数有效性。AI后端不访问UPMS参数接口、不配置参数服务地址；客户端在初始化请求中提交partSizeBytes、concurrency、maxRetries、urlExpirySeconds、sessionExpireSeconds。后端仅保留鉴权、S3协议边界、实际分片及总字节数一致性检查和SHA256计算，不执行格式或编码限制。详见[客户端上传校验实施说明](docs/frontend-upload-client-validation.md)。
 
 ## 验证
 
+上传参数改由客户端提交后的聚焦回归（外部数据库及MinIO使用替身）：
+
 ```bash
-./mvnw -pl etd-business-parent/etd-business-ai-agent -am test
-./mvnw -pl etd-business-parent/etd-business-ai-agent -am -DskipTests dependency:tree
+./mvnw -pl etd-business-parent/etd-business-ai-agent -am -Dtest=UploadClientParametersTest,UploadedFileInspectorTest,AiEndpointAuthenticationTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-集成冒烟测试使用运行时生成的测试密钥，启动真实 Web / Security 上下文并初始化 DashScope、Agent、MinIO、Druid 和 MyBatis。测试使用仅在 test scope 引入的 H2 隔离数据库连接，模拟 Redis 登录令牌存储并关闭 Redis 健康探测，不请求外部服务；覆盖健康检查匿名访问、业务接口匿名拒绝、无效令牌、缺少权限、正确授权和令牌撤销。测试中的探针 Controller 不会进入正式应用。
+测试覆盖客户端参数透传、旧文件类型和大小限制移除、S3技术边界、摘要与字节数核对，以及既有接口认证。真实MinIO上传、浏览器CORS及前端参数校验需要按客户端实施说明联调，单元测试不代表这些场景已经验证。
 
-真实 PostgreSQL / Redis 连通性、UPMS 联调、模型调用与存储读写需在对应运行环境中验证。H2 测试不代表 PostgreSQL 或向量检索已完成验证。
+## 注解读取权限回归
+
+`KnowledgeReadPermissionIntegrationTest` 在加载当前 `extensions.sql` 和 `schema.sql` 的空PostgreSQL测试库中执行。必须使用一次性数据库，设置 `AI_PERMISSION_TEST_DB_URL`、`AI_PERMISSION_TEST_DB_USER`、`AI_PERMISSION_TEST_DB_PASSWORD` 后运行：
+
+```bash
+./mvnw -pl etd-business-parent/etd-business-ai-agent -am -Dtest=KnowledgeReadPermissionIntegrationTest,PublicReadDataPermissionTest,EtdDataPermissionHandlerTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+未设置测试库URL时该数据库用例明确跳过。测试通过真实Mapper XML及Spring权限切面验证分页总数、详情、业务筛选、公开/本人/部门范围、跨租户隔离、私有祖先导航及读写权限边界，不依赖MinIO或模型服务。
+
+## XML租户与逻辑删除过滤
+
+AI应用已开启 `etd.mybatis.logic-delete.enabled`。普通文档、目录及模型引用查询由框架统一追加租户和逻辑删除条件，XML保留知识库、状态、名称等业务筛选，不再额外维护表间租户等值条件，不再传递仅用于普通查询过滤的租户参数。平台管理员遵循框架跨租户规则，但仍过滤已删除资料。
+
+目录非空检查使用 `UNION ALL` CTE汇总，使两个分支都经过租户及逻辑删除过滤；检查仍包含当前用户无读取权限的有效子项。后台跨租户清理及已授权后的物理投影清理按全局任务ID或文档ID定位，普通调用的租户隔离仍由框架负责。
+
+## 管理页面状态筛选
+
+五个管理列表统一支持可选`dataStatus`：不传查看全部，`0`禁用，`1`启用；响应VO同步返回该字段。文档管理查询不再固定要求文档或知识库启用，目录树筛选保留必要祖先。原件下载/预览继续由后端校验知识库与文件启用状态。前端增量对接要求见`docs/frontend-ai-prompt.md`末尾，复用现有`common_status`字典，无新增字典、系统参数或菜单权限。
+
+## Service层权限与版本处理
+
+普通Service查询与更新的租户、组织范围统一由MyBatis拦截器处理；平台管理员不再被手写当前租户条件限制。原 `KnowledgeScope` 已移除，页面writable标记改用框架 `DataPermissionScope`，组织资料新增策略单独维护在 `KnowledgeCreationPolicy`。
+
+管理实体及上传会话通过 `@Version` 使用原生乐观锁；业务不再手工比较数据库version或递增并发版本，更新仍检查影响行数。目录parentId和文档folderId明确支持更新为空，审计字段由框架填充。上传替换快照、处理轮次、任务状态CAS及目录结构校验保留。
+
+模型连接跨租户编辑凭证使用已存记录的tenantId参与加密，避免平台管理员当前上下文导致密文租户绑定错误。前端继续回传读取时的version，接口字段和更新成功响应保持原有约定；更新后重新取详情或刷新列表获取新版本，无需新增接口或菜单。
+
+## AI接口认证回归
+
+AI Controller直接使用框架@Permission声明资源码，不保留AiPermission常量类。下面的离线测试复用生产Security过滤链与方法鉴权，检查匿名业务请求返回401、健康白名单、无权限用户返回403，以及read/write权限边界：
+
+```bash
+./mvnw -pl etd-business-parent/etd-business-ai-agent -am -Dtest=AiEndpointAuthenticationTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+前端按 `docs/frontend-permission-resource.md` 核对是否需要恢复上一轮移除的权限判断；目录、文件的writable约束及框架租户/数据权限继续生效。已有菜单数据不会被本次源码修改自动覆盖。
