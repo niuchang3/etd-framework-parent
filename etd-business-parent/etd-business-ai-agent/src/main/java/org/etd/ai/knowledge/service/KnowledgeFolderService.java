@@ -1,142 +1,104 @@
 package org.etd.ai.knowledge.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-
 import lombok.RequiredArgsConstructor;
-
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeFolderMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/** 目录树读取及单目录管理，结构锁由业务编排层持有。 */
+/** 租户级独立目录维护能力。 */
 @Service
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_folder"))
 @RequiredArgsConstructor
 public class KnowledgeFolderService {
     private final KnowledgeFolderMapper mapper;
 
     /**
-     * 取得可读节点及只用于导航的祖先节点。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
-     * @param dataStatus 可选目录状态；导航祖先不受此筛选限制
-     * @return 符合条件的记录集合，不在Java中拼接跨表权限数据
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 查询租户目录和必要祖先，保留完整导航路径。
+     * @param dataStatus 可选目录状态，必要祖先不受筛选限制
+     * @return 平铺目录节点列表
      */
-    // f是可读目录来源；entry及p仅补齐导航，不能对它们追加相同权限而截断路径。
-    @DataPermission(
-            tables = {
-                @DataPermissionTable(
-                        table = "ai_knowledge_folder",
-                        alias = "f",
-                        publicColumn = "is_public"),
-                @DataPermissionTable(table = "ai_knowledge_document", publicColumn = "is_public")
-            })
-    public List<KnowledgeFolderEntity> fetchFolderList(Long baseId, Integer dataStatus) {
-        return mapper.selectReadableFolderList(baseId, dataStatus);
+    public List<KnowledgeFolderEntity> fetchFolderList(Integer dataStatus) {
+        return mapper.selectFolderList(dataStatus);
     }
 
     /**
-     * 管理入口使用框架原有角色范围，不使用公开标记。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
-     * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
-     * @return 通过存在性及访问范围校验的业务记录
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 要求目录存在且在当前租户范围中。
+     * @param id 目录标识
+     * @return 可管理的目录记录
+     * @throws ApiRuntimeException 目录不存在时
      */
-    public KnowledgeFolderEntity requireWritable(Long baseId, Long id) {
-        var query =
-                Wrappers.<KnowledgeFolderEntity>lambdaQuery()
-                        .eq(KnowledgeFolderEntity::getId, id)
-                        .eq(KnowledgeFolderEntity::getKnowledgeBaseId, baseId);
-        var e = mapper.selectOne(query);
-        if (e == null) {
-            throw new ApiRuntimeException("目录不存在或无管理权限");
+    public KnowledgeFolderEntity requireWritable(Long id) {
+        var query = Wrappers.<KnowledgeFolderEntity>lambdaQuery().eq(KnowledgeFolderEntity::getId, id);
+        var entity = mapper.selectOne(query);
+        if (entity == null) {
+            throw new ApiRuntimeException("目录不存在");
         }
-        return e;
+        return entity;
     }
 
     /**
-     * 校验父目录可写，空表示知识库根目录。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
+     * 目录父节点可为空；非空父节点必须属于可访问租户。
      * @param parentId 目标父目录标识，空表示根目录
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
-    public void requireParent(Long baseId, Long parentId) {
+    public void requireParent(Long parentId) {
         if (parentId != null) {
-            requireWritable(baseId, parentId);
+            requireWritable(parentId);
         }
     }
 
     /**
-     * 判断目标是否在当前节点后代链上，防止目录循环。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
-     * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
-     * @param targetId 待移动到的目标目录标识
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 串行化结构变更，防止并发目录移动形成环，以及删除目录时新增子目录。
+     * 调用方必须处于事务内，数据库在事务结束时自动释放锁。
      */
-    public void requireAcyclic(Long baseId, Long id, Long targetId) {
-        if (targetId != null && mapper.selectAncestorCount(baseId, id, targetId) > 0) {
+    public void lockStructure() {
+        mapper.lockStructure();
+    }
+
+    /**
+     * 检查移动目标的祖先链，禁止移入自身或后代。
+     * @param id 当前目录标识
+     * @param targetId 目标父目录，空表示根目录
+     * @throws ApiRuntimeException 移动会形成循环时
+     */
+    public void requireAcyclic(Long id, Long targetId) {
+        if (targetId != null && mapper.selectAncestorCount(id, targetId) > 0) {
             throw new ApiRuntimeException("不能移入自身或下级目录");
         }
     }
 
     /**
-     * 新增目录，组织及公开默认值使用框架自动填充。
-     *
-     * @param e 本次写入的业务记录，租户和审计信息由后端控制
-     * @return 业务记录的雪花标识
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 创建目录，归属及默认状态由框架填充。
+     * @param entity 目录基本信息
+     * @return 新建目录标识
      */
-    public Long createFolder(KnowledgeFolderEntity e) {
-        mapper.insert(e);
-        return e.getId();
+    public Long createFolder(KnowledgeFolderEntity entity) {
+        mapper.insert(entity);
+        return entity.getId();
     }
 
     /**
-     * 修改目录时显式更新parent_id，支持从子目录移动到根目录。
-     *
-     * @param e 本次写入的业务记录，租户和审计信息由后端控制
-     * @param version 页面读取的当前版本，用于拒绝并发覆盖
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 更新目录并通过乐观锁拒绝并发覆盖，父节点允许显式清空。
+     * @param entity 本次编辑字段
+     * @param version 前端读取的当前版本
      */
-    public void modifyFolder(KnowledgeFolderEntity e, Long version) {
-        e.setVersion(version);
-        int changed = mapper.updateById(e);
-        if (changed != 1) {
+    public void modifyFolder(KnowledgeFolderEntity entity, Long version) {
+        entity.setVersion(version);
+        if (mapper.updateById(entity) != 1) {
             throw new ApiRuntimeException("目录已变化，请刷新后重试");
         }
     }
 
     /**
-     * 禁止删除仍有任意未删除子项的目录，包含不可见子项。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
-     * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 删除无子目录占用的目录，检查包括当前用户不可见的记录。
+     * @param id 已校验管理权限的目录标识
      */
-    public void removeFolder(Long baseId, Long id) {
-        if (mapper.selectChildCount(baseId, id) > 0) {
-            throw new ApiRuntimeException("目录非空，不能删除");
+    public void removeFolder(Long id) {
+        if (mapper.selectChildCount(id) > 0) {
+            throw new ApiRuntimeException("目录包含子目录，不能删除");
         }
         mapper.deleteById(id);
-    }
-
-    /**
-     * 供知识库删除前检查目录占用。
-     *
-     * @param baseId 所属知识库标识，必须位于可信租户范围内
-     * @return 符合当前租户及查询条件的记录数量
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
-     */
-    public long countFolder(Long baseId) {
-        return mapper.selectChildCount(baseId, null);
     }
 }

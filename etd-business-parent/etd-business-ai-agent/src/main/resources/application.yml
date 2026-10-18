@@ -17,5 +17,4 @@ spring:
     import:
       - classpath:redis.yml
       - classpath:druid.yml
-      - classpath:minIo.yml
       - classpath:etd-ai-agent.yml

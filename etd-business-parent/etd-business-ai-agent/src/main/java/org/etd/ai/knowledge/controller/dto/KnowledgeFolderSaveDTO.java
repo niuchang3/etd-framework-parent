@@ -17,13 +17,14 @@ public class KnowledgeFolderSaveDTO {
     @Size(max = 100)
     private String folderName;
 
+    /** 目录描述，选填，最多500字。 */
+    @Size(max = 500)
+    private String description;
+
     /** 同级非负排序。 */
     @NotNull
     @Min(0)
     private Integer sortOrder;
-
-    /** 是否公开读取，新增默认false。 */
-    private Boolean isPublic;
 
     /** 更新必填的版本。 */
     @Min(0)

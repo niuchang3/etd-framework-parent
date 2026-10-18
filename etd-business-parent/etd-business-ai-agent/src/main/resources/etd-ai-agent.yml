@@ -7,23 +7,15 @@ etd:
     tenant:
       enabled: true # 所有业务表保留租户隔离。
     data-permission:
-      enabled: true # 目录及文档管理沿用角色数据范围。
+      enabled: true # 启用组织数据权限，租户共享表按下方清单排除。
       ignore-tables:
         - ai_model_connection # 租户级配置，无独立组织归属。
         - ai_model_config # 租户级配置，无独立组织归属。
-        - ai_knowledge_base # 容器不额外阻断公开文件读取。
-        - ai_file_upload # 由后端按创建人、租户及知识库精确校验。
-        - ai_storage_cleanup # 仅由内部维护入口消费。
-        - ai_knowledge_chunk # 明细权限由关联文档提供。
-        - ai_vector_768 # 向量投影继承文档权限。
-        - ai_vector_1024 # 向量投影继承文档权限。
-        - ai_vector_1536 # 向量投影继承文档权限。
+        - ai_knowledge_folder # 租户共享目录，不按组织或创建人过滤。
   ai:
     credentials:
       key: ${AI_CREDENTIAL_ENCRYPTION_KEY:ZXRkLWFpLWxvY2FsLWRldmVsb3BtZW50LWtleS0wMDE=} # 仅供本地开发的固定32字节AES密钥，部署环境必须自行注入。
       key-id: ${AI_CREDENTIAL_KEY_ID:ai-local-01} # 本地默认密钥标识，与本地密钥固定配套使用。
-    upload:
-      cleanup-interval-ms: 60000 # 后台扫描过期上传及失败清理的间隔毫秒。
 
 system:
   security:

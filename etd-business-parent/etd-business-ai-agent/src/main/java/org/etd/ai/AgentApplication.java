@@ -3,10 +3,8 @@ package org.etd.ai;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /** 智能体业务应用入口，按功能域扫描 Mapper，承载 AI 编排、框架数据访问和令牌鉴权能力。 */
-@EnableScheduling
 @SpringBootApplication
 @MapperScan("org.etd.ai.**.mapper")
 public class AgentApplication {

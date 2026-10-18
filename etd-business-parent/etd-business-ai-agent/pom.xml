@@ -65,7 +65,7 @@
             <artifactId>etd-framework-starter-cache</artifactId>
         </dependency>
 
-        <!-- 复用框架统一的 HTTP、时间序列化、日志与对象存储能力。 -->
+        <!-- 复用框架统一的 HTTP、时间序列化、日志能力。 -->
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-web</artifactId>
@@ -73,17 +73,6 @@
         <dependency>
             <groupId>org.etd.framework</groupId>
             <artifactId>etd-framework-starter-logs</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.etd.framework</groupId>
-            <artifactId>etd-framework-starter-storage</artifactId>
-            <exclusions>
-                <!-- OSS SDK 传递引入旧日志桥；统一使用 Spring Boot 自带的 spring-jcl，避免重复发现实现。 -->
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -108,6 +97,27 @@
 
     <build>
         <plugins>
+            <!-- 显式启用MapStruct与Lombok编译期处理器，版本由共享BOM管理。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <!-- 父工程只管理插件版本，此处绑定 repackage 以生成可独立运行的业务应用。 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>

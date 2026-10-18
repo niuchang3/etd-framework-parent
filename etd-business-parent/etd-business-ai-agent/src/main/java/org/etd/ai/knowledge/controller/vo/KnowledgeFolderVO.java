@@ -28,15 +28,15 @@ public class KnowledgeFolderVO {
     /** 目录名称。 */
     private String folderName;
 
+    /** 目录描述，选填，最多500字。 */
+    private String description;
+
     /** 排序值。 */
     private Integer sortOrder;
 
-    /** 是否租户内公开。 */
-    private Boolean isPublic;
-
-    /** 仅用于到达可读子项的祖先，不允许据此查看隐藏内容。 */
+    /** 是否仅用于导航；租户共享目录始终为false。 */
     private Boolean navigationOnly;
 
-    /** 角色数据范围是否允许管理；操作同时要求接口write权限。 */
+    /** 租户范围内可维护；操作同时要求接口write权限。 */
     private Boolean writable;
 }

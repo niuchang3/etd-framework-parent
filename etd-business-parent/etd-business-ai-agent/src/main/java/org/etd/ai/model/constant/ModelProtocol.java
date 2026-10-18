@@ -8,6 +8,9 @@ public final class ModelProtocol {
     /** 使用只写的API Key凭证。 */
     public static final String AUTH_API_KEY = "api_key";
 
+    /** 文本向量模型类型。 */
+    public static final String TYPE_EMBEDDING = "embedding";
+
     /** 当前允许保存的接入协议代码，不表示已实现实际调用。 */
     public static final String PROVIDER_PATTERN = "dashscope|ollama|openai_compatible";
 

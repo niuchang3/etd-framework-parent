@@ -6,13 +6,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import lombok.RequiredArgsConstructor;
 
-import org.etd.ai.knowledge.constant.AiStage;
+import org.etd.ai.model.constant.ModelProtocol;
 import org.etd.ai.model.entity.ModelConfigEntity;
 import org.etd.ai.model.mapper.ModelConfigMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
-
-import java.util.Objects;
 
 /** 模型草稿配置能力，维度仅后端实测写入，页面不可编辑。 */
 @Service
@@ -80,19 +78,11 @@ public class ModelConfigService {
     public void modifyModel(ModelConfigEntity e, Long version) {
         var old = requireModel(e.getId());
         // 维度只能由后端实测写入；页面编辑不覆盖已有实测值，也不允许手工声明。
-        if (AiStage.EMBEDDING.equals(e.getModelType())
-                && AiStage.EMBEDDING.equals(old.getModelType())) {
+        if (ModelProtocol.TYPE_EMBEDDING.equals(e.getModelType())
+                && ModelProtocol.TYPE_EMBEDDING.equals(old.getModelType())) {
             e.setEmbeddingDimensions(old.getEmbeddingDimensions());
         }
         validateDimensions(e);
-        if (mapper.selectKnowledgeBaseCount(e.getId()) > 0
-                && (!Objects.equals(old.getConnectionId(), e.getConnectionId())
-                        || !Objects.equals(old.getModelCode(), e.getModelCode())
-                        || !Objects.equals(old.getModelType(), e.getModelType())
-                        || !Objects.equals(
-                                old.getEmbeddingDimensions(), e.getEmbeddingDimensions()))) {
-            throw new ApiRuntimeException("模型已被知识库引用，不能修改向量空间相关配置");
-        }
         e.setVersion(version);
         if (mapper.updateById(e) != 1) {
             throw new ApiRuntimeException("模型配置已变化，请刷新重试");
@@ -114,21 +104,18 @@ public class ModelConfigService {
     }
 
     /**
-     * 删除草稿配置，已有知识库引用时由外键拒绝破坏关联。
+     * 删除已校验存在的模型草稿配置。
      *
      * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
     public void removeModel(Long id) {
         requireModel(id);
-        if (mapper.selectKnowledgeBaseCount(id) > 0) {
-            throw new ApiRuntimeException("模型仍被知识库引用，不能删除");
-        }
         mapper.deleteById(id);
     }
 
     private void validateDimensions(ModelConfigEntity e) {
-        if (!AiStage.EMBEDDING.equals(e.getModelType()) && e.getEmbeddingDimensions() != null) {
+        if (!ModelProtocol.TYPE_EMBEDDING.equals(e.getModelType()) && e.getEmbeddingDimensions() != null) {
             throw new ApiRuntimeException("只有向量模型可以配置声明维度");
         }
     }

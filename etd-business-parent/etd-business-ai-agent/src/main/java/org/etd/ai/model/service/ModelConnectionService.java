@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
-import java.util.Objects;
 
 /** 租户模型连接能力，不发起探测或模型调用。 */
 @Service
@@ -93,11 +92,6 @@ public class ModelConnectionService {
     public void modifyConnection(ModelConnectionEntity e, String apiKey, Long version) {
         var old = requireConnection(e.getId(), true);
         validateEndpoint(e.getBaseUrl());
-        if ((!Objects.equals(old.getProvider(), e.getProvider())
-                        || !Objects.equals(old.getBaseUrl(), e.getBaseUrl()))
-                && mapper.selectBoundKnowledgeBaseCount(e.getId()) > 0) {
-            throw new ApiRuntimeException("连接已被知识库使用，不能修改接入协议或模型端点");
-        }
         populateCredential(e, apiKey, old);
         e.setVersion(version);
         if (mapper.updateById(e) != 1) {

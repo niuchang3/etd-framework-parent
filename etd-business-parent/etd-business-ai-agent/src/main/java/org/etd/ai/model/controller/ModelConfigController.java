@@ -11,14 +11,13 @@ import lombok.RequiredArgsConstructor;
 import org.etd.ai.model.biz.ModelBizService;
 import org.etd.ai.model.controller.dto.ModelConfigSaveDTO;
 import org.etd.ai.model.controller.vo.ModelConfigVO;
-import org.etd.ai.model.entity.ModelConfigEntity;
+import org.etd.ai.model.converter.ModelConfigConverter;
 import org.etd.ai.model.service.ModelConfigService;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.framework.starter.web.validation.UpdateRequest;
-import org.springframework.beans.BeanUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,7 +52,7 @@ public class ModelConfigController {
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
         var page = service.fetchPage(current, size, modelType, dataStatus);
-        var result = page.convert(this::toVO);
+        var result = page.convert(ModelConfigConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -68,7 +67,7 @@ public class ModelConfigController {
     @GetMapping("/{id}")
     public ResultModel<ModelConfigVO> get(@PathVariable Long id) {
         var entity = service.requireModel(id);
-        var result = toVO(entity);
+        var result = ModelConfigConverter.INSTANCE.toVO(entity);
         return ResultModel.success(result);
     }
 
@@ -82,7 +81,7 @@ public class ModelConfigController {
     @AutoLog("新增模型配置")
     @PostMapping
     public ResultModel<Long> save(@Valid @RequestBody ModelConfigSaveDTO dto) {
-        var e = toEntity(dto);
+        var e = ModelConfigConverter.INSTANCE.toEntity(dto);
         return ResultModel.success(biz.createModel(e));
     }
 
@@ -99,7 +98,7 @@ public class ModelConfigController {
     public ResultModel<Boolean> update(
             @PathVariable Long id,
             @Validated(UpdateRequest.class) @RequestBody ModelConfigSaveDTO dto) {
-        var e = toEntity(dto);
+        var e = ModelConfigConverter.INSTANCE.toEntity(dto);
         e.setId(id);
         biz.modifyModel(e, dto.getVersion());
         return ResultModel.success(true);
@@ -119,18 +118,4 @@ public class ModelConfigController {
         return ResultModel.success(true);
     }
 
-    private ModelConfigEntity toEntity(ModelConfigSaveDTO dto) {
-        var e = new ModelConfigEntity();
-        BeanUtils.copyProperties(dto, e);
-        e.setModelName(dto.getModelName().trim());
-        e.setModelCode(dto.getModelCode().trim());
-        return e;
-    }
-
-    private ModelConfigVO toVO(ModelConfigEntity e) {
-        var v = new ModelConfigVO();
-        BeanUtils.copyProperties(e, v);
-        v.setVerified(false);
-        return v;
-    }
 }

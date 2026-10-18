@@ -22,15 +22,12 @@ import com.nimbusds.jwt.SignedJWT;
 
 import jakarta.servlet.Filter;
 
-import org.etd.ai.document.controller.KnowledgeDocumentController;
-import org.etd.ai.knowledge.controller.KnowledgeBaseController;
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.model.biz.ModelBizService;
 import org.etd.ai.model.controller.ModelConfigController;
 import org.etd.ai.model.controller.ModelConnectionController;
 import org.etd.ai.model.entity.ModelConfigEntity;
 import org.etd.ai.model.service.ModelConfigService;
-import org.etd.ai.upload.controller.UploadController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,17 +154,14 @@ class AiEndpointAuthenticationTest {
         mvc.perform(request).andExpect(status().isOk());
     }
 
-    /** 六个入口直接使用框架注解，原资源码与菜单和前端协议保持一致。 */
+    /** 保留的三个入口直接使用框架注解，原资源码与菜单和前端协议保持一致。 */
     @Test
     void shouldDeclareFrameworkPermissionOnAllAiControllers() {
         var resources =
                 Map.of(
                         ModelConnectionController.class, "ai:model-connection",
                         ModelConfigController.class, "ai:model-config",
-                        KnowledgeBaseController.class, "ai:knowledge-base",
-                        KnowledgeFolderController.class, "ai:knowledge-folder",
-                        KnowledgeDocumentController.class, "ai:knowledge-document",
-                        UploadController.class, "ai:knowledge-document");
+                        KnowledgeFolderController.class, "ai:knowledge-folder");
         for (var resource : resources.entrySet()) {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);

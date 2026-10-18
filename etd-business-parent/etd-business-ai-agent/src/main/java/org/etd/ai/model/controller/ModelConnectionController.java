@@ -11,14 +11,13 @@ import lombok.RequiredArgsConstructor;
 import org.etd.ai.model.biz.ModelBizService;
 import org.etd.ai.model.controller.dto.ModelConnectionSaveDTO;
 import org.etd.ai.model.controller.vo.ModelConnectionVO;
-import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.etd.ai.model.converter.ModelConnectionConverter;
 import org.etd.ai.model.service.ModelConnectionService;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.etd.framework.starter.web.validation.UpdateRequest;
-import org.springframework.beans.BeanUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,7 +50,7 @@ public class ModelConnectionController {
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
         var page = service.fetchPage(current, size, dataStatus);
-        var result = page.convert(this::toVO);
+        var result = page.convert(ModelConnectionConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -66,7 +65,7 @@ public class ModelConnectionController {
     @GetMapping("/{id}")
     public ResultModel<ModelConnectionVO> get(@PathVariable Long id) {
         var entity = service.requireConnection(id, false);
-        var result = toVO(entity);
+        var result = ModelConnectionConverter.INSTANCE.toVO(entity);
         return ResultModel.success(result);
     }
 
@@ -80,7 +79,7 @@ public class ModelConnectionController {
     @AutoLog("新增模型连接")
     @PostMapping
     public ResultModel<Long> save(@Valid @RequestBody ModelConnectionSaveDTO dto) {
-        var e = toEntity(dto);
+        var e = ModelConnectionConverter.INSTANCE.toEntity(dto);
         return ResultModel.success(service.createConnection(e, dto.getApiKey()));
     }
 
@@ -97,7 +96,7 @@ public class ModelConnectionController {
     public ResultModel<Boolean> update(
             @PathVariable Long id,
             @Validated(UpdateRequest.class) @RequestBody ModelConnectionSaveDTO dto) {
-        var e = toEntity(dto);
+        var e = ModelConnectionConverter.INSTANCE.toEntity(dto);
         e.setId(id);
         service.modifyConnection(e, dto.getApiKey(), dto.getVersion());
         return ResultModel.success(true);
@@ -117,17 +116,4 @@ public class ModelConnectionController {
         return ResultModel.success(true);
     }
 
-    private ModelConnectionEntity toEntity(ModelConnectionSaveDTO dto) {
-        var e = new ModelConnectionEntity();
-        BeanUtils.copyProperties(dto, e);
-        e.setConnectionName(dto.getConnectionName().trim());
-        return e;
-    }
-
-    private ModelConnectionVO toVO(ModelConnectionEntity e) {
-        var v = new ModelConnectionVO();
-        BeanUtils.copyProperties(e, v);
-        v.setCredentialConfigured(e.getApiKeyCiphertext() != null);
-        return v;
-    }
 }

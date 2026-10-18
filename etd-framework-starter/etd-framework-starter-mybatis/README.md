@@ -245,14 +245,14 @@ var page = recordMapper.selectPage(new Page<RecordEntity>(pageNumber, pageSize),
 ```java
 /** 查询当前租户内公开或当前角色范围内的文档。 */
 @DataPermission(tables = {
-    @DataPermissionTable(table = "ai_knowledge_document", publicColumn = "is_public")
+    @DataPermissionTable(table = "biz_document", publicColumn = "is_public")
 })
-public List<KnowledgeDocumentEntity> fetchDocumentList() {
+public List<DocumentEntity> fetchDocumentList() {
     return documentMapper.selectDocumentList();
 }
 ```
 
-对 `FROM ai_knowledge_document d` 生成的权限条件为：
+对 `FROM biz_document d` 生成的权限条件为：
 
 ```sql
 原查询条件 AND (d.is_public = true OR d.create_by = 当前用户 OR d.org_id IN (角色组织集合))
@@ -264,8 +264,8 @@ public List<KnowledgeDocumentEntity> fetchDocumentList() {
 
 ```java
 @DataPermission(tables = {
-    @DataPermissionTable(table = "ai_knowledge_document", publicColumn = "is_public"),
-    @DataPermissionTable(table = "ai_knowledge_folder", publicColumn = "is_public"),
+    @DataPermissionTable(table = "biz_document", publicColumn = "is_public"),
+    @DataPermissionTable(table = "biz_category", publicColumn = "is_public"),
     @DataPermissionTable(table = "biz_record")
 })
 ```

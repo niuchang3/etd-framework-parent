@@ -11,7 +11,7 @@ begin;
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
                        menu_path, menu_router, menu_icon, menu_type, sort, permission_code)
 values (1000010, null, current_timestamp, 1, current_timestamp, 1, 1,
-        '事件中心', '/event', null, 'NotificationOutlined', 'DIRECTORY', 50, null),
+        '事件中心', '/event', null, 'NotificationOutlined', 'DIRECTORY', 30, null),
        (1000011, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
         '事件类型', '/event/types', '@/views/event/types/index.vue', 'TagsOutlined', 'MENU', 10, 'event:type'),
        (1000012, 1000010, current_timestamp, 1, current_timestamp, 1, 1,

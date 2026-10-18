@@ -191,6 +191,11 @@ spring:
   - 包含 2 个及以上中间算子（如同时包含 `filter` + `map` + `groupingBy`）、涉及算法/复杂分组或业务规则判断的 Stream 表达式，**必须提取为独立且语义明确的私有辅助方法**（如 `groupOrganizationsByUserId`），避免在主业务逻辑中内联长流；仅涉及单一属性映射（如 `list.stream().map(X::getId).toList()`）或简单 `anyMatch` 的极简单行流，允许直接内联。
 - 单个方法理论上不超过 30 行。超过 30 行时，必须优先考虑提取私有方法、规则方法、转换方法或独立组件承接复杂逻辑。
 
+### Bean 转换
+
+- Bean 之间的转换（包括 DTO、VO、Entity）必须使用 MapStruct，并在对应功能域的 `converter` 包中定义转换接口。
+- 禁止使用 Spring、Apache Commons 等提供的 `BeanUtils.copyProperties(...)` 进行属性复制或对象转换，例如 `BeanUtils.copyProperties(dto, e)`；不得通过封装工具方法绕过此规则。
+
 ### 包结构与模块边界
 
 - 包命名和类放置必须符合模块职责及现有根命名空间：

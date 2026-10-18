@@ -149,6 +149,58 @@ create index idx_ai_model_config_tenant_connection
     on ai_model_config (tenant_id, connection_id);
 
 /*==============================================================*/
+/* table: ai_knowledge_folder */
+/*==============================================================*/
+create table ai_knowledge_folder
+(
+    id                          bigint not null,
+    create_time                 timestamp(6) with time zone not null default current_timestamp,
+    create_by                   bigint,
+    update_time                 timestamp(6) with time zone not null default current_timestamp,
+    update_by                   bigint,
+    data_status                 integer not null default 1,
+    tenant_id                   bigint not null,
+    del_flag                    smallint not null default 0,
+    version                     bigint not null default 0,
+    parent_id                   bigint,
+    folder_name                 varchar(100) not null,
+    description                 varchar(500),
+    sort_order                  integer not null default 0,
+    primary key (id),
+    constraint ck_ai_knowledge_folder_status check (data_status in (0, 1)),
+    constraint ck_ai_knowledge_folder_deleted check (del_flag in (0, 1)),
+    constraint ck_ai_knowledge_folder_version check (version >= 0),
+    constraint ck_ai_knowledge_folder_name check (folder_name = btrim(folder_name) and folder_name <> ''),
+    constraint ck_ai_knowledge_folder_sort check (sort_order >= 0),
+    constraint ck_ai_knowledge_folder_parent check (parent_id is null or parent_id <> id),
+    constraint uk_ai_knowledge_folder_scope unique (tenant_id, id),
+    constraint fk_ai_knowledge_folder_parent foreign key (tenant_id, parent_id)
+        references ai_knowledge_folder (tenant_id, id)
+);
+
+comment on table ai_knowledge_folder is '知识库分类目录树；目录下创建知识库，文档归属知识库';
+comment on column ai_knowledge_folder.id is '框架雪花算法分配的全局业务主键，不使用数据库自增';
+comment on column ai_knowledge_folder.create_time is '创建时间点，Java 使用 Instant';
+comment on column ai_knowledge_folder.create_by is '创建用户标识，仅用于审计，不作为目录数据权限过滤条件';
+comment on column ai_knowledge_folder.update_time is '修改时间点，由应用在每次修改时更新';
+comment on column ai_knowledge_folder.update_by is '修改用户标识';
+comment on column ai_knowledge_folder.data_status is '启停状态：0禁用、1启用，对应 BasicConstant.DataStatus';
+comment on column ai_knowledge_folder.tenant_id is '所属租户标识，从后端可信租户上下文取得';
+comment on column ai_knowledge_folder.del_flag is '逻辑删除标识：0未删除、1已删除';
+comment on column ai_knowledge_folder.version is '非负乐观锁版本，由应用在每次修改时递增';
+comment on column ai_knowledge_folder.parent_id is '父目录标识，根目录为空；禁止自身及祖先循环，跨层循环由业务事务校验';
+comment on column ai_knowledge_folder.folder_name is '目录名称，去除首尾空格，同租户同父目录的未删除记录内唯一';
+comment on column ai_knowledge_folder.description is '目录描述，选填，最多500字';
+comment on column ai_knowledge_folder.sort_order is '同级目录的非负排序值，升序排列，相同时按主键排序';
+
+-- PostgreSQL 16 使用 NULLS NOT DISTINCT，根目录 parent_id 为空时也禁止同级重名。
+create unique index uk_ai_knowledge_folder_name on ai_knowledge_folder
+    (tenant_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
+-- 不限定逻辑删除，覆盖父目录外键检查；同时支持同级目录排序及递归树查询。
+create index idx_ai_knowledge_folder_parent on ai_knowledge_folder
+    (tenant_id, parent_id, sort_order, id);
+
+/*==============================================================*/
 /* table: ai_knowledge_base */
 /*==============================================================*/
 create table ai_knowledge_base
@@ -160,6 +212,9 @@ create table ai_knowledge_base
     update_by                   bigint,
     data_status                 integer not null default 1,
     tenant_id                   bigint not null,
+    org_id                      bigint not null,
+    folder_id                   bigint not null,
+    is_public                   boolean not null default false,
     del_flag                    smallint not null default 0,
     version                     bigint not null default 0,
     knowledge_name              varchar(100) not null,
@@ -179,6 +234,8 @@ create table ai_knowledge_base
     constraint ck_ai_knowledge_base_version check (version >= 0),
     constraint uk_ai_knowledge_base_tenant unique (tenant_id, id),
     constraint uk_ai_knowledge_base_vector_binding unique (tenant_id, id, embedding_model_config_id, embedding_dimensions),
+    constraint fk_ai_knowledge_base_folder foreign key (tenant_id, folder_id)
+        references ai_knowledge_folder (tenant_id, id),
     constraint fk_ai_knowledge_base_model foreign key (tenant_id, embedding_model_config_id, embedding_dimensions)
         references ai_model_config (tenant_id, id, embedding_dimensions),
     constraint ck_ai_knowledge_base_name check (knowledge_name = btrim(knowledge_name) and knowledge_name <> ''),
@@ -218,75 +275,22 @@ comment on column ai_knowledge_base.vector_top_k is '向量分支最大候选条
 comment on column ai_knowledge_base.retrieval_top_k is '最终返回条数，正整数且不超过当前模式的候选容量';
 comment on column ai_knowledge_base.similarity_threshold is '仅用于向量分支的0～1相似度阈值；为空时不额外限制得分，不作用于全文或RRF得分';
 
-create unique index uk_ai_knowledge_base_name on ai_knowledge_base (tenant_id, knowledge_name) where del_flag = 0;
+create unique index uk_ai_knowledge_base_name on ai_knowledge_base (tenant_id, folder_id, knowledge_name) where del_flag = 0;
 create index idx_ai_knowledge_base_created on ai_knowledge_base (tenant_id, create_time desc, id desc) where del_flag = 0;
 -- 包含已删除引用，支持模型外键检查及模型关联知识库查询。
 create index idx_ai_knowledge_base_model on ai_knowledge_base (tenant_id, embedding_model_config_id, embedding_dimensions);
 
-/*==============================================================*/
-/* table: ai_knowledge_folder */
-/*==============================================================*/
-create table ai_knowledge_folder
-(
-    id                          bigint not null,
-    create_time                 timestamp(6) with time zone not null default current_timestamp,
-    create_by                   bigint,
-    update_time                 timestamp(6) with time zone not null default current_timestamp,
-    update_by                   bigint,
-    data_status                 integer not null default 1,
-    tenant_id                   bigint not null,
-    org_id                      bigint not null,
-    del_flag                    smallint not null default 0,
-    version                     bigint not null default 0,
-    knowledge_base_id           bigint not null,
-    parent_id                   bigint,
-    folder_name                 varchar(100) not null,
-    sort_order                  integer not null default 0,
-    is_public                   boolean not null default false,
-    primary key (id),
-    constraint ck_ai_knowledge_folder_status check (data_status in (0, 1)),
-    constraint ck_ai_knowledge_folder_deleted check (del_flag in (0, 1)),
-    constraint ck_ai_knowledge_folder_version check (version >= 0),
-    constraint ck_ai_knowledge_folder_name check (folder_name = btrim(folder_name) and folder_name <> ''),
-    constraint ck_ai_knowledge_folder_sort check (sort_order >= 0),
-    constraint ck_ai_knowledge_folder_parent check (parent_id is null or parent_id <> id),
-    constraint uk_ai_knowledge_folder_scope unique (tenant_id, knowledge_base_id, id),
-    constraint fk_ai_knowledge_folder_base foreign key (tenant_id, knowledge_base_id)
-        references ai_knowledge_base (tenant_id, id),
-    constraint fk_ai_knowledge_folder_parent foreign key (tenant_id, knowledge_base_id, parent_id)
-        references ai_knowledge_folder (tenant_id, knowledge_base_id, id)
-);
-
-comment on table ai_knowledge_folder is '知识库多级目录；独立控制目录读取范围，不向文件传递公开状态';
-comment on column ai_knowledge_folder.id is '框架雪花算法分配的全局业务主键，不使用数据库自增';
-comment on column ai_knowledge_folder.create_time is '创建时间点，Java 使用 Instant';
-comment on column ai_knowledge_folder.create_by is '创建用户标识，同时作为框架本人数据权限的匹配字段';
-comment on column ai_knowledge_folder.update_time is '修改时间点，由应用在每次修改时更新';
-comment on column ai_knowledge_folder.update_by is '修改用户标识';
-comment on column ai_knowledge_folder.data_status is '启停状态：0禁用、1启用，对应 BasicConstant.DataStatus';
-comment on column ai_knowledge_folder.tenant_id is '所属租户标识，从后端可信租户上下文取得';
-comment on column ai_knowledge_folder.org_id is '归属组织，实体继承 OrgScopedEntity；新增默认取当前主组织，指定组织需后端校验';
-comment on column ai_knowledge_folder.del_flag is '逻辑删除标识：0未删除、1已删除';
-comment on column ai_knowledge_folder.version is '非负乐观锁版本，由应用在每次修改时递增';
-comment on column ai_knowledge_folder.knowledge_base_id is '所属知识库标识，目录及其父目录必须位于同租户同知识库';
-comment on column ai_knowledge_folder.parent_id is '父目录标识，根目录为空；禁止自身及祖先循环，跨层循环由业务事务校验';
-comment on column ai_knowledge_folder.folder_name is '目录名称，去除首尾空格，同租户同知识库同父目录的未删除记录内唯一';
-comment on column ai_knowledge_folder.sort_order is '同级目录的非负排序值，升序排列，相同时按主键排序';
-comment on column ai_knowledge_folder.is_public is '是否租户内公开读取，默认false；非公开走角色数据权限，公开不授予写权限且不公开子项';
-
--- PostgreSQL 16 使用 NULLS NOT DISTINCT，根目录 parent_id 为空时也禁止同级重名。
-create unique index uk_ai_knowledge_folder_name on ai_knowledge_folder
-    (tenant_id, knowledge_base_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
--- 不限定逻辑删除，覆盖父目录外键检查；同时支持同级目录排序及递归树查询。
-create index idx_ai_knowledge_folder_parent on ai_knowledge_folder
-    (tenant_id, knowledge_base_id, parent_id, sort_order, id);
--- 读取条件为公开 OR 组织范围 OR 本人，分别提供筛选索引，不承诺优化器必然组合全部索引。
-create index idx_ai_knowledge_folder_public on ai_knowledge_folder
-    (tenant_id, knowledge_base_id, parent_id, sort_order, id) where del_flag = 0 and data_status = 1 and is_public;
-create index idx_ai_knowledge_folder_org on ai_knowledge_folder
-    (tenant_id, knowledge_base_id, org_id) where del_flag = 0 and data_status = 1;
-create index idx_ai_knowledge_folder_creator on ai_knowledge_folder
-    (tenant_id, knowledge_base_id, create_by) where del_flag = 0 and data_status = 1;
+comment on column ai_knowledge_base.org_id is '知识库管理组织，公开读取不授予写权限，文档统一继承该管理范围';
+comment on column ai_knowledge_base.folder_id is '必填分类目录，与知识库属于同一租户；移动知识库不改变文档归属';
+comment on column ai_knowledge_base.is_public is '是否租户内公开；非管理用户读取文档还须文档自身公开';
+-- 目录外键与目录下知识库列表共用此索引；不限定逻辑删除，支持外键检查。
+create index idx_ai_knowledge_base_folder on ai_knowledge_base (folder_id, create_time desc, id desc);
+create index idx_ai_knowledge_base_public on ai_knowledge_base (tenant_id, create_time desc, id desc)
+    where del_flag = 0 and is_public;
+create index idx_ai_knowledge_base_org on ai_knowledge_base (tenant_id, org_id, create_time desc, id desc)
+    where del_flag = 0;
+create index idx_ai_knowledge_base_creator on ai_knowledge_base (tenant_id, create_by, create_time desc, id desc)
+    where del_flag = 0;
 
 /*==============================================================*/
 /* table: ai_knowledge_document */
@@ -300,11 +304,9 @@ create table ai_knowledge_document
     update_by                   bigint,
     data_status                 integer not null default 1,
     tenant_id                   bigint not null,
-    org_id                      bigint not null,
     del_flag                    smallint not null default 0,
     version                     bigint not null default 0,
     knowledge_base_id           bigint not null,
-    folder_id                   bigint,
     is_public                   boolean not null default false,
     document_name               varchar(255) not null,
     original_filename           varchar(255) not null,
@@ -331,8 +333,6 @@ create table ai_knowledge_document
     constraint ck_ai_knowledge_document_version check (version >= 0),
     constraint uk_ai_knowledge_document_scope unique (tenant_id, knowledge_base_id, id),
     constraint fk_ai_knowledge_document_base foreign key (tenant_id, knowledge_base_id) references ai_knowledge_base (tenant_id, id),
-    constraint fk_ai_knowledge_document_folder foreign key (tenant_id, knowledge_base_id, folder_id)
-        references ai_knowledge_folder (tenant_id, knowledge_base_id, id),
     constraint ck_ai_knowledge_document_name check (btrim(document_name) <> '' and btrim(original_filename) <> ''),
     constraint ck_ai_knowledge_document_storage check (storage_provider = 'minio' and btrim(storage_bucket) <> '' and btrim(storage_object_key) <> ''),
     constraint ck_ai_knowledge_document_file check (file_size > 0 and btrim(content_type) <> '' and file_sha256 ~ '^[0-9a-f]{64}$'),
@@ -355,12 +355,10 @@ comment on column ai_knowledge_document.update_time is '修改时间点，由应
 comment on column ai_knowledge_document.update_by is '修改用户标识';
 comment on column ai_knowledge_document.data_status is '启停状态：0禁用、1启用，对应 BasicConstant.DataStatus';
 comment on column ai_knowledge_document.tenant_id is '所属租户标识，从后端可信租户上下文取得';
-comment on column ai_knowledge_document.org_id is '归属组织，实体继承 OrgScopedEntity；新增默认取当前主组织，指定组织需后端校验';
 comment on column ai_knowledge_document.del_flag is '逻辑删除标识：0未删除、1已删除';
 comment on column ai_knowledge_document.version is '非负乐观锁版本，由应用在每次修改时递增';
 comment on column ai_knowledge_document.knowledge_base_id is '所属知识库标识，必须属于同一租户';
-comment on column ai_knowledge_document.folder_id is '所属目录标识，允许为空表示未分类；目录必须属于同租户同知识库';
-comment on column ai_knowledge_document.is_public is '是否租户内公开读取，默认false；非公开走角色数据权限，不继承目录公开状态且不授予写权限';
+comment on column ai_knowledge_document.is_public is '是否租户内公开读取，默认false；非公开仅知识库管理范围可读；非管理用户须同时满足知识库公开和文档公开';
 comment on column ai_knowledge_document.document_name is '页面显示文档名称，可与原文件名不同';
 comment on column ai_knowledge_document.original_filename is '上传时的原始文件名，仅展示，不用于拼接本地路径';
 comment on column ai_knowledge_document.storage_provider is '对象存储实现，第一版仅使用minio，由后端选择';
@@ -383,19 +381,16 @@ comment on column ai_knowledge_document.processed_time is '本轮处理成功或
 
 create index idx_ai_knowledge_document_created on ai_knowledge_document
     (tenant_id, knowledge_base_id, create_time desc, id desc) where del_flag = 0;
--- 包含逻辑删除记录，支持目录外键检查以及按目录分页；未分类文件使用 folder_id IS NULL 查询。
-create index idx_ai_knowledge_document_folder on ai_knowledge_document
-    (tenant_id, knowledge_base_id, folder_id, create_time desc, id desc);
 create index idx_ai_knowledge_document_public on ai_knowledge_document
     (tenant_id, knowledge_base_id, create_time desc, id desc) where del_flag = 0 and data_status = 1 and is_public;
-create index idx_ai_knowledge_document_org on ai_knowledge_document
-    (tenant_id, knowledge_base_id, org_id, create_time desc, id desc) where del_flag = 0 and data_status = 1;
-create index idx_ai_knowledge_document_creator on ai_knowledge_document
-    (tenant_id, knowledge_base_id, create_by, create_time desc, id desc) where del_flag = 0 and data_status = 1;
 -- 复合唯一键已以租户、知识库开头，覆盖知识库外键检查，无需重复建立同前缀索引。
 create index idx_ai_knowledge_document_expired on ai_knowledge_document
     (processing_lease_until, tenant_id, id)
     where del_flag = 0 and processing_status in ('parsing', 'embedding') and processing_owner is not null;
+
+-- 原件清理队列的引用检查必须有索引，避免每批任务扫描所有文件。
+create index idx_ai_knowledge_document_object on ai_knowledge_document
+    (tenant_id, storage_bucket, storage_object_key) where del_flag = 0;
 
 /*==============================================================*/
 /* table: ai_knowledge_chunk */
@@ -660,10 +655,7 @@ create index idx_ai_vector_1536_binding on ai_vector_1536
 -- 原生PgVectorStore使用metadata JSON path过滤；真实召回SQL仍需校验业务发布状态。
 create index idx_ai_vector_1536_metadata on ai_vector_1536 using gin (metadata jsonb_path_ops);
 
--- 原件清理队列的引用检查必须有索引，避免每批任务扫描所有文件。
-create index idx_ai_knowledge_document_object on ai_knowledge_document
-    (tenant_id, storage_bucket, storage_object_key) where del_flag = 0;
-
+-- 上传会话引用知识库及文档，必须在被引用表创建完成后定义。
 /* 文件传输会话独立于解析工作流；持久化支持幂等合并和过期清理。 */
 create table ai_file_upload (
     id bigint primary key,
@@ -676,7 +668,6 @@ create table ai_file_upload (
     del_flag smallint not null default 0 check (del_flag in (0,1)),
     version bigint not null default 0 check (version >= 0),
     knowledge_base_id bigint not null,
-    folder_id bigint,
     replace_document_id bigint,
     replace_version bigint,
     original_filename varchar(255) not null,
@@ -693,7 +684,6 @@ create table ai_file_upload (
     max_retries integer not null check (max_retries >= 0),
     expires_at timestamp(6) with time zone not null,
     constraint fk_ai_file_upload_base foreign key (tenant_id,knowledge_base_id) references ai_knowledge_base(tenant_id,id),
-    constraint fk_ai_file_upload_folder foreign key (tenant_id,knowledge_base_id,folder_id) references ai_knowledge_folder(tenant_id,knowledge_base_id,id),
     constraint fk_ai_file_upload_replace foreign key (tenant_id,knowledge_base_id,replace_document_id) references ai_knowledge_document(tenant_id,knowledge_base_id,id),
     constraint fk_ai_file_upload_document foreign key (tenant_id,knowledge_base_id,document_id) references ai_knowledge_document(tenant_id,knowledge_base_id,id),
     constraint uk_ai_file_upload_object unique (tenant_id,bucket,object_key),
@@ -705,7 +695,6 @@ create table ai_file_upload (
     constraint ck_ai_file_upload_remote check (state <> 'uploading' or nullif(btrim(upload_id),'') is not null)
 );
 create index idx_ai_file_upload_expired on ai_file_upload(expires_at,id) where state in ('initializing','uploading') and del_flag=0;
-create index idx_ai_file_upload_folder on ai_file_upload(tenant_id,knowledge_base_id,folder_id);
 create index idx_ai_file_upload_replace on ai_file_upload(tenant_id,knowledge_base_id,replace_document_id);
 create index idx_ai_file_upload_document on ai_file_upload(tenant_id,knowledge_base_id,document_id);
 
@@ -720,7 +709,6 @@ comment on column ai_file_upload.tenant_id is '可信租户标识';
 comment on column ai_file_upload.del_flag is '逻辑删除，0未删除1已删除';
 comment on column ai_file_upload.version is '非负乐观锁版本';
 comment on column ai_file_upload.knowledge_base_id is '所属知识库';
-comment on column ai_file_upload.folder_id is '目标目录，空为未分类';
 comment on column ai_file_upload.replace_document_id is '可选替换文档，必须同租户同知识库';
 comment on column ai_file_upload.replace_version is '替换文档预期版本，防止上传期间文件已改变';
 comment on column ai_file_upload.original_filename is '原始文件名，不作为存储路径';
