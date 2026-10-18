@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFact
 import org.springframework.boot.autoconfigure.web.servlet.ServletWebServerFactoryAutoConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.unit.DataSize;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,12 +53,10 @@ class WebServerHeaderConfigTest {
         return runner.withConfiguration(configurations);
     }
 
-    /** 将所有连接器定制器按实际顺序执行后，读取 HTTP 协议处理器的最终上限。 */
+    /** 通过工厂真实连接器配置路径执行协议及连接器定制，读取最终请求头上限。 */
     private int getRequestHeaderBytes(TomcatServletWebServerFactory factory) {
         Connector connector = new Connector();
-        for (var customizer : factory.getTomcatConnectorCustomizers()) {
-            customizer.customize(connector);
-        }
+        ReflectionTestUtils.invokeMethod(factory, "customizeConnector", connector);
         AbstractHttp11Protocol<?> protocol = (AbstractHttp11Protocol<?>) connector.getProtocolHandler();
         return protocol.getMaxHttpRequestHeaderSize();
     }
