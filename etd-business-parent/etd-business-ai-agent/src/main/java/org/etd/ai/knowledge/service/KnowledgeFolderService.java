@@ -6,22 +6,28 @@ import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeFolderMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 
 import java.util.List;
 
-/** 租户级独立目录维护能力。 */
+/** 按前端所选部门维护独立目录树，不校验UPMS部门。 */
 @Service
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_folder"))
 @RequiredArgsConstructor
 public class KnowledgeFolderService {
     private final KnowledgeFolderMapper mapper;
 
     /**
-     * 查询租户目录和必要祖先，保留完整导航路径。
+     * 查询权限范围内目录及必要祖先，可按部门进一步筛选。
+     * @param orgId 可选部门标识，空时不按部门筛选，始终遵循框架数据权限
      * @param dataStatus 可选目录状态，必要祖先不受筛选限制
      * @return 平铺目录节点列表
      */
-    public List<KnowledgeFolderEntity> fetchFolderList(Integer dataStatus) {
-        return mapper.selectFolderList(dataStatus);
+    @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_folder", alias = "f"))
+    public List<KnowledgeFolderEntity> fetchFolderList(Long orgId, Integer dataStatus) {
+        return mapper.selectFolderList(orgId, dataStatus);
     }
 
     /**
@@ -34,7 +40,7 @@ public class KnowledgeFolderService {
         var query = Wrappers.<KnowledgeFolderEntity>lambdaQuery().eq(KnowledgeFolderEntity::getId, id);
         var entity = mapper.selectOne(query);
         if (entity == null) {
-            throw new ApiRuntimeException("目录不存在");
+            throw new ApiRuntimeException("目录不存在或无数据权限");
         }
         return entity;
     }
@@ -42,11 +48,29 @@ public class KnowledgeFolderService {
     /**
      * 目录父节点可为空；非空父节点必须属于可访问租户。
      * @param parentId 目标父目录标识，空表示根目录
+     * @param orgId 所属部门标识，父子目录必须一致
      */
-    public void requireParent(Long parentId) {
+    public void requireParent(Long parentId, Long orgId) {
         if (parentId != null) {
-            requireWritable(parentId);
+            requireFolderByOrganization(parentId, orgId);
         }
+    }
+
+    /**
+     * 按所选部门定位目录，防止目录树跨部门关联，不查询或验证部门本身。
+     * @param id 目录标识
+     * @param orgId 前端传入的部门标识
+     * @return 所选部门中的目录
+     */
+    public KnowledgeFolderEntity requireFolderByOrganization(Long id, Long orgId) {
+        var query = Wrappers.<KnowledgeFolderEntity>lambdaQuery()
+                .eq(KnowledgeFolderEntity::getId, id)
+                .eq(KnowledgeFolderEntity::getOrgId, orgId);
+        var entity = mapper.selectOne(query);
+        if (entity == null) {
+            throw new ApiRuntimeException("目录不存在、不属于所选部门或无数据权限");
+        }
+        return entity;
     }
 
     /**
@@ -75,6 +99,11 @@ public class KnowledgeFolderService {
      * @return 新建目录标识
      */
     public Long createFolder(KnowledgeFolderEntity entity) {
+        // INSERT不追加查询权限条件，新增记录必须主动遵循同一角色数据范围。
+        var scope = DataPermissionScope.current();
+        if (!scope.canManage(entity.getOrgId(), scope.userId())) {
+            throw new ApiRuntimeException("无目录新增数据权限");
+        }
         mapper.insert(entity);
         return entity.getId();
     }

@@ -160,6 +160,7 @@ create table ai_knowledge_folder
     update_by                   bigint,
     data_status                 integer not null default 1,
     tenant_id                   bigint not null,
+    org_id                      bigint not null,
     del_flag                    smallint not null default 0,
     version                     bigint not null default 0,
     parent_id                   bigint,
@@ -174,8 +175,9 @@ create table ai_knowledge_folder
     constraint ck_ai_knowledge_folder_sort check (sort_order >= 0),
     constraint ck_ai_knowledge_folder_parent check (parent_id is null or parent_id <> id),
     constraint uk_ai_knowledge_folder_scope unique (tenant_id, id),
-    constraint fk_ai_knowledge_folder_parent foreign key (tenant_id, parent_id)
-        references ai_knowledge_folder (tenant_id, id)
+    constraint uk_ai_knowledge_folder_org_scope unique (tenant_id, org_id, id),
+    constraint fk_ai_knowledge_folder_parent foreign key (tenant_id, org_id, parent_id)
+        references ai_knowledge_folder (tenant_id, org_id, id)
 );
 
 comment on table ai_knowledge_folder is '知识库分类目录树；目录下创建知识库，文档归属知识库';
@@ -186,19 +188,32 @@ comment on column ai_knowledge_folder.update_time is '修改时间点，由应�
 comment on column ai_knowledge_folder.update_by is '修改用户标识';
 comment on column ai_knowledge_folder.data_status is '启停状态：0禁用、1启用，对应 BasicConstant.DataStatus';
 comment on column ai_knowledge_folder.tenant_id is '所属租户标识，从后端可信租户上下文取得';
+comment on column ai_knowledge_folder.org_id is '所属部门标识，直接采用前端参数；目录访问按框架角色数据范围控制，不查询UPMS校验部门';
 comment on column ai_knowledge_folder.del_flag is '逻辑删除标识：0未删除、1已删除';
 comment on column ai_knowledge_folder.version is '非负乐观锁版本，由应用在每次修改时递增';
 comment on column ai_knowledge_folder.parent_id is '父目录标识，根目录为空；禁止自身及祖先循环，跨层循环由业务事务校验';
-comment on column ai_knowledge_folder.folder_name is '目录名称，去除首尾空格，同租户同父目录的未删除记录内唯一';
+comment on column ai_knowledge_folder.folder_name is '目录名称，去除首尾空格，同租户同部门同父目录的未删除记录内唯一';
 comment on column ai_knowledge_folder.description is '目录描述，选填，最多500字';
 comment on column ai_knowledge_folder.sort_order is '同级目录的非负排序值，升序排列，相同时按主键排序';
 
 -- PostgreSQL 16 使用 NULLS NOT DISTINCT，根目录 parent_id 为空时也禁止同级重名。
 create unique index uk_ai_knowledge_folder_name on ai_knowledge_folder
-    (tenant_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
+    (tenant_id, org_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
 -- 不限定逻辑删除，覆盖父目录外键检查；同时支持同级目录排序及递归树查询。
 create index idx_ai_knowledge_folder_parent on ai_knowledge_folder
-    (tenant_id, parent_id, sort_order, id);
+    (tenant_id, org_id, parent_id, sort_order, id);
+
+-- 所选部门列表过滤及全树排序，状态为可选筛选字段。
+create index idx_ai_knowledge_folder_org_sort on ai_knowledge_folder
+    (tenant_id, org_id, sort_order, id) include (data_status) where del_flag = 0;
+
+-- 不指定部门时按租户读取全树，并保持目录排序。
+create index idx_ai_knowledge_folder_tenant_sort on ai_knowledge_folder
+    (tenant_id, sort_order, id) include (data_status) where del_flag = 0;
+
+-- 本人范围按创建人过滤，部门作为可选附加筛选字段。
+create index idx_ai_knowledge_folder_creator_sort on ai_knowledge_folder
+    (tenant_id, create_by, sort_order, id) include (org_id) where del_flag = 0;
 
 /*==============================================================*/
 /* table: ai_knowledge_base */

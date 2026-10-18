@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
@@ -20,7 +21,8 @@ import java.util.TimeZone;
  *
  * @author Young
  */
-@AutoConfiguration
+// 先注册框架ObjectMapper，避免Boot默认映射器使缺失Bean条件提前失效。
+@AutoConfiguration(before = JacksonAutoConfiguration.class)
 public class WebJacksonConfig {
 
     private static final String JACKSON_TIME_ZONE_PROPERTY = "spring.jackson.time-zone";

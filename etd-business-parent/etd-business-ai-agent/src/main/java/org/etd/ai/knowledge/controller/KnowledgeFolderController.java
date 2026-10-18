@@ -36,6 +36,7 @@ public class KnowledgeFolderController {
     /**
      * 独立返回可读目录及必要祖先，空目录正常展示，navigationOnly节点不得维护。
      *
+     * @param orgId 可选部门标识，不传时查询当前数据权限范围内全部目录
      * @param dataStatus 可选启停状态：0停用、1启用；不传表示全部状态
      * @return 统一业务响应；code=2000表示成功，data语义见方法说明
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
@@ -43,17 +44,18 @@ public class KnowledgeFolderController {
     @AutoLog("查询知识库目录列表")
     @GetMapping
     public ResultModel<List<KnowledgeFolderVO>> list(
+            @RequestParam(required = false) @Min(1) Long orgId,
             @RequestParam(required = false)
                     @Min(BasicConstant.DataStatus.DISABLED_CODE)
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
-        var folders = service.fetchFolderList(dataStatus);
+        var folders = service.fetchFolderList(orgId, dataStatus);
         var result = folders.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
         return ResultModel.success(result);
     }
 
     /**
-     * 创建租户级分类目录。
+     * 在前端所选部门下创建目录。
      *
      * @param dto 经过接口参数校验的页面请求，不包含可信身份字段
      * @return 统一业务响应；code=2000表示成功，data语义见方法说明

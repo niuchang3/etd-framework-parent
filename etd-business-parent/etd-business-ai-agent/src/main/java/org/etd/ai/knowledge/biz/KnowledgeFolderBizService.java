@@ -16,7 +16,7 @@ public class KnowledgeFolderBizService {
     @Transactional
     public Long createFolder(KnowledgeFolderEntity entity) {
         folders.lockStructure();
-        folders.requireParent(entity.getParentId());
+        folders.requireParent(entity.getParentId(), entity.getOrgId());
         return folders.createFolder(entity);
     }
 
@@ -24,8 +24,8 @@ public class KnowledgeFolderBizService {
     @Transactional
     public void modifyFolder(KnowledgeFolderEntity entity, Long version) {
         folders.lockStructure();
-        folders.requireWritable(entity.getId());
-        folders.requireParent(entity.getParentId());
+        folders.requireFolderByOrganization(entity.getId(), entity.getOrgId());
+        folders.requireParent(entity.getParentId(), entity.getOrgId());
         folders.requireAcyclic(entity.getId(), entity.getParentId());
         folders.modifyFolder(entity, version);
     }

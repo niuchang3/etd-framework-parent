@@ -22,6 +22,9 @@ public class KnowledgeFolderVO {
     /** 更新时间点。 */
     private Instant updateTime;
 
+    /** 所属部门标识，用于左侧部门与右侧目录树联动。 */
+    private Long orgId;
+
     /** 父目录标识，根目录为空。 */
     private Long parentId;
 
@@ -34,9 +37,9 @@ public class KnowledgeFolderVO {
     /** 排序值。 */
     private Integer sortOrder;
 
-    /** 是否仅用于导航；租户共享目录始终为false。 */
+    /** 是否为仅供导航的祖先节点；true时不可编辑。 */
     private Boolean navigationOnly;
 
-    /** 租户范围内可维护；操作同时要求接口write权限。 */
+    /** 角色数据范围允许维护目录记录；操作同时要求接口write权限。 */
     private Boolean writable;
 }

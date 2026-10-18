@@ -9,6 +9,11 @@ import org.etd.framework.starter.web.validation.UpdateRequest;
 /** KnowledgeFolderSaveDTO 页面请求；不接收租户、创建人或存储对象键。 */
 @Data
 public class KnowledgeFolderSaveDTO {
+    /** 所选部门标识，直接采用前端参数，不查询UPMS校验。 */
+    @NotNull
+    @Positive
+    private Long orgId;
+
     /** 父目录，根目录为空。 */
     @Positive private Long parentId;
 

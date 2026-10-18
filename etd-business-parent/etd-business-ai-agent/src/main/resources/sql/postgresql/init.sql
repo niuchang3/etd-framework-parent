@@ -68,7 +68,7 @@ values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '模型配置', '/ai/model-configs', '@/views/ai/model-config/index.vue',
         'ai:model-config', 'ControlOutlined', 'MENU', 20),
        (1000105, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        '知识库目录', '/ai/knowledge-folders', '@/views/ai/knowledge-folder/index.vue',
+        '知识库分类', '/ai/knowledge-folders', '@/views/ai/knowledge-folder/index.vue',
         'ai:knowledge-folder', 'ApartmentOutlined', 'MENU', 30)
 on conflict (id) do nothing;
 

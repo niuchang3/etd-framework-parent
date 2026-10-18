@@ -11,7 +11,6 @@ etd:
       ignore-tables:
         - ai_model_connection # 租户级配置，无独立组织归属。
         - ai_model_config # 租户级配置，无独立组织归属。
-        - ai_knowledge_folder # 租户共享目录，不按组织或创建人过滤。
   ai:
     credentials:
       key: ${AI_CREDENTIAL_ENCRYPTION_KEY:ZXRkLWFpLWxvY2FsLWRldmVsb3BtZW50LWtleS0wMDE=} # 仅供本地开发的固定32字节AES密钥，部署环境必须自行注入。

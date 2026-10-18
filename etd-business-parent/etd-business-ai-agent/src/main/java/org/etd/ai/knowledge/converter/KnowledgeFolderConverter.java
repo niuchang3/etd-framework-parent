@@ -4,6 +4,9 @@ import org.etd.ai.knowledge.controller.dto.KnowledgeFolderSaveDTO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeFolderVO;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.mapstruct.BeanMapping;
+import org.mapstruct.AfterMapping;
+import org.mapstruct.MappingTarget;
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
@@ -21,6 +24,7 @@ public interface KnowledgeFolderConverter {
      * @return 待保存的业务实体
      */
     @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "orgId", source = "orgId")
     @Mapping(target = "parentId", source = "parentId")
     @Mapping(target = "folderName", expression = "java(dto.getFolderName().trim())")
     @Mapping(target = "description", source = "description")
@@ -33,7 +37,26 @@ public interface KnowledgeFolderConverter {
      * @param entity 业务实体
      * @return 页面响应
      */
-    @Mapping(target = "writable", constant = "true")
-    @Mapping(target = "navigationOnly", constant = "false")
+    @Mapping(target = "writable", expression = "java(canManageFolder(entity))")
+    @Mapping(target = "navigationOnly", expression = "java(!canManageFolder(entity))")
     KnowledgeFolderVO toVO(KnowledgeFolderEntity entity);
+
+    /** @param entity 目录记录 @return 框架角色范围是否允许维护该目录 */
+    default boolean canManageFolder(KnowledgeFolderEntity entity) {
+        return DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy());
+    }
+
+    /**
+     * 祖先补齐只供导航，不暴露隐藏目录的描述、审计或编辑版本。
+     * @param response 已转换的目录响应
+     */
+    @AfterMapping
+    default void hideNavigationDetails(@MappingTarget KnowledgeFolderVO response) {
+        if (Boolean.TRUE.equals(response.getNavigationOnly())) {
+            response.setDescription(null);
+            response.setVersion(null);
+            response.setCreateTime(null);
+            response.setUpdateTime(null);
+        }
+    }
 }
