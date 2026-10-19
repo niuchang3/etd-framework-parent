@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.etd.framework.starter.client.autoconfigure.SecurityClientAutoConfiguration;
 import com.etd.framework.starter.client.core.authentication.AccessDeniedHandlerImpl;
 import com.etd.framework.starter.client.core.authentication.AuthenticationEntryPointImpl;
@@ -28,6 +31,10 @@ import org.etd.ai.model.controller.ModelController;
 import org.etd.ai.model.controller.ModelConnectionController;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.entity.ModelEntity;
+import org.etd.ai.model.mapper.ModelMapper;
+import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.user.UserDetails;
+import org.springframework.http.MediaType;
 import org.etd.ai.model.service.ModelConnectionService;
 import org.etd.ai.model.service.ModelService;
 import org.junit.jupiter.api.AfterEach;
@@ -83,6 +90,7 @@ class AiEndpointAuthenticationTest {
     void closeSecurityContext() {
         context.close();
         SecurityContextHolder.clearContext();
+        RequestContext.clean();
     }
 
     /** 匿名业务请求仍被框架认证入口拒绝。 */
@@ -132,20 +140,73 @@ class AiEndpointAuthenticationTest {
         verify(models).removeConnection(1L);
     }
 
-    /** 目录要求独立read权限，不暴露写入口，旧模型配置路由不存在。 */
+    /** 全局目录要求read权限；普通用户即使有write权限也不能维护。 */
     @Test
-    void shouldExposeOnlyReadOnlyCatalogAndRemoveOldRoutes() throws Exception {
+    void shouldKeepCatalogReadOnlyForTenantUsers() throws Exception {
         var anonymous = get("/v1/models");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var denied = get("/v1/models").session(createSession("ai:model-connection:read"));
+        var deniedSession = createSession("ai:model-connection:read");
+        var denied = get("/v1/models").session(deniedSession);
         mvc.perform(denied).andExpect(status().isForbidden());
         var session = createSession("ai:model:read", "ai:model:write");
         var catalog = get("/v1/models").session(session);
         mvc.perform(catalog).andExpect(status().isOk());
-        var write = post("/v1/models").session(session);
-        mvc.perform(write).andExpect(status().isMethodNotAllowed());
+        var write = post("/v1/models").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
+        mvc.perform(write).andExpect(status().isForbidden());
+        RequestContext.getUser().setTenantAdmin(true);
+        mvc.perform(write).andExpect(status().isForbidden());
+        var update = put("/v1/models/1").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
+        mvc.perform(update).andExpect(status().isForbidden());
+        var remove = delete("/v1/models/1").session(session);
+        mvc.perform(remove).andExpect(status().isForbidden());
         var removed = get("/v1/model-configs").session(session);
         mvc.perform(removed).andExpect(status().isNotFound());
+    }
+
+    /** 平台管理员无需人工写SQL即可维护目录，真实能力服务仍执行身份检查。 */
+    @Test
+    void shouldAllowPlatformAdministratorToManageCatalog() throws Exception {
+        var session = createPlatformSession(false);
+        var create = post("/v1/models").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
+        mvc.perform(create).andExpect(status().isOk());
+        var update = put("/v1/models/1").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
+        mvc.perform(update).andExpect(status().isOk());
+        var remove = delete("/v1/models/1").session(session);
+        mvc.perform(remove).andExpect(status().isOk());
+        var mapper = context.getBean(ModelMapper.class);
+        verify(mapper).insert(any(ModelEntity.class));
+        verify(mapper).update(any(ModelEntity.class), any());
+        verify(mapper).deleteById(1L);
+    }
+
+    /** 锁定身份不能利用平台管理员豁免绕过写保护。 */
+    @Test
+    void shouldRejectReadOnlyPlatformAdministrator() throws Exception {
+        var session = createPlatformSession(true);
+        var write = post("/v1/models").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
+        mvc.perform(write).andExpect(status().isForbidden());
+        var mapper = context.getBean(ModelMapper.class);
+        verifyNoInteractions(mapper);
+    }
+
+    /** 有效完整模型请求，避免参数错误掩盖权限边界。 */
+    private static final String MODEL_REQUEST = """
+            {"providerCode":"aliyun","modelName":"测试模型","modelCode":"test-model",
+             "modelType":"chat","sort":0,"dataStatus":1,"version":0}
+            """;
+
+    /** 管理身份同时放入会话认证详情与框架可信请求上下文。 */
+    private MockHttpSession createPlatformSession(boolean readOnly) {
+        var session = createSession();
+        var user = RequestContext.getUser();
+        user.setPlatformAdmin(true);
+        user.setLocked(readOnly);
+        return session;
     }
 
     /** 为请求装配指定authority，避免依赖外部UPMS令牌签发。 */
@@ -157,6 +218,10 @@ class AiEndpointAuthenticationTest {
         }
         var authentication =
                 UsernamePasswordAuthenticationToken.authenticated("tenant-user", "", authorities);
+        var user = new UserDetails();
+        user.setId(1L);
+        authentication.setDetails(user);
+        RequestContext.setUser(user);
         var securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         var session = new MockHttpSession();
@@ -267,19 +332,40 @@ class AiEndpointAuthenticationTest {
             return new ModelConnectionController(models, biz);
         }
 
-        /** 全局目录没有租户写入接口。 */
+        /** 真实目录能力服务使用Mapper替身，身份规则不做mock。 */
         @Bean
-        ModelService modelService() {
-            var service = mock(ModelService.class);
+        ModelMapper modelMapper() {
+            var configuration = new MybatisConfiguration();
+            var assistant = new MapperBuilderAssistant(configuration, "catalog-security-test");
+            TableInfoHelper.initTableInfo(assistant, ModelEntity.class);
+            var mapper = mock(ModelMapper.class);
             var page = new Page<ModelEntity>(1L, 10L);
-            when(service.fetchPage(1L, 10L, null, null)).thenReturn(page);
-            return service;
+            when(mapper.selectPage(any(), any())).thenReturn(page);
+            var model = new ModelEntity();
+            model.setId(1L);
+            model.setVersion(0L);
+            when(mapper.selectOne(any())).thenReturn(model);
+            when(mapper.update(any(ModelEntity.class), any())).thenReturn(1);
+            when(mapper.deleteById(1L)).thenReturn(1);
+            return mapper;
+        }
+
+        /** 目录写规则通过真实能力服务执行。 */
+        @Bean
+        ModelService modelService(ModelMapper mapper) {
+            return new ModelService(mapper);
+        }
+
+        /** 关联引用检查使用真实编排逻辑。 */
+        @Bean
+        ModelBizService modelBizService(ModelService models, ModelConnectionService connections) {
+            return new ModelBizService(models, connections);
         }
 
         /** 使用真实目录Controller参与安全链测试。 */
         @Bean
-        ModelController modelController(ModelService models) {
-            return new ModelController(models);
+        ModelController modelController(ModelService models, ModelBizService biz) {
+            return new ModelController(models, biz);
         }
 
         /** 提供白名单匹配的公开端点。 */

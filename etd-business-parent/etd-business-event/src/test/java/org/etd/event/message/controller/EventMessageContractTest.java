@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -37,10 +38,12 @@ class EventMessageContractTest {
             assertNotNull(inputStream);
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(schema.contains("event_type         varchar(150) not null"));
-            assertTrue(schema.contains("event_type_id      bigint references evt_event_type (id)"));
+            assertTrue(schema.contains("event_type_id      bigint,"));
             assertTrue(schema.contains("message_status     integer not null default 1"));
             assertTrue(schema.contains("failure_reason     varchar(2000)"));
             assertTrue(schema.contains("idx_evt_event_message_%1$s_status_time"));
+            assertFalse(schema.toLowerCase().contains("references "));
+            assertFalse(schema.toLowerCase().contains("foreign key"));
         }
     }
 }

@@ -106,7 +106,7 @@ values (2200101, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2200103, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'ai_model_auth_type', 'AI 模型认证方式', true, true, '根据接入协议校验允许的认证方式，不包含 SaaS 内部加密主密钥'),
        (2200104, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'ai_model_provider', 'AI 模型服务商', true, true, '模型目录所属服务商，用于分类筛选，与调用协议分开');
+        'ai_model_provider', 'AI 模型服务商', true, true, '模型管理所属服务商，用于分类筛选，与调用协议分开');
 
 -- sys_dict_data 初始化。
 insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
@@ -150,7 +150,7 @@ values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '模型连接器', '/ai/model-connections', '@/views/ai/model-connection/index.vue',
         'ai:model-connection', 'LinkOutlined', 'MENU', 20),
        (1000106, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        '模型目录', '/ai/models', '@/views/ai/model/index.vue',
+        '模型管理', '/ai/models', '@/views/ai/model/index.vue',
         'ai:model', 'AppstoreOutlined', 'MENU', 10),
        (1000105, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '知识库分类', '/ai/knowledge-folders', '@/views/ai/knowledge-folder/index.vue',

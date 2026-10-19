@@ -418,7 +418,7 @@ create table if not exists sys_dict_data
     update_by    bigint,
     data_status  int,
     del_flag     smallint not null default 0,
-    dict_type_id bigint not null references sys_dict_type (id),
+    dict_type_id bigint not null,
     dict_code    varchar(100) not null,
     dict_label   varchar(100) not null,
     dict_value   varchar(200) not null,

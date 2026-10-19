@@ -6,6 +6,10 @@ import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.etd.ai.model.component.ModelCredentialCipher;
+import org.etd.ai.model.biz.ModelBizService;
+import org.etd.ai.model.controller.dto.ModelSaveDTO;
+import org.etd.ai.model.converter.ModelConverter;
+import org.springframework.security.access.AccessDeniedException;
 import org.etd.ai.model.config.ModelCredentialProperties;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.entity.ModelEntity;
@@ -58,8 +62,8 @@ class ModelPersistenceTest {
             var model = createModel(models);
             assertNull(model.getTenantId());
             var service = new ModelService(models);
-            assertEquals(1, service.fetchPage(1, 10, "aliyun", "chat").getTotal());
-            assertEquals(0, service.fetchPage(1, 10, "deepseek", null).getTotal());
+            assertEquals(1, service.fetchPage(1, 10, "aliyun", "chat", null).getTotal());
+            assertEquals(0, service.fetchPage(1, 10, "deepseek", null, null).getTotal());
             var connection = createConnection(model.getId());
             assertEquals(1, connections.insert(connection));
             assertEquals(1L, connection.getTenantId());
@@ -137,9 +141,193 @@ class ModelPersistenceTest {
             model.setDataStatus(0);
             mapper.updateById(model);
             var service = new ModelService(mapper);
-            assertEquals(0, service.fetchPage(1, 10, null, null).getTotal());
+            assertEquals(0, service.fetchPage(1, 10, null, null, null).getTotal());
             assertThrows(ApiRuntimeException.class, () -> service.requireModel(model.getId()));
         }
+    }
+
+    /** 管理员CRUD经过真实Mapper，验证版本冲突、显式清空、停用后维护及逻辑删除。 */
+    @Test
+    void shouldManageCatalogWithVersionAndExplicitClearing() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        RequestContext.getUser().setPlatformAdmin(true);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var service = new ModelService(mapper);
+            var dto = createModelRequest();
+            var entity = ModelConverter.INSTANCE.toEntity(dto);
+            var id = service.createModel(entity);
+            assertEquals(0L, mapper.selectById(id).getVersion());
+            verifyModelEditing(service, id, dto);
+            RequestContext.getUser().setPlatformAdmin(false);
+            assertEquals(0, service.fetchPage(1, 10, null, null, 0).getTotal());
+            assertThrows(ApiRuntimeException.class, () -> service.fetchModel(id));
+            assertThrows(AccessDeniedException.class, () -> service.removeModel(id));
+            RequestContext.getUser().setPlatformAdmin(true);
+            assertEquals(1, service.fetchPage(1, 10, null, null, 0).getTotal());
+            assertEquals(0, service.fetchModel(id).getDataStatus());
+            service.removeModel(id);
+            assertNull(mapper.selectById(id));
+        }
+    }
+
+    /** 数据库默认忽略null时，Wrapper仍显式清空选填字段；旧版本不能覆盖新修改。 */
+    private void verifyModelEditing(ModelService service, Long id, ModelSaveDTO dto) {
+        dto.setVersion(0L);
+        dto.setDataStatus(0);
+        dto.setLogoPath(null);
+        dto.setDescription(null);
+        dto.setApiKeyUrl(null);
+        dto.setSetupGuideUrl(null);
+        dto.setBaseUrlHelp(null);
+        var edit = ModelConverter.INSTANCE.toEntity(dto);
+        edit.setId(id);
+        service.modifyModel(edit);
+        var saved = service.fetchModel(id);
+        assertEquals(1L, saved.getVersion());
+        assertNull(saved.getLogoPath());
+        assertNull(saved.getDescription());
+        assertNull(saved.getApiKeyUrl());
+        assertNull(saved.getSetupGuideUrl());
+        assertNull(saved.getBaseUrlHelp());
+        var stale = ModelConverter.INSTANCE.toEntity(dto);
+        stale.setId(id);
+        assertThrows(ApiRuntimeException.class, () -> service.modifyModel(stale));
+    }
+
+    /** 跨租户已有连接时禁止删除和改变模型调用身份，删除连接后才可删除目录。 */
+    @Test
+    void shouldProtectCatalogReferencedByAnotherTenant() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var model = createModel(mapper);
+            var connectionMapper = session.getMapper(ModelConnectionMapper.class);
+            var connection = createConnection(model.getId());
+            RequestContext.setTenantCode(2L);
+            connectionMapper.insert(connection);
+            RequestContext.setTenantCode(1L);
+            RequestContext.getUser().setPlatformAdmin(true);
+            var cipher = createCipher();
+            var connections = new ModelConnectionService(connectionMapper, cipher);
+            var models = new ModelService(mapper);
+            var biz = new ModelBizService(models, connections);
+            assertThrows(ApiRuntimeException.class, () -> biz.removeModel(model.getId()));
+            var dto = createModelRequest();
+            dto.setVersion(model.getVersion());
+            dto.setModelCode("changed-code");
+            var edit = ModelConverter.INSTANCE.toEntity(dto);
+            edit.setId(model.getId());
+            assertThrows(ApiRuntimeException.class, () -> biz.modifyModel(edit));
+            connectionMapper.deleteById(connection.getId());
+            biz.removeModel(model.getId());
+            assertNull(mapper.selectById(model.getId()));
+        }
+    }
+
+    /** 模型保存支持维度数组，新增、修改与读取均保持集合，支持范围不受系统三种存储维度限制。 */
+    @Test
+    void shouldManageEmbeddingModelSupportedDimensions() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        RequestContext.getUser().setPlatformAdmin(true);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var service = new ModelService(mapper);
+            var dto = createModelRequest();
+            dto.setModelType("embedding");
+            var dimensions = new Integer[]{256, 768, 1024, 1536, 2048};
+            dto.setEmbedding(dimensions);
+            var entity = ModelConverter.INSTANCE.toEntity(dto);
+            var id = service.createModel(entity);
+            assertEquals("embedding", mapper.selectById(id).getModelType());
+            assertArrayEquals(dimensions, mapper.selectById(id).getEmbedding());
+            dto.setModelName("更新后的向量模型");
+            var updatedDimensions = new Integer[]{768, 1024};
+            dto.setEmbedding(updatedDimensions);
+            dto.setVersion(0L);
+            var edit = ModelConverter.INSTANCE.toEntity(dto);
+            edit.setId(id);
+            service.modifyModel(edit);
+            assertEquals("更新后的向量模型", mapper.selectById(id).getModelName());
+            assertArrayEquals(updatedDimensions, mapper.selectById(id).getEmbedding());
+            assertEquals(1L, mapper.selectById(id).getVersion());
+        }
+    }
+
+    /** 非法支持集合在新增和修改时均被拒绝，合法数据不会被错误请求覆盖。 */
+    @Test
+    void shouldRejectInvalidSupportedDimensionArrays() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        RequestContext.getUser().setPlatformAdmin(true);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var service = new ModelService(mapper);
+            var dto = createModelRequest();
+            dto.setModelType("embedding");
+            var supported = new Integer[]{768, 1024};
+            dto.setEmbedding(supported);
+            var valid = ModelConverter.INSTANCE.toEntity(dto);
+            var id = service.createModel(valid);
+            var invalidArrays = new Integer[][]{null, {}, {null}, {0}, {-1}, {768, 768}};
+            for (var invalidArray : invalidArrays) {
+                dto.setEmbedding(invalidArray);
+                var invalid = ModelConverter.INSTANCE.toEntity(dto);
+                assertThrows(ApiRuntimeException.class, () -> service.createModel(invalid));
+                invalid.setId(id);
+                invalid.setVersion(0L);
+                assertThrows(ApiRuntimeException.class, () -> service.modifyModel(invalid));
+            }
+            assertArrayEquals(supported, mapper.selectById(id).getEmbedding());
+            assertEquals(0L, mapper.selectById(id).getVersion());
+        }
+    }
+
+    /** 非向量模型禁止填写集合；无连接引用的模型改为聊天类型时须显式清空原集合。 */
+    @Test
+    void shouldClearSupportedDimensionsWhenChangingModelType() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        RequestContext.getUser().setPlatformAdmin(true);
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var service = new ModelService(mapper);
+            var dto = createModelRequest();
+            var dimensions = new Integer[]{768, 1024};
+            dto.setEmbedding(dimensions);
+            var invalid = ModelConverter.INSTANCE.toEntity(dto);
+            assertThrows(ApiRuntimeException.class, () -> service.createModel(invalid));
+            dto.setModelType("embedding");
+            var embedding = ModelConverter.INSTANCE.toEntity(dto);
+            var id = service.createModel(embedding);
+            dto.setModelType("chat");
+            dto.setEmbedding(null);
+            dto.setVersion(0L);
+            var edit = ModelConverter.INSTANCE.toEntity(dto);
+            edit.setId(id);
+            service.modifyModel(edit);
+            assertNull(mapper.selectById(id).getEmbedding());
+            assertEquals("chat", mapper.selectById(id).getModelType());
+        }
+    }
+
+    /** 构造可维护模型定义，选填字段先有值以验证后续清空行为。 */
+    private ModelSaveDTO createModelRequest() {
+        var dto = new ModelSaveDTO();
+        dto.setProviderCode("aliyun");
+        dto.setModelName("管理测试模型");
+        dto.setModelCode("managed-model");
+        dto.setModelType("chat");
+        dto.setSort(0);
+        dto.setLogoPath("/assets/model.svg");
+        dto.setDescription("管理测试");
+        dto.setApiKeyUrl("https://example.com/keys");
+        dto.setSetupGuideUrl("https://example.com/guide");
+        dto.setBaseUrlHelp("从控制台获取地址");
+        return dto;
     }
 
     /** 使用真实YAML、填充器和拦截链，避免测试自行复制隔离策略。 */
@@ -176,7 +364,7 @@ class ModelPersistenceTest {
                 int start = ddl.indexOf("create table " + table + "\n");
                 int end = ddl.indexOf(";", start);
                 // H2使用Java正则，替换等价的空白字符类；完整原始DDL另用PostgreSQL验证。
-                var tableDdl = ddl.substring(start, end).replace("[^[:space:]]", "[^\\s]");
+                var tableDdl = ddl.substring(start, end).replace("[^[:space:]]", "[^\\s]").replace("integer[]", "integer array");
                 statement.execute(tableDdl);
             }
         }
@@ -193,7 +381,7 @@ class ModelPersistenceTest {
         return Binder.get(environment).bind("etd.mybatis", EtdMyBatisPlusProperties.class).get();
     }
 
-    /** 平台模型的维护归属不带租户，测试插入模拟开发人员录入。 */
+    /** 平台模型的维护归属不带租户，测试插入模拟平台管理员录入。 */
     private ModelEntity createModel(ModelMapper mapper) {
         var model = new ModelEntity();
         model.setProviderCode("aliyun");

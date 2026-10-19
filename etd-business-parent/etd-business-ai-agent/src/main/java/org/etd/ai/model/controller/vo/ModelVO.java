@@ -2,9 +2,15 @@ package org.etd.ai.model.controller.vo;
 
 import lombok.Data;
 
-/** 租户选模型时使用的公共目录信息，不包含任何租户凭证。 */
+/** 模型管理查询及管理使用的公共信息，不包含任何租户凭证。 */
 @Data
 public class ModelVO {
+    /** 乐观锁版本，修改模型时原样回传。 */
+    private Long version;
+
+    /** 启停状态：0停用、1启用。 */
+    private Integer dataStatus;
+
     /** 平台模型标识，按框架约定以字符串传输。 */
     private Long id;
     /** 服务商字典值，用于筛选，不表示接入协议。 */
@@ -34,9 +40,9 @@ public class ModelVO {
     /** 服务地址获取及填写说明，专属实例地址由租户提供。 */
     private String baseUrlHelp;
 
-    /** 平台定义的固定向量维度；未确定时为空，不能作为连接已验证的证明。 */
-    private Integer embeddingDimensions;
+    /** 平台登记的模型支持维度集合；向量模型必填且元素为不重复的正整数，非向量模型为空；知识库可选值还须与系统支持范围取交集。 */
+    private Integer[] embedding;
 
-    /** 模型目录展示顺序，数值越小越靠前。 */
+    /** 模型管理展示顺序，数值越小越靠前。 */
     private Integer sort;
 }

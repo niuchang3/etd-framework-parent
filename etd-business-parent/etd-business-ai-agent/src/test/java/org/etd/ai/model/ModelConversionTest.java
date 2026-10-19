@@ -49,8 +49,14 @@ class ModelConversionTest {
         assertNull(entity.getTenantId());
         assertNull(entity.getCreateBy());
         var model = new ModelEntity();
-        model.setEmbeddingDimensions(1024);
+        model.setModelType("embedding");
+        var dimensions = new Integer[]{768, 1024, 1536};
+        model.setEmbedding(dimensions);
         var response = ModelConverter.INSTANCE.toVO(model);
-        assertEquals(1024, response.getEmbeddingDimensions());
+        assertEquals("embedding", response.getModelType());
+        assertArrayEquals(dimensions, response.getEmbedding());
+        var output = json.valueToTree(response);
+        assertEquals(3, output.get("embedding").size());
+        assertEquals(768, output.get("embedding").get(0).intValue());
     }
 }

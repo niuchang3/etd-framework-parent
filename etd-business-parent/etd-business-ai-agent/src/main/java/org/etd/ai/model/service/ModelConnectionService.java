@@ -113,6 +113,17 @@ public class ModelConnectionService {
         mapper.deleteById(id);
     }
 
+    /**
+     * 统计模型的有效连接引用；平台管理员调用时框架自动跨租户统计。
+     * @param modelId 全局模型标识
+     * @return 未删除的连接数量
+     */
+    public long countConnectionByModel(Long modelId) {
+        var query = Wrappers.<ModelConnectionEntity>lambdaQuery()
+                .eq(ModelConnectionEntity::getModelId, modelId);
+        return mapper.selectCount(query);
+    }
+
     /** 凭证只写；更新留空沿用原密文，切换为none时显式清空两个存储字段。 */
     private void populateCredential(
             ModelConnectionEntity e, String key, ModelConnectionEntity old) {

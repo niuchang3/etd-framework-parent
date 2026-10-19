@@ -1,15 +1,29 @@
 package org.etd.ai.model.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
+import org.apache.ibatis.type.JdbcType;
+import org.etd.ai.model.mapper.typehandler.EmbeddingDimensionsTypeHandler;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.etd.framework.starter.mybaits.core.BaseEntity;
 
-/** 平台全局模型目录；由开发人员维护，不存储租户地址或凭证。 */
+import org.etd.framework.starter.mybaits.core.BaseEntity;
+import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
+
+/** 平台全局模型管理；由平台管理员维护，不存储租户地址或凭证。 */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName(value = "ai_model", excludeProperty = "tenantId")
+@TableName(value = "ai_model", excludeProperty = "tenantId", autoResultMap = true)
 public class ModelEntity extends BaseEntity {
+    /** 乐观锁版本，新增由框架填充，更新必须携带当前值。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("0")
+    @Version
+    private Long version;
+
     /** 服务商字典值，用于筛选，不表示接入协议。 */
     private String providerCode;
 
@@ -37,9 +51,10 @@ public class ModelEntity extends BaseEntity {
     /** 服务地址获取及填写说明，专属实例地址由租户提供。 */
     private String baseUrlHelp;
 
-    /** 平台定义的固定向量维度；未确定时为空，不能作为连接已验证的证明。 */
-    private Integer embeddingDimensions;
+    /** 平台登记的模型支持维度集合；向量模型必填且元素为不重复的正整数，非向量模型为空；知识库可选值还须与系统支持范围取交集。 */
+    @TableField(jdbcType = JdbcType.ARRAY, typeHandler = EmbeddingDimensionsTypeHandler.class)
+    private Integer[] embedding;
 
-    /** 模型目录展示顺序，数值越小越靠前。 */
+    /** 模型管理展示顺序，数值越小越靠前。 */
     private Integer sort;
 }

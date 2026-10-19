@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "logging.file=${java.io.tmpdir}/etd-ai-startup-test"
 })
 class AgentApplicationSmokeTest {
-    /** 实际装配的只读模型目录入口。 */
+    /** 实际装配的只读模型管理入口。 */
     @Autowired
     private ModelController models;
 
