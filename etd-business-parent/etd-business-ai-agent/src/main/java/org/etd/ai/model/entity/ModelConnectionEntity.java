@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import org.etd.framework.starter.mybaits.core.BaseEntity;
 import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
@@ -19,11 +20,11 @@ public class ModelConnectionEntity extends BaseEntity {
     @Version
     private Long version;
 
-    /** 租户自定义连接名称。 */
-    private String connectionName;
+    /** 租户选中的平台模型标识，一个连接器对应一个模型。 */
+    private Long modelId;
 
     /** 接入协议代码。 */
-    private String provider;
+    private String protocol;
 
     /** 服务端API根地址。 */
     private String baseUrl;
@@ -32,7 +33,7 @@ public class ModelConnectionEntity extends BaseEntity {
     private String authType;
 
     /** AES-GCM认证加密后的API Key，不返回前端。 */
-    @lombok.ToString.Exclude
+    @ToString.Exclude
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String apiKeyCiphertext;
 
@@ -40,7 +41,20 @@ public class ModelConnectionEntity extends BaseEntity {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String credentialKeyId;
 
-    /** 非敏感用途备注。 */
-    @TableField(updateStrategy = FieldStrategy.ALWAYS)
-    private String remark;
+    /** 平台模型名称；仅用于关联查询展示，不写入连接表。 */
+    @TableField(exist = false)
+    private String modelName;
+
+    /** 模型主能力类型；仅用于关联查询展示，不写入连接表。 */
+    @TableField(exist = false)
+    private String modelType;
+
+    /** 所属服务商字典值；仅用于关联查询展示，不写入连接表。 */
+    @TableField(exist = false)
+    private String providerCode;
+
+    /** 模型Logo资源路径；仅用于关联查询展示，不写入连接表。 */
+    @TableField(exist = false)
+    private String logoPath;
+
 }

@@ -21,11 +21,10 @@ public interface ModelConnectionConverter {
      * @return 待保存的业务实体
      */
     @BeanMapping(ignoreByDefault = true)
-    @Mapping(target = "connectionName", expression = "java(dto.getConnectionName().trim())")
-    @Mapping(target = "provider", source = "provider")
+    @Mapping(target = "modelId", source = "modelId")
+    @Mapping(target = "protocol", source = "protocol")
     @Mapping(target = "baseUrl", source = "baseUrl")
     @Mapping(target = "authType", source = "authType")
-    @Mapping(target = "remark", source = "remark")
     @Mapping(target = "version", source = "version")
     ModelConnectionEntity toEntity(ModelConnectionSaveDTO dto);
 

@@ -1,7 +1,33 @@
 package org.etd.ai.model.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.apache.ibatis.annotations.Param;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 
-/** 模型连接数据访问，租户隔离由框架负责。 */
-public interface ModelConnectionMapper extends BaseMapper<ModelConnectionEntity> {}
+/** 租户模型连接数据访问，模型展示字段通过SQL关联查询。 */
+public interface ModelConnectionMapper extends BaseMapper<ModelConnectionEntity> {
+    /**
+     * 关联目录分页查询连接，普通租户由框架拦截器隔离。
+     * @param page 分页参数
+     * @param modelId 可选模型标识
+     * @param dataStatus 可选启停状态
+     * @return 连接及模型展示信息
+     */
+    IPage<ModelConnectionEntity> selectConnectionPage(IPage<ModelConnectionEntity> page,
+            @Param("modelId") Long modelId, @Param("dataStatus") Integer dataStatus);
+
+    /**
+     * 查询连接及关联模型信息，不向Controller直接返回VO。
+     * @param id 连接标识
+     * @return 连接详情，不存在时为空
+     */
+    ModelConnectionEntity selectConnectionDetail(@Param("id") Long id);
+
+    /**
+     * 统计未删除知识库对连接的使用，阻止删除仍被使用的连接。
+     * @param id 连接器标识
+     * @return 引用数量
+     */
+    long countKnowledgeBaseByConnection(@Param("id") Long id);
+}

@@ -219,7 +219,7 @@ class KnowledgeFolderPersistenceTest {
 
     /** 直接加载目录建表片段，避免测试自行维护另一套字段。 */
     private void createFolderTable(JdbcDataSource dataSource) throws Exception {
-        var schema = new ClassPathResource("sql/postgresql/schema.sql");
+        var schema = new ClassPathResource("sql/ai.sql");
         String ddl = schema.getContentAsString(StandardCharsets.UTF_8);
         int start = ddl.indexOf("create table ai_knowledge_folder\n");
         int end = ddl.indexOf(";", start);

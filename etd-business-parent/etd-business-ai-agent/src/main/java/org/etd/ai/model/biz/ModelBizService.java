@@ -1,59 +1,40 @@
 package org.etd.ai.model.biz;
 
 import lombok.RequiredArgsConstructor;
-
-import org.etd.ai.model.entity.ModelConfigEntity;
-import org.etd.ai.model.service.ModelConfigService;
+import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.service.ModelConnectionService;
-import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.ai.model.service.ModelService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 模型和连接的跨能力写入编排，锁定连接防止并发删除后新建模型。 */
+/** 租户选择平台模型后的接入编排；凭证加密由连接能力服务负责。 */
 @Service
 @RequiredArgsConstructor
 public class ModelBizService {
-    private final ModelConfigService models;
+    private final ModelService models;
     private final ModelConnectionService connections;
 
     /**
-     * 创建前校验并锁定同租户连接。
-     *
-     * @param e 本次写入的业务记录，租户和审计信息由后端控制
-     * @return 业务记录的雪花标识
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 校验模型可用后创建租户连接，不发起外部模型调用。
+     * @param entity 租户提交的模型及连接配置
+     * @param apiKey 只写凭证，不记录到日志
+     * @return 连接器标识
      */
     @Transactional
-    public Long createModel(ModelConfigEntity e) {
-        connections.requireConnection(e.getConnectionId(), true);
-        return models.createModel(e);
+    public Long createConnection(ModelConnectionEntity entity, String apiKey) {
+        models.requireModel(entity.getModelId());
+        return connections.createConnection(entity, apiKey);
     }
 
     /**
-     * 修改时锁定目标连接并校验模型版本。
-     *
-     * @param e 本次写入的业务记录，租户和审计信息由后端控制
-     * @param version 页面读取的当前版本，用于拒绝并发覆盖
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
+     * 校验模型可用后修改接入信息，禁止更换连接器绑定的模型。
+     * @param entity 连接配置，不包含可信租户字段
+     * @param apiKey 新凭证，留空保留原凭证
+     * @param version 页面读取的乐观锁版本
      */
     @Transactional
-    public void modifyModel(ModelConfigEntity e, Long version) {
-        connections.requireConnection(e.getConnectionId(), true);
-        models.modifyModel(e, version);
-    }
-
-    /**
-     * 删除连接前检查仍在使用的模型。
-     *
-     * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
-     * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
-     */
-    @Transactional
-    public void removeConnection(Long id) {
-        connections.requireConnection(id, true);
-        if (models.countModelByConnection(id) > 0) {
-            throw new ApiRuntimeException("连接仍有模型配置，不能删除");
-        }
-        connections.removeConnection(id);
+    public void modifyConnection(ModelConnectionEntity entity, String apiKey, Long version) {
+        models.requireModel(entity.getModelId());
+        connections.modifyConnection(entity, apiKey, version);
     }
 }

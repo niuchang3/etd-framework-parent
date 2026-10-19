@@ -1,152 +1,175 @@
 /*==============================================================*/
+/* AI 数据库检索扩展与中英文分词配置。                          */
+/* 在 AI 数据库执行，本节先安装扩展，再执行后续建表。          */
+/* 数据库镜像须已安装 vector、zhparser、SCWS 及其词库。         */
+/* 不包含系统字典初始化，不由应用启动流程自动执行。            */
+/*==============================================================*/
+begin;
+
+-- 界面可能已启用扩展；此处只复用已安装扩展，不下载安装文件。
+create extension if not exists vector;
+create extension if not exists zhparser;
+
+-- SCWS 统一切分中英文，再以英文词干词典规范化；中文词项保持原词，英文词形归一。
+create text search configuration public.ai_zh_v1 (parser = zhparser);
+alter text search configuration public.ai_zh_v1
+    add mapping for n, v, a, i, e, l, j, x, m, t with english_stem;
+
+comment on text search configuration public.ai_zh_v1 is
+    'AI 中英文统一分词配置 v1；SCWS 切词及英文词干归一，变更后必须重算全文索引列';
+
+-- 固定 regconfig 使生成列不受连接默认语言影响；配置视为不可变，变更需重算已存词项。
+create function public.ai_search_vector(title text, content text)
+returns tsvector
+language sql
+immutable
+as $function$
+    select pg_catalog.setweight(
+               pg_catalog.to_tsvector('public.ai_zh_v1'::regconfig, coalesce(title, '')), 'A')
+           || pg_catalog.setweight(
+               pg_catalog.to_tsvector('public.ai_zh_v1'::regconfig, coalesce(content, '')), 'B');
+$function$;
+
+comment on function public.ai_search_vector(text, text) is
+    '生成统一中英文全文词项：标题权重 A、正文权重 B，供分片 STORED 列及 GIN 索引使用';
+
+-- 查询和索引使用相同分词规则；普通输入不作为 tsquery 语法执行。
+create function public.ai_search_query(query_text text)
+returns tsquery
+language sql
+immutable
+as $function$
+    select pg_catalog.plainto_tsquery('public.ai_zh_v1'::regconfig, coalesce(query_text, ''));
+$function$;
+
+comment on function public.ai_search_query(text) is
+    '按索引相同规则生成中英文全文查询；调用方须对空词项返回空候选并附加租户授权条件';
+
+commit;
+
+/*==============================================================*/
 /* SaaS 模型、知识库、分片及向量检索的完整初始结构。           */
 /* 本脚本描述当前最终结构，由部署流程显式执行，不在应用启动时执行。 */
 /*==============================================================*/
 
--- 先执行 extensions.sql；本文件为首次建库 DDL，不作为增量迁移脚本重复执行。
+-- 扩展和检索函数由本文件前半部分创建；本节定义首次建库表结构。
 begin;
 set local search_path = public, pg_catalog;
 
+create table ai_model
+(
+    id                       bigint not null,
+    create_time              timestamp(6) with time zone not null default current_timestamp,
+    create_by                bigint,
+    update_time              timestamp(6) with time zone not null default current_timestamp,
+    update_by                bigint,
+    data_status              integer not null default 1,
+    del_flag                 smallint not null default 0,
+    provider_code            varchar(64) not null,
+    model_type               varchar(32) not null,
+    model_name               varchar(100) not null,
+    model_code               varchar(200) not null,
+    logo_path                varchar(1000),
+    description              varchar(1000),
+    api_key_url              varchar(1000),
+    setup_guide_url          varchar(1000),
+    base_url_help            varchar(1000),
+    embedding_dimensions     integer,
+    sort                     integer not null default 0,
+    primary key (id),
+    constraint uk_ai_model_dimensions unique (id, embedding_dimensions),
+    constraint ck_ai_model_status check (data_status in (0, 1)),
+    constraint ck_ai_model_deleted check (del_flag in (0, 1)),
+    constraint ck_ai_model_name check (model_name = btrim(model_name) and model_name <> ''),
+    constraint ck_ai_model_code check (model_code = btrim(model_code) and model_code <> ''),
+    constraint ck_ai_model_provider check (provider_code = btrim(provider_code) and provider_code <> ''),
+    constraint ck_ai_model_type check (model_type in ('chat', 'embedding', 'rerank', 'image', 'speech_to_text', 'text_to_speech')),
+    constraint ck_ai_model_dimensions check ((model_type = 'embedding' and (embedding_dimensions is null or embedding_dimensions > 0)) or (model_type <> 'embedding' and embedding_dimensions is null)),
+    constraint ck_ai_model_sort check (sort >= 0)
+);
+
+comment on table ai_model is '平台全局模型目录：开发人员维护，所有租户共用；不保存租户连接及凭证';
+comment on column ai_model.id is '主键ID，由应用分配雪花ID';
+comment on column ai_model.create_time is '创建时间，保存带时区的绝对时间点';
+comment on column ai_model.create_by is '创建用户ID';
+comment on column ai_model.update_time is '最后修改时间，保存带时区的绝对时间点';
+comment on column ai_model.update_by is '最后修改用户ID';
+comment on column ai_model.data_status is '启停状态：0禁用、1启用';
+comment on column ai_model.del_flag is '逻辑删除：0未删除、1已删除';
+comment on column ai_model.provider_code is '服务商字典ai_model_provider的值，与接入协议分开';
+comment on column ai_model.model_type is '模型类型字典ai_model_type的值，必须有对应的后端能力支持';
+comment on column ai_model.model_name is '平台模型展示名称';
+comment on column ai_model.model_code is '调用模型接口使用的真实模型代码，由平台维护';
+comment on column ai_model.logo_path is '模型Logo资源路径';
+comment on column ai_model.description is '模型用途及特点介绍';
+comment on column ai_model.api_key_url is '获取API Key的服务商页面地址，不保存密钥';
+comment on column ai_model.setup_guide_url is '模型开通及协议接入指南地址';
+comment on column ai_model.base_url_help is '实际服务地址的获取及填写说明，不能填入租户专属地址';
+comment on column ai_model.embedding_dimensions is '平台定义的固定向量维度，未确定时为空；不表示租户连接已验证';
+comment on column ai_model.sort is '模型目录排序值，越小越靠前';
+
+-- 一个服务商下的有效调用模型代码唯一；不同服务商可收录相同模型。
+create unique index uk_ai_model_provider_code on ai_model (provider_code, model_code) where del_flag = 0;
+-- 覆盖目录四种筛选组合：无筛选、仅服务商、仅类型及服务商加类型。
+create index idx_ai_model_sort on ai_model (sort, id) where del_flag = 0 and data_status = 1;
+create index idx_ai_model_provider_sort on ai_model (provider_code, sort, id) where del_flag = 0 and data_status = 1;
+create index idx_ai_model_type_sort on ai_model (model_type, sort, id) where del_flag = 0 and data_status = 1;
+create index idx_ai_model_provider_type_sort on ai_model (provider_code, model_type, sort, id)
+    where del_flag = 0 and data_status = 1;
+
 create table ai_model_connection
 (
-    id                    bigint not null,
-    create_time           timestamp(6) with time zone not null default current_timestamp,
-    create_by             bigint,
-    update_time           timestamp(6) with time zone not null default current_timestamp,
-    update_by             bigint,
-    data_status           integer not null default 1,
-    tenant_id             bigint not null,
-    del_flag              smallint not null default 0,
-    version               bigint not null default 0,
-    connection_name       varchar(100) not null,
-    provider              varchar(32) not null,
-    base_url              varchar(1000) not null,
-    auth_type             varchar(16) not null,
-    api_key_ciphertext    text,
-    credential_key_id     varchar(64),
-    remark                varchar(500),
+    id                       bigint not null,
+    create_time              timestamp(6) with time zone not null default current_timestamp,
+    create_by                bigint,
+    update_time              timestamp(6) with time zone not null default current_timestamp,
+    update_by                bigint,
+    data_status              integer not null default 1,
+    del_flag                 smallint not null default 0,
+    tenant_id                bigint not null,
+    version                  bigint not null default 0,
+    model_id                 bigint not null,
+    protocol                 varchar(32) not null,
+    base_url                 varchar(1000) not null,
+    auth_type                varchar(16) not null,
+    api_key_ciphertext       text,
+    credential_key_id        varchar(64),
     primary key (id),
-    -- 复合外键的被引用键必须包含租户，不能使用仅覆盖未删除记录的部分唯一索引。
     constraint uk_ai_model_connection_tenant_id unique (tenant_id, id),
+    constraint uk_ai_model_connection_binding unique (tenant_id, id, model_id),
+    constraint fk_ai_model_connection_model foreign key (model_id) references ai_model (id),
     constraint ck_ai_model_connection_status check (data_status in (0, 1)),
     constraint ck_ai_model_connection_deleted check (del_flag in (0, 1)),
     constraint ck_ai_model_connection_version check (version >= 0),
-    constraint ck_ai_model_connection_name check
-        (connection_name = btrim(connection_name) and connection_name <> ''),
-    constraint ck_ai_model_connection_provider check
-        (provider in ('dashscope', 'ollama', 'openai_compatible')),
+    constraint ck_ai_model_connection_protocol check (protocol in ('dashscope', 'ollama', 'openai_compatible')),
     constraint ck_ai_model_connection_url check (base_url ~ '^https?://[^[:space:]]+$'),
-    constraint ck_ai_model_connection_auth check
-        ((auth_type = 'none' and api_key_ciphertext is null and credential_key_id is null)
-         or (auth_type = 'api_key' and nullif(btrim(api_key_ciphertext), '') is not null
-             and nullif(btrim(credential_key_id), '') is not null))
+    constraint ck_ai_model_connection_auth check ((auth_type = 'none' and api_key_ciphertext is null and credential_key_id is null) or (auth_type = 'api_key' and nullif(btrim(api_key_ciphertext), '') is not null and nullif(btrim(credential_key_id), '') is not null))
 );
 
-comment on table ai_model_connection is '模型服务连接：保存服务地址和认证信息，供多个模型配置共用';
-comment on column ai_model_connection.id is '主键ID，由应用分配全局唯一的雪花ID，不使用数据库自增';
-comment on column ai_model_connection.create_time is '创建时间，默认当前时间；保存带时区的时间点';
-comment on column ai_model_connection.create_by is '创建用户ID，可为空';
-comment on column ai_model_connection.update_time is '最后修改时间，新增时默认当前时间，后续修改由应用更新';
-comment on column ai_model_connection.update_by is '最后修改用户ID，可为空';
-comment on column ai_model_connection.data_status is '启停状态：0禁用、1启用，默认1';
-comment on column ai_model_connection.tenant_id is '所属租户ID，由后端租户上下文确定';
-comment on column ai_model_connection.del_flag is '逻辑删除标记：0未删除、1已删除，默认0';
-comment on column ai_model_connection.version is '乐观锁版本号，默认0且不能为负；用于检测并发修改，由应用维护递增';
-comment on column ai_model_connection.connection_name is '连接显示名称，最多100字；不能有首尾空格，同租户未删除的连接不能重名';
-comment on column ai_model_connection.provider is '服务接入方式：dashscope阿里云百炼、ollama本地模型服务、openai_compatible兼容OpenAI协议的服务';
-comment on column ai_model_connection.base_url is '模型服务的API根地址，必须使用http或https；不在地址中填写密钥等凭证';
-comment on column ai_model_connection.auth_type is '认证方式：none无需认证、api_key使用API密钥；使用api_key时必须同时保存密文和加密密钥标识';
-comment on column ai_model_connection.api_key_ciphertext is 'API密钥的加密结果，包含解密和校验所需的格式信息；无需认证时为空，不保存明文';
-comment on column ai_model_connection.credential_key_id is '加密API密钥时使用的服务端密钥标识；实际加密密钥由运行环境提供，不存入数据库';
-comment on column ai_model_connection.remark is '连接备注，最多500字；不填写API密钥等敏感信息';
+comment on table ai_model_connection is '租户模型连接器：直接关联一个平台模型，保存租户选择的协议、实际地址及认证凭证';
+comment on column ai_model_connection.id is '主键ID，由应用分配雪花ID';
+comment on column ai_model_connection.create_time is '创建时间，保存带时区的绝对时间点';
+comment on column ai_model_connection.create_by is '创建用户ID';
+comment on column ai_model_connection.update_time is '最后修改时间，保存带时区的绝对时间点';
+comment on column ai_model_connection.update_by is '最后修改用户ID';
+comment on column ai_model_connection.data_status is '启停状态：0禁用、1启用';
+comment on column ai_model_connection.del_flag is '逻辑删除：0未删除、1已删除';
+comment on column ai_model_connection.tenant_id is '所属租户，由可信请求上下文填充';
+comment on column ai_model_connection.version is '乐观锁版本，更新必须携带当前版本';
+comment on column ai_model_connection.model_id is '所选平台模型ID，创建后不允许更换';
+comment on column ai_model_connection.protocol is '租户选择的接入协议，不是服务商编码；保存不表示调用已经验证';
+comment on column ai_model_connection.base_url is '租户实际服务地址，不得含凭证、查询参数或片段';
+comment on column ai_model_connection.auth_type is '认证方式：none无需认证、api_key密钥认证';
+comment on column ai_model_connection.api_key_ciphertext is 'AES-GCM加密的API Key，不返回前端';
+comment on column ai_model_connection.credential_key_id is '服务端加密密钥标识，实际主密钥由环境注入';
 
-create unique index uk_ai_model_connection_tenant_name
-    on ai_model_connection (tenant_id, connection_name)
-    where del_flag = 0;
-
--- 租户连接列表按创建时间倒序分页，不使用应用侧集合过滤或排序。
+-- 不强制同一租户只能接入一次同一模型；使用模型和地址区分，不保留连接名称。
 create index idx_ai_model_connection_tenant_created
-    on ai_model_connection (tenant_id, create_time desc, id desc)
-    where del_flag = 0;
-
-/*==============================================================*/
-/* table: ai_model_config                                       */
-/*==============================================================*/
-
-create table ai_model_config
-(
-    id                    bigint not null,
-    create_time           timestamp(6) with time zone not null default current_timestamp,
-    create_by             bigint,
-    update_time           timestamp(6) with time zone not null default current_timestamp,
-    update_by             bigint,
-    data_status           integer not null default 1,
-    tenant_id             bigint not null,
-    del_flag              smallint not null default 0,
-    version               bigint not null default 0,
-    connection_id         bigint not null,
-    model_name            varchar(100) not null,
-    model_type            varchar(32) not null,
-    model_code            varchar(200) not null,
-    embedding_dimensions  integer,
-    capabilities          jsonb not null default '{}'::jsonb,
-    default_options       jsonb not null default '{}'::jsonb,
-    remark                varchar(500),
-    primary key (id),
-    -- 供知识库同时校验模型租户、标识和实际向量维度。
-    constraint uk_ai_model_config_tenant_dimensions unique (tenant_id, id, embedding_dimensions),
-    constraint fk_ai_model_config_tenant_connection
-        foreign key (tenant_id, connection_id)
-            references ai_model_connection (tenant_id, id),
-    constraint ck_ai_model_config_status check (data_status in (0, 1)),
-    constraint ck_ai_model_config_deleted check (del_flag in (0, 1)),
-    constraint ck_ai_model_config_version check (version >= 0),
-    constraint ck_ai_model_config_name check
-        (model_name = btrim(model_name) and model_name <> ''),
-    constraint ck_ai_model_config_code check
-        (model_code = btrim(model_code) and model_code <> ''),
-    constraint ck_ai_model_config_type check
-        (model_type in ('chat', 'embedding', 'rerank', 'image', 'speech_to_text', 'text_to_speech')),
-    -- 基础阶段允许向量模型未实测维度；其他类型不得混入维度参数。
-    constraint ck_ai_model_config_dimensions check
-        ((model_type = 'embedding' and (embedding_dimensions is null or embedding_dimensions > 0))
-         or (model_type <> 'embedding' and embedding_dimensions is null)),
-    constraint ck_ai_model_config_capabilities check (jsonb_typeof(capabilities) = 'object'),
-    constraint ck_ai_model_config_options check (jsonb_typeof(default_options) = 'object')
-);
-
-comment on table ai_model_config is '模型配置：记录连接下的具体模型、能力类型和默认调用参数，供知识库或Agent选用';
-comment on column ai_model_config.id is '主键ID，由应用分配全局唯一的雪花ID，不使用数据库自增';
-comment on column ai_model_config.create_time is '创建时间，默认当前时间；保存带时区的时间点';
-comment on column ai_model_config.create_by is '创建用户ID，可为空';
-comment on column ai_model_config.update_time is '最后修改时间，新增时默认当前时间，后续修改由应用更新';
-comment on column ai_model_config.update_by is '最后修改用户ID，可为空';
-comment on column ai_model_config.data_status is '启停状态：0禁用、1启用，默认1';
-comment on column ai_model_config.tenant_id is '所属租户ID，由后端租户上下文确定';
-comment on column ai_model_config.del_flag is '逻辑删除标记：0未删除、1已删除，默认0';
-comment on column ai_model_config.version is '乐观锁版本号，默认0且不能为负；用于检测并发修改，由应用维护递增';
-comment on column ai_model_config.connection_id is '所属模型服务连接ID，关联ai_model_connection.id，必须与当前配置属于同一租户';
-comment on column ai_model_config.model_name is '模型显示名称，最多100字；不能有首尾空格，同租户同能力类型的未删除模型不能重名';
-comment on column ai_model_config.model_type is '模型主要能力：chat聊天、embedding向量化、rerank重排序、image图片生成、speech_to_text语音识别、text_to_speech语音合成';
-comment on column ai_model_config.model_code is '调用服务时使用的真实模型名称，例如qwen-plus；可与页面显示名称不同，不能有首尾空格';
-comment on column ai_model_config.embedding_dimensions is '向量模型实际输出的向量维度，正整数；未实测时可为空，非embedding类型必须为空';
-comment on column ai_model_config.capabilities is '模型能力说明，JSON对象，默认空对象；例如是否支持工具调用、图片输入或流式输出';
-comment on column ai_model_config.default_options is '模型调用的默认参数，JSON对象，默认空对象；不用于保存密钥、地址、模型名称或覆盖向量维度';
-comment on column ai_model_config.remark is '模型用途说明，最多500字；不填写密钥等敏感信息';
-
-create unique index uk_ai_model_config_tenant_type_name
-    on ai_model_config (tenant_id, model_type, model_name)
-    where del_flag = 0;
-
--- 页面先选择模型分类，再按创建时间倒序分页；启停状态作为附加筛选字段。
-create index idx_ai_model_config_tenant_type_created
-    on ai_model_config (tenant_id, model_type, create_time desc, id desc)
-    include (data_status)
-    where del_flag = 0;
-
--- 连接下模型查询、JOIN 及外键检查共用此索引，不仅覆盖未删除记录。
-create index idx_ai_model_config_tenant_connection
-    on ai_model_config (tenant_id, connection_id);
+    on ai_model_connection (tenant_id, create_time desc, id desc) include (data_status) where del_flag = 0;
+create index idx_ai_model_connection_tenant_model_created
+    on ai_model_connection (tenant_id, model_id, create_time desc, id desc) include (data_status) where del_flag = 0;
+-- 不限定逻辑删除，覆盖模型外键检查及目录与连接的JOIN。
+create index idx_ai_model_connection_model on ai_model_connection (model_id);
 
 /*==============================================================*/
 /* table: ai_knowledge_folder */
@@ -234,7 +257,8 @@ create table ai_knowledge_base
     knowledge_name              varchar(100) not null,
     description                 varchar(1000),
     retrieval_mode              varchar(16) not null default 'keyword',
-    embedding_model_config_id   bigint,
+    embedding_model_connection_id bigint,
+    embedding_model_id          bigint,
     embedding_dimensions        integer,
     chunk_max_tokens            integer not null,
     chunk_overlap_tokens        integer not null,
@@ -247,16 +271,19 @@ create table ai_knowledge_base
     constraint ck_ai_knowledge_base_deleted check (del_flag in (0, 1)),
     constraint ck_ai_knowledge_base_version check (version >= 0),
     constraint uk_ai_knowledge_base_tenant unique (tenant_id, id),
-    constraint uk_ai_knowledge_base_vector_binding unique (tenant_id, id, embedding_model_config_id, embedding_dimensions),
+    constraint uk_ai_knowledge_base_vector_binding unique (tenant_id, id, embedding_model_connection_id, embedding_dimensions),
     constraint fk_ai_knowledge_base_folder foreign key (tenant_id, folder_id)
         references ai_knowledge_folder (tenant_id, id),
-    constraint fk_ai_knowledge_base_model foreign key (tenant_id, embedding_model_config_id, embedding_dimensions)
-        references ai_model_config (tenant_id, id, embedding_dimensions),
+    -- 同时校验租户连接归属、连接绑定的模型及该模型的固定维度。
+    constraint fk_ai_knowledge_base_connection foreign key (tenant_id, embedding_model_connection_id, embedding_model_id)
+        references ai_model_connection (tenant_id, id, model_id),
+    constraint fk_ai_knowledge_base_model foreign key (embedding_model_id, embedding_dimensions)
+        references ai_model (id, embedding_dimensions),
     constraint ck_ai_knowledge_base_name check (knowledge_name = btrim(knowledge_name) and knowledge_name <> ''),
     constraint ck_ai_knowledge_base_mode check (retrieval_mode in ('keyword', 'vector', 'hybrid')),
     constraint ck_ai_knowledge_base_embedding check (
-        (embedding_model_config_id is null and embedding_dimensions is null)
-        or (embedding_model_config_id is not null and embedding_dimensions is not null
+        (embedding_model_connection_id is null and embedding_model_id is null and embedding_dimensions is null)
+        or (embedding_model_connection_id is not null and embedding_model_id is not null and embedding_dimensions is not null
             and embedding_dimensions between 768 and 1536)),
     constraint ck_ai_knowledge_base_chunk_size check (chunk_max_tokens > 0 and chunk_overlap_tokens >= 0 and chunk_overlap_tokens < chunk_max_tokens),
     constraint ck_ai_knowledge_base_top_k check (keyword_top_k > 0 and vector_top_k > 0 and retrieval_top_k > 0
@@ -280,8 +307,9 @@ comment on column ai_knowledge_base.version is '乐观锁版本号，默认0且�
 comment on column ai_knowledge_base.knowledge_name is '知识库显示名称，最多100字；不能有首尾空格，同租户同目录的未删除知识库不能重名';
 comment on column ai_knowledge_base.description is '知识库的用途和内容范围说明，可为空，最多1000字';
 comment on column ai_knowledge_base.retrieval_mode is '检索模式：keyword全文、vector向量、hybrid混合，默认keyword；保存模式不代表检索功能已经可用';
-comment on column ai_knowledge_base.embedding_model_config_id is '向量模型配置ID，关联ai_model_config.id；与embedding_dimensions同时有值或同时为空';
-comment on column ai_knowledge_base.embedding_dimensions is '绑定模型的向量维度，当前允许768～1536；须与模型配置一致，并与embedding_model_config_id同时填写或留空';
+comment on column ai_knowledge_base.embedding_model_connection_id is '向量模型连接器ID，关联ai_model_connection.id；与模型ID和维度同时填写或留空';
+comment on column ai_knowledge_base.embedding_model_id is '连接器绑定的平台模型ID，由后端确定；用于数据库校验连接与模型维度一致';
+comment on column ai_knowledge_base.embedding_dimensions is '绑定模型的向量维度，当前允许768～1536；须与平台模型固定维度一致，并与embedding_model_connection_id同时填写或留空';
 comment on column ai_knowledge_base.chunk_max_tokens is '文档分片的目标Token上限，必须大于0；还需由业务校验是否符合模型输入限制';
 comment on column ai_knowledge_base.chunk_overlap_tokens is '相邻分片重复保留的Token数量，不能为负，且必须小于chunk_max_tokens';
 comment on column ai_knowledge_base.keyword_top_k is '全文检索分支最多召回的候选分片数，必须大于0；不是最终返回数量';
@@ -292,7 +320,9 @@ comment on column ai_knowledge_base.similarity_threshold is '向量检索的最�
 create unique index uk_ai_knowledge_base_name on ai_knowledge_base (tenant_id, folder_id, knowledge_name) where del_flag = 0;
 create index idx_ai_knowledge_base_created on ai_knowledge_base (tenant_id, create_time desc, id desc) where del_flag = 0;
 -- 包含已删除引用，支持模型外键检查及模型关联知识库查询。
-create index idx_ai_knowledge_base_model on ai_knowledge_base (tenant_id, embedding_model_config_id, embedding_dimensions);
+create index idx_ai_knowledge_base_model on ai_knowledge_base (tenant_id, embedding_model_connection_id, embedding_model_id);
+create index idx_ai_knowledge_base_connection on ai_knowledge_base (embedding_model_connection_id) where del_flag = 0;
+create index idx_ai_knowledge_base_catalog_dimensions on ai_knowledge_base (embedding_model_id, embedding_dimensions);
 
 comment on column ai_knowledge_base.org_id is '知识库维护归属部门ID，用于管理权限过滤；文档的数据归属部门单独记录';
 comment on column ai_knowledge_base.folder_id is '所属目录ID，关联ai_knowledge_folder.id；必须属于同一租户，移动知识库只改变目录归属';
@@ -512,7 +542,7 @@ create table ai_vector_768
     knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
     document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
     chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
-    model_config_id bigint generated always as ((metadata->>'model_config_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
     processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
     embedding_dimensions integer generated always as (768) stored not null,
     constraint fk_ai_vector_768_chunk foreign key
@@ -521,9 +551,9 @@ create table ai_vector_768
         (tenant_id, knowledge_base_id, document_id, id, processing_version, vector_id, org_id, is_public)
         deferrable initially deferred,
     constraint fk_ai_vector_768_binding foreign key
-        (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions)
+        (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions)
         references ai_knowledge_base
-        (tenant_id, id, embedding_model_config_id, embedding_dimensions),
+        (tenant_id, id, embedding_model_connection_id, embedding_dimensions),
     constraint ck_ai_vector_768_content check (btrim(content) <> ''),
     constraint ck_ai_vector_768_metadata check (
         jsonb_typeof(metadata) = 'object'
@@ -538,8 +568,8 @@ create table ai_vector_768
         and (metadata->>'document_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'chunk_id' and jsonb_typeof(metadata->'chunk_id') = 'string'
         and (metadata->>'chunk_id') ~ '^[1-9][0-9]*$'
-        and metadata ? 'model_config_id' and jsonb_typeof(metadata->'model_config_id') = 'string'
-        and (metadata->>'model_config_id') ~ '^[1-9][0-9]*$'
+        and metadata ? 'model_connection_id' and jsonb_typeof(metadata->'model_connection_id') = 'string'
+        and (metadata->>'model_connection_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'processing_version' and jsonb_typeof(metadata->'processing_version') = 'string'
         and (metadata->>'processing_version') ~ '^(0|[1-9][0-9]*)$'
     )
@@ -548,7 +578,7 @@ create table ai_vector_768
 comment on table ai_vector_768 is '768维向量数据：保存文档分片的向量及检索所需副本；正文以ai_knowledge_chunk为准，归属字段由metadata自动生成';
 comment on column ai_vector_768.id is '向量记录主键，等于ai_knowledge_chunk.vector_id；由应用写入雪花ID，不是分片表的id';
 comment on column ai_vector_768.content is '生成该向量时使用的分片正文副本，不能全为空白；权威正文保存在ai_knowledge_chunk.content';
-comment on column ai_vector_768.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_config_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
+comment on column ai_vector_768.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_connection_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
 comment on column ai_vector_768.embedding is '模型生成的768维向量，维度必须恰好为768，所用模型须与知识库绑定配置一致';
 comment on column ai_vector_768.tenant_id is '所属租户ID，由数据库从metadata.tenant_id自动生成，应用不直接写入此列';
 comment on column ai_vector_768.org_id is '文档数据归属部门ID，由数据库从metadata.org_id自动生成；须与所属分片一致，可直接用于组织过滤';
@@ -556,7 +586,7 @@ comment on column ai_vector_768.is_public is '文档公开标记副本，由数�
 comment on column ai_vector_768.knowledge_base_id is '所属知识库ID，由数据库从metadata.knowledge_base_id自动生成，须与所属分片一致';
 comment on column ai_vector_768.document_id is '所属文档ID，由数据库从metadata.document_id自动生成，须与所属分片一致';
 comment on column ai_vector_768.chunk_id is '所属分片ID，由数据库从metadata.chunk_id自动生成，关联ai_knowledge_chunk.id';
-comment on column ai_vector_768.model_config_id is '生成向量的模型配置ID，由数据库从metadata.model_config_id自动生成，须与知识库绑定的模型一致';
+comment on column ai_vector_768.model_connection_id is '生成向量的模型连接器ID，由数据库从metadata.model_connection_id自动生成，须与知识库绑定的模型一致';
 comment on column ai_vector_768.processing_version is '所属文档处理轮次，由数据库从metadata.processing_version自动生成，须与所属分片一致；检索时仍需核对文档当前有效轮次';
 comment on column ai_vector_768.embedding_dimensions is '向量维度，由数据库固定生成为768；用于校验知识库绑定模型的维度，应用不直接写入此列';
 
@@ -571,7 +601,7 @@ create index idx_ai_vector_768_org on ai_vector_768
 create index idx_ai_vector_768_public on ai_vector_768
     (tenant_id, knowledge_base_id) where is_public;
 create index idx_ai_vector_768_binding on ai_vector_768
-    (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions);
+    (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions);
 -- 原生PgVectorStore使用metadata JSON path过滤；真实召回SQL仍需校验业务发布状态。
 create index idx_ai_vector_768_metadata on ai_vector_768 using gin (metadata jsonb_path_ops);
 
@@ -590,7 +620,7 @@ create table ai_vector_1024
     knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
     document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
     chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
-    model_config_id bigint generated always as ((metadata->>'model_config_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
     processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
     embedding_dimensions integer generated always as (1024) stored not null,
     constraint fk_ai_vector_1024_chunk foreign key
@@ -599,9 +629,9 @@ create table ai_vector_1024
         (tenant_id, knowledge_base_id, document_id, id, processing_version, vector_id, org_id, is_public)
         deferrable initially deferred,
     constraint fk_ai_vector_1024_binding foreign key
-        (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions)
+        (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions)
         references ai_knowledge_base
-        (tenant_id, id, embedding_model_config_id, embedding_dimensions),
+        (tenant_id, id, embedding_model_connection_id, embedding_dimensions),
     constraint ck_ai_vector_1024_content check (btrim(content) <> ''),
     constraint ck_ai_vector_1024_metadata check (
         jsonb_typeof(metadata) = 'object'
@@ -616,8 +646,8 @@ create table ai_vector_1024
         and (metadata->>'document_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'chunk_id' and jsonb_typeof(metadata->'chunk_id') = 'string'
         and (metadata->>'chunk_id') ~ '^[1-9][0-9]*$'
-        and metadata ? 'model_config_id' and jsonb_typeof(metadata->'model_config_id') = 'string'
-        and (metadata->>'model_config_id') ~ '^[1-9][0-9]*$'
+        and metadata ? 'model_connection_id' and jsonb_typeof(metadata->'model_connection_id') = 'string'
+        and (metadata->>'model_connection_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'processing_version' and jsonb_typeof(metadata->'processing_version') = 'string'
         and (metadata->>'processing_version') ~ '^(0|[1-9][0-9]*)$'
     )
@@ -626,7 +656,7 @@ create table ai_vector_1024
 comment on table ai_vector_1024 is '1024维向量数据：保存文档分片的向量及检索所需副本；正文以ai_knowledge_chunk为准，归属字段由metadata自动生成';
 comment on column ai_vector_1024.id is '向量记录主键，等于ai_knowledge_chunk.vector_id；由应用写入雪花ID，不是分片表的id';
 comment on column ai_vector_1024.content is '生成该向量时使用的分片正文副本，不能全为空白；权威正文保存在ai_knowledge_chunk.content';
-comment on column ai_vector_1024.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_config_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
+comment on column ai_vector_1024.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_connection_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
 comment on column ai_vector_1024.embedding is '模型生成的1024维向量，维度必须恰好为1024，所用模型须与知识库绑定配置一致';
 comment on column ai_vector_1024.tenant_id is '所属租户ID，由数据库从metadata.tenant_id自动生成，应用不直接写入此列';
 comment on column ai_vector_1024.org_id is '文档数据归属部门ID，由数据库从metadata.org_id自动生成；须与所属分片一致，可直接用于组织过滤';
@@ -634,7 +664,7 @@ comment on column ai_vector_1024.is_public is '文档公开标记副本，由数
 comment on column ai_vector_1024.knowledge_base_id is '所属知识库ID，由数据库从metadata.knowledge_base_id自动生成，须与所属分片一致';
 comment on column ai_vector_1024.document_id is '所属文档ID，由数据库从metadata.document_id自动生成，须与所属分片一致';
 comment on column ai_vector_1024.chunk_id is '所属分片ID，由数据库从metadata.chunk_id自动生成，关联ai_knowledge_chunk.id';
-comment on column ai_vector_1024.model_config_id is '生成向量的模型配置ID，由数据库从metadata.model_config_id自动生成，须与知识库绑定的模型一致';
+comment on column ai_vector_1024.model_connection_id is '生成向量的模型连接器ID，由数据库从metadata.model_connection_id自动生成，须与知识库绑定的模型一致';
 comment on column ai_vector_1024.processing_version is '所属文档处理轮次，由数据库从metadata.processing_version自动生成，须与所属分片一致；检索时仍需核对文档当前有效轮次';
 comment on column ai_vector_1024.embedding_dimensions is '向量维度，由数据库固定生成为1024；用于校验知识库绑定模型的维度，应用不直接写入此列';
 
@@ -649,7 +679,7 @@ create index idx_ai_vector_1024_org on ai_vector_1024
 create index idx_ai_vector_1024_public on ai_vector_1024
     (tenant_id, knowledge_base_id) where is_public;
 create index idx_ai_vector_1024_binding on ai_vector_1024
-    (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions);
+    (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions);
 -- 原生PgVectorStore使用metadata JSON path过滤；真实召回SQL仍需校验业务发布状态。
 create index idx_ai_vector_1024_metadata on ai_vector_1024 using gin (metadata jsonb_path_ops);
 
@@ -668,7 +698,7 @@ create table ai_vector_1536
     knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
     document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
     chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
-    model_config_id bigint generated always as ((metadata->>'model_config_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
     processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
     embedding_dimensions integer generated always as (1536) stored not null,
     constraint fk_ai_vector_1536_chunk foreign key
@@ -677,9 +707,9 @@ create table ai_vector_1536
         (tenant_id, knowledge_base_id, document_id, id, processing_version, vector_id, org_id, is_public)
         deferrable initially deferred,
     constraint fk_ai_vector_1536_binding foreign key
-        (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions)
+        (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions)
         references ai_knowledge_base
-        (tenant_id, id, embedding_model_config_id, embedding_dimensions),
+        (tenant_id, id, embedding_model_connection_id, embedding_dimensions),
     constraint ck_ai_vector_1536_content check (btrim(content) <> ''),
     constraint ck_ai_vector_1536_metadata check (
         jsonb_typeof(metadata) = 'object'
@@ -694,8 +724,8 @@ create table ai_vector_1536
         and (metadata->>'document_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'chunk_id' and jsonb_typeof(metadata->'chunk_id') = 'string'
         and (metadata->>'chunk_id') ~ '^[1-9][0-9]*$'
-        and metadata ? 'model_config_id' and jsonb_typeof(metadata->'model_config_id') = 'string'
-        and (metadata->>'model_config_id') ~ '^[1-9][0-9]*$'
+        and metadata ? 'model_connection_id' and jsonb_typeof(metadata->'model_connection_id') = 'string'
+        and (metadata->>'model_connection_id') ~ '^[1-9][0-9]*$'
         and metadata ? 'processing_version' and jsonb_typeof(metadata->'processing_version') = 'string'
         and (metadata->>'processing_version') ~ '^(0|[1-9][0-9]*)$'
     )
@@ -704,7 +734,7 @@ create table ai_vector_1536
 comment on table ai_vector_1536 is '1536维向量数据：保存文档分片的向量及检索所需副本；正文以ai_knowledge_chunk为准，归属字段由metadata自动生成';
 comment on column ai_vector_1536.id is '向量记录主键，等于ai_knowledge_chunk.vector_id；由应用写入雪花ID，不是分片表的id';
 comment on column ai_vector_1536.content is '生成该向量时使用的分片正文副本，不能全为空白；权威正文保存在ai_knowledge_chunk.content';
-comment on column ai_vector_1536.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_config_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
+comment on column ai_vector_1536.metadata is '检索元数据JSON对象，必须包含tenant_id、org_id、is_public、knowledge_base_id、document_id、chunk_id、model_connection_id、processing_version；ID及轮次使用十进制字符串，is_public使用布尔值';
 comment on column ai_vector_1536.embedding is '模型生成的1536维向量，维度必须恰好为1536，所用模型须与知识库绑定配置一致';
 comment on column ai_vector_1536.tenant_id is '所属租户ID，由数据库从metadata.tenant_id自动生成，应用不直接写入此列';
 comment on column ai_vector_1536.org_id is '文档数据归属部门ID，由数据库从metadata.org_id自动生成；须与所属分片一致，可直接用于组织过滤';
@@ -712,7 +742,7 @@ comment on column ai_vector_1536.is_public is '文档公开标记副本，由数
 comment on column ai_vector_1536.knowledge_base_id is '所属知识库ID，由数据库从metadata.knowledge_base_id自动生成，须与所属分片一致';
 comment on column ai_vector_1536.document_id is '所属文档ID，由数据库从metadata.document_id自动生成，须与所属分片一致';
 comment on column ai_vector_1536.chunk_id is '所属分片ID，由数据库从metadata.chunk_id自动生成，关联ai_knowledge_chunk.id';
-comment on column ai_vector_1536.model_config_id is '生成向量的模型配置ID，由数据库从metadata.model_config_id自动生成，须与知识库绑定的模型一致';
+comment on column ai_vector_1536.model_connection_id is '生成向量的模型连接器ID，由数据库从metadata.model_connection_id自动生成，须与知识库绑定的模型一致';
 comment on column ai_vector_1536.processing_version is '所属文档处理轮次，由数据库从metadata.processing_version自动生成，须与所属分片一致；检索时仍需核对文档当前有效轮次';
 comment on column ai_vector_1536.embedding_dimensions is '向量维度，由数据库固定生成为1536；用于校验知识库绑定模型的维度，应用不直接写入此列';
 
@@ -727,7 +757,7 @@ create index idx_ai_vector_1536_org on ai_vector_1536
 create index idx_ai_vector_1536_public on ai_vector_1536
     (tenant_id, knowledge_base_id) where is_public;
 create index idx_ai_vector_1536_binding on ai_vector_1536
-    (tenant_id, knowledge_base_id, model_config_id, embedding_dimensions);
+    (tenant_id, knowledge_base_id, model_connection_id, embedding_dimensions);
 -- 原生PgVectorStore使用metadata JSON path过滤；真实召回SQL仍需校验业务发布状态。
 create index idx_ai_vector_1536_metadata on ai_vector_1536 using gin (metadata jsonb_path_ops);
 

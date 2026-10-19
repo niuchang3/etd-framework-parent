@@ -26,7 +26,7 @@
 
     <build>
         <resources>
-            <!-- 保留各应用自己的 Mapper XML、SQL、启动配置及其他资源。 -->
+            <!-- 保留各应用自己的 Mapper XML、启动配置及其他资源。 -->
             <resource>
                 <directory>${project.basedir}/src/main/resources</directory>
                 <filtering>false</filtering>
@@ -41,5 +41,21 @@
                 <filtering>false</filtering>
             </resource>
         </resources>
+        <testResources>
+            <!-- 保留业务工程已有的测试资源。 -->
+            <testResource>
+                <directory>${project.basedir}/src/test/resources</directory>
+                <filtering>false</filtering>
+            </testResource>
+            <!-- 测试读取集中目录中的SQL，脚本不打包到应用运行资源中。 -->
+            <testResource>
+                <directory>${project.basedir}/../sql</directory>
+                <targetPath>sql</targetPath>
+                <includes>
+                    <include>*.sql</include>
+                </includes>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
     </build>
 </project>

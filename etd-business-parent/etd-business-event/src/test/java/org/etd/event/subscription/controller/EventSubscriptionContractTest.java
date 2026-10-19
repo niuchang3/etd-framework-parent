@@ -37,7 +37,7 @@ class EventSubscriptionContractTest {
      */
     @Test
     void shouldExcludeRemovedColumnsFromSchema() throws Exception {
-        try (var inputStream = getClass().getClassLoader().getResourceAsStream("sql/postgresql/schema.sql")) {
+        try (var inputStream = getClass().getClassLoader().getResourceAsStream("sql/event.sql")) {
             assertNotNull(inputStream);
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             assertFalse(schema.contains("subscription_code"));

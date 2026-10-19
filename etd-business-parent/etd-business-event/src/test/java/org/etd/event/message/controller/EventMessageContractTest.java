@@ -33,7 +33,7 @@ class EventMessageContractTest {
     @Test
     void shouldDeclareMessageFailureColumnsInSchema() throws Exception {
         try (var inputStream = getClass().getClassLoader()
-                .getResourceAsStream("sql/postgresql/schema.sql")) {
+                .getResourceAsStream("sql/event.sql")) {
             assertNotNull(inputStream);
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(schema.contains("event_type         varchar(150) not null"));

@@ -1,42 +1,8 @@
-/*==============================================================*/
-/* sys_tenant: 系统租户表初始化                                  */
-/*==============================================================*/
-insert into sys_tenant (id, create_time, create_by, update_time, update_by, data_status, logo, tenant_name,
-                        description, credit_code, tenant_type, tenant_admin_user, locked)
-values (1, '2024-04-11 16:38:46.000000+08:00', 1, '2024-04-11 16:38:46.000000+08:00', 1, 1, null,
-        'ETD Console', 'easy to develop framework functional demo', '1', 'system', 1, false)
-on conflict (id) do nothing;
+-- 公共字典、菜单和系统参数初始化，统一在UPMS数据库执行。
+-- 先执行upms.sql；本文件不包含租户账号、组织或租户菜单授权。
+begin;
 
-/*==============================================================*/
-/* sys_user: 系统用户初始化                                      */
-/*==============================================================*/
-insert into sys_user (id, create_time, create_by, update_time, update_by, data_status, tenant_id, account, mobile,
-                      password, user_name, birthday, gender, avatar, nick_name, locked, enabled)
-values (1, '2024-04-11 15:05:51.000000+08:00', 1, '2024-04-11 15:05:51.000000+08:00', 1, 1, 1, 'admin', '17719540702',
-        '{bcrypt}$2a$10$ltbQNkrjY/tcqP8ytOVSOerYvPMxfNjYgfwv.HaslRAqV/jOyYkSS', '牛昌', '1990-02-02', 1, null,
-        '淡淡丶奶油味', false, true)
-on conflict (id) do nothing;
-
-/*==============================================================*/
-/* sys_role: 系统角色初始化                                      */
-/*==============================================================*/
-insert into sys_role (id, create_time, create_by, update_time, update_by, data_status, tenant_id, built_in,
-                      role_name, role_code, role_desc, permission_type)
-values (1, '2024-04-12 09:46:50.000000+08:00', 1, '2024-04-12 09:46:50.000000+08:00', 1, 1, 1, true,
-        '平台管理员', 'PLATFORM_ADMIN', '平台管理员，拥有系统最高权限', '1')
-on conflict (id) do nothing;
-
-/*==============================================================*/
-/* sys_user_role_rel: 系统用户与角色关系初始化                    */
-/*==============================================================*/
-insert into sys_user_role_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id,
-                               user_id, role_id)
-values (1, '2024-04-12 09:48:30.000000+08:00', 1, '2024-04-12 09:48:30.000000+08:00', 1, 1, 1, 1, 1)
-on conflict (id) do nothing;
-
-/*==============================================================*/
-/* sys_menus: 系统菜单初始化                                     */
-/*==============================================================*/
+-- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
                        menu_path, menu_router, menu_icon, menu_type, sort, permission_code)
 values (1000001, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
@@ -60,24 +26,7 @@ values (1000001, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:
 on conflict (id) do update
 set menu_router = excluded.menu_router, permission_code = excluded.permission_code;
 
-/*==============================================================*/
-/* sys_tenant_menu_rel: 默认租户菜单权限初始化                   */
-/*==============================================================*/
-insert into sys_tenant_menu_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id, menu_id)
-values (1100001, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000001),
-       (1100002, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000002),
-       (1100003, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000003),
-       (1100004, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000004),
-       (1100005, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000005),
-       (1100006, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000006),
-       (1100007, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000007),
-       (1100008, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000008),
-       (1100009, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1, 1, 1000009)
-on conflict (id) do nothing;
-
-/*==============================================================*/
-/* sys_dict_type: 系统字典类型初始化                              */
-/*==============================================================*/
+-- sys_dict_type 初始化。
 insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            type_code, type_name, built_in, enabled, remark)
 values (2200001, current_timestamp, 1, current_timestamp, 1, 1, 0,
@@ -98,9 +47,7 @@ values (2200001, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'system_tenant_type', '租户类型', true, true, '系统租户类型')
 on conflict (id) do nothing;
 
-/*==============================================================*/
-/* sys_dict_data: 系统字典数据初始化                              */
-/*==============================================================*/
+-- sys_dict_data 初始化。
 insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
 values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
@@ -149,25 +96,86 @@ values (2300001, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200008, 'ORDINARY', '普通租户', 'ordinary', 20, true, true, null)
     on conflict (id) do nothing;
 
+-- sys_dict_type 初始化。
+insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           type_code, type_name, built_in, enabled, remark)
+values (2200101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_model_type', 'AI 模型类型', true, true, '模型主能力分类；实际可选项还需由后端适配器能力筛选'),
+       (2200102, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_model_protocol', 'AI 模型接入协议', true, true, '模型服务适配器类别，不是模型厂商品牌列表'),
+       (2200103, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_model_auth_type', 'AI 模型认证方式', true, true, '根据接入协议校验允许的认证方式，不包含 SaaS 内部加密主密钥'),
+       (2200104, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_model_provider', 'AI 模型服务商', true, true, '模型目录所属服务商，用于分类筛选，与调用协议分开');
 
+-- sys_dict_data 初始化。
+insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
+-- AI 字典值与模型表 CHECK 中的代码保持一致，不保存租户模型实例或凭证。
+values (2300201, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'CHAT', '聊天模型', 'chat', 10, true, true, '对话与文本生成；是否支持工具调用或图片输入由模型能力另行描述'),
+       (2300202, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'EMBEDDING', '向量模型', 'embedding', 20, true, true, '将文本转换为向量；固定维度由平台目录维护，接入仍需验证'),
+       (2300203, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'RERANK', '重排序模型', 'rerank', 30, true, true, '对召回结果重新排序；页面仅在后端具备对应适配能力时开放选择'),
+       (2300204, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'IMAGE', '图片生成模型', 'image', 40, true, true, '用于生成图片，不表示聊天模型的图片理解能力'),
+       (2300205, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'SPEECH_TO_TEXT', '语音识别模型', 'speech_to_text', 50, true, true, '将语音转换为文本'),
+       (2300206, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200101, 'TEXT_TO_SPEECH', '语音合成模型', 'text_to_speech', 60, true, true, '将文本转换为语音'),
+       (2300207, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200102, 'DASHSCOPE', 'DashScope 协议', 'dashscope', 10, true, true, '百炼模型服务的 DashScope 接入协议'),
+       (2300208, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200102, 'OLLAMA', 'Ollama 协议', 'ollama', 20, true, true, '通过 SaaS 后端可访问的 Ollama 服务接入'),
+       (2300209, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200102, 'OPENAI_COMPATIBLE', 'OpenAI 兼容协议', 'openai_compatible', 30, true, true, '接入实现相应协议的模型服务，不限定厂商；仍需核验具体能力'),
+       (2300210, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200103, 'NONE', '无需认证', 'none', 10, true, true, '只适用于允许无认证访问的模型服务，不填写认证凭证'),
+       (2300211, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200103, 'API_KEY', 'API Key', 'api_key', 20, true, true, '单个 API Key 凭证，后端加密保存；不额外要求 Secret Key'),
+       (2300212, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200104, 'ALIYUN', '阿里云百炼', 'aliyun', 10, true, true, '服务商品牌，不限定租户选择的协议'),
+       (2300213, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200104, 'OPENAI', 'OpenAI', 'openai', 20, true, true, '服务商品牌，不表示OpenAI兼容协议'),
+       (2300214, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200104, 'DEEPSEEK', 'DeepSeek', 'deepseek', 30, true, true, '服务商品牌，具体模型由平台目录维护');
 
-/*==============================================================*/
-/* sys_organization: 系统组织架构初始化                            */
-/*==============================================================*/
-INSERT INTO sys_organization (
-    id, create_time, create_by, update_time, update_by, data_status, del_flag, tenant_id, parent_id, parent_id_path, org_code, org_name, org_type, leader_user_id, sort, enabled
-) VALUES
-      (2094438638732578818, '2026-08-31 22:54:18.939000+08:00', 1, '2026-08-31 22:54:18.946000+08:00', 1, 1, 0, 1, NULL, '/', 'YSPT', '演示平台', 'COMPANY', NULL, 1, true),
-      (2094438716536918017, '2026-08-31 22:54:37.470000+08:00', 1, '2026-08-31 22:54:37.470000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'JSYFB', '技术研发部', 'DEPARTMENT', NULL, 2, true),
-      (2094438814792683522, '2026-08-31 22:55:00.896000+08:00', 1, '2026-08-31 22:55:00.896000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'CPYFB', '产品研发部', 'DEPARTMENT', NULL, 3, true),
-      (2094438920245874690, '2026-08-31 22:55:26.038000+08:00', 1, '2026-08-31 22:55:26.039000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'XSB', '销售部', 'DEPARTMENT', NULL, 4, true),
-      (2094439019298557954, '2026-08-31 22:55:49.653000+08:00', 1, '2026-08-31 22:55:49.654000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'XZB', '行政部', 'DEPARTMENT', NULL, 5, true),
-      (2094439206968496129, '2026-08-31 22:56:34.398000+08:00', 1, '2026-08-31 22:56:34.398000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'YYB', '运营部', 'DEPARTMENT', NULL, 7, true),
-      (2094439089842556930, '2026-08-31 22:56:06.473000+08:00', 1, '2026-08-31 22:57:31.182000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'RSB', '人事部', 'DEPARTMENT', NULL, 8, true);
+-- sys_menus 初始化。
+insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                       menu_name, menu_path, menu_router, permission_code, menu_icon, menu_type, sort)
+values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'AI管理', '/ai', null, null, 'RobotOutlined', 'DIRECTORY', 30),
+       (1000102, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        '模型连接器', '/ai/model-connections', '@/views/ai/model-connection/index.vue',
+        'ai:model-connection', 'LinkOutlined', 'MENU', 20),
+       (1000106, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        '模型目录', '/ai/models', '@/views/ai/model/index.vue',
+        'ai:model', 'AppstoreOutlined', 'MENU', 10),
+       (1000105, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        '知识库分类', '/ai/knowledge-folders', '@/views/ai/knowledge-folder/index.vue',
+        'ai:knowledge-folder', 'ApartmentOutlined', 'MENU', 30);
 
-/*==============================================================*/
-/* sys_config: 系统参数初始化                                    */
-/*==============================================================*/
+-- sys_menus 初始化。
+insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
+                       menu_path, menu_router, menu_icon, menu_type, sort, permission_code)
+values (1000010, null, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件中心', '/event', null, 'NotificationOutlined', 'DIRECTORY', 30, null),
+       (1000011, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件类型', '/event/types', '@/views/event/types/index.vue', 'TagsOutlined', 'MENU', 10, 'event:type'),
+       (1000012, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件订阅', '/event/subscriptions', '@/views/event/subscriptions/index.vue', 'ApiOutlined', 'MENU', 20,
+        'event:subscription'),
+       (1000013, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '事件消息', '/event/messages', '@/views/event/messages/index.vue', 'MessageOutlined', 'MENU', 30,
+        'event:message'),
+       (1000014, 1000010, current_timestamp, 1, current_timestamp, 1, 1,
+        '投递管理', '/event/deliveries', '@/views/event/deliveries/index.vue', 'SendOutlined', 'MENU', 40,
+        'event:delivery')
+on conflict (id) do update
+set menu_router = excluded.menu_router, permission_code = excluded.permission_code;
+
+-- sys_config 初始化。
 insert into sys_config (id, create_time, create_by, update_time, update_by, data_status, parameter_key,
                         parameter_name, parameter_value, value_type, built_in, enabled, remark)
 values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
@@ -187,3 +195,5 @@ values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
         '{"request":{"timeoutMs":5000,"retryTimes":3},"cache":{"dictTtlSeconds":600,"userMenuTtlSeconds":1800}}',
         'json', true, true, '前端超时时间、请求重试次数及字典等数据缓存时效')
 on conflict (id) do nothing;
+
+commit;

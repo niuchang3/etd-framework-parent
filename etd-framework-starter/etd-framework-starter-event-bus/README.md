@@ -394,8 +394,8 @@ public void consumeUserCreatedEvent(String messageJson) {
 
 ### 8.1 存储初始化
 
-- starter 提供结构参考：[`etd-framework-starter-event-server/src/main/resources/sql/postgresql/schema.sql`](etd-framework-starter-event-server/src/main/resources/sql/postgresql/schema.sql)。它不是自动执行的数据库迁移器。
-- Event 应用当前使用的初始化结构在 [`src/main/resources/postgresql/schema.sql`](../../etd-business-parent/etd-business-event/src/main/resources/postgresql/schema.sql)，初始化时核对其与实际分片配置一致，不要重复执行同一套建表 DDL。
+- Event server 与业务 Event 共用唯一建表脚本 [`event.sql`](../../etd-business-parent/sql/event.sql)，在 Event 数据库显式执行，并核对实际分片配置；不保留重复参考 DDL，也不由 starter 自动执行。
+- 公共菜单统一维护在 [`init.sql`](../../etd-business-parent/sql/init.sql)，默认租户授权统一维护在 [`upms_data.sql`](../../etd-business-parent/sql/upms_data.sql)，二者在 UPMS 数据库执行。
 - 当前 [`sharding-event-local.yaml`](../../etd-business-parent/etd-business-event/src/main/resources/sharding-event-local.yaml) 使用单个 `event` 数据源；`evt_event_type`、`evt_event_subscription` 是单表；`evt_event_message` 和 `evt_event_delivery` 按 `event_id` 使用内置 `HASH_MOD` 分为 `_0`、`_1`，并声明绑定表。
 - 物理连接变量为 `EVENT_DB_HOST`、`EVENT_DB_PORT`、`EVENT_DB_NAME`、`EVENT_DB_USERNAME`、`EVENT_DB_PASSWORD`，诊断开关为 `EVENT_SHARDING_SQL_SHOW`。ShardingSphere 文件使用 `$${变量名::默认值}`，不要混用 Spring `${...}` 语法。
 - Event 专属配置把四张逻辑表排除在租户和组织权限过滤之外；这属于事件中心业务应用配置，不是 starter 自动改变其他业务表权限。

@@ -22,11 +22,11 @@ public class ModelConnectionVO {
     /** 更新时间点。 */
     private Instant updateTime;
 
-    /** 连接名称。 */
-    private String connectionName;
+    /** 所选平台模型标识。 */
+    private Long modelId;
 
     /** 接入协议。 */
-    private String provider;
+    private String protocol;
 
     /** 模型服务地址。 */
     private String baseUrl;
@@ -37,6 +37,16 @@ public class ModelConnectionVO {
     /** 是否已配置凭证，不返回明文或密文。 */
     private Boolean credentialConfigured;
 
-    /** 用途说明。 */
-    private String remark;
+    /** 平台模型名称，代替连接器名称展示。 */
+    private String modelName;
+
+    /** 平台模型主能力类型。 */
+    private String modelType;
+
+    /** 服务商字典值。 */
+    private String providerCode;
+
+    /** 模型Logo资源路径。 */
+    private String logoPath;
+
 }

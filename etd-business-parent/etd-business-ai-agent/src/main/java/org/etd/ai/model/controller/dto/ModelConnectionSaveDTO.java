@@ -1,8 +1,10 @@
 package org.etd.ai.model.controller.dto;
 
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
+import lombok.ToString;
 
 import org.etd.ai.model.constant.ModelProtocol;
 import org.etd.framework.starter.web.validation.UpdateRequest;
@@ -10,15 +12,15 @@ import org.etd.framework.starter.web.validation.UpdateRequest;
 /** ModelConnectionSaveDTO 页面请求；不接收租户、创建人或存储对象键。 */
 @Data
 public class ModelConnectionSaveDTO {
-    /** 连接名称。 */
-    @NotBlank
-    @Size(max = 100)
-    private String connectionName;
+    /** 所选平台模型，更新不允许切换；换模型应重新建立连接。 */
+    @NotNull
+    @Positive
+    private Long modelId;
 
-    /** 接入协议。 */
+    /** 租户选择的接入协议，不是服务商代码。 */
     @NotBlank
-    @Pattern(regexp = ModelProtocol.PROVIDER_PATTERN)
-    private String provider;
+    @Pattern(regexp = ModelProtocol.PROTOCOL_PATTERN)
+    private String protocol;
 
     /** API根地址，不得含凭证、查询参数或片段。 */
     @NotBlank
@@ -32,12 +34,9 @@ public class ModelConnectionSaveDTO {
 
     /** 只写API Key，更新为空保留已有密钥。 */
     @Size(max = 4096)
-    @lombok.ToString.Exclude
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String apiKey;
-
-    /** 用途说明。 */
-    @Size(max = 500)
-    private String remark;
 
     /** 更新时的版本。 */
     @Min(0)

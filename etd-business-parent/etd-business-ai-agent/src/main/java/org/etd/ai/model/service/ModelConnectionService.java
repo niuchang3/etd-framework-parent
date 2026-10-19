@@ -30,18 +30,14 @@ public class ModelConnectionService {
      *
      * @param current 从1开始的页码
      * @param size 每页记录数或预期字节数，以方法用途为准
+     * @param modelId 可选平台模型标识
      * @param dataStatus 可选启停状态；不传时不过滤状态
      * @return 符合当前租户及查询条件的分页结果
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
-    public IPage<ModelConnectionEntity> fetchPage(long current, long size, Integer dataStatus) {
+    public IPage<ModelConnectionEntity> fetchPage(long current, long size, Long modelId, Integer dataStatus) {
         var page = new Page<ModelConnectionEntity>(current, size);
-        var query =
-                Wrappers.<ModelConnectionEntity>lambdaQuery()
-                        .eq(dataStatus != null, ModelConnectionEntity::getDataStatus, dataStatus)
-                        .orderByDesc(
-                                ModelConnectionEntity::getCreateTime, ModelConnectionEntity::getId);
-        return mapper.selectPage(page, query);
+        return mapper.selectConnectionPage(page, modelId, dataStatus);
     }
 
     /**
@@ -73,7 +69,7 @@ public class ModelConnectionService {
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
     public Long createConnection(ModelConnectionEntity e, String apiKey) {
-        validateEndpoint(e.getBaseUrl());
+        validateConnection(e);
         e.setId(IdWorker.getId());
         populateCredential(e, apiKey, null);
         mapper.insert(e);
@@ -91,7 +87,10 @@ public class ModelConnectionService {
     @Transactional
     public void modifyConnection(ModelConnectionEntity e, String apiKey, Long version) {
         var old = requireConnection(e.getId(), true);
-        validateEndpoint(e.getBaseUrl());
+        if (!old.getModelId().equals(e.getModelId())) {
+            throw new ApiRuntimeException("连接器不能切换模型，请重新创建连接");
+        }
+        validateConnection(e);
         populateCredential(e, apiKey, old);
         e.setVersion(version);
         if (mapper.updateById(e) != 1) {
@@ -100,18 +99,26 @@ public class ModelConnectionService {
     }
 
     /**
-     * 删除已校验未被模型引用的连接。
+     * 删除未被知识库引用的连接；引用检查由同事务内的数据库查询完成。
      *
      * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
+    @Transactional
     public void removeConnection(Long id) {
+        requireConnection(id, true);
+        if (mapper.countKnowledgeBaseByConnection(id) > 0) {
+            throw new ApiRuntimeException("连接器仍被知识库引用，不能删除");
+        }
         mapper.deleteById(id);
     }
 
+    /** 凭证只写；更新留空沿用原密文，切换为none时显式清空两个存储字段。 */
     private void populateCredential(
             ModelConnectionEntity e, String key, ModelConnectionEntity old) {
         if (ModelProtocol.AUTH_NONE.equals(e.getAuthType())) {
+            e.setApiKeyCiphertext(null);
+            e.setCredentialKeyId(null);
             return;
         }
         if (key == null || key.isBlank()) {
@@ -122,14 +129,37 @@ public class ModelConnectionService {
             e.setCredentialKeyId(old.getCredentialKeyId());
             return;
         }
-        e.setApiKeyCiphertext(
-                cipher.encrypt(
-                        key,
-                        old == null ? RequestContext.getTenantCode() : old.getTenantId(),
-                        e.getId()));
-        e.setCredentialKeyId(cipher.requireKeyId());
+        Long tenantId = old == null ? RequestContext.getTenantCode() : old.getTenantId();
+        String ciphertext = cipher.encrypt(key, tenantId, e.getId());
+        String keyId = cipher.requireKeyId();
+        e.setApiKeyCiphertext(ciphertext);
+        e.setCredentialKeyId(keyId);
     }
 
+    /** 校验实际协议和认证组合；保存配置不表示已具备外部调用或验证能力。 */
+    private void validateConnection(ModelConnectionEntity entity) {
+        if (!entity.getProtocol().matches(ModelProtocol.PROTOCOL_PATTERN)
+                || !entity.getAuthType().matches(ModelProtocol.AUTH_PATTERN)) {
+            throw new ApiRuntimeException("不支持的协议或认证方式");
+        }
+        validateEndpoint(entity.getBaseUrl());
+    }
+
+    /**
+     * 查询连接及模型展示信息，凭证由Controller转换器屏蔽。
+     * @param id 连接器标识
+     * @return 当前访问范围内的连接详情
+     * @throws ApiRuntimeException 连接不存在
+     */
+    public ModelConnectionEntity fetchConnection(Long id) {
+        var connection = mapper.selectConnectionDetail(id);
+        if (connection == null) {
+            throw new ApiRuntimeException("模型连接不存在");
+        }
+        return connection;
+    }
+
+    /** 地址只接受无用户信息、查询参数及片段的HTTP根地址。 */
     private void validateEndpoint(String value) {
         try {
             URI uri = URI.create(value);

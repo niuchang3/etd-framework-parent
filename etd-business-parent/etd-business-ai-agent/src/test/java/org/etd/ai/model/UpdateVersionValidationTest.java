@@ -2,7 +2,6 @@ package org.etd.ai.model;
 
 import jakarta.validation.Validation;
 import org.etd.ai.model.controller.dto.ModelConnectionSaveDTO;
-import org.etd.ai.model.controller.dto.ModelConfigSaveDTO;
 import org.etd.ai.knowledge.controller.dto.KnowledgeFolderSaveDTO;
 import org.etd.framework.starter.web.validation.UpdateRequest;
 import org.junit.jupiter.api.Test;
@@ -16,7 +15,7 @@ class UpdateVersionValidationTest {
     void shouldRequireVersionOnlyForUpdates() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var validator = factory.getValidator();
-            for (Object dto : List.of(new ModelConnectionSaveDTO(), new ModelConfigSaveDTO(),
+            for (Object dto : List.of(new ModelConnectionSaveDTO(),
                     new KnowledgeFolderSaveDTO())) {
                 assertFalse(validator.validate(dto).stream()
                         .anyMatch(v -> "version".equals(v.getPropertyPath().toString())));

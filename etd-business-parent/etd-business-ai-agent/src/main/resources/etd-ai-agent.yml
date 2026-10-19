@@ -5,12 +5,14 @@ etd:
     logic-delete:
       enabled: true # 自定义SELECT按实体@TableLogic自动排除已删除记录，不影响物理清理SQL。
     tenant:
-      enabled: true # 所有业务表保留租户隔离。
+      enabled: true # 租户连接及业务数据保留隔离，平台模型目录全局共享。
+      ignore-tables:
+        - ai_model # 开发人员维护的全局模型目录，不含tenant_id。
     data-permission:
       enabled: true # 启用组织数据权限，租户共享表按下方清单排除。
       ignore-tables:
         - ai_model_connection # 租户级配置，无独立组织归属。
-        - ai_model_config # 租户级配置，无独立组织归属。
+        - ai_model # 全局模型目录，无组织归属。
   ai:
     credentials:
       key: ${AI_CREDENTIAL_ENCRYPTION_KEY:ZXRkLWFpLWxvY2FsLWRldmVsb3BtZW50LWtleS0wMDE=} # 仅供本地开发的固定32字节AES密钥，部署环境必须自行注入。

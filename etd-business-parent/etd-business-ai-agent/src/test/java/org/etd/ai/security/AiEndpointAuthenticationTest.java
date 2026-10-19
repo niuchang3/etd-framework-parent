@@ -24,10 +24,12 @@ import jakarta.servlet.Filter;
 
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.model.biz.ModelBizService;
-import org.etd.ai.model.controller.ModelConfigController;
+import org.etd.ai.model.controller.ModelController;
 import org.etd.ai.model.controller.ModelConnectionController;
-import org.etd.ai.model.entity.ModelConfigEntity;
-import org.etd.ai.model.service.ModelConfigService;
+import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.etd.ai.model.entity.ModelEntity;
+import org.etd.ai.model.service.ModelConnectionService;
+import org.etd.ai.model.service.ModelService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,9 +88,9 @@ class AiEndpointAuthenticationTest {
     /** 匿名业务请求仍被框架认证入口拒绝。 */
     @Test
     void shouldRequireAuthenticationForBusinessEndpoints() throws Exception {
-        var request = get("/v1/model-configs");
+        var request = get("/v1/model-connections");
         mvc.perform(request).andExpect(status().isUnauthorized());
-        var writeRequest = delete("/v1/model-configs/1");
+        var writeRequest = delete("/v1/model-connections/1");
         mvc.perform(writeRequest).andExpect(status().isUnauthorized());
     }
 
@@ -96,38 +98,54 @@ class AiEndpointAuthenticationTest {
     @Test
     void shouldDenyAuthenticatedUserWithoutFunctionalAuthorities() throws Exception {
         var session = createSession();
-        var readRequest = get("/v1/model-configs").session(session);
+        var readRequest = get("/v1/model-connections").session(session);
         mvc.perform(readRequest).andExpect(status().isForbidden());
-        var writeRequest = delete("/v1/model-configs/1").session(session);
+        var writeRequest = delete("/v1/model-connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
-        var models = context.getBean(ModelConfigService.class);
+        var models = context.getBean(ModelConnectionService.class);
         verifyNoInteractions(models);
     }
 
     /** read只允许查询，不能执行删除等写操作。 */
     @Test
     void shouldAllowReadWithoutGrantingWrite() throws Exception {
-        var session = createSession("ai:model-config:read");
-        var readRequest = get("/v1/model-configs").session(session);
+        var session = createSession("ai:model-connection:read");
+        var readRequest = get("/v1/model-connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-configs/1").session(session);
+        var writeRequest = delete("/v1/model-connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
-        var models = context.getBean(ModelConfigService.class);
+        var models = context.getBean(ModelConnectionService.class);
         verify(models).fetchPage(1L, 10L, null, null);
-        verify(models, never()).removeModel(anyLong());
+        verify(models, never()).removeConnection(anyLong());
     }
 
     /** 同时具备read/write时，真实Controller可调用读写业务能力。 */
     @Test
     void shouldAllowGrantedReadAndWrite() throws Exception {
-        var session = createSession("ai:model-config:read", "ai:model-config:write");
-        var readRequest = get("/v1/model-configs").session(session);
+        var session = createSession("ai:model-connection:read", "ai:model-connection:write");
+        var readRequest = get("/v1/model-connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-configs/1").session(session);
+        var writeRequest = delete("/v1/model-connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isOk());
-        var models = context.getBean(ModelConfigService.class);
+        var models = context.getBean(ModelConnectionService.class);
         verify(models).fetchPage(1L, 10L, null, null);
-        verify(models).removeModel(1L);
+        verify(models).removeConnection(1L);
+    }
+
+    /** 目录要求独立read权限，不暴露写入口，旧模型配置路由不存在。 */
+    @Test
+    void shouldExposeOnlyReadOnlyCatalogAndRemoveOldRoutes() throws Exception {
+        var anonymous = get("/v1/models");
+        mvc.perform(anonymous).andExpect(status().isUnauthorized());
+        var denied = get("/v1/models").session(createSession("ai:model-connection:read"));
+        mvc.perform(denied).andExpect(status().isForbidden());
+        var session = createSession("ai:model:read", "ai:model:write");
+        var catalog = get("/v1/models").session(session);
+        mvc.perform(catalog).andExpect(status().isOk());
+        var write = post("/v1/models").session(session);
+        mvc.perform(write).andExpect(status().isMethodNotAllowed());
+        var removed = get("/v1/model-configs").session(session);
+        mvc.perform(removed).andExpect(status().isNotFound());
     }
 
     /** 为请求装配指定authority，避免依赖外部UPMS令牌签发。 */
@@ -160,7 +178,7 @@ class AiEndpointAuthenticationTest {
         var resources =
                 Map.of(
                         ModelConnectionController.class, "ai:model-connection",
-                        ModelConfigController.class, "ai:model-config",
+                        ModelController.class, "ai:model",
                         KnowledgeFolderController.class, "ai:knowledge-folder");
         for (var resource : resources.entrySet()) {
             var permission =
@@ -235,18 +253,33 @@ class AiEndpointAuthenticationTest {
 
         /** 不访问数据库，仅验证接口是否经过认证后进入服务。 */
         @Bean
-        ModelConfigService modelConfigService() {
-            var models = mock(ModelConfigService.class);
-            var page = new Page<ModelConfigEntity>(1L, 10L);
+        ModelConnectionService modelConnectionService() {
+            var models = mock(ModelConnectionService.class);
+            var page = new Page<ModelConnectionEntity>(1L, 10L);
             when(models.fetchPage(1L, 10L, null, null)).thenReturn(page);
             return models;
         }
 
         /** 注册实际AI模型Controller，保留方法安全代理参与调用。 */
         @Bean
-        ModelConfigController modelConfigController(ModelConfigService models) {
+        ModelConnectionController modelConnectionController(ModelConnectionService models) {
             var biz = mock(ModelBizService.class);
-            return new ModelConfigController(models, biz);
+            return new ModelConnectionController(models, biz);
+        }
+
+        /** 全局目录没有租户写入接口。 */
+        @Bean
+        ModelService modelService() {
+            var service = mock(ModelService.class);
+            var page = new Page<ModelEntity>(1L, 10L);
+            when(service.fetchPage(1L, 10L, null, null)).thenReturn(page);
+            return service;
+        }
+
+        /** 使用真实目录Controller参与安全链测试。 */
+        @Bean
+        ModelController modelController(ModelService models) {
+            return new ModelController(models);
         }
 
         /** 提供白名单匹配的公开端点。 */

@@ -36,6 +36,7 @@ public class ModelConnectionController {
      *
      * @param current 从1开始的页码
      * @param size 每页记录数或预期字节数，以方法用途为准
+     * @param modelId 可选平台模型标识
      * @param dataStatus 可选启停状态：0停用、1启用；不传表示全部状态
      * @return 统一业务响应；code=2000表示成功，data语义见方法说明
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
@@ -48,8 +49,9 @@ public class ModelConnectionController {
             @RequestParam(required = false)
                     @Min(BasicConstant.DataStatus.DISABLED_CODE)
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
-                    Integer dataStatus) {
-        var page = service.fetchPage(current, size, dataStatus);
+                    Integer dataStatus,
+            @RequestParam(required = false) @Positive Long modelId) {
+        var page = service.fetchPage(current, size, modelId, dataStatus);
         var result = page.convert(ModelConnectionConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
@@ -64,7 +66,7 @@ public class ModelConnectionController {
     @AutoLog("获取模型连接详情")
     @GetMapping("/{id}")
     public ResultModel<ModelConnectionVO> get(@PathVariable Long id) {
-        var entity = service.requireConnection(id, false);
+        var entity = service.fetchConnection(id);
         var result = ModelConnectionConverter.INSTANCE.toVO(entity);
         return ResultModel.success(result);
     }
@@ -80,7 +82,8 @@ public class ModelConnectionController {
     @PostMapping
     public ResultModel<Long> save(@Valid @RequestBody ModelConnectionSaveDTO dto) {
         var e = ModelConnectionConverter.INSTANCE.toEntity(dto);
-        return ResultModel.success(service.createConnection(e, dto.getApiKey()));
+        var id = biz.createConnection(e, dto.getApiKey());
+        return ResultModel.success(id);
     }
 
     /**
@@ -98,7 +101,7 @@ public class ModelConnectionController {
             @Validated(UpdateRequest.class) @RequestBody ModelConnectionSaveDTO dto) {
         var e = ModelConnectionConverter.INSTANCE.toEntity(dto);
         e.setId(id);
-        service.modifyConnection(e, dto.getApiKey(), dto.getVersion());
+        biz.modifyConnection(e, dto.getApiKey(), dto.getVersion());
         return ResultModel.success(true);
     }
 
@@ -112,7 +115,7 @@ public class ModelConnectionController {
     @AutoLog("删除模型连接")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> remove(@PathVariable Long id) {
-        biz.removeConnection(id);
+        service.removeConnection(id);
         return ResultModel.success(true);
     }
 

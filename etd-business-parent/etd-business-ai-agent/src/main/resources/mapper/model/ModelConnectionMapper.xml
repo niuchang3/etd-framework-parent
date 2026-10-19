@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.model.mapper.ModelConnectionMapper">
+    <sql id="connectionWithModel">
+        select c.*, m.model_name, m.model_type, m.provider_code, m.logo_path
+        from ai_model_connection c
+        join ai_model m on m.id = c.model_id
+    </sql>
+
+    <select id="selectConnectionPage" resultType="org.etd.ai.model.entity.ModelConnectionEntity">
+        <include refid="connectionWithModel"/>
+        where c.del_flag = 0
+        <if test="modelId != null">
+            and c.model_id = #{modelId}
+        </if>
+        <if test="dataStatus != null">
+            and c.data_status = #{dataStatus}
+        </if>
+        order by c.create_time desc, c.id desc
+    </select>
+
+    <select id="selectConnectionDetail" resultType="org.etd.ai.model.entity.ModelConnectionEntity">
+        <include refid="connectionWithModel"/>
+        where c.id = #{id}
+          and c.del_flag = 0
+    </select>
+
+    <select id="countKnowledgeBaseByConnection" resultType="long">
+        select count(*)
+        from ai_knowledge_base
+        where embedding_model_connection_id = #{id}
+          and del_flag = 0
+    </select>
+</mapper>
