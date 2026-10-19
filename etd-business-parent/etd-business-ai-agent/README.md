@@ -30,7 +30,7 @@ SQL 仍包含等待重新设计的知识库、文档及向量表，这些结构�
 
 模型目录按服务商、类型及排序建立索引；连接器的模型外键、租户分页和模型筛选有索引支持；知识库连接引用与模型维度外键均有索引支持。关联展示通过 Mapper XML 完成，不在 Java 内存拼装。
 
-部署凭证加密参数使用 `AI_CREDENTIAL_ENCRYPTION_KEY`、`AI_CREDENTIAL_KEY_ID`。具体前端变更见 [FRONTEND-REFACTOR.md](FRONTEND-REFACTOR.md)，完整菜单定义见 [ai-menus.json](ai-menus.json)。
+部署凭证加密参数使用 `AI_CREDENTIAL_ENCRYPTION_KEY`、`AI_CREDENTIAL_KEY_ID`。
 
 验证命令：
 
