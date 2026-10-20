@@ -65,6 +65,12 @@
             <artifactId>etd-framework-starter-cache</artifactId>
         </dependency>
 
+        <!-- 资料上传复用框架MinIO客户端，不引入独立SDK版本。 -->
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-starter-storage</artifactId>
+        </dependency>
+
         <!-- 复用框架统一的 HTTP、时间序列化、日志能力。 -->
         <dependency>
             <groupId>org.etd.framework</groupId>

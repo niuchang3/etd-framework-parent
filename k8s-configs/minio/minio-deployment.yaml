@@ -54,6 +54,10 @@ spec:
                   name: minio-secret
                   key: MINIO_ROOT_PASSWORD
                   optional: true
+            - name: MINIO_API_STALE_UPLOADS_EXPIRY
+              value: "48h" # 未完成分片的保留时间，必须大于应用续传会话有效期；默认应用为24小时。
+            - name: MINIO_API_STALE_UPLOADS_CLEANUP_INTERVAL
+              value: "1h" # MinIO原生残片扫描周期，回收会话ID未成功落库等异常产生的残片。
           resources:
             requests:
               cpu: 100m

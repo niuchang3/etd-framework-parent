@@ -28,10 +28,29 @@
           and c.del_flag = 0
     </select>
 
-    <select id="countKnowledgeBaseByConnection" resultType="long">
-        select count(*)
-        from ai_knowledge_base
-        where embedding_model_connection_id = #{id}
-          and del_flag = 0
+    <resultMap id="embeddingConnectionOption" type="org.etd.ai.model.mapper.result.EmbeddingConnectionOption">
+        <id property="id" column="id"/>
+        <result property="modelId" column="model_id"/>
+        <result property="modelName" column="model_name"/>
+        <result property="providerCode" column="provider_code"/>
+        <result property="embedding" column="embedding" jdbcType="ARRAY"
+                typeHandler="org.etd.ai.model.mapper.typehandler.EmbeddingDimensionsTypeHandler"/>
+    </resultMap>
+
+    <!-- 租户连接索引及模型主键支持关联；多表信息由SQL直接查询，服务层仅裁剪维度选项。 -->
+    <select id="selectEmbeddingConnectionOptionList" resultMap="embeddingConnectionOption">
+        select c.id,
+               c.model_id,
+               m.model_name,
+               m.provider_code,
+               m.embedding
+        from ai_model_connection c
+        join ai_model m on m.id = c.model_id
+        where c.del_flag = 0
+          and c.data_status = 1
+          and m.del_flag = 0
+          and m.data_status = 1
+          and m.model_type = 'embedding'
+        order by m.sort, m.id
     </select>
 </mapper>

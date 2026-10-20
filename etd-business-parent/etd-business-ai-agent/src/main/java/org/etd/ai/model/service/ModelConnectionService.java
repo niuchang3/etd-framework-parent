@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import org.etd.ai.model.mapper.result.EmbeddingConnectionOption;
 
 /** 租户模型连接能力，不发起探测或模型调用。 */
 @Service
@@ -28,6 +32,33 @@ public class ModelConnectionService {
 
     private final ModelConnectionMapper mapper;
     private final ModelCredentialCipher cipher;
+
+    /** @param supportedDimensions 调用功能支持的存储维度 @return 当前租户可选向量连接器列表，不读取凭证 */
+    public List<EmbeddingConnectionOption> fetchEmbeddingConnectionOptionList(Set<Integer> supportedDimensions) {
+        var options = mapper.selectEmbeddingConnectionOptionList();
+        return resolveSupportedEmbeddingOptionList(options, supportedDimensions);
+    }
+
+    /** 只裁剪单条已关联结果的维度属性，不在Java中关联或拼接模型与连接器。 */
+    private List<EmbeddingConnectionOption> resolveSupportedEmbeddingOptionList(List<EmbeddingConnectionOption> options, Set<Integer> supportedDimensions) {
+        var result = new ArrayList<EmbeddingConnectionOption>();
+        for (EmbeddingConnectionOption option : options) {
+            var dimensions = new ArrayList<Integer>();
+            if (option.getEmbedding() != null) {
+                for (Integer dimension : option.getEmbedding()) {
+                    if (supportedDimensions.contains(dimension)) {
+                        dimensions.add(dimension);
+                    }
+                }
+            }
+            if (!dimensions.isEmpty()) {
+                Integer[] supported = dimensions.toArray(Integer[]::new);
+                option.setEmbedding(supported);
+                result.add(option);
+            }
+        }
+        return result;
+    }
 
     /**
      * 分页查询连接，Controller仅输出脱敏VO。
@@ -139,7 +170,7 @@ public class ModelConnectionService {
     }
 
     /**
-     * 删除未被知识库引用的连接；引用检查由同事务内的数据库查询完成。
+     * 删除当前可访问的连接，不校验资料引用；资料调用时检查连接是否仍可用。
      *
      * @param id 当前操作记录的业务标识，不能绕过租户和访问校验
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
@@ -147,9 +178,6 @@ public class ModelConnectionService {
     @Transactional
     public void removeConnection(Long id) {
         requireConnection(id, true);
-        if (mapper.countKnowledgeBaseByConnection(id) > 0) {
-            throw new ApiRuntimeException("连接器仍被知识库引用，不能删除");
-        }
         mapper.deleteById(id);
     }
 

@@ -1,9 +1,13 @@
 # 智能体服务公共配置，环境连接信息及本地默认值放在 application-{profile}.yml。
 server:
   port: ${AI_AGENT_PORT:8300} # 智能体服务独立端口，可由环境变量覆盖。
+
 logging:
   level:
     root: INFO # 与 UPMS 保持相同的默认日志级别。
+    org.etd.ai.knowledge.mapper: DEBUG # 输出知识库 Mapper 的 SQL 和绑定参数。
+    org.etd.ai.model.mapper: DEBUG # 输出模型 Mapper 的 SQL 和绑定参数。
+
 spring:
   profiles:
     active: local # 与 UPMS 一致，默认加载本地环境，可由启动参数覆盖。
@@ -13,8 +17,9 @@ spring:
     time-zone: Asia/Shanghai # 复用框架 HTTP 时间序列化规则。
 
   config:
-    # AI 当前仅使用缓存与普通数据源，不加载 Kafka 或事件服务配置。
+    # AI 使用缓存、普通数据源及MinIO原件存储，不加载未使用的事件组件。
     import:
       - classpath:redis.yml
       - classpath:druid.yml
+      - classpath:minIo.yml
       - classpath:etd-ai-agent.yml

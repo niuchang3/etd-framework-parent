@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper">
+    <!-- 仅后台任务调用，读取到期记录并在事务内串行取消，不改变完整原件的保留策略。 -->
+    <select id="selectExpiredUploadList" resultMap="mybatis-plus_KnowledgeDocumentEntity">
+        select *
+        from ai_knowledge_document
+        where del_flag = 0
+          and upload_status in ('initializing', 'uploading', 'failed')
+          and upload_expires_at &lt;= current_timestamp
+        order by upload_expires_at, id
+        limit 20
+        for update skip locked
+    </select>
+
+    <update id="updateExpiredUpload">
+        update ai_knowledge_document
+        set upload_status = 'cancelled',
+            upload_error_message = '上传会话已过期',
+            update_time = current_timestamp,
+            version = version + 1
+        where id = #{id}
+          and del_flag = 0
+          and upload_status in ('initializing', 'uploading', 'failed')
+          and upload_expires_at &lt;= current_timestamp
+    </update>
+</mapper>

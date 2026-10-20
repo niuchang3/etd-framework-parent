@@ -118,9 +118,9 @@ public class ModelSquareBizService {
     }
 
     /**
-     * 删除当前访问范围内未被知识库引用的连接。
+     * 删除当前访问范围内的模型连接器。
      * @param id 连接标识
-     * @throws ApiRuntimeException 连接不存在或仍被知识库引用
+     * @throws ApiRuntimeException 连接不存在或无访问权限
      */
     @Transactional
     public void removeConnection(Long id) {

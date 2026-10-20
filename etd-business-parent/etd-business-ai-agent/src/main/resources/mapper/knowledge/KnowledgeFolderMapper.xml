@@ -65,4 +65,10 @@
         from ai_knowledge_folder
         where parent_id = #{folderId}
     </select>
+    <select id="selectDocumentCount" resultType="java.lang.Long">
+        select count(*)
+        from ai_knowledge_document
+        where folder_id = #{folderId}
+          and del_flag = 0
+    </select>
 </mapper>

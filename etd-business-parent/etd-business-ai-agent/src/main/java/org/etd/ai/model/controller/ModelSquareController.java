@@ -167,10 +167,10 @@ public class ModelSquareController {
     }
 
     /**
-     * 删除未被知识库引用的连接。
+     * 删除的模型连接器。
      * @param id 连接标识
      * @return 删除成功标识
-     * @throws ApiRuntimeException 连接不存在或仍被知识库引用
+     * @throws ApiRuntimeException 连接不存在或无访问权限
      */
     @AutoLog("删除模型广场连接")
     @DeleteMapping("/connections/{id}")

@@ -31,4 +31,7 @@ public interface KnowledgeFolderMapper extends BaseMapper<KnowledgeFolderEntity>
      */
     @InterceptorIgnore(dataPermission = "true")
     Long selectChildCount(@Param("folderId") Long folderId);
+    /** @param folderId 已校验维护权限的目录 @return 包括隐藏资料的占用数量 */
+    @InterceptorIgnore(dataPermission = "true")
+    Long selectDocumentCount(@Param("folderId") Long folderId);
 }

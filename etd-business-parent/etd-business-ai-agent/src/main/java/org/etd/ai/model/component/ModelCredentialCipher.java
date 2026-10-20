@@ -70,6 +70,37 @@ public class ModelCredentialCipher {
     }
 
     /**
+     * 在模型调用边界解密凭证，不允许将明文返回接口或写入日志。
+     * @param value AES-GCM密文
+     * @param keyId 密钥标识
+     * @param tenantId 凭证所属租户
+     * @param connectionId 凭证所属连接器
+     * @return 仅供服务端请求使用的明文密钥
+     */
+    public String decrypt(String value, String keyId, Long tenantId, Long connectionId) {
+        try {
+            if (!requireKeyId().equals(keyId)) {
+                throw new IllegalArgumentException("密钥标识不匹配");
+            }
+            String[] parts = value.split("\\.", -1);
+            if (parts.length != 3 || !"v1".equals(parts[0])) {
+                throw new IllegalArgumentException("密文格式无效");
+            }
+            byte[] key = Base64.getDecoder().decode(properties.getKey());
+            byte[] nonce = Base64.getDecoder().decode(parts[1]);
+            var secretKey = new SecretKeySpec(key, "AES");
+            var parameters = new GCMParameterSpec(TAG_BITS, nonce);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameters);
+            cipher.updateAAD((tenantId + ":" + connectionId).getBytes(StandardCharsets.UTF_8));
+            byte[] encrypted = Base64.getDecoder().decode(parts[2]);
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (GeneralSecurityException | IllegalArgumentException exception) {
+            throw new ApiRuntimeException("模型凭证解密失败，请重新配置连接器");
+        }
+    }
+
+    /**
      * 返回非敏感的当前密钥标识。
      *
      * @return 当前服务端主密钥的非敏感标识

@@ -128,6 +128,9 @@ public class KnowledgeFolderService {
         if (mapper.selectChildCount(id) > 0) {
             throw new ApiRuntimeException("目录包含子目录，不能删除");
         }
+        if (mapper.selectDocumentCount(id) > 0) {
+            throw new ApiRuntimeException("目录包含资料，不能删除");
+        }
         mapper.deleteById(id);
     }
 }

@@ -28,6 +28,18 @@ import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.Filter;
 
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
+import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
+import org.etd.ai.knowledge.controller.KnowledgeDocumentNavigationController;
+import org.etd.ai.knowledge.service.KnowledgeFolderService;
+import org.etd.ai.knowledge.controller.KnowledgeUploadController;
+import org.etd.ai.knowledge.controller.KnowledgeProcessingController;
+import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
+import org.etd.ai.knowledge.biz.KnowledgeUploadBizService;
+import org.etd.ai.knowledge.service.KnowledgeDocumentService;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
+import org.etd.ai.knowledge.config.KnowledgeUploadProperties;
+import org.etd.framework.starter.log.annotation.AutoLog;
+import java.lang.reflect.Modifier;
 import org.etd.ai.model.biz.ModelBizService;
 import org.etd.ai.model.biz.ModelSquareBizService;
 import org.etd.ai.model.controller.ModelController;
@@ -104,6 +116,45 @@ class AiEndpointAuthenticationTest {
         mvc.perform(request).andExpect(status().isUnauthorized());
         var writeRequest = delete("/v1/model-square/connections/1");
         mvc.perform(writeRequest).andExpect(status().isUnauthorized());
+    }
+
+    /** 资料接口保持认证和功能权限；只读用户可获取下载地址，但不能取消上传。 */
+    @Test
+    void shouldProtectKnowledgeUploadsAndKeepDownloadsReadable() throws Exception {
+        var anonymous = get("/v1/knowledge-documents");
+        mvc.perform(anonymous).andExpect(status().isUnauthorized());
+        var session = createSession("ai:knowledge-document:read");
+        var list = get("/v1/knowledge-documents").session(session);
+        mvc.perform(list).andExpect(status().isOk());
+        var folders = get("/v1/knowledge-documents/folders").session(session);
+        mvc.perform(folders).andExpect(status().isOk());
+        var policy = get("/v1/knowledge-documents/uploads/policy").session(session);
+        mvc.perform(policy).andExpect(status().isOk());
+        var options = get("/v1/knowledge-documents/model-options").session(session);
+        mvc.perform(options).andExpect(status().isOk());
+        var download = post("/v1/knowledge-documents/1/download-url").session(session);
+        mvc.perform(download).andExpect(status().isOk());
+        var denied = post("/v1/knowledge-documents/uploads/1/cancel").session(session);
+        mvc.perform(denied).andExpect(status().isForbidden());
+        var writable = createSession("ai:knowledge-document:read", "ai:knowledge-document:write");
+        var allowed = post("/v1/knowledge-documents/uploads/1/cancel").session(writable);
+        mvc.perform(allowed).andExpect(status().isOk());
+        var uploads = context.getBean(KnowledgeUploadBizService.class);
+        verify(uploads).cancelUpload(1L);
+    }
+
+    /** 查询、上传及处理入口均声明中文操作日志，不能遗漏只读入口。 */
+    @Test
+    void shouldLogAllKnowledgeEndpoints() {
+        var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
+                KnowledgeProcessingController.class, KnowledgeDocumentNavigationController.class);
+        for (Class<?> controller : controllers) {
+            for (var method : controller.getDeclaredMethods()) {
+                if (Modifier.isPublic(method.getModifiers())) {
+                    assertNotNull(method.getAnnotation(AutoLog.class), method.getName());
+                }
+            }
+        }
     }
 
     /** 登录但无功能权限时，读写接口均拒绝且不能进入业务服务。 */
@@ -374,7 +425,11 @@ class AiEndpointAuthenticationTest {
                 Map.of(
                         ModelController.class, "ai:model",
                         ModelSquareController.class, "ai:model-square",
-                        KnowledgeFolderController.class, "ai:knowledge-folder");
+                        KnowledgeFolderController.class, "ai:knowledge-folder",
+                        KnowledgeDocumentController.class, "ai:knowledge-document",
+                        KnowledgeUploadController.class, "ai:knowledge-document",
+                        KnowledgeProcessingController.class, "ai:knowledge-document",
+                        KnowledgeDocumentNavigationController.class, "ai:knowledge-document");
         for (var resource : resources.entrySet()) {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
@@ -444,6 +499,50 @@ class AiEndpointAuthenticationTest {
         @Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
+        }
+
+        /** 页面目录导航能力替身；读目录不要求拥有目录维护菜单资源权限。 */
+        @Bean
+        KnowledgeDocumentNavigationController knowledgeDocumentNavigationController() {
+            var folders = mock(KnowledgeFolderService.class);
+            return new KnowledgeDocumentNavigationController(folders);
+        }
+
+        /** 资料接口服务替身，实际认证与方法权限不做替身。 */
+        @Bean
+        KnowledgeDocumentService knowledgeDocumentService() {
+            var service = mock(KnowledgeDocumentService.class);
+            var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+            when(service.fetchDocumentPage(1L, 10L, null, null, null, null)).thenReturn(page);
+            return service;
+        }
+
+        /** 原件下载能力替身，不访问MinIO。 */
+        @Bean
+        KnowledgeDocumentBizService knowledgeDocumentBizService() {
+            var service = mock(KnowledgeDocumentBizService.class);
+            when(service.createDownloadUrl(1L)).thenReturn("https://example.invalid/test-download");
+            return service;
+        }
+
+        /** 上传能力替身，确认无write权限时不会执行取消。 */
+        @Bean
+        KnowledgeUploadBizService knowledgeUploadBizService() {
+            return mock(KnowledgeUploadBizService.class);
+        }
+
+        /** 装配真实资料控制器。 */
+        @Bean
+        KnowledgeDocumentController knowledgeDocumentController(KnowledgeDocumentService documents,
+                KnowledgeDocumentBizService biz, ModelConnectionService connections) {
+            return new KnowledgeDocumentController(documents, biz, connections);
+        }
+
+        /** 装配真实上传控制器及默认技术参数。 */
+        @Bean
+        KnowledgeUploadController knowledgeUploadController(KnowledgeUploadBizService uploads) {
+            var properties = new KnowledgeUploadProperties();
+            return new KnowledgeUploadController(uploads, properties);
         }
 
         /** 不访问数据库，仅验证接口是否经过认证后进入服务。 */

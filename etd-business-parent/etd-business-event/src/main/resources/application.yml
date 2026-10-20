@@ -1,9 +1,15 @@
 # Event 服务公共配置，各环境差异连接信息应放入 application-{profile}.yml。
 server:
   port: 8200 # Event 服务监听端口。
+
 logging:
   level:
     root: INFO # 默认根日志级别，具体环境可以覆盖。
+    org.etd.event.delivery.mapper: DEBUG # 输出事件投递 Mapper 的 SQL 和绑定参数。
+    org.etd.event.message.mapper: DEBUG # 输出事件消息 Mapper 的 SQL 和绑定参数。
+    org.etd.event.subscription.mapper: DEBUG # 输出事件订阅 Mapper 的 SQL 和绑定参数。
+    org.etd.event.type.mapper: DEBUG # 输出事件类型 Mapper 的 SQL 和绑定参数。
+
 spring:
   profiles:
     active: local # 默认启用本地环境，可由启动参数覆盖。

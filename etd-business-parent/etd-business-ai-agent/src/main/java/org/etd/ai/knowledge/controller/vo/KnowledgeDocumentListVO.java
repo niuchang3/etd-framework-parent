@@ -1,0 +1,43 @@
+package org.etd.ai.knowledge.controller.vo;
+
+import lombok.Data;
+import java.time.Instant;
+
+/** 资料列表摘要；上传分片清单和模型处理参数只在详情返回，避免分页传输大量回执。 */
+@Data
+public class KnowledgeDocumentListVO {
+    /** 资料ID。 */
+    private Long id;
+    /** 资料的数据归属部门ID。 */
+    private Long orgId;
+    /** 所属分类目录ID。 */
+    private Long folderId;
+    /** 编辑时使用的乐观锁版本。 */
+    private Long version;
+    /** 资料显示名称。 */
+    private String documentName;
+    /** 原始文件名。 */
+    private String originalFilename;
+    /** 文件MIME声明。 */
+    private String contentType;
+    /** 原件大小，单位字节。 */
+    private Long fileSize;
+    /** 资料启停状态。 */
+    private Integer dataStatus;
+    /** 文件上传状态，与处理状态分开展示。 */
+    private String uploadStatus;
+    /** 知识处理状态。 */
+    private String processingStatus;
+    /** 脱敏后的上传失败原因。 */
+    private String uploadErrorMessage;
+    /** 脱敏后的处理失败原因。 */
+    private String errorMessage;
+    /** 上传会话截止时间。 */
+    private Instant uploadExpiresAt;
+    /** 资料上传用户ID。 */
+    private Long createBy;
+    /** 创建时间。 */
+    private Instant createTime;
+    /** 修改时间。 */
+    private Instant updateTime;
+}

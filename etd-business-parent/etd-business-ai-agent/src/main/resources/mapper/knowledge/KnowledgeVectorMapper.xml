@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeVectorMapper">
+    <insert id="insertVector">
+        insert into
+        <choose>
+            <when test="dimension == 768">ai_vector_768</when>
+            <when test="dimension == 1024">ai_vector_1024</when>
+            <otherwise>ai_vector_1536</otherwise>
+        </choose>
+        (id, content, metadata, vector)
+        values (#{id}, #{content}, cast(#{metadata} as jsonb), cast(#{vector} as vector))
+    </insert>
+</mapper>
