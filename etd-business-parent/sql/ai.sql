@@ -148,7 +148,7 @@ create table ai_model_connection
     constraint ck_ai_model_connection_auth check ((auth_type = 'none' and api_key_ciphertext is null and credential_key_id is null) or (auth_type = 'api_key' and nullif(btrim(api_key_ciphertext), '') is not null and nullif(btrim(credential_key_id), '') is not null))
 );
 
-comment on table ai_model_connection is '租户模型连接器：直接关联一个平台模型，保存租户选择的协议、实际地址及认证凭证';
+comment on table ai_model_connection is '租户模型连接器：同一租户的一个平台模型仅允许一个未删除连接器，保存协议、实际地址及认证凭证';
 comment on column ai_model_connection.id is '主键ID，由应用分配雪花ID';
 comment on column ai_model_connection.create_time is '创建时间，保存带时区的绝对时间点';
 comment on column ai_model_connection.create_by is '创建用户ID';
@@ -165,12 +165,12 @@ comment on column ai_model_connection.auth_type is '认证方式：none无需认
 comment on column ai_model_connection.api_key_ciphertext is 'AES-GCM加密的API Key，不返回前端';
 comment on column ai_model_connection.credential_key_id is '服务端加密密钥标识，实际主密钥由环境注入';
 
--- 不强制同一租户只能接入一次同一模型；使用模型和地址区分，不保留连接名称。
+-- 停用连接仍占用模型绑定，逻辑删除后允许重新接入；不同租户独立绑定。
 create index idx_ai_model_connection_tenant_created
     on ai_model_connection (tenant_id, create_time desc, id desc) include (data_status) where del_flag = 0;
-create index idx_ai_model_connection_tenant_model_created
-    on ai_model_connection (tenant_id, model_id, create_time desc, id desc) include (data_status) where del_flag = 0;
--- 覆盖平台跨租户的有效连接分组和启停统计；租户统计复用上方tenant_model索引。
+create unique index uk_ai_model_connection_tenant_model
+    on ai_model_connection (tenant_id, model_id) include (data_status) where del_flag = 0;
+-- 覆盖平台跨租户的有效连接分组和启停统计；租户统计复用上方唯一索引。
 create index idx_ai_model_connection_model on ai_model_connection (model_id)
     include (data_status) where del_flag = 0;
 

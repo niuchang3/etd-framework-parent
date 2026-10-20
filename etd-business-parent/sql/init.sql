@@ -107,12 +107,14 @@ values (2200101, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2200103, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'ai_model_auth_type', 'AI 模型认证方式', true, true, '根据接入协议校验允许的认证方式，不包含 SaaS 内部加密主密钥'),
        (2200104, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'ai_model_provider', 'AI 模型服务商', true, true, '模型管理所属服务商，用于分类筛选，与调用协议分开');
+        'ai_model_provider', 'AI 模型服务商', true, true, '模型管理所属服务商，用于分类筛选，与调用协议分开'),
+       (2200105, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_embedding_dimension', 'AI 向量维度', true, true, '系统向量存储支持的维度；知识库可选项须与所选模型的支持维度取交集');
 
 -- sys_dict_data 初始化。
 insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
--- AI 字典值与模型表 CHECK 中的代码保持一致，不保存租户模型实例或凭证。
+-- AI 字典值与对应业务表 CHECK 中的代码保持一致，不保存租户模型实例或凭证。
 values (2300201, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200101, 'CHAT', '聊天模型', 'chat', 10, true, true, '对话与文本生成；是否支持工具调用或图片输入由模型能力另行描述'),
        (2300202, current_timestamp, 1, current_timestamp, 1, 1, 0,
@@ -140,7 +142,13 @@ values (2300201, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300213, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200104, 'OPENAI', 'OpenAI', 'openai', 20, true, true, '服务商品牌，不表示OpenAI兼容协议'),
        (2300214, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200104, 'DEEPSEEK', 'DeepSeek', 'deepseek', 30, true, true, '服务商品牌，具体模型由平台目录维护');
+        2200104, 'DEEPSEEK', 'DeepSeek', 'deepseek', 30, true, true, '服务商品牌，具体模型由平台目录维护'),
+       (2300215, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200105, 'DIMENSION_768', '768 维', '768', 10, true, true, '对应系统 768 维向量存储'),
+       (2300216, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200105, 'DIMENSION_1024', '1024 维', '1024', 20, true, true, '对应系统 1024 维向量存储'),
+       (2300217, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200105, 'DIMENSION_1536', '1536 维', '1536', 30, true, true, '对应系统 1536 维向量存储');
 
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, del_flag,

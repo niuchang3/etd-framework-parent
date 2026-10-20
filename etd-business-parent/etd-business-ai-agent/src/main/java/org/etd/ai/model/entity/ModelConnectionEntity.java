@@ -20,7 +20,7 @@ public class ModelConnectionEntity extends BaseEntity {
     @Version
     private Long version;
 
-    /** 租户选中的平台模型标识，一个连接器对应一个模型。 */
+    /** 租户选中的平台模型标识，同一租户的一个模型仅允许一个未删除连接器。 */
     private Long modelId;
 
     /** 接入协议代码。 */

@@ -35,6 +35,7 @@ import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -42,6 +43,9 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /** 加载真实模型DDL、Mapper和应用隔离配置，验证目录共享及连接凭证边界。 */
 class ModelPersistenceTest {
@@ -68,14 +72,14 @@ class ModelPersistenceTest {
 
     /** 连接启停和逻辑删除分别影响计数，其他租户连接不计入当前租户的已接入状态。 */
     private void populateSquareConnections(ModelConnectionMapper connections, Long firstId, Long secondId) {
+        var deleted = createConnection(firstId);
+        connections.insert(deleted);
+        connections.deleteById(deleted.getId());
         var enabled = createConnection(firstId);
         connections.insert(enabled);
         var disabled = createConnection(secondId);
         disabled.setDataStatus(0);
         connections.insert(disabled);
-        var deleted = createConnection(firstId);
-        connections.insert(deleted);
-        connections.deleteById(deleted.getId());
         RequestContext.setTenantCode(2L);
         var foreign = createConnection(firstId);
         connections.insert(foreign);
@@ -216,6 +220,71 @@ class ModelPersistenceTest {
             biz.modifyConnection(update, null, 0L);
             assertEquals(update.getBaseUrl(), biz.fetchConnection(id).getBaseUrl());
             assertEquals(1L, biz.fetchConnection(id).getVersion());
+        }
+    }
+
+    /** 同租户同模型拒绝重复接入，换地址或停用均不释放绑定，删除后可重新接入。 */
+    @Test
+    void shouldRejectDuplicateModelConnectionUntilDeleted() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var modelMapper = session.getMapper(ModelMapper.class);
+            var model = createModel(modelMapper);
+            var mapper = session.getMapper(ModelConnectionMapper.class);
+            var cipher = createCipher();
+            var service = new ModelConnectionService(mapper, cipher);
+            var first = createConnection(model.getId());
+            var id = service.createConnection(first, null);
+            var duplicate = createConnection(model.getId());
+            duplicate.setBaseUrl("http://127.0.0.1:11435");
+            var error = assertThrows(ApiRuntimeException.class, () -> service.createConnection(duplicate, null));
+            assertEquals("该模型已绑定连接器，请修改已有连接器", error.getMessage());
+            service.modifyConnectionStatus(id, 0, 0L);
+            assertThrows(ApiRuntimeException.class, () -> service.createConnection(duplicate, null));
+            // 本测试未建知识库表，仅直接逻辑删除以聚焦绑定释放规则。
+            mapper.deleteById(id);
+            assertNotNull(service.createConnection(duplicate, null));
+            assertEquals(1, service.countConnectionByModel(model.getId()));
+        }
+    }
+
+    /** 创建前校验通过但插入发生唯一键冲突时，仍返回明确的重复绑定业务提示。 */
+    @Test
+    void shouldTranslateConcurrentDuplicateConnectionToBusinessError() {
+        populateIdentity();
+        var mapper = mock(ModelConnectionMapper.class);
+        var cipher = createCipher();
+        var service = new ModelConnectionService(mapper, cipher);
+        var conflict = new DuplicateKeyException("模拟并发唯一键冲突");
+        doThrow(conflict).when(mapper).insert(any(ModelConnectionEntity.class));
+        var connection = createConnection(100L);
+        var error = assertThrows(ApiRuntimeException.class, () -> service.createConnection(connection, null));
+        assertEquals("该模型已绑定连接器，请修改已有连接器", error.getMessage());
+    }
+
+    /** 管理员可跨租户查看连接，但新增绑定的唯一性仍只按新连接所属租户判断。 */
+    @Test
+    void shouldAllowIndependentModelConnectionsForDifferentTenants() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var modelMapper = session.getMapper(ModelMapper.class);
+            var model = createModel(modelMapper);
+            var mapper = session.getMapper(ModelConnectionMapper.class);
+            var cipher = createCipher();
+            var service = new ModelConnectionService(mapper, cipher);
+            var first = createConnection(model.getId());
+            service.createConnection(first, null);
+            RequestContext.setTenantCode(2L);
+            RequestContext.getUser().setPlatformAdmin(true);
+            var second = createConnection(model.getId());
+            assertNotNull(service.createConnection(second, null));
+            var duplicate = createConnection(model.getId());
+            assertThrows(ApiRuntimeException.class, () -> service.createConnection(duplicate, null));
+            assertEquals(2, service.countConnectionByModel(model.getId()));
+            RequestContext.setTenantCode(1L);
+            assertThrows(ApiRuntimeException.class, () -> service.createConnection(duplicate, null));
         }
     }
 

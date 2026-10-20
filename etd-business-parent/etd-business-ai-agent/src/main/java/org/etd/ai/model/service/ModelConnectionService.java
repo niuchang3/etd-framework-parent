@@ -13,6 +13,7 @@ import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.mapper.ModelConnectionMapper;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,9 @@ import java.net.URI;
 @Service
 @RequiredArgsConstructor
 public class ModelConnectionService {
+    /** 顺序请求和并发唯一键冲突统一使用的重复绑定提示。 */
+    private static final String MODEL_ALREADY_BOUND_MESSAGE = "该模型已绑定连接器，请修改已有连接器";
+
     private final ModelConnectionMapper mapper;
     private final ModelCredentialCipher cipher;
 
@@ -63,7 +67,7 @@ public class ModelConnectionService {
     }
 
     /**
-     * 创建连接并加密凭证；API Key只写不读。
+     * 创建连接并加密凭证；同一租户的一个模型仅允许一个未删除连接，API Key只写不读。
      *
      * @param e 本次写入的业务记录，租户和审计信息由后端控制
      * @param apiKey 待加密凭证或配置值，不写入日志或普通响应
@@ -72,10 +76,27 @@ public class ModelConnectionService {
      */
     public Long createConnection(ModelConnectionEntity e, String apiKey) {
         validateConnection(e);
+        requireUnboundModel(e.getModelId());
         e.setId(IdWorker.getId());
         populateCredential(e, apiKey, null);
-        mapper.insert(e);
+        try {
+            mapper.insert(e);
+        } catch (DuplicateKeyException exception) {
+            // 唯一索引负责并发写入的最终约束，重复接入返回业务提示而非数据库错误。
+            throw new ApiRuntimeException(MODEL_ALREADY_BOUND_MESSAGE);
+        }
         return e.getId();
+    }
+
+    /** 校验新连接所属租户的模型绑定唯一性；显式租户条件用于定位唯一键，不限制管理员的查询权限。 */
+    private void requireUnboundModel(Long modelId) {
+        var query = Wrappers.<ModelConnectionEntity>lambdaQuery()
+                .eq(ModelConnectionEntity::getTenantId, RequestContext.getTenantCode())
+                .eq(ModelConnectionEntity::getModelId, modelId);
+        // 停用仍占用绑定；逻辑删除记录由MyBatis-Plus自动排除。
+        if (mapper.exists(query)) {
+            throw new ApiRuntimeException(MODEL_ALREADY_BOUND_MESSAGE);
+        }
     }
 
     /**
