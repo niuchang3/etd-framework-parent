@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
 import org.etd.ai.model.biz.ModelBizService;
+import org.etd.ai.model.constant.ModelPermissionCode;
 import org.etd.ai.model.controller.dto.ModelSaveDTO;
 import org.etd.ai.model.controller.vo.ModelVO;
 import org.etd.ai.model.converter.ModelConverter;
@@ -34,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/models")
-@Permission("ai:model")
+@Permission(ModelPermissionCode.MODEL)
 public class ModelController {
     private final ModelService service;
     private final ModelBizService biz;

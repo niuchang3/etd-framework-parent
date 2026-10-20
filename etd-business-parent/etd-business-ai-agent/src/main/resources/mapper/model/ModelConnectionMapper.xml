@@ -16,6 +16,9 @@
         <if test="dataStatus != null">
             and c.data_status = #{dataStatus}
         </if>
+        <if test="providerCode != null">
+            and m.provider_code = #{providerCode}
+        </if>
         order by c.create_time desc, c.id desc
     </select>
 

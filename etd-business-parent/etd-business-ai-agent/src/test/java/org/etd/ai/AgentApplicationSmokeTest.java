@@ -1,7 +1,11 @@
 package org.etd.ai;
 
 import org.etd.ai.model.controller.ModelController;
-import org.etd.ai.model.controller.ModelConnectionController;
+import org.etd.ai.model.controller.ModelSquareController;
+import org.etd.ai.model.biz.ModelSquareBizService;
+
+import java.util.HashSet;
+import java.util.Set;
 import org.etd.ai.model.mapper.ModelMapper;
 import org.etd.framework.starter.mybaits.EtdMyBatisPlusProperties;
 import org.junit.jupiter.api.Test;
@@ -27,9 +31,13 @@ class AgentApplicationSmokeTest {
     @Autowired
     private ModelController models;
 
-    /** 实际装配的租户连接器入口。 */
+    /** 实际装配的首页聚合入口。 */
     @Autowired
-    private ModelConnectionController connections;
+    private ModelSquareController square;
+
+    /** 广场必须通过Biz层组合底层模型及连接能力。 */
+    @Autowired
+    private ModelSquareBizService squareBiz;
 
     /** Mapper扫描应包含新平台目录。 */
     @Autowired
@@ -48,13 +56,21 @@ class AgentApplicationSmokeTest {
     @Test
     void shouldStartWithSharedCatalogAndTenantConnections() {
         assertNotNull(models);
-        assertNotNull(connections);
+        assertNotNull(square);
+        assertNotNull(squareBiz);
+        var registeredPaths = new HashSet<String>();
         assertNotNull(mapper);
         for (var mapping : mappings.getHandlerMethods().keySet()) {
             for (var path : mapping.getPatternValues()) {
+                registeredPaths.add(path);
                 assertFalse(path.startsWith("/v1/model-configs"));
+                assertFalse(path.startsWith("/v1/model-connections"));
             }
         }
+        var squarePaths = Set.of("/v1/model-square/models", "/v1/model-square/models/{id}",
+                "/v1/model-square/connections", "/v1/model-square/connections/{id}",
+                "/v1/model-square/connections/{id}/status");
+        assertTrue(registeredPaths.containsAll(squarePaths));
         assertTrue(properties.getTenant().getIgnoreTables().contains("ai_model"));
         assertFalse(properties.getTenant().getIgnoreTables().contains("ai_model_connection"));
         assertTrue(properties.getDataPermission().getIgnoreTables().contains("ai_model"));

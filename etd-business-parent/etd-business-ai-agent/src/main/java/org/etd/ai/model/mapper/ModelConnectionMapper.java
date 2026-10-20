@@ -12,10 +12,12 @@ public interface ModelConnectionMapper extends BaseMapper<ModelConnectionEntity>
      * @param page 分页参数
      * @param modelId 可选模型标识
      * @param dataStatus 可选启停状态
+     * @param providerCode 可选服务商字典值，用于连接管理的服务商筛选
      * @return 连接及模型展示信息
      */
     IPage<ModelConnectionEntity> selectConnectionPage(IPage<ModelConnectionEntity> page,
-            @Param("modelId") Long modelId, @Param("dataStatus") Integer dataStatus);
+            @Param("modelId") Long modelId, @Param("dataStatus") Integer dataStatus,
+            @Param("providerCode") String providerCode);
 
     /**
      * 查询连接及关联模型信息，不向Controller直接返回VO。

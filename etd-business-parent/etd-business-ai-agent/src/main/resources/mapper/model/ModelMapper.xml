@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.model.mapper.ModelMapper">
+    <resultMap id="squareModel" type="org.etd.ai.model.mapper.result.ModelSquareModel" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="embedding" column="embedding" jdbcType="ARRAY"
+                typeHandler="org.etd.ai.model.mapper.typehandler.EmbeddingDimensionsTypeHandler"/>
+    </resultMap>
+
+    <!-- 普通租户的连接统计由框架注入隔离条件；管理员仍遵循全局访问规则。 -->
+    <sql id="connectionCounts">
+        select c.model_id,
+               count(*) as connection_count,
+               sum(case when c.data_status = 1 then 1 else 0 end) as enabled_connection_count
+        from ai_model_connection c
+        where c.del_flag = 0
+        group by c.model_id
+    </sql>
+
+    <!-- 首页只展示平台已启用模型；停用模型的连接通过连接管理入口维护。 -->
+    <sql id="visibleModels">
+        select m.*,
+               coalesce(c.connection_count, 0) as connection_count,
+               coalesce(c.enabled_connection_count, 0) as enabled_connection_count
+        from ai_model m
+        left join (
+            <include refid="connectionCounts"/>
+        ) c on c.model_id = m.id
+        where m.del_flag = 0
+          and m.data_status = 1
+    </sql>
+
+    <select id="selectSquareModelPage" resultMap="squareModel">
+        select v.*
+        from (
+            <include refid="visibleModels"/>
+        ) v
+        <where>
+            <if test="providerCode != null">
+                and v.provider_code = #{providerCode}
+            </if>
+            <if test="modelType != null">
+                and v.model_type = #{modelType}
+            </if>
+            <if test="keyword != null">
+                and (lower(v.model_name) like lower(#{keyword}) escape '\'
+                     or lower(v.model_code) like lower(#{keyword}) escape '\')
+            </if>
+            <if test="connected != null and connected">
+                and v.connection_count > 0
+            </if>
+            <if test="connected != null and !connected">
+                and v.connection_count = 0
+            </if>
+        </where>
+        order by v.sort, v.id
+    </select>
+</mapper>

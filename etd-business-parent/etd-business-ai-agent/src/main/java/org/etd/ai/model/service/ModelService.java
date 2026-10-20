@@ -36,6 +36,8 @@ public class ModelService {
             long current, long size, String providerCode, String modelType, Integer dataStatus) {
         var page = new Page<ModelEntity>(current, size);
         var query = Wrappers.<ModelEntity>lambdaQuery()
+                // 全局目录不经过租户过滤，租户可见状态必须在能力服务中显式限定。
+                .eq(!isPlatformAdmin(), ModelEntity::getDataStatus, BasicConstant.DataStatus.ENABLED_CODE)
                 .eq(dataStatus != null, ModelEntity::getDataStatus, dataStatus)
                 .eq(providerCode != null, ModelEntity::getProviderCode, providerCode)
                 .eq(modelType != null, ModelEntity::getModelType, modelType)

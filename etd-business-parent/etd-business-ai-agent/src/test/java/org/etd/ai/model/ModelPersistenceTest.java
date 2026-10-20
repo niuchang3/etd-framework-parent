@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.etd.ai.model.component.ModelCredentialCipher;
 import org.etd.ai.model.biz.ModelBizService;
+import org.etd.ai.model.biz.ModelSquareBizService;
 import org.etd.ai.model.controller.dto.ModelSaveDTO;
 import org.etd.ai.model.converter.ModelConverter;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,8 +16,10 @@ import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.entity.ModelEntity;
 import org.etd.ai.model.mapper.ModelConnectionMapper;
 import org.etd.ai.model.mapper.ModelMapper;
+import org.etd.ai.model.mapper.result.ModelSquareModel;
 import org.etd.ai.model.service.ModelConnectionService;
 import org.etd.ai.model.service.ModelService;
+import org.etd.ai.model.service.ModelSquareService;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.user.UserDetails;
@@ -36,11 +39,232 @@ import org.springframework.core.io.ClassPathResource;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /** 加载真实模型DDL、Mapper和应用隔离配置，验证目录共享及连接凭证边界。 */
 class ModelPersistenceTest {
+    /** 同一服务商的不同模型独立成卡片，接入统计保持模型粒度和框架访问范围。 */
+    @Test
+    void shouldReturnModelCardsWithinAccessScope() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var first = createModel(mapper);
+            var second = createCatalogModel(mapper, "aliyun", "embedding", "向量模型");
+            createCatalogModel(mapper, "deepseek", "chat", "DeepSeek");
+            var connections = session.getMapper(ModelConnectionMapper.class);
+            populateSquareConnections(connections, first.getId(), second.getId());
+            var service = new ModelSquareService(mapper);
+            verifyModelCounts(service, first.getId(), second.getId(), 1);
+            RequestContext.setTenantCode(2L);
+            verifyModelCounts(service, first.getId(), second.getId(), 1);
+            RequestContext.getUser().setPlatformAdmin(true);
+            verifyModelCounts(service, first.getId(), second.getId(), 2);
+        }
+    }
+
+    /** 连接启停和逻辑删除分别影响计数，其他租户连接不计入当前租户的已接入状态。 */
+    private void populateSquareConnections(ModelConnectionMapper connections, Long firstId, Long secondId) {
+        var enabled = createConnection(firstId);
+        connections.insert(enabled);
+        var disabled = createConnection(secondId);
+        disabled.setDataStatus(0);
+        connections.insert(disabled);
+        var deleted = createConnection(firstId);
+        connections.insert(deleted);
+        connections.deleteById(deleted.getId());
+        RequestContext.setTenantCode(2L);
+        var foreign = createConnection(firstId);
+        connections.insert(foreign);
+        RequestContext.setTenantCode(1L);
+    }
+
+    /** 每条返回记录是具体模型，平台管理员仍能按框架规则统计所有租户连接。 */
+    private void verifyModelCounts(ModelSquareService service, Long firstId, Long secondId, long count) {
+        var page = service.fetchModelPage(1, 12, null, null, null, null);
+        assertEquals(3, page.getTotal());
+        var first = requireSquareModel(page.getRecords(), firstId);
+        assertEquals(count, first.getConnectionCount());
+        assertEquals(count, first.getEnabledConnectionCount());
+        var second = requireSquareModel(page.getRecords(), secondId);
+        var tenantTwoOnly = RequestContext.getTenantCode() == 2L && !RequestContext.getUser().isPlatformAdmin();
+        assertEquals(tenantTwoOnly ? 0 : 1, second.getConnectionCount());
+        assertEquals(0, second.getEnabledConnectionCount());
+        assertEquals("embedding", second.getModelType());
+    }
+
+    /** 按模型标识定位断言对象，不依赖相同排序值记录的数据库返回顺序。 */
+    private ModelSquareModel requireSquareModel(List<ModelSquareModel> models, Long id) {
+        for (var model : models) {
+            if (id.equals(model.getId())) {
+                return model;
+            }
+        }
+        throw new AssertionError("首页未返回预期模型：" + id);
+    }
+
+    /** 首页模型支持分页、服务商、类型、接入状态及文本搜索，关联统计不复制模型记录。 */
+    @Test
+    void shouldFilterSquareModelsWithoutGroupingByProvider() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var first = createModel(mapper);
+            var second = createCatalogModel(mapper, "aliyun", "embedding", "向量模型");
+            var connections = session.getMapper(ModelConnectionMapper.class);
+            var connection = createConnection(first.getId());
+            connections.insert(connection);
+            var service = new ModelSquareService(mapper);
+            verifySquareModelFilters(service, second.getId());
+            RequestContext.setTenantCode(2L);
+            assertEquals(2, service.fetchModelPage(1, 12, null, null, null, null).getTotal());
+            assertEquals(0, service.fetchModelPage(1, 12, null, null, null, true).getTotal());
+        }
+    }
+
+    /** 统计先于分页，未接入向量模型及支持维度不因关联连接而丢失。 */
+    private void verifySquareModelFilters(ModelSquareService service, Long embeddingId) {
+        var page = service.fetchModelPage(1, 1, "aliyun", null, null, null);
+        assertEquals(2, page.getTotal());
+        assertEquals(1, page.getRecords().size());
+        var connected = service.fetchModelPage(1, 12, "aliyun", null, null, true);
+        assertEquals(1, connected.getTotal());
+        assertEquals(1, connected.getRecords().getFirst().getDataStatus());
+        assertEquals(1, connected.getRecords().getFirst().getConnectionCount());
+        var unconnected = service.fetchModelPage(1, 12, null, "embedding", " 向量 ", false);
+        assertEquals(1, unconnected.getTotal());
+        assertEquals(embeddingId, unconnected.getRecords().getFirst().getId());
+        var dimensions = new Integer[]{768, 1024};
+        assertArrayEquals(dimensions, unconnected.getRecords().getFirst().getEmbedding());
+        assertEquals(0, service.fetchModelPage(1, 12, null, null, "%", null).getTotal());
+        assertEquals(0, service.fetchModelPage(1, 12, "missing", null, null, null).getTotal());
+    }
+
+    /** 停用和删除模型均不在首页展示，停用模型的已有连接仍可由连接管理查询。 */
+    @Test
+    void shouldHideDisabledModelsAndKeepExistingConnectionsManageable() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var model = createModel(mapper);
+            var connections = session.getMapper(ModelConnectionMapper.class);
+            var connection = createConnection(model.getId());
+            connections.insert(connection);
+            model.setDataStatus(0);
+            mapper.updateById(model);
+            var deleted = createCatalogModel(mapper, "deepseek", "chat", "已删除模型");
+            mapper.deleteById(deleted.getId());
+            var service = new ModelSquareService(mapper);
+            assertEquals(0, service.fetchModelPage(1, 12, null, null, null, null).getTotal());
+            assertNotNull(connections.selectConnectionDetail(connection.getId()));
+            RequestContext.getUser().setPlatformAdmin(true);
+            assertEquals(0, service.fetchModelPage(1, 12, null, null, null, null).getTotal());
+            var page = new Page<ModelConnectionEntity>(1, 10);
+            assertEquals(1, connections.selectConnectionPage(page, model.getId(), null, null).getTotal());
+        }
+    }
+
+    /** 连接管理可直接按服务商分页筛选，不需前端下载全部连接再拼接。 */
+    @Test
+    void shouldFilterConnectionsByProvider() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var aliyun = createModel(mapper);
+            var deepseek = createCatalogModel(mapper, "deepseek", "chat", "DeepSeek");
+            var connections = session.getMapper(ModelConnectionMapper.class);
+            var first = createConnection(aliyun.getId());
+            var second = createConnection(deepseek.getId());
+            connections.insert(first);
+            connections.insert(second);
+            var page = new Page<ModelConnectionEntity>(1, 10);
+            var result = connections.selectConnectionPage(page, null, null, "deepseek");
+            assertEquals(1, result.getTotal());
+            assertEquals(second.getId(), result.getRecords().getFirst().getId());
+        }
+    }
+
+    /** 广场Biz通过真实模型及连接能力完成接入、查询和修改，模型绑定保持不变。 */
+    @Test
+    void shouldConnectAndManageModelThroughSquareBiz() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var model = createModel(mapper);
+            var connectionMapper = session.getMapper(ModelConnectionMapper.class);
+            var cipher = createCipher();
+            var connections = new ModelConnectionService(connectionMapper, cipher);
+            var models = new ModelService(mapper);
+            var queries = new ModelSquareService(mapper);
+            var biz = new ModelSquareBizService(queries, models, connections);
+            var connection = createConnection(model.getId());
+            var id = biz.createConnection(connection, null);
+            assertEquals(model.getId(), biz.fetchModel(model.getId()).getId());
+            assertEquals(model.getId(), biz.fetchConnection(id).getModelId());
+            assertEquals(1, biz.fetchConnectionPage(1, 10, model.getId(), null, null).getTotal());
+            assertEquals(1, biz.fetchModelPage(1, 12, null, null, null, true).getTotal());
+            var update = createConnection(model.getId());
+            update.setId(id);
+            update.setBaseUrl("http://127.0.0.1:11435");
+            biz.modifyConnection(update, null, 0L);
+            assertEquals(update.getBaseUrl(), biz.fetchConnection(id).getBaseUrl());
+            assertEquals(1L, biz.fetchConnection(id).getVersion());
+        }
+    }
+
+    /** 启停保留密文，拒绝旧版本；模型停用后允许停用连接但禁止再次启用。 */
+    @Test
+    void shouldSwitchConnectionStatusWithoutChangingCredentials() throws Exception {
+        var factory = createSessionFactory();
+        populateIdentity();
+        try (var session = factory.openSession(true)) {
+            var mapper = session.getMapper(ModelMapper.class);
+            var model = createModel(mapper);
+            var connectionMapper = session.getMapper(ModelConnectionMapper.class);
+            var cipher = createCipher();
+            var service = new ModelConnectionService(connectionMapper, cipher);
+            var models = new ModelService(mapper);
+            var queries = new ModelSquareService(mapper);
+            var biz = new ModelSquareBizService(queries, models, service);
+            var connection = createConnection(model.getId());
+            connection.setAuthType("api_key");
+            var id = service.createConnection(connection, "test-only-status-key");
+            var original = connectionMapper.selectById(id);
+            biz.modifyConnectionStatus(id, 0, 0L);
+            assertEquals(0, connectionMapper.selectById(id).getDataStatus());
+            assertEquals(original.getApiKeyCiphertext(), connectionMapper.selectById(id).getApiKeyCiphertext());
+            assertThrows(ApiRuntimeException.class, () -> biz.modifyConnectionStatus(id, 1, 0L));
+            model.setDataStatus(0);
+            mapper.updateById(model);
+            biz.modifyConnectionStatus(id, 0, 1L);
+            assertThrows(ApiRuntimeException.class, () -> biz.modifyConnectionStatus(id, 1, 2L));
+            assertEquals(0, connectionMapper.selectById(id).getDataStatus());
+        }
+    }
+
+    /** 构造独立模型，向量模型使用合法的支持维度集合。 */
+    private ModelEntity createCatalogModel(ModelMapper mapper, String provider, String type, String name) {
+        var model = new ModelEntity();
+        model.setProviderCode(provider);
+        model.setModelName(name);
+        model.setModelCode(name);
+        model.setModelType(type);
+        model.setSort(1);
+        if ("embedding".equals(type)) {
+            var dimensions = new Integer[]{768, 1024};
+            model.setEmbedding(dimensions);
+        }
+        mapper.insert(model);
+        return model;
+    }
+
     /** 为框架自动填充SpEL提供上下文。 */
     private final StaticApplicationContext context = new StaticApplicationContext();
 
@@ -71,12 +295,12 @@ class ModelPersistenceTest {
             assertEquals(model.getModelName(), details.getModelName());
             assertEquals("aliyun", details.getProviderCode());
             var page = new Page<ModelConnectionEntity>(1, 10);
-            assertEquals(1, connections.selectConnectionPage(page, model.getId(), null).getTotal());
+            assertEquals(1, connections.selectConnectionPage(page, model.getId(), null, null).getTotal());
             RequestContext.setTenantCode(2L);
             assertNotNull(service.requireModel(model.getId()));
             assertNull(connections.selectConnectionDetail(connection.getId()));
             assertNull(connections.selectById(connection.getId()));
-            assertEquals(0, connections.selectConnectionPage(page, null, null).getTotal());
+            assertEquals(0, connections.selectConnectionPage(page, null, null, null).getTotal());
             RequestContext.getUser().setPlatformAdmin(true);
             assertNotNull(connections.selectConnectionDetail(connection.getId()));
         }
@@ -340,7 +564,8 @@ class ModelPersistenceTest {
         factory.setConfiguration(configuration);
         factory.setDataSource(source);
         var resource = new ClassPathResource("mapper/model/ModelConnectionMapper.xml");
-        factory.setMapperLocations(resource);
+        var modelResource = new ClassPathResource("mapper/model/ModelMapper.xml");
+        factory.setMapperLocations(resource, modelResource);
         var global = new GlobalConfig();
         var fill = new DefaultDataFillHandler();
         fill.setApplicationContext(context);
@@ -351,7 +576,6 @@ class ModelPersistenceTest {
         var interceptor = framework.mybatisPlusInterceptor();
         factory.setPlugins(interceptor);
         var sessionFactory = factory.getObject();
-        sessionFactory.getConfiguration().addMapper(ModelMapper.class);
         return sessionFactory;
     }
 

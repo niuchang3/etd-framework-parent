@@ -32,12 +32,14 @@ public class ModelConnectionService {
      * @param size 每页记录数或预期字节数，以方法用途为准
      * @param modelId 可选平台模型标识
      * @param dataStatus 可选启停状态；不传时不过滤状态
+     * @param providerCode 可选服务商字典值
      * @return 符合当前租户及查询条件的分页结果
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
-    public IPage<ModelConnectionEntity> fetchPage(long current, long size, Long modelId, Integer dataStatus) {
+    public IPage<ModelConnectionEntity> fetchPage(
+            long current, long size, Long modelId, Integer dataStatus, String providerCode) {
         var page = new Page<ModelConnectionEntity>(current, size);
-        return mapper.selectConnectionPage(page, modelId, dataStatus);
+        return mapper.selectConnectionPage(page, modelId, dataStatus, providerCode);
     }
 
     /**
@@ -94,6 +96,23 @@ public class ModelConnectionService {
         populateCredential(e, apiKey, old);
         e.setVersion(version);
         if (mapper.updateById(e) != 1) {
+            throw new ApiRuntimeException("连接已变化，请刷新重试");
+        }
+    }
+
+    /**
+     * 按版本修改连接状态，加载完整记录以保持原地址及加密凭证不变。
+     * @param id 当前访问范围内的连接标识
+     * @param dataStatus 目标状态，调用方已校验合法状态码
+     * @param version 页面读取的当前版本
+     * @throws ApiRuntimeException 连接不存在或版本冲突
+     */
+    @Transactional
+    public void modifyConnectionStatus(Long id, Integer dataStatus, Long version) {
+        var connection = requireConnection(id, true);
+        connection.setDataStatus(dataStatus);
+        connection.setVersion(version);
+        if (mapper.updateById(connection) != 1) {
             throw new ApiRuntimeException("连接已变化，请刷新重试");
         }
     }

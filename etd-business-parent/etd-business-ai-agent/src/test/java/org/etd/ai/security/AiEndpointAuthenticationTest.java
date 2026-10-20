@@ -1,6 +1,8 @@
 package org.etd.ai.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -27,8 +29,10 @@ import jakarta.servlet.Filter;
 
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.model.biz.ModelBizService;
+import org.etd.ai.model.biz.ModelSquareBizService;
 import org.etd.ai.model.controller.ModelController;
-import org.etd.ai.model.controller.ModelConnectionController;
+import org.etd.ai.model.controller.ModelSquareController;
+import org.etd.ai.model.service.ModelSquareService;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.entity.ModelEntity;
 import org.etd.ai.model.mapper.ModelMapper;
@@ -96,9 +100,9 @@ class AiEndpointAuthenticationTest {
     /** 匿名业务请求仍被框架认证入口拒绝。 */
     @Test
     void shouldRequireAuthenticationForBusinessEndpoints() throws Exception {
-        var request = get("/v1/model-connections");
+        var request = get("/v1/model-square/connections");
         mvc.perform(request).andExpect(status().isUnauthorized());
-        var writeRequest = delete("/v1/model-connections/1");
+        var writeRequest = delete("/v1/model-square/connections/1");
         mvc.perform(writeRequest).andExpect(status().isUnauthorized());
     }
 
@@ -106,9 +110,9 @@ class AiEndpointAuthenticationTest {
     @Test
     void shouldDenyAuthenticatedUserWithoutFunctionalAuthorities() throws Exception {
         var session = createSession();
-        var readRequest = get("/v1/model-connections").session(session);
+        var readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isForbidden());
-        var writeRequest = delete("/v1/model-connections/1").session(session);
+        var writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
         var models = context.getBean(ModelConnectionService.class);
         verifyNoInteractions(models);
@@ -117,26 +121,26 @@ class AiEndpointAuthenticationTest {
     /** read只允许查询，不能执行删除等写操作。 */
     @Test
     void shouldAllowReadWithoutGrantingWrite() throws Exception {
-        var session = createSession("ai:model-connection:read");
-        var readRequest = get("/v1/model-connections").session(session);
+        var session = createSession("ai:model-square:read");
+        var readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-connections/1").session(session);
+        var writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
         var models = context.getBean(ModelConnectionService.class);
-        verify(models).fetchPage(1L, 10L, null, null);
+        verify(models).fetchPage(1L, 10L, null, null, null);
         verify(models, never()).removeConnection(anyLong());
     }
 
     /** 同时具备read/write时，真实Controller可调用读写业务能力。 */
     @Test
     void shouldAllowGrantedReadAndWrite() throws Exception {
-        var session = createSession("ai:model-connection:read", "ai:model-connection:write");
-        var readRequest = get("/v1/model-connections").session(session);
+        var session = createSession("ai:model-square:read", "ai:model-square:write");
+        var readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-connections/1").session(session);
+        var writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isOk());
         var models = context.getBean(ModelConnectionService.class);
-        verify(models).fetchPage(1L, 10L, null, null);
+        verify(models).fetchPage(1L, 10L, null, null, null);
         verify(models).removeConnection(1L);
     }
 
@@ -145,7 +149,7 @@ class AiEndpointAuthenticationTest {
     void shouldKeepCatalogReadOnlyForTenantUsers() throws Exception {
         var anonymous = get("/v1/models");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var deniedSession = createSession("ai:model-connection:read");
+        var deniedSession = createSession("ai:model-square:read");
         var denied = get("/v1/models").session(deniedSession);
         mvc.perform(denied).andExpect(status().isForbidden());
         var session = createSession("ai:model:read", "ai:model:write");
@@ -230,6 +234,132 @@ class AiEndpointAuthenticationTest {
         return session;
     }
 
+    /** 广场单一read权限覆盖模型和连接全部查询，不能替代平台模型目录管理权限。 */
+    @Test
+    void shouldAllowAllSquareReadsWithOneAuthority() throws Exception {
+        var paths = List.of("/v1/model-square/models", "/v1/model-square/models/1",
+                "/v1/model-square/connections", "/v1/model-square/connections/1");
+        var session = createSession("ai:model-square:read");
+        for (var path : paths) {
+            var request = get(path).session(session);
+            mvc.perform(request).andExpect(status().isOk());
+        }
+        var forbidden = get("/v1/models").session(session);
+        mvc.perform(forbidden).andExpect(status().isForbidden());
+        var mapper = context.getBean(ModelMapper.class);
+        verify(mapper, never()).insert(any(ModelEntity.class));
+    }
+
+    /** 广场read只允许浏览，广场write可接入具体模型，无需第二个菜单资源权限。 */
+    @Test
+    void shouldConnectModelWithSquareWriteAuthority() throws Exception {
+        var payload = """
+                {"modelId":"1","protocol":"ollama","baseUrl":"http://127.0.0.1:11434","authType":"none"}
+                """;
+        var browseOnly = createSession("ai:model-square:read");
+        var denied = post("/v1/model-square/connections").session(browseOnly)
+                .contentType(MediaType.APPLICATION_JSON).content(payload);
+        mvc.perform(denied).andExpect(status().isForbidden());
+        var writable = createSession("ai:model-square:read", "ai:model-square:write");
+        var allowed = post("/v1/model-square/connections").session(writable)
+                .contentType(MediaType.APPLICATION_JSON).content(payload);
+        mvc.perform(allowed).andExpect(status().isOk());
+        var connections = context.getBean(ModelConnectionService.class);
+        verify(connections).createConnection(argThat(connection -> connection.getModelId().equals(1L)), isNull());
+        var missingModel = post("/v1/model-square/connections").session(writable)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"protocol\":\"ollama\",\"baseUrl\":\"http://127.0.0.1:11434\",\"authType\":\"none\"}");
+        mvc.perform(missingModel).andExpect(status().isBadRequest());
+    }
+
+    /** 修改连接也按广场write授权，并将目标连接及版本交给真实广场Biz编排。 */
+    @Test
+    void shouldUpdateConnectionWithSquareWriteAuthority() throws Exception {
+        var payload = """
+                {"modelId":"1","protocol":"ollama","baseUrl":"http://127.0.0.1:11434",
+                 "authType":"none","version":0}
+                """;
+        var readOnly = createSession("ai:model-square:read");
+        var denied = put("/v1/model-square/connections/1").session(readOnly)
+                .contentType(MediaType.APPLICATION_JSON).content(payload);
+        mvc.perform(denied).andExpect(status().isForbidden());
+        var writable = createSession("ai:model-square:read", "ai:model-square:write");
+        var allowed = put("/v1/model-square/connections/1").session(writable)
+                .contentType(MediaType.APPLICATION_JSON).content(payload);
+        mvc.perform(allowed).andExpect(status().isOk());
+        var connections = context.getBean(ModelConnectionService.class);
+        verify(connections).modifyConnection(argThat(connection -> connection.getId().equals(1L)), isNull(), eq(0L));
+    }
+
+    /** 聚合连接详情保持只返回凭证存在标记，不因移动入口而泄露内部存储字段。 */
+    @Test
+    void shouldKeepAggregatedConnectionResponseSecretFree() throws Exception {
+        var session = createSession("ai:model-square:read");
+        var request = get("/v1/model-square/connections/1").session(session);
+        var response = mvc.perform(request).andExpect(status().isOk()).andReturn();
+        var body = response.getResponse().getContentAsString();
+        assertTrue(body.contains("\"credentialConfigured\":true"));
+        assertFalse(body.contains("test-encrypted-secret"));
+        assertFalse(body.contains("test-key-id"));
+        assertFalse(body.contains("apiKeyCiphertext"));
+        assertFalse(body.contains("credentialKeyId"));
+    }
+
+    /** 移除旧Controller后，已认证用户访问旧路径仍应404，不保留别名或兼容入口。 */
+    @Test
+    void shouldRemoveStandaloneConnectionEndpoints() throws Exception {
+        var session = createPlatformSession(false);
+        var paths = List.of("/v1/model-connections", "/v1/model-connections/1",
+                "/v1/model-square/providers");
+        for (var path : paths) {
+            var request = get(path).session(session);
+            mvc.perform(request).andExpect(status().isNotFound());
+        }
+        var write = delete("/v1/model-connections/1").session(session);
+        mvc.perform(write).andExpect(status().isNotFound());
+    }
+
+    /** 旧连接器资源码不再授权广场，防止移除菜单后形成隐式权限别名。 */
+    @Test
+    void shouldRejectRemovedConnectionAuthority() throws Exception {
+        var session = createSession("ai:model-connection:read", "ai:model-connection:write");
+        var read = get("/v1/model-square/connections").session(session);
+        mvc.perform(read).andExpect(status().isForbidden());
+        var write = delete("/v1/model-square/connections/1").session(session);
+        mvc.perform(write).andExpect(status().isForbidden());
+        var connections = context.getBean(ModelConnectionService.class);
+        verifyNoInteractions(connections);
+    }
+
+    /** 广场read/write权限不能绕过用户及平台管理员的只读身份保护。 */
+    @Test
+    void shouldRejectSquareWritesForReadOnlyIdentity() throws Exception {
+        var session = createSession("ai:model-square:read", "ai:model-square:write");
+        RequestContext.getUser().setLocked(true);
+        var request = delete("/v1/model-square/connections/1").session(session);
+        mvc.perform(request).andExpect(status().isForbidden());
+        RequestContext.getUser().setPlatformAdmin(true);
+        mvc.perform(request).andExpect(status().isForbidden());
+        var connections = context.getBean(ModelConnectionService.class);
+        verifyNoInteractions(connections);
+    }
+
+    /** 连接启停遵循write权限，参数合法后才进入编排服务。 */
+    @Test
+    void shouldRequireWriteForConnectionStatus() throws Exception {
+        var readOnly = createSession("ai:model-square:read");
+        var denied = put("/v1/model-square/connections/1/status").session(readOnly)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":0,\"version\":0}");
+        mvc.perform(denied).andExpect(status().isForbidden());
+        var writable = createSession("ai:model-square:read", "ai:model-square:write");
+        var allowed = put("/v1/model-square/connections/1/status").session(writable)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":0,\"version\":0}");
+        mvc.perform(allowed).andExpect(status().isOk());
+        var invalid = put("/v1/model-square/connections/1/status").session(writable)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":2,\"version\":0}");
+        mvc.perform(invalid).andExpect(status().isBadRequest());
+    }
+
     /** 健康路径仍使用框架匿名白名单，未将全部AI路径加入白名单。 */
     @Test
     void shouldKeepHealthPathPublic() throws Exception {
@@ -237,13 +367,13 @@ class AiEndpointAuthenticationTest {
         mvc.perform(request).andExpect(status().isOk());
     }
 
-    /** 保留的三个入口直接使用框架注解，原资源码与菜单和前端协议保持一致。 */
+    /** 首页所有聚合接口使用广场资源码，平台模型目录仍保持独立管理权限。 */
     @Test
     void shouldDeclareFrameworkPermissionOnAllAiControllers() {
         var resources =
                 Map.of(
-                        ModelConnectionController.class, "ai:model-connection",
                         ModelController.class, "ai:model",
+                        ModelSquareController.class, "ai:model-square",
                         KnowledgeFolderController.class, "ai:knowledge-folder");
         for (var resource : resources.entrySet()) {
             var permission =
@@ -321,15 +451,35 @@ class AiEndpointAuthenticationTest {
         ModelConnectionService modelConnectionService() {
             var models = mock(ModelConnectionService.class);
             var page = new Page<ModelConnectionEntity>(1L, 10L);
-            when(models.fetchPage(1L, 10L, null, null)).thenReturn(page);
+            when(models.fetchPage(1L, 10L, null, null, null)).thenReturn(page);
+            var connection = new ModelConnectionEntity();
+            connection.setId(1L);
+            connection.setModelId(1L);
+            connection.setApiKeyCiphertext("test-encrypted-secret");
+            connection.setCredentialKeyId("test-key-id");
+            when(models.fetchConnection(1L)).thenReturn(connection);
+            when(models.requireConnection(1L, false)).thenReturn(connection);
+            when(models.createConnection(any(), any())).thenReturn(1L);
             return models;
         }
 
-        /** 注册实际AI模型Controller，保留方法安全代理参与调用。 */
+        /** 广场查询使用真实服务和Mapper替身，以验证Controller权限及响应转换。 */
         @Bean
-        ModelConnectionController modelConnectionController(ModelConnectionService models) {
-            var biz = mock(ModelBizService.class);
-            return new ModelConnectionController(models, biz);
+        ModelSquareService modelSquareService(ModelMapper mapper) {
+            return new ModelSquareService(mapper);
+        }
+
+        /** 广场使用真实Biz组合模型和连接能力，确保安全测试覆盖实际接口调用链。 */
+        @Bean
+        ModelSquareBizService modelSquareBizService(ModelSquareService queries,
+                ModelService models, ModelConnectionService connections) {
+            return new ModelSquareBizService(queries, models, connections);
+        }
+
+        /** 聚合Controller统一按广场权限参与真实框架方法安全校验。 */
+        @Bean
+        ModelSquareController modelSquareController(ModelSquareBizService biz) {
+            return new ModelSquareController(biz);
         }
 
         /** 真实目录能力服务使用Mapper替身，身份规则不做mock。 */
@@ -341,9 +491,12 @@ class AiEndpointAuthenticationTest {
             var mapper = mock(ModelMapper.class);
             var page = new Page<ModelEntity>(1L, 10L);
             when(mapper.selectPage(any(), any())).thenReturn(page);
+            when(mapper.selectSquareModelPage(any(), any(), any(), any(), any()))
+                    .thenAnswer(call -> call.getArgument(0));
             var model = new ModelEntity();
             model.setId(1L);
             model.setVersion(0L);
+            model.setDataStatus(1);
             when(mapper.selectOne(any())).thenReturn(model);
             when(mapper.update(any(ModelEntity.class), any())).thenReturn(1);
             when(mapper.deleteById(1L)).thenReturn(1);

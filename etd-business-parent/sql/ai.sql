@@ -170,8 +170,9 @@ create index idx_ai_model_connection_tenant_created
     on ai_model_connection (tenant_id, create_time desc, id desc) include (data_status) where del_flag = 0;
 create index idx_ai_model_connection_tenant_model_created
     on ai_model_connection (tenant_id, model_id, create_time desc, id desc) include (data_status) where del_flag = 0;
--- 支持平台跨租户统计有效模型连接，以及模型与连接器的关联查询。
-create index idx_ai_model_connection_model on ai_model_connection (model_id);
+-- 覆盖平台跨租户的有效连接分组和启停统计；租户统计复用上方tenant_model索引。
+create index idx_ai_model_connection_model on ai_model_connection (model_id)
+    include (data_status) where del_flag = 0;
 
 /*==============================================================*/
 /* table: ai_knowledge_folder */

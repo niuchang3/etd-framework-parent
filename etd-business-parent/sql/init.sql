@@ -2,11 +2,12 @@
 -- 先执行upms.sql；本文件不包含租户账号、组织或租户菜单授权。
 begin;
 
+-- 首页模型广场统一承接模型浏览与连接接入管理，按read/write授权，不另设连接器菜单。
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,
                        menu_path, menu_router, menu_icon, menu_type, sort, permission_code)
 values (1000001, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
-        '首页', '/dashboard', '@/views/404.vue', 'AppstoreOutlined', 'MENU', 10, null),
+        '首页', '/dashboard', '@/views/dashboard/index.vue', 'AppstoreOutlined', 'MENU', 10, 'ai:model-square'),
        (1000002, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
         '租户管理', '/system/tenants', '@/views/tenant/index.vue', 'TeamOutlined', 'MENU', 20, 'system:tenant'),
        (1000003, null, '2026-08-30 04:57:41.475264+08:00', 1, '2026-08-30 04:57:41.475264+08:00', 1, 1,
@@ -146,9 +147,6 @@ insert into sys_menus (id, parent_id, create_time, create_by, update_time, updat
                        menu_name, menu_path, menu_router, permission_code, menu_icon, menu_type, sort)
 values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'AI管理', '/ai', null, null, 'RobotOutlined', 'DIRECTORY', 30),
-       (1000102, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        '模型连接器', '/ai/model-connections', '@/views/ai/model-connection/index.vue',
-        'ai:model-connection', 'LinkOutlined', 'MENU', 20),
        (1000106, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '模型管理', '/ai/models', '@/views/ai/model/index.vue',
         'ai:model', 'AppstoreOutlined', 'MENU', 10),
