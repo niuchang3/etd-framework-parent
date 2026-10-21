@@ -35,6 +35,9 @@ import org.etd.ai.knowledge.controller.KnowledgeUploadController;
 import org.etd.ai.knowledge.controller.KnowledgeProcessingController;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.biz.KnowledgeUploadBizService;
+import org.etd.ai.knowledge.biz.KnowledgeProcessingBizService;
+import org.etd.ai.knowledge.service.KnowledgeChunkService;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.config.KnowledgeUploadProperties;
@@ -56,6 +59,10 @@ import org.etd.ai.model.service.ModelService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.http.HttpMethod;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -142,6 +149,96 @@ class AiEndpointAuthenticationTest {
         var uploads = context.getBean(KnowledgeUploadBizService.class);
         verify(uploads).cancelUpload(1L);
     }
+
+    /**
+     * 四个Controller的全部17个路由只授予知识库资源权限逐个验证；业务IO使用替身。
+     * @param endpoint 路由及请求参数，写操作不能被只读菜单授权放行
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("knowledgeEndpointList")
+    void shouldAuthorizeEveryKnowledgeEndpointWithOneMenu(KnowledgeEndpoint endpoint) throws Exception {
+        var anonymous = createKnowledgeRequest(endpoint, null);
+        mvc.perform(anonymous).andExpect(status().isUnauthorized());
+        var ungrantedSession = createSession();
+        var ungranted = createKnowledgeRequest(endpoint, ungrantedSession);
+        mvc.perform(ungranted).andExpect(status().isForbidden());
+        var readSession = createSession("ai:knowledge-document:read");
+        var read = createKnowledgeRequest(endpoint, readSession);
+        mvc.perform(read).andExpect(endpoint.write() ? status().isForbidden() : status().isOk());
+        var writeSession = createSession("ai:knowledge-document:read", "ai:knowledge-document:write");
+        var write = createKnowledgeRequest(endpoint, writeSession);
+        mvc.perform(write).andExpect(status().isOk());
+        if (endpoint.write()) {
+            RequestContext.getUser().setLocked(true);
+            var locked = createKnowledgeRequest(endpoint, writeSession);
+            mvc.perform(locked).andExpect(status().isForbidden());
+        }
+    }
+
+    /**
+     * 当前资料页面全部路由，包括显式按read授权的POST下载入口。
+     * @return 与真实Controller请求方式、参数一致的路由用例
+     */
+    private static List<KnowledgeEndpoint> knowledgeEndpointList() {
+        var result = new ArrayList<KnowledgeEndpoint>();
+        String base = "/v1/knowledge-documents";
+        String uploads = base + "/uploads";
+        String hash = "0".repeat(64);
+        String initialization = "{\"folderId\":1,\"orgId\":1,\"originalFilename\":\"test.txt\","
+                + "\"contentType\":\"text/plain\",\"fileSize\":100,\"fileSha256\":\"" + hash + "\"}";
+        String configuration = """
+                {"version":0,"folderId":1,"documentName":"资料","isPublic":false,
+                 "retrievalMode":"keyword","chunkMaxTokens":500,"chunkOverlapTokens":50,
+                 "keywordTopK":20,"vectorTopK":20,"retrievalTopK":10}
+                """;
+        addKnowledgeEndpoint(result, "GET", base, null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/folders", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/model-options", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/1", null, false);
+        addKnowledgeEndpoint(result, "GET", uploads + "/policy", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/1/chunks", null, false);
+        addKnowledgeEndpoint(result, "POST", base + "/1/download-url", null, false);
+        addKnowledgeEndpoint(result, "PUT", base + "/1", configuration, true);
+        addKnowledgeEndpoint(result, "DELETE", base + "/1", null, true);
+        addKnowledgeEndpoint(result, "POST", uploads, initialization, true);
+        addKnowledgeEndpoint(result, "POST", uploads + "/1/parts/1/url", null, true);
+        addKnowledgeEndpoint(result, "PUT", uploads + "/1/parts/1", "{\"etag\":\"test-etag\"}", true);
+        addKnowledgeEndpoint(result, "POST", uploads + "/1/resume", "{\"fileSha256\":\"" + hash + "\"}", true);
+        addKnowledgeEndpoint(result, "POST", uploads + "/1/complete", null, true);
+        addKnowledgeEndpoint(result, "POST", uploads + "/1/cancel", null, true);
+        addKnowledgeEndpoint(result, "POST", base + "/1/parse", null, true);
+        addKnowledgeEndpoint(result, "POST", base + "/1/confirm", null, true);
+        return result;
+    }
+
+    /** 先构造路由用例再加入集合，避免在调用处嵌套组装对象。 */
+    private static void addKnowledgeEndpoint(List<KnowledgeEndpoint> endpoints, String method, String path,
+            String body, boolean write) {
+        var endpoint = new KnowledgeEndpoint(method, path, body, write);
+        endpoints.add(endpoint);
+    }
+
+    /** 按同一路由构造不同菜单授权身份的真实HTTP请求。 */
+    private MockHttpServletRequestBuilder createKnowledgeRequest(KnowledgeEndpoint endpoint, MockHttpSession session) {
+        var method = HttpMethod.valueOf(endpoint.method());
+        var request = request(method, endpoint.path());
+        if (session != null) {
+            request.session(session);
+        }
+        if (endpoint.body() != null) {
+            request.contentType(MediaType.APPLICATION_JSON).content(endpoint.body());
+        }
+        return request;
+    }
+
+    /**
+     * 单接口权限用例。
+     * @param method HTTP请求方式
+     * @param path 实际业务路由
+     * @param body 可选JSON请求体
+     * @param write 是否要求知识库菜单读写授权
+     */
+    private record KnowledgeEndpoint(String method, String path, String body, boolean write) {}
 
     /** 查询、上传及处理入口均声明中文操作日志，不能遗漏只读入口。 */
     @Test
@@ -434,7 +531,7 @@ class AiEndpointAuthenticationTest {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
             assertNotNull(permission);
-            assertEquals(resource.getValue(), permission.value());
+            assertEquals(List.of(resource.getValue()), List.of(permission.value()));
         }
     }
 
@@ -514,6 +611,8 @@ class AiEndpointAuthenticationTest {
             var service = mock(KnowledgeDocumentService.class);
             var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
             when(service.fetchDocumentPage(1L, 10L, null, null, null, null)).thenReturn(page);
+            var document = createKnowledgeDocumentResponse();
+            when(service.requireDocument(1L, false)).thenReturn(document);
             return service;
         }
 
@@ -528,7 +627,35 @@ class AiEndpointAuthenticationTest {
         /** 上传能力替身，确认无write权限时不会执行取消。 */
         @Bean
         KnowledgeUploadBizService knowledgeUploadBizService() {
-            return mock(KnowledgeUploadBizService.class);
+            var service = mock(KnowledgeUploadBizService.class);
+            var document = createKnowledgeDocumentResponse();
+            when(service.createUpload(any(KnowledgeDocumentEntity.class))).thenReturn(document);
+            when(service.createPartUrl(1L, 1)).thenReturn("https://example.invalid/upload-part");
+            when(service.confirmPart(1L, 1, "test-etag")).thenReturn(document);
+            when(service.resumeUpload(1L, "0".repeat(64))).thenReturn(document);
+            when(service.completeUpload(1L)).thenReturn(document);
+            return service;
+        }
+
+        /** 装配真实处理Controller，将解析、确认及正文数据访问隔离为替身。 */
+        @Bean
+        KnowledgeProcessingController knowledgeProcessingController(KnowledgeDocumentService documents) {
+            var processing = mock(KnowledgeProcessingBizService.class);
+            var document = createKnowledgeDocumentResponse();
+            when(processing.createPreview(1L)).thenReturn(document);
+            when(processing.approvePreview(1L)).thenReturn(document);
+            var chunks = mock(KnowledgeChunkService.class);
+            var page = new Page<KnowledgeChunkEntity>(1L, 20L);
+            when(chunks.fetchChunkPage(1L, 0L, 1L, 20L)).thenReturn(page);
+            return new KnowledgeProcessingController(processing, documents, chunks);
+        }
+
+        /** 仅提供路由转换所需字段，不模拟真实外部存储或模型处理结果。 */
+        private static KnowledgeDocumentEntity createKnowledgeDocumentResponse() {
+            var document = new KnowledgeDocumentEntity();
+            document.setId(1L);
+            document.setProcessingVersion(0L);
+            return document;
         }
 
         /** 装配真实资料控制器。 */

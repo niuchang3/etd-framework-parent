@@ -205,7 +205,10 @@ values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'ai:model', 'AppstoreOutlined', 'MENU', 10),
        (1000105, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '知识库分类', '/ai/knowledge-folders', '@/views/ai/knowledge-folder/index.vue',
-        'ai:knowledge-folder', 'ApartmentOutlined', 'MENU', 30);
+        'ai:knowledge-folder', 'ApartmentOutlined', 'MENU', 30),
+       (1000107, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        '知识库', '/ai/knowledge-documents', '/views/ai/knowledge-document/index.vue',
+        'ai:knowledge-document', 'FileTextOutlined', 'MENU', 40);
 
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,

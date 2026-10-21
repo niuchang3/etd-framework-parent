@@ -11,8 +11,8 @@ import java.lang.annotation.*;
 @Documented
 @PreAuthorize("@permissionChecker.check(#root)")
 public @interface Permission {
-    /** 完整资源码；方法留空时继承类上的资源码。 */
-    String value() default "";
+    /** 完整资源码数组，满足任意一个资源的操作权限即可；方法留空时继承类上的整个数组。 */
+    String[] value() default {};
 
     /** 方法 AUTO 时继承类上的显式操作，仍为 AUTO 才按 HTTP 方法推导。 */
     PermissionAction action() default PermissionAction.AUTO;

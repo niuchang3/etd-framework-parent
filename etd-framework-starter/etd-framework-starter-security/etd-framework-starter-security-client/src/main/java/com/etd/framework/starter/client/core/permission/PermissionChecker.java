@@ -30,13 +30,24 @@ public final class PermissionChecker {
         if (classPermission == null && methodPermission == null) {
             return false;
         }
-        String resource = resolveResource(classPermission, methodPermission);
+        String[] resources = resolveResources(classPermission, methodPermission);
         PermissionAction action = resolveAction(classPermission, methodPermission, request.getMethod());
         if (action == PermissionAction.WRITE && isReadOnly(root)) {
             return false;
         }
-        String authority = PermissionCode.createAuthority(resource, action);
-        return isPlatformAdmin(root) || root.hasAuthority(authority);
+        return isPlatformAdmin(root) || hasAnyAuthority(root, resources, action);
+    }
+
+    /** 各资源共享本次操作类型，命中任意一个权限即可访问。 */
+    private boolean hasAnyAuthority(MethodSecurityExpressionOperations root, String[] resources,
+                                    PermissionAction action) {
+        for (String resource : resources) {
+            String authority = PermissionCode.createAuthority(resource, action);
+            if (root.hasAuthority(authority)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 获取当前 HTTP 请求；非 MVC 请求上下文不适用接口权限注解。 */
@@ -69,18 +80,18 @@ public final class PermissionChecker {
         return root.getAuthentication().getDetails() instanceof UserDetails user && user.isReadOnly();
     }
 
-    /** 方法填写资源码时覆盖类声明，否则继承类上的资源码。 */
-    private String resolveResource(Permission classPermission, Permission methodPermission) {
-        validateResource(classPermission);
-        validateResource(methodPermission);
-        String resource = classPermission == null ? "" : classPermission.value();
+    /** 方法非空数组整体覆盖类声明；最终必须至少有一个合法资源码。 */
+    private String[] resolveResources(Permission classPermission, Permission methodPermission) {
+        validateResources(classPermission);
+        validateResources(methodPermission);
+        String[] resources = classPermission == null ? new String[0] : classPermission.value();
         if (hasResourceCode(methodPermission)) {
-            resource = methodPermission.value();
+            resources = methodPermission.value();
         }
-        if (!PermissionCode.isValidResource(resource)) {
+        if (resources.length == 0) {
             throw new IllegalArgumentException("权限注解未提供合法资源码");
         }
-        return resource;
+        return resources;
     }
 
     /** 显式声明优先；类和方法都使用 AUTO 时，才按 HTTP 方法判断读写。 */
@@ -100,7 +111,7 @@ public final class PermissionChecker {
 
     /** 注解是否填写了资源码；未填写时继承类声明。 */
     private boolean hasResourceCode(Permission permission) {
-        return permission != null && !permission.value().isEmpty();
+        return permission != null && permission.value().length > 0;
     }
 
     /** 注解是否显式指定读写类型，而非 AUTO。 */
@@ -108,10 +119,15 @@ public final class PermissionChecker {
         return permission != null && permission.action() != PermissionAction.AUTO;
     }
 
-    /** 留空表示继承，非空声明必须遵守菜单资源码格式。 */
-    private void validateResource(Permission permission) {
-        if (hasResourceCode(permission) && !PermissionCode.isValidResource(permission.value())) {
-            throw new IllegalArgumentException("权限资源码格式错误：" + permission.value());
+    /** 空数组表示继承；提前校验全部元素，避免短路放行掩盖错误配置。 */
+    private void validateResources(Permission permission) {
+        if (permission == null) {
+            return;
+        }
+        for (String resource : permission.value()) {
+            if (!PermissionCode.isValidResource(resource)) {
+                throw new IllegalArgumentException("权限资源码格式错误：" + resource);
+            }
         }
     }
 }

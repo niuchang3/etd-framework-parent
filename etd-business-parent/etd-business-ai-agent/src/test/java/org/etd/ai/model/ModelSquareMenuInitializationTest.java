@@ -25,6 +25,8 @@ class ModelSquareMenuInitializationTest {
             verifyMenu(connection, "/dashboard", "@/views/dashboard/index.vue", ModelPermissionCode.SQUARE);
             verifyStandaloneConnectionMenuRemoved(connection);
             verifyMenu(connection, "/ai/models", "@/views/ai/model/index.vue", ModelPermissionCode.MODEL);
+            // 知识库组件路径按前端实际返回值保存，不擅自追加@别名。
+            verifyMenu(connection, "/ai/knowledge-documents", "/views/ai/knowledge-document/index.vue", "ai:knowledge-document");
         }
     }
 
