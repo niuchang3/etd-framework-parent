@@ -610,7 +610,7 @@ class AiEndpointAuthenticationTest {
         KnowledgeDocumentService knowledgeDocumentService() {
             var service = mock(KnowledgeDocumentService.class);
             var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-            when(service.fetchDocumentPage(1L, 10L, null, null, null, null)).thenReturn(page);
+            when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null)).thenReturn(page);
             var document = createKnowledgeDocumentResponse();
             when(service.requireDocument(1L, false)).thenReturn(document);
             return service;

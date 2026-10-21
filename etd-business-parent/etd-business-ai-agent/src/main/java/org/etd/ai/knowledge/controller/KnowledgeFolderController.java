@@ -1,5 +1,6 @@
 package org.etd.ai.knowledge.controller;
 
+import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 
 import jakarta.validation.Valid;
@@ -28,7 +29,7 @@ import java.util.List;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-folders")
-@Permission("ai:knowledge-folder")
+@Permission(KnowledgePermissionCode.FOLDER)
 public class KnowledgeFolderController {
     private final KnowledgeFolderService service;
     private final KnowledgeFolderBizService biz;

@@ -23,7 +23,7 @@ spring:
   application:
     name: upms-server # 应用名称，同时用于日志、注册发现和缓存键前缀。
   config:
-    # 组件配置由父 POM 打包到 classpath，应用专属配置随后加载。
+    # 组件配置由 etd-business-common 依赖提供，应用专属配置随后加载。
     import:
       - classpath:redis.yml
       - classpath:druid.yml

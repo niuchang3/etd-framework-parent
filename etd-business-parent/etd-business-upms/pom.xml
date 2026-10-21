@@ -20,6 +20,12 @@
     </properties>
 
     <dependencies>
+
+        <!-- 跨业务应用共享权限码等公共契约。 -->
+        <dependency>
+            <groupId>org.etd.framework.business</groupId>
+            <artifactId>etd-business-common</artifactId>
+        </dependency>
         <!-- 菜单权限码等请求字段依赖 Bean Validation 执行校验，版本由 Boot BOM 管理。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

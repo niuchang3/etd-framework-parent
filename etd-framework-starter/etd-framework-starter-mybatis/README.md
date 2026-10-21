@@ -60,7 +60,7 @@
 
 本模块当前依赖包含 MyBatis-Plus Boot 3 starter、JSQLParser、Spring AOP、Druid、MySQL 驱动、ShardingSphere-JDBC 和 common-core。引入依赖不代表已经配置数据源、分片规则或组织权限数据。
 
-业务应用共享组件配置统一维护在 `etd-business-parent/config/`，应用通过 `spring.config.import` 按需导入 classpath 根目录文件，例如 `classpath:druid.yml`。使用 ShardingSphere 的应用由对应环境的 `sharding-<业务域>-<profile>.yaml` 管理物理连接池，不再导入普通 Druid 数据源配置。本 starter 不提供默认分片规则。
+业务应用共享组件配置统一维护在 `etd-business-parent/etd-business-common/src/main/resources/`，应用通过 `spring.config.import` 按需导入 classpath 根目录文件，例如 `classpath:druid.yml`。使用 ShardingSphere 的应用由对应环境的 `sharding-<业务域>-<profile>.yaml` 管理物理连接池，不再导入普通 Druid 数据源配置。本 starter 不提供默认分片规则。
 
 ## 配置项与实际默认行为
 

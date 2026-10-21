@@ -1,9 +1,9 @@
 package org.etd.ai.knowledge.controller;
 
+import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.controller.vo.KnowledgeFolderVO;
 import org.etd.ai.knowledge.converter.KnowledgeFolderConverter;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
@@ -19,7 +19,7 @@ import java.util.List;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents/folders")
-@Permission(KnowledgePolicy.DOCUMENT_PERMISSION)
+@Permission(KnowledgePermissionCode.DOCUMENT)
 public class KnowledgeDocumentNavigationController {
     private final KnowledgeFolderService folders;
     /** @param orgId 可选部门 @param dataStatus 可选启停状态 @return 可见目录及只供导航的必要祖先 */

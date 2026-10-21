@@ -1,7 +1,7 @@
 package org.etd.upms.organization.controller;
 
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
-import org.etd.upms.menu.constant.MenuPermissionCode;
+import org.etd.common.permission.constant.MenuPermissionCode;
 import jakarta.validation.Valid;
 import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.model.biz.ModelSquareBizService;
-import org.etd.ai.model.constant.ModelPermissionCode;
+import org.etd.common.permission.constant.ModelPermissionCode;
 import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.controller.dto.ModelConnectionSaveDTO;
 import org.etd.ai.model.controller.dto.ModelConnectionStatusDTO;

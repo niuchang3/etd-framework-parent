@@ -2,7 +2,7 @@ package org.etd.upms.user.controller;
 
 
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
-import org.etd.upms.menu.constant.MenuPermissionCode;
+import org.etd.common.permission.constant.MenuPermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;

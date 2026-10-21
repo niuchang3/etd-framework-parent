@@ -5,7 +5,7 @@ import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import org.etd.event.constant.EventPermissionCode;
+import org.etd.common.permission.constant.EventPermissionCode;
 import org.etd.event.message.biz.EventMessageBizService;
 import org.etd.event.message.controller.vo.EventMessageDetailVO;
 import org.etd.event.message.controller.vo.EventMessageVO;

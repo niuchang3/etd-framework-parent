@@ -11,7 +11,10 @@ import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 /** 资料基础持久化能力，统一执行组织数据范围和版本检查。 */
 @Service
@@ -21,16 +24,22 @@ public class KnowledgeDocumentService {
     private final KnowledgeDocumentMapper mapper;
 
     /** @param current 页码 @param size 每页数量 @param folderId 可选目录
+     * @param folderIds 优先筛选的目录集合，非空时忽略 folderId，不自动展开子孙目录
      * @param keyword 可选名称 @param uploadStatus 可选上传状态 @param processingStatus 可选处理状态
      * @return 数据权限内资料分页 */
     public IPage<KnowledgeDocumentEntity> fetchDocumentPage(long current, long size, Long folderId,
-            String keyword, String uploadStatus, String processingStatus) {
+            List<Long> folderIds, String keyword, String uploadStatus, String processingStatus) {
         var query = Wrappers.<KnowledgeDocumentEntity>lambdaQuery()
-                .eq(folderId != null, KnowledgeDocumentEntity::getFolderId, folderId)
                 .like(StringUtils.hasText(keyword), KnowledgeDocumentEntity::getDocumentName, keyword)
                 .eq(StringUtils.hasText(uploadStatus), KnowledgeDocumentEntity::getUploadStatus, uploadStatus)
                 .eq(StringUtils.hasText(processingStatus), KnowledgeDocumentEntity::getProcessingStatus, processingStatus)
                 .orderByDesc(KnowledgeDocumentEntity::getCreateTime, KnowledgeDocumentEntity::getId);
+        // 保留旧单目录调用，批量目录非空时只生成 IN 条件，避免与 folderId 取交集。
+        if (!CollectionUtils.isEmpty(folderIds)) {
+            query.in(KnowledgeDocumentEntity::getFolderId, folderIds);
+        } else if (folderId != null) {
+            query.eq(KnowledgeDocumentEntity::getFolderId, folderId);
+        }
         var page = new Page<KnowledgeDocumentEntity>(current, size);
         return mapper.selectPage(page, query);
     }

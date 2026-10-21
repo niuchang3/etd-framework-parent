@@ -1,6 +1,6 @@
 package org.etd.ai.model;
 
-import org.etd.ai.model.constant.ModelPermissionCode;
+import org.etd.common.permission.constant.ModelPermissionCode;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;

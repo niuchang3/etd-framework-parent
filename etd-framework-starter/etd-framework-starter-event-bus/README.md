@@ -81,11 +81,11 @@ flowchart TD
 
 仓库的公共文件位于：
 
-- [`etd-business-parent/config/kafka.yml`](../../etd-business-parent/config/kafka.yml)：Kafka 连接、序列化、消费确认、隔离级别和生产者事务。
-- [`etd-business-parent/config/event-client.yml`](../../etd-business-parent/config/event-client.yml)：入口 Topic、发送线程池、连接检查和 ID 节点。
-- [`etd-business-parent/config/event-server.yml`](../../etd-business-parent/config/event-server.yml)：入口 Topic 声明、内部 Topic、消费组和投递重试。
+- [`etd-business-parent/etd-business-common/src/main/resources/kafka.yml`](../../etd-business-parent/etd-business-common/src/main/resources/kafka.yml)：Kafka 连接、序列化、消费确认、隔离级别和生产者事务。
+- [`etd-business-parent/etd-business-common/src/main/resources/event-client.yml`](../../etd-business-parent/etd-business-common/src/main/resources/event-client.yml)：入口 Topic、发送线程池、连接检查和 ID 节点。
+- [`etd-business-parent/etd-business-common/src/main/resources/event-server.yml`](../../etd-business-parent/etd-business-common/src/main/resources/event-server.yml)：入口 Topic 声明、内部 Topic、消费组和投递重试。
 
-业务父 POM 保留应用自身 `src/main/resources`，并把 `${project.basedir}/../config` 的 YAML 作为资源根目录打包，`filtering=false`。因此导入路径是 `classpath:event-client.yml`，不是 `classpath:config/event-client.yml`。
+共享 YAML 只打包到 `etd-business-common` JAR 的 classpath 根目录，业务应用显式依赖该模块，保留自身 `src/main/resources`，资源均使用 `filtering=false`。因此导入路径是 `classpath:event-client.yml`，不是 `classpath:config/event-client.yml`；引入公共模块不会自动加载未导入的组件配置。
 
 **这些公共 YAML 不在 starter JAR 内。** 仓库外的应用应自行声明对应配置或提供同名 classpath 资源，不能只复制 import 就认为文件已经存在。
 
@@ -394,8 +394,8 @@ public void consumeUserCreatedEvent(String messageJson) {
 
 ### 8.1 存储初始化
 
-- Event server 与业务 Event 共用唯一建表脚本 [`event.sql`](../../etd-business-parent/sql/event.sql)，在 Event 数据库显式执行，并核对实际分片配置；不保留重复参考 DDL，也不由 starter 自动执行。
-- 公共菜单统一维护在 [`init.sql`](../../etd-business-parent/sql/init.sql)，默认租户授权统一维护在 [`upms_data.sql`](../../etd-business-parent/sql/upms_data.sql)，二者在 UPMS 数据库执行。
+- Event server 与业务 Event 共用唯一建表脚本 [`event.sql`](../../etd-business-parent/etd-business-common/sql/event.sql)，在 Event 数据库显式执行，并核对实际分片配置；不保留重复参考 DDL，也不由 starter 自动执行。
+- 公共菜单统一维护在 [`init.sql`](../../etd-business-parent/etd-business-common/sql/init.sql)，默认租户授权统一维护在 [`upms_data.sql`](../../etd-business-parent/etd-business-common/sql/upms_data.sql)，二者在 UPMS 数据库执行。
 - 当前 [`sharding-event-local.yaml`](../../etd-business-parent/etd-business-event/src/main/resources/sharding-event-local.yaml) 使用单个 `event` 数据源；`evt_event_type`、`evt_event_subscription` 是单表；`evt_event_message` 和 `evt_event_delivery` 按 `event_id` 使用内置 `HASH_MOD` 分为 `_0`、`_1`，并声明绑定表。
 - 物理连接变量为 `EVENT_DB_HOST`、`EVENT_DB_PORT`、`EVENT_DB_NAME`、`EVENT_DB_USERNAME`、`EVENT_DB_PASSWORD`，诊断开关为 `EVENT_SHARDING_SQL_SHOW`。ShardingSphere 文件使用 `$${变量名::默认值}`，不要混用 Spring `${...}` 语法。
 - Event 专属配置把四张逻辑表排除在租户和组织权限过滤之外；这属于事件中心业务应用配置，不是 starter 自动改变其他业务表权限。

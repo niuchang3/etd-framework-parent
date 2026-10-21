@@ -1,7 +1,7 @@
 spring:
   datasource:
     druid:
-      # 本地环境只定义 PostgreSQL 连接信息，连接池公共参数位于 config/druid.yml。
+      # 本地环境只定义 PostgreSQL 连接信息，连接池公共参数由 etd-business-common 的 druid.yml 提供。
       url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:30432}/${DB_NAME:upms}
       username: ${DB_USERNAME:root} # PostgreSQL 用户名，仅提供本地开发默认值。
       password: ${DB_PASSWORD:123456} # PostgreSQL 密码，仅提供本地开发默认值。

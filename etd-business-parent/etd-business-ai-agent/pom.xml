@@ -29,6 +29,12 @@
     </dependencyManagement>
 
     <dependencies>
+
+        <!-- 跨业务应用共享权限码等公共契约。 -->
+        <dependency>
+            <groupId>org.etd.framework.business</groupId>
+            <artifactId>etd-business-common</artifactId>
+        </dependency>
         <!-- AI 编排与模型 SDK 由框架 starter 统一提供，不装配依赖全局密钥的默认模型客户端。 -->
         <dependency>
             <groupId>org.etd.framework</groupId>

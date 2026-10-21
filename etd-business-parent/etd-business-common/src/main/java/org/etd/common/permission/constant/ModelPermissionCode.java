@@ -1,4 +1,4 @@
-package org.etd.ai.model.constant;
+package org.etd.common.permission.constant;
 
 /** 模型域菜单资源码，read/write操作由框架根据HTTP方法判定。 */
 public final class ModelPermissionCode {

@@ -12,6 +12,7 @@
   - `etd-framework-starter`
   - `etd-framework-dependencies`
   - `etd-business-parent`
+- 业务公共契约、共享组件配置和初始化 SQL 统一归属 `etd-business-parent/etd-business-common`；业务应用显式依赖该模块，框架 common/starter 不得反向依赖业务公共模块。
 - 优先使用仓库根目录下的 Maven Wrapper：
   - macOS/Linux：`./mvnw`
   - Windows：`mvnw.cmd`
@@ -97,9 +98,10 @@
 
 ### YAML 配置组织与资源加载
 
-- 业务应用共享的组件配置统一维护在 `etd-business-parent/config/`，按职责拆分为 `redis.yml`、`druid.yml`、`kafka.yml`、`event-client.yml`、`event-server.yml` 等文件；不要另建配置子模块或复制多份公共配置。
-- `etd-business-parent/pom.xml` 统一声明共享资源规则，各业务子项目继承：保留自身的 `src/main/resources`，同时将 `${project.basedir}/../config` 作为资源根目录，包含 YAML 文件并设置 `filtering=false`，保留 Spring 运行时解析的 `${...}` 占位符。
-- 共享目录中的文件直接打包到 classpath 根目录，例如源码 `etd-business-parent/config/redis.yml` 对应 `classpath:redis.yml`。不得添加 `targetPath=config`、使用 `classpath:config/redis.yml` 或使用依赖开发机绝对路径的导入方式，保持 IDE 与 Maven 的资源路径一致。
+- 业务应用共享的组件配置统一维护在 `etd-business-parent/etd-business-common/src/main/resources/`，按职责拆分为 `redis.yml`、`druid.yml`、`kafka.yml`、`event-client.yml`、`event-server.yml` 等文件；不得在父工程或各应用中复制共享配置，也不另建配置模块。
+- `etd-business-parent/pom.xml` 统一声明各模块自身的 `src/main/resources` 资源规则并设置 `filtering=false`，保留 Spring 运行时解析的 `${...}` 占位符。共享 YAML 只打包到 `etd-business-common` JAR，业务应用通过显式 Maven 依赖读取，不再通过额外资源目录复制到各应用。
+- 共享文件位于公共 JAR 的 classpath 根目录，例如源码 `etd-business-parent/etd-business-common/src/main/resources/redis.yml` 对应 `classpath:redis.yml`。不得添加 `targetPath=config`、使用 `classpath:config/redis.yml` 或使用依赖开发机绝对路径的导入方式，保持 IDE 与 Maven 的资源路径一致。
+- 初始化 SQL 统一维护在 `etd-business-parent/etd-business-common/sql/`，脚本由部署人员显式执行，不自动随应用启动执行，也不打包到运行时 JAR。业务父 POM 将 `${project.basedir}/../etd-business-common/sql` 映射到测试 classpath 的 `sql/`，测试继续使用 `classpath:sql/<文件名>.sql`；不得复制脚本或保留旧目录兜底。
 - 每个应用通过 `spring.config.import` 显式导入实际需要的组件。文件被打包不代表必须加载，禁止为了统一外观而给未使用 Kafka、事件服务、存储等能力的应用引入相应配置或依赖。
 - 应用自身的 `application.yml` 作为启动入口，集中声明服务端口、日志级别、profile、应用名称、时区和配置导入；应用专属策略优先维护在自身 `src/main/resources/etd-<业务模块>.yml`，独立功能可以继续拆分，例如 UPMS 的 `etd-oauth.yml`、`etd-upms.yml`，Event 的 `etd-event.yml`，AI 的 `etd-ai-agent.yml`。
 - `application-{profile}.yml` 只维护确有环境差异的连接信息、凭证占位符和环境开关；不要重复声明已经由共享组件文件维护的相同配置。迁移到公共配置时，应同步移除本次范围内已失效的本地重复项，避免 profile 配置覆盖公共环境变量。
@@ -170,14 +172,15 @@ spring:
   - 租户类型、角色类型、权限码、菜单类型、业务类型等类型码；
   - 请求头名称、缓存键前缀、Token 字段名、固定 JSON 字段名等协议约定；
   - 在多个位置重复使用的配置键、默认值、边界值和特殊标识值。
-- 全局常量和枚举统一放在 `etd-framework-common-core` 的 `org.etd.framework.common.core.constants` 包：
+- 框架全局常量和枚举统一放在 `etd-framework-common-core` 的 `org.etd.framework.common.core.constants` 包：
   - 跨模块通用的基础状态优先定义在 `BasicConstant` 中，例如 `BasicConstant.DataStatus`；
   - 具有独立语义、字段较多或需要实现接口的常量应使用独立枚举类，不要持续向 `BasicConstant` 堆积不相关内容；
   - 常量名称使用大写字母和下划线，枚举类型使用大驼峰，枚举项使用大写字母和下划线；
   - 有数据库存储值或接口传输值的枚举必须显式定义 `code`，禁止依赖 `ordinal()`，也不要把枚举项名称作为隐式协议值；
   - 业务判断、查询条件、默认赋值、参数校验和序列化必须引用同一个枚举或常量定义，不能在不同位置重复写字面量；
   - SQL、YAML 等无法直接引用 Java 枚举的文件可以保留必要字面量，但字段注释、默认值和 Java 枚举语义必须一致。
-- 只在单个业务模块或单个功能域使用的常量应放在对应功能域的 `constant` 包，例如 `org.etd.order.refund.constant`，不要上提为全局常量。
+- 跨业务应用共享的菜单权限码统一放在 `etd-business-common` 的 `org.etd.common.permission.constant` 包，按 UPMS、Event、模型、知识库等职责拆分常量类，保持唯一 Java 定义；其他跨应用公共契约按明确功能域组织在 `org.etd.common.*` 下。不要把业务权限码上提到框架 common，也不要让业务应用相互依赖以复用常量。
+- 只在单个业务模块或单个功能域使用的常量应放在对应功能域的 `constant` 包，例如 `org.etd.order.refund.constant`，不要上提为全局常量或放入业务公共模块。
 - 新增常量或枚举前必须先搜索已有定义，禁止为同一语义创建名称不同、取值相同的重复常量。
 - 不要创建无边界的 `Constant`、`Constants`、`CommonEnum` 类；常量类或枚举名必须表达具体业务或技术语义。
 - 不要求机械提取所有字面量。含义显而易见且只服务于局部技术实现的值可以直接使用，例如集合空判断中的 `0`、数据库影响行数判断中的 `> 0`、数组下标和清晰算法中的局部边界值；一旦具有业务含义、重复出现或需要跨层保持一致，就必须提取为常量或枚举。

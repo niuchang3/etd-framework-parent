@@ -1,7 +1,7 @@
 package org.etd.upms.menu.controller;
 
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
-import org.etd.upms.menu.constant.MenuPermissionCode;
+import org.etd.common.permission.constant.MenuPermissionCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

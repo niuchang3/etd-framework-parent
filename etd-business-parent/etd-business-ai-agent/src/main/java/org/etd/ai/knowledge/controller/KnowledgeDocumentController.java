@@ -1,13 +1,14 @@
 package org.etd.ai.knowledge.controller;
 
+import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentSaveDTO;
+import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentPageQuery;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentListVO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeEmbeddingOptionVO;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents")
-@Permission(KnowledgePolicy.DOCUMENT_PERMISSION)
+@Permission(KnowledgePermissionCode.DOCUMENT)
 public class KnowledgeDocumentController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeDocumentBizService biz;
@@ -40,17 +41,13 @@ public class KnowledgeDocumentController {
         return ResultModel.success(result);
     }
 
-    /** @param current 页码 @param size 每页数量 @param folderId 可选目录
-     * @param keyword 名称搜索 @param uploadStatus 上传状态 @param processingStatus 处理状态 @return 当前管理范围内资料 */
+    /** @param query 分页及筛选条件，批量目录优先于单目录；子孙目录由前端收集
+     * @return 当前管理范围内资料 */
     @AutoLog("分页查询知识资料")
     @GetMapping
-    public ResultModel<IPage<KnowledgeDocumentListVO>> page(@RequestParam(defaultValue = "1") @Min(1) long current,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(200) long size,
-            @RequestParam(required = false) @Positive Long folderId,
-            @RequestParam(required = false) @Size(max = 255) String keyword,
-            @RequestParam(required = false) String uploadStatus,
-            @RequestParam(required = false) String processingStatus) {
-        var page = documents.fetchDocumentPage(current, size, folderId, keyword, uploadStatus, processingStatus);
+    public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {
+        var page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
+                query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getProcessingStatus());
         var result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
         return ResultModel.success(result);
     }

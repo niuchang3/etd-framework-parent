@@ -19,25 +19,28 @@
     </properties>
 
     <modules>
+        <module>etd-business-common</module>
         <module>etd-business-upms</module>
         <module>etd-business-event</module>
         <module>etd-business-ai-agent</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 业务公共契约与业务应用同版本，应用显式声明依赖，公共模块不依赖自身。 -->
+            <dependency>
+                <groupId>org.etd.framework.business</groupId>
+                <artifactId>etd-business-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <resources>
             <!-- 保留各应用自己的 Mapper XML、启动配置及其他资源。 -->
             <resource>
                 <directory>${project.basedir}/src/main/resources</directory>
-                <filtering>false</filtering>
-            </resource>
-            <!-- 将共享 config 目录作为资源根目录，保持 IDE 与 Maven 使用相同的 classpath 路径。 -->
-            <resource>
-                <directory>${project.basedir}/../config</directory>
-                <includes>
-                    <include>**/*.yml</include>
-                    <include>**/*.yaml</include>
-                </includes>
                 <filtering>false</filtering>
             </resource>
         </resources>
@@ -47,9 +50,9 @@
                 <directory>${project.basedir}/src/test/resources</directory>
                 <filtering>false</filtering>
             </testResource>
-            <!-- 测试读取集中目录中的SQL，脚本不打包到应用运行资源中。 -->
+            <!-- 测试读取业务公共模块中的唯一 SQL 源文件，不将脚本打包到运行资源。 -->
             <testResource>
-                <directory>${project.basedir}/../sql</directory>
+                <directory>${project.basedir}/../etd-business-common/sql</directory>
                 <targetPath>sql</targetPath>
                 <includes>
                     <include>*.sql</include>

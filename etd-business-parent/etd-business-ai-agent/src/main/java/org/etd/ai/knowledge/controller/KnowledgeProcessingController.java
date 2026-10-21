@@ -1,10 +1,10 @@
 package org.etd.ai.knowledge.controller;
 
+import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.biz.KnowledgeProcessingBizService;
 import org.etd.ai.knowledge.controller.vo.*;
 import org.etd.ai.knowledge.converter.*;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents/{id}")
-@Permission(KnowledgePolicy.DOCUMENT_PERMISSION)
+@Permission(KnowledgePermissionCode.DOCUMENT)
 public class KnowledgeProcessingController {
     private final KnowledgeProcessingBizService processing;
     private final KnowledgeDocumentService documents;

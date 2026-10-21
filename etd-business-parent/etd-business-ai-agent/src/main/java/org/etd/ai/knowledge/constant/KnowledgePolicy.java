@@ -4,8 +4,6 @@ import java.util.Set;
 
 /** 知识资料生命周期与本功能域协议约定。 */
 public final class KnowledgePolicy {
-    /** 资料管理与上传、处理入口共用的功能资源码。 */
-    public static final String DOCUMENT_PERMISSION = "ai:knowledge-document";
     /** 允许单份资料生成的正文分片数量上限。 */
     public static final int MAX_CHUNKS = 10000;
     /** 单份正文分片的Token配置上限。 */

@@ -1,10 +1,10 @@
 package org.etd.ai.knowledge.controller;
 
+import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.biz.KnowledgeUploadBizService;
 import org.etd.ai.knowledge.controller.dto.*;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents/uploads")
-@Permission(KnowledgePolicy.DOCUMENT_PERMISSION)
+@Permission(KnowledgePermissionCode.DOCUMENT)
 public class KnowledgeUploadController {
     private final KnowledgeUploadBizService uploads;
     private final KnowledgeUploadProperties properties;
