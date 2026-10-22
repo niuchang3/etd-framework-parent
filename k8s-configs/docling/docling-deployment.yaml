@@ -1,0 +1,92 @@
+# 本地 CPU 单实例；Web UI 与 API 使用同一服务端口。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docling
+  namespace: docling
+spec:
+  replicas: 1 # Local 模式任务状态属于当前实例，不直接扩为多副本。
+  strategy:
+    type: Recreate # 更新时先停止旧实例，避免同时写入单节点卷。
+  selector:
+    matchLabels:
+      app: docling
+  template:
+    metadata:
+      labels:
+        app: docling
+    spec:
+      terminationGracePeriodSeconds: 60 # 为正在执行的请求保留退出时间。
+      securityContext:
+        fsGroup: 1001 # 允许镜像中的非 root 用户写入持久卷。
+      containers:
+        - name: docling
+          # 固定已验证的版本和镜像摘要，避免重新部署时版本漂移；支持 ARM64。
+          image: quay.io/docling-project/docling-serve-cpu:v1.37.0@sha256:6eda9c524992147c1b0b06a1a9be4894bd68b1f43c86d92c32f996c4c60d18a3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5001 # Docling API 和 /ui 页面监听端口。
+          env:
+            # 开启本地 Web 调试界面。
+            - name: DOCLING_SERVE_ENABLE_UI
+              value: "true"
+            # 使用进程内任务执行器，不另行引入 Redis 队列。
+            - name: DOCLING_SERVE_ENG_KIND
+              value: local
+            # 同时最多处理一项任务，控制本机内存峰值。
+            - name: DOCLING_SERVE_ENG_LOC_NUM_WORKERS
+              value: "1"
+            # 限制 Docling 与 OpenMP 的 CPU 推理线程数。
+            - name: DOCLING_NUM_THREADS
+              value: "4"
+            - name: OMP_NUM_THREADS
+              value: "4"
+            # Linux ARM64 容器使用 CPU 推理，不使用宿主机 Apple GPU。
+            - name: DOCLING_DEVICE
+              value: cpu
+            # 仅缓存一组转换器配置，减少多套模型驻留内存。
+            - name: DOCLING_SERVE_OPTIONS_CACHE_SIZE
+              value: "1"
+            # 将处理工作目录和额外下载缓存放到持久卷。
+            - name: DOCLING_SERVE_SCRATCH_PATH
+              value: /var/lib/docling/scratch
+            - name: HF_HOME
+              value: /var/lib/docling/huggingface
+          resources:
+            requests:
+              cpu: 500m # 调度预留半个 CPU 核。
+              memory: 1Gi # 调度预留内存，不代表实际峰值。
+            limits:
+              cpu: "4" # 最多使用四核 CPU。
+              memory: 4Gi # 本地试跑上限，大型文档需观察峰值后调整。
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/docling
+          # 就绪接口通过后才接收流量，首次模型加载最多等待约 15 分钟。
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+            failureThreshold: 90
+            timeoutSeconds: 3
+          # 检查模型与服务是否准备好接收请求。
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          # 存活检查使用健康接口，不将首次模型加载误判为异常。
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: docling-data

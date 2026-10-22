@@ -1,0 +1,15 @@
+# 本地访问：http://127.0.0.1:30501/ui/；API 文档位于 /docs。
+apiVersion: v1
+kind: Service
+metadata:
+  name: docling
+  namespace: docling
+spec:
+  type: NodePort # 沿用本地中间件的节点端口访问方式。
+  selector:
+    app: docling
+  ports:
+    - name: http
+      port: 5001 # 集群内使用 docling.docling.svc.cluster.local:5001。
+      targetPort: http
+      nodePort: 30501 # 本机浏览器和 Java 客户端的访问端口。

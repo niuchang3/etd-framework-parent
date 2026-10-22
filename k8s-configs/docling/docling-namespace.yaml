@@ -1,0 +1,5 @@
+# 本地 Docling 独立命名空间，隔离于现有中间件。
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docling

@@ -1,0 +1,13 @@
+# 保存处理结果工作目录和 Hugging Face 缓存；镜像内置模型仍使用镜像原路径。
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: docling-data
+  namespace: docling
+spec:
+  accessModes:
+    - ReadWriteOnce # 本地单节点读写卷。
+  storageClassName: local-path # OrbStack 当前使用的动态存储类。
+  resources:
+    requests:
+      storage: 10Gi # Pod 重建后复用；不替代知识库原件与正文的正式存储。
