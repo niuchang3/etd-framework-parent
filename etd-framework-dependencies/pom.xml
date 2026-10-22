@@ -25,6 +25,9 @@
         <spring.ai.version>1.1.2</spring.ai.version>
         <spring.ai.alibaba.extensions.version>1.1.2.1</spring.ai.alibaba.extensions.version>
 
+        <!-- Spring Boot 不管理 Docling SDK，锁定已验证的官方 Java 客户端版本。 -->
+        <docling.version>0.7.0</docling.version>
+
         <!--第三方工具类-->
         <hutool.version>5.8.38</hutool.version>
         <jakarta.validation.version>3.1.1</jakarta.validation.version>
@@ -122,6 +125,15 @@
                 <version>${ipaddress.version}</version>
             </dependency>
 
+
+            <!-- 仅管理 Docling 自身模块，Jackson 和日志版本继续由 Spring Boot BOM 管理。 -->
+            <dependency>
+                <groupId>ai.docling</groupId>
+                <artifactId>docling-bom</artifactId>
+                <version>${docling.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
             <!--   本地工程jar包管理     -->
             <dependency>

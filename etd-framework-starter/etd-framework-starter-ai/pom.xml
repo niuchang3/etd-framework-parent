@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>etd-framework-starter-ai</artifactId>
-    <description>面向 SaaS 的 Spring AI Alibaba 编排与模型 SDK 依赖入口</description>
+    <description>面向 SaaS 的 AI 编排、模型 SDK 与文档解析能力</description>
 
     <dependencyManagement>
         <dependencies>
@@ -46,10 +46,61 @@
             <!-- 上游 BOM 将 SDK 标记为可选，本 starter 必须向业务应用传递该能力。 -->
             <optional>false</optional>
         </dependency>
+        <!-- 文档解析仅在显式启用时装配，不要求应用启动时存在 Docling 服务。 -->
+        <dependency>
+            <groupId>ai.docling</groupId>
+            <artifactId>docling-serve-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
