@@ -21,7 +21,6 @@ etd:
         part-size-bytes: ${AI_UPLOAD_PART_SIZE_BYTES:10485760} # 固定上传分片大小，默认10MiB，不小于5MiB。
         session-seconds: ${AI_UPLOAD_SESSION_SECONDS:86400} # 断点续传会话有效期，默认24小时。
         url-seconds: ${AI_UPLOAD_URL_SECONDS:900} # 单次预签名上传及下载地址有效期，默认15分钟。
-        max-text-bytes: ${AI_PARSE_MAX_TEXT_BYTES:33554432} # 单次解析的正文大小上限，默认32MiB。
     credentials:
       key: ${AI_CREDENTIAL_ENCRYPTION_KEY:ZXRkLWFpLWxvY2FsLWRldmVsb3BtZW50LWtleS0wMDE=} # 仅供本地开发的固定32字节AES密钥，部署环境必须自行注入。
       key-id: ${AI_CREDENTIAL_KEY_ID:ai-local-01} # 本地默认密钥标识，与本地密钥固定配套使用。

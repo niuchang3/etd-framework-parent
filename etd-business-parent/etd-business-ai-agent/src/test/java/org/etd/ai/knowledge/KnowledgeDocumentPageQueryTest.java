@@ -49,7 +49,7 @@ class KnowledgeDocumentPageQueryTest {
             assertFalse(sql.contains("folder_id ="));
             assertTrue(sql.contains("document_name like"));
             assertTrue(sql.contains("upload_status ="));
-            assertTrue(sql.contains("processing_status ="));
+            assertFalse(sql.contains("processing_status"));
             assertTrue(sql.contains("order by create_time desc,id desc"));
             var parameters = query.getParamNameValuePairs().values();
             assertTrue(parameters.contains(1L));
@@ -58,7 +58,7 @@ class KnowledgeDocumentPageQueryTest {
             return call.getArgument(0);
         });
         List<Long> folderIds = List.of(1L, 2L);
-        var page = service.fetchDocumentPage(2L, 20L, folderId, folderIds, "说明", "completed", "ready");
+        var page = service.fetchDocumentPage(2L, 20L, folderId, folderIds, "说明", "completed");
         assertEquals(2L, page.getCurrent());
         assertEquals(20L, page.getSize());
     }
@@ -75,13 +75,13 @@ class KnowledgeDocumentPageQueryTest {
             assertFalse(sql.contains("folder_id in"));
             return call.getArgument(0);
         });
-        service.fetchDocumentPage(1L, 10L, 9L, folderIds, null, null, null);
+        service.fetchDocumentPage(1L, 10L, 9L, folderIds, null, null);
 
         doAnswer(call -> {
             Wrapper<KnowledgeDocumentEntity> query = call.getArgument(1);
             assertFalse(query.getSqlSegment().toLowerCase().contains("folder_id"));
             return call.getArgument(0);
         }).when(mapper).selectPage(any(), any());
-        service.fetchDocumentPage(1L, 10L, null, folderIds, null, null, null);
+        service.fetchDocumentPage(1L, 10L, null, folderIds, null, null);
     }
 }

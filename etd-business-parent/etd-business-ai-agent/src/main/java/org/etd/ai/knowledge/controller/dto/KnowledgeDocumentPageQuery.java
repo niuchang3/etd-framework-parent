@@ -22,7 +22,7 @@ public class KnowledgeDocumentPageQuery {
     @Max(200)
     private long size = 10;
 
-    /** 单目录筛选，兼容原有调用；仅在 folderIds 为空时生效，待旧调用完成切换后可移除。 */
+    /** 单目录筛选，仅在 folderIds 为空时生效。 */
     @Positive
     private Long folderId;
 
@@ -36,6 +36,4 @@ public class KnowledgeDocumentPageQuery {
     /** 上传状态，未传时不按上传状态筛选。 */
     private String uploadStatus;
 
-    /** 处理状态，未传时不按处理状态筛选。 */
-    private String processingStatus;
 }

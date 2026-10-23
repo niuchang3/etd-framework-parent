@@ -25,7 +25,4 @@ public class KnowledgeUploadProperties {
     /** 临时上传和下载地址有效期，默认15分钟。 */
     @Min(1) @Max(604800)
     private int urlSeconds = 900;
-    /** 单次解析解压后的正文大小限制，默认32MiB。 */
-    @Min(1)
-    private int maxTextBytes = 32 * 1024 * 1024;
 }

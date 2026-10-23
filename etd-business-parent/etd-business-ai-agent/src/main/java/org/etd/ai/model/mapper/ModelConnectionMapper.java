@@ -1,8 +1,6 @@
 package org.etd.ai.model.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import java.util.List;
-import org.etd.ai.model.mapper.result.EmbeddingConnectionOption;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.ibatis.annotations.Param;
 import org.etd.ai.model.entity.ModelConnectionEntity;
@@ -28,6 +26,4 @@ public interface ModelConnectionMapper extends BaseMapper<ModelConnectionEntity>
      */
     ModelConnectionEntity selectConnectionDetail(@Param("id") Long id);
 
-    /** @return 当前租户范围内已启用向量连接器及平台登记的维度 */
-    List<EmbeddingConnectionOption> selectEmbeddingConnectionOptionList();
 }

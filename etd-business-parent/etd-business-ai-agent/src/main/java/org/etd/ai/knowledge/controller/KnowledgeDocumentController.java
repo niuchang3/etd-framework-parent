@@ -5,15 +5,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentSaveDTO;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentPageQuery;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentListVO;
-import org.etd.ai.knowledge.controller.vo.KnowledgeEmbeddingOptionVO;
-import org.etd.ai.model.service.ModelConnectionService;
-import java.util.List;
 import org.etd.ai.knowledge.converter.KnowledgeDocumentConverter;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.framework.common.core.model.ResultModel;
@@ -31,23 +27,13 @@ import org.springframework.web.bind.annotation.*;
 public class KnowledgeDocumentController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeDocumentBizService biz;
-    private final ModelConnectionService connections;
-    /** @return 已启用向量模型连接器，只有资料read权限即可读取脱敏选择项 */
-    @AutoLog("查询知识资料可选向量模型")
-    @GetMapping("/model-options")
-    public ResultModel<List<KnowledgeEmbeddingOptionVO>> listModelOptions() {
-        var options = connections.fetchEmbeddingConnectionOptionList(KnowledgePolicy.DIMENSIONS);
-        var result = options.stream().map(KnowledgeDocumentConverter.INSTANCE::toVO).toList();
-        return ResultModel.success(result);
-    }
-
     /** @param query 分页及筛选条件，批量目录优先于单目录；子孙目录由前端收集
      * @return 当前管理范围内资料 */
     @AutoLog("分页查询知识资料")
     @GetMapping
     public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {
         var page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
-                query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getProcessingStatus());
+                query.getFolderIds(), query.getKeyword(), query.getUploadStatus());
         var result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
         return ResultModel.success(result);
     }
@@ -75,7 +61,7 @@ public class KnowledgeDocumentController {
         String url = biz.createDownloadUrl(id);
         return ResultModel.success(url);
     }
-    /** @param id 资料ID @return 原件、正文及向量清理结果 */
+    /** @param id 资料ID @return 资料及原件清理结果 */
     @AutoLog("删除知识资料")
     @DeleteMapping("/{id}")
     public ResultModel<Boolean> remove(@PathVariable Long id) {

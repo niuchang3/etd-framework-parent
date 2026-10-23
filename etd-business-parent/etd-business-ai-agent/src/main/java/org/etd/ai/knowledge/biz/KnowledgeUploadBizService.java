@@ -30,12 +30,24 @@ public class KnowledgeUploadBizService {
     /** @param document 新上传记录 @return 已初始化的资料；初始化失败清理已知会话 */
     public KnowledgeDocumentEntity createUpload(KnowledgeDocumentEntity document) {
         validateFileSize(document.getFileSize());
+        // 展示类型只按原始文件名生成，不依赖浏览器MIME声明，也不随资料显示名称修改。
+        String fileType = resolveFileType(document.getOriginalFilename());
+        document.setFileType(fileType);
         try {
             return transactions.execute(status -> initializeUpload(document));
         } catch (RuntimeException exception) {
             abortAfterInitializationFailure(document);
             throw exception;
         }
+    }
+
+    /** 提取最后一个扩展名作为图标类型；隐藏文件名和末尾空扩展名使用通用图标。 */
+    private String resolveFileType(String filename) {
+        int separator = filename.lastIndexOf('.');
+        if (separator <= 0 || separator == filename.length() - 1) {
+            return KnowledgePolicy.UNKNOWN_FILE_TYPE;
+        }
+        return filename.substring(separator + 1).toLowerCase(Locale.ROOT);
     }
 
     /** 目录结构锁避免上传初始化与目录删除交叉，INSERT权限由资料服务校验。 */

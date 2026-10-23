@@ -150,15 +150,11 @@ values (2300201, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300217, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200105, 'DIMENSION_1536', '1536 维', '1536', 30, true, true, '对应系统 1536 维向量存储');
 
--- 知识资料字典：仅用于页面展示、筛选及已支持策略选择，不由字典驱动状态机或增加后端能力。
+-- 知识资料上传状态字典：仅用于页面展示和筛选，状态流转由后端控制。
 insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            type_code, type_name, built_in, enabled, remark)
 values (2200106, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'ai_knowledge_upload_status', '知识资料上传状态', true, true, '文件传输状态，用于展示与筛选；状态流转由后端控制，不代表正文解析进度'),
-       (2200107, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'ai_knowledge_processing_status', '知识资料处理状态', true, true, '正文解析、分片确认及向量化状态，用于展示与筛选；状态流转由后端控制'),
-       (2200108, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        'ai_knowledge_retrieval_mode', '知识资料检索方式', true, true, '资料检索配置选项；字典取值须与后端支持的检索策略及数据库约束一致');
+        'ai_knowledge_upload_status', '知识资料上传状态', true, true, '文件传输状态，用于展示与筛选；状态流转由后端控制，不代表正文解析进度');
 
 insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
@@ -173,27 +169,7 @@ values (2300218, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300222, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200106, 'FAILED', '上传失败', 'failed', 50, true, true, '上传、合并或完整性核验失败，后续操作由后端校验会话状态'),
        (2300223, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200106, 'CANCELLED', '已取消', 'cancelled', 60, true, true, '上传已取消或会话已过期，不能继续该上传会话'),
-       (2300224, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'UPLOADED', '未处理', 'uploaded', 10, true, true, '尚未启动正文解析；原件是否上传完成须单独判断upload_status'),
-       (2300225, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'PENDING', '待处理', 'pending', 20, true, true, '等待知识处理，不表示正在上传文件'),
-       (2300226, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'PARSING', '解析中', 'parsing', 30, true, true, '正在解析原件并生成正文分片'),
-       (2300227, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'PREVIEW', '待确认分片', 'preview', 40, true, true, '正文分片已生成，等待用户预览和确认'),
-       (2300228, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'EMBEDDING', '建立索引中', 'embedding', 50, true, true, '正在执行确认后的索引处理；向量模式调用所选模型生成向量'),
-       (2300229, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'READY', '可检索', 'ready', 60, true, true, '当前处理轮次已完成索引，可用于检索'),
-       (2300230, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200107, 'FAILED', '处理失败', 'failed', 70, true, true, '正文解析或索引处理失败，与上传失败分别展示'),
-       (2300231, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200108, 'KEYWORD', '全文检索', 'keyword', 10, true, true, '基于正文分片全文索引召回，不要求配置向量模型'),
-       (2300232, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200108, 'VECTOR', '向量检索', 'vector', 20, true, true, '基于所选模型及维度生成的向量召回，必须配置有效向量模型'),
-       (2300233, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200108, 'HYBRID', '混合检索', 'hybrid', 30, true, true, '组合全文和向量召回，必须配置有效向量模型');
+        2200106, 'CANCELLED', '已取消', 'cancelled', 60, true, true, '上传已取消或会话已过期，不能继续该上传会话');
 
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, del_flag,

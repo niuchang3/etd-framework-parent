@@ -32,12 +32,8 @@ import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentNavigationController;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.controller.KnowledgeUploadController;
-import org.etd.ai.knowledge.controller.KnowledgeProcessingController;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.biz.KnowledgeUploadBizService;
-import org.etd.ai.knowledge.biz.KnowledgeProcessingBizService;
-import org.etd.ai.knowledge.service.KnowledgeChunkService;
-import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.config.KnowledgeUploadProperties;
@@ -137,8 +133,6 @@ class AiEndpointAuthenticationTest {
         mvc.perform(folders).andExpect(status().isOk());
         var policy = get("/v1/knowledge-documents/uploads/policy").session(session);
         mvc.perform(policy).andExpect(status().isOk());
-        var options = get("/v1/knowledge-documents/model-options").session(session);
-        mvc.perform(options).andExpect(status().isOk());
         var download = post("/v1/knowledge-documents/1/download-url").session(session);
         mvc.perform(download).andExpect(status().isOk());
         var denied = post("/v1/knowledge-documents/uploads/1/cancel").session(session);
@@ -151,7 +145,7 @@ class AiEndpointAuthenticationTest {
     }
 
     /**
-     * 四个Controller的全部17个路由只授予知识库资源权限逐个验证；业务IO使用替身。
+     * 三个Controller的全部13个路由只授予知识库资源权限逐个验证；业务IO使用替身。
      * @param endpoint 路由及请求参数，写操作不能被只读菜单授权放行
      */
     @ParameterizedTest(name = "{0}")
@@ -187,16 +181,12 @@ class AiEndpointAuthenticationTest {
         String initialization = "{\"folderId\":1,\"orgId\":1,\"originalFilename\":\"test.txt\","
                 + "\"contentType\":\"text/plain\",\"fileSize\":100,\"fileSha256\":\"" + hash + "\"}";
         String configuration = """
-                {"version":0,"folderId":1,"documentName":"资料","isPublic":false,
-                 "retrievalMode":"keyword","chunkMaxTokens":500,"chunkOverlapTokens":50,
-                 "keywordTopK":20,"vectorTopK":20,"retrievalTopK":10}
+                {"version":0,"folderId":1,"documentName":"资料","description":"用途说明"}
                 """;
         addKnowledgeEndpoint(result, "GET", base, null, false);
         addKnowledgeEndpoint(result, "GET", base + "/folders", null, false);
-        addKnowledgeEndpoint(result, "GET", base + "/model-options", null, false);
         addKnowledgeEndpoint(result, "GET", base + "/1", null, false);
         addKnowledgeEndpoint(result, "GET", uploads + "/policy", null, false);
-        addKnowledgeEndpoint(result, "GET", base + "/1/chunks", null, false);
         addKnowledgeEndpoint(result, "POST", base + "/1/download-url", null, false);
         addKnowledgeEndpoint(result, "PUT", base + "/1", configuration, true);
         addKnowledgeEndpoint(result, "DELETE", base + "/1", null, true);
@@ -206,8 +196,6 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "POST", uploads + "/1/resume", "{\"fileSha256\":\"" + hash + "\"}", true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/complete", null, true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/cancel", null, true);
-        addKnowledgeEndpoint(result, "POST", base + "/1/parse", null, true);
-        addKnowledgeEndpoint(result, "POST", base + "/1/confirm", null, true);
         return result;
     }
 
@@ -240,11 +228,11 @@ class AiEndpointAuthenticationTest {
      */
     private record KnowledgeEndpoint(String method, String path, String body, boolean write) {}
 
-    /** 查询、上传及处理入口均声明中文操作日志，不能遗漏只读入口。 */
+    /** 查询和上传入口均声明中文操作日志，不能遗漏只读入口。 */
     @Test
     void shouldLogAllKnowledgeEndpoints() {
         var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
-                KnowledgeProcessingController.class, KnowledgeDocumentNavigationController.class);
+                KnowledgeDocumentNavigationController.class);
         for (Class<?> controller : controllers) {
             for (var method : controller.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
@@ -525,7 +513,6 @@ class AiEndpointAuthenticationTest {
                         KnowledgeFolderController.class, "ai:knowledge-folder",
                         KnowledgeDocumentController.class, "ai:knowledge-document",
                         KnowledgeUploadController.class, "ai:knowledge-document",
-                        KnowledgeProcessingController.class, "ai:knowledge-document",
                         KnowledgeDocumentNavigationController.class, "ai:knowledge-document");
         for (var resource : resources.entrySet()) {
             var permission =
@@ -610,7 +597,7 @@ class AiEndpointAuthenticationTest {
         KnowledgeDocumentService knowledgeDocumentService() {
             var service = mock(KnowledgeDocumentService.class);
             var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-            when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null)).thenReturn(page);
+            when(service.fetchDocumentPage(1L, 10L, null, null, null, null)).thenReturn(page);
             var document = createKnowledgeDocumentResponse();
             when(service.requireDocument(1L, false)).thenReturn(document);
             return service;
@@ -637,32 +624,18 @@ class AiEndpointAuthenticationTest {
             return service;
         }
 
-        /** 装配真实处理Controller，将解析、确认及正文数据访问隔离为替身。 */
-        @Bean
-        KnowledgeProcessingController knowledgeProcessingController(KnowledgeDocumentService documents) {
-            var processing = mock(KnowledgeProcessingBizService.class);
-            var document = createKnowledgeDocumentResponse();
-            when(processing.createPreview(1L)).thenReturn(document);
-            when(processing.approvePreview(1L)).thenReturn(document);
-            var chunks = mock(KnowledgeChunkService.class);
-            var page = new Page<KnowledgeChunkEntity>(1L, 20L);
-            when(chunks.fetchChunkPage(1L, 0L, 1L, 20L)).thenReturn(page);
-            return new KnowledgeProcessingController(processing, documents, chunks);
-        }
-
         /** 仅提供路由转换所需字段，不模拟真实外部存储或模型处理结果。 */
         private static KnowledgeDocumentEntity createKnowledgeDocumentResponse() {
             var document = new KnowledgeDocumentEntity();
             document.setId(1L);
-            document.setProcessingVersion(0L);
             return document;
         }
 
         /** 装配真实资料控制器。 */
         @Bean
         KnowledgeDocumentController knowledgeDocumentController(KnowledgeDocumentService documents,
-                KnowledgeDocumentBizService biz, ModelConnectionService connections) {
-            return new KnowledgeDocumentController(documents, biz, connections);
+                KnowledgeDocumentBizService biz) {
+            return new KnowledgeDocumentController(documents, biz);
         }
 
         /** 装配真实上传控制器及默认技术参数。 */

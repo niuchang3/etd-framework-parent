@@ -1,18 +1,9 @@
 package org.etd.ai.knowledge;
 
 import io.minio.*;
-import com.sun.net.httpserver.HttpServer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.etd.ai.model.entity.ModelEntity;
-import org.etd.ai.model.entity.ModelConnectionEntity;
-import org.etd.ai.model.service.ModelService;
-import org.etd.ai.model.service.ModelConnectionService;
-import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.springframework.transaction.support.TransactionTemplate;
-import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import org.etd.ai.knowledge.biz.*;
-import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.*;
 import org.etd.ai.knowledge.service.*;
 import org.etd.framework.common.core.context.model.RequestContext;
@@ -31,7 +22,7 @@ import java.security.MessageDigest;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** 连接隔离测试库及独立MinIO桶，验证真实上传、续传、JSON回执、权限与处理状态。 */
+/** 连接隔离测试库及独立MinIO桶，验证真实上传、续传、JSON回执、权限与上传状态。 */
 @EnabledIfEnvironmentVariable(named = "AI_KNOWLEDGE_TEST_JDBC_URL", matches = ".+")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.profiles.active=knowledge-test",
@@ -52,24 +43,12 @@ class KnowledgeUploadIntegrationTest {
     @Autowired private KnowledgeDocumentService documents;
     /** 真实资料管理。 */
     @Autowired private KnowledgeDocumentBizService documentBiz;
-    /** 真实解析及索引处理。 */
-    @Autowired private KnowledgeProcessingBizService processing;
-    /** 正文查询。 */
-    @Autowired private KnowledgeChunkService chunks;
     /** 隔离测试库查询。 */
     @Autowired private JdbcTemplate jdbc;
-    /** 清理测试独立桶。 */
-    @Autowired private CustomMinioClient minio;
     /** 过期清理使用的内部访问能力。 */
     @Autowired private KnowledgeUploadExpiryService expiry;
     /** 测试事务模板。 */
     @Autowired private TransactionTemplate transactions;
-    /** 模型目录真实能力。 */
-    @Autowired private ModelService models;
-    /** 连接器真实能力，验证删除不再检查资料引用。 */
-    @Autowired private ModelConnectionService connections;
-    /** 生成局部模型响应。 */
-    @Autowired private ObjectMapper json;
     /** 保留本测试创建的资料ID，失败时仍尝试清理。 */
     private final List<Long> created = new ArrayList<>();
 
@@ -99,14 +78,13 @@ class KnowledgeUploadIntegrationTest {
         RequestContext.clean();
     }
 
-    /** 初始化、真实PUT、回执确认、模拟重载续传、合并、解析、全文发布及删除完整走通。 */
+    /** 初始化、真实PUT、回执确认、模拟重载续传、合并及删除完整走通。 */
     @Test
-    void shouldResumeAndPublishDocument() throws Exception {
+    void shouldResumeAndCompleteUpload() throws Exception {
         var folder = createFolder();
         byte[] bytes = "中文知识资料与断点续传验证\n".repeat(80).getBytes(StandardCharsets.UTF_8);
         var document = createUpload(folder.getId(), bytes, "知识资料.md");
         assertEquals("uploading", document.getUploadStatus());
-        assertEquals(500, document.getChunkMaxTokens());
         assertThrows(ApiRuntimeException.class, () -> uploads.createPartUrl(document.getId(), 2));
         String etag = putPart(document.getId(), 1, bytes);
         assertThrows(ApiRuntimeException.class, () -> uploads.confirmPart(document.getId(), 1, "invalid-etag"));
@@ -121,17 +99,16 @@ class KnowledgeUploadIntegrationTest {
         assertEquals("completed", uploads.completeUpload(document.getId()).getUploadStatus());
         assertEquals("completed", uploads.completeUpload(document.getId()).getUploadStatus());
         assertTrue(documentBiz.createDownloadUrl(document.getId()).contains("X-Amz"));
-        var preview = processing.createPreview(document.getId());
-        assertEquals("preview", preview.getProcessingStatus());
-        assertFalse(chunks.fetchChunkList(document.getId(), preview.getProcessingVersion()).isEmpty());
-        var ready = processing.approvePreview(document.getId());
-        assertEquals("ready", ready.getProcessingStatus());
-        assertEquals("ready", processing.approvePreview(document.getId()).getProcessingStatus());
+        var completed = documents.requireDocument(document.getId(), false);
+        assertEquals("completed", completed.getUploadStatus());
+        assertNotNull(completed.getUploadedTime());
+        assertEquals("知识资料.md", completed.getDocumentName());
+        assertEquals("md", completed.getFileType());
+        assertEquals((long) bytes.length, completed.getFileSize());
         assertThrows(ApiRuntimeException.class, () -> folderBiz.removeFolder(folder.getId()));
         verifyPermissionIsolation(document.getId());
         documentBiz.removeDocument(document.getId());
         created.remove(document.getId());
-        assertEquals(0, jdbc.queryForObject("select count(*) from ai_knowledge_chunk where document_id = ?", Integer.class, document.getId()));
         folderBiz.removeFolder(folder.getId());
     }
 
@@ -192,78 +169,6 @@ class KnowledgeUploadIntegrationTest {
         objects.cancelExpiredUploadList();
         setIdentity();
         assertEquals("cancelled", documents.requireDocument(document.getId(), false).getUploadStatus());
-    }
-
-    /** 使用本地HTTP替身而非真实付费模型，验证选择模型、维度、向量写入和连接器删除规则。 */
-    @Test
-    void shouldBuildVectorsAndAllowDeletingReferencedConnection() throws Exception {
-        var address = new InetSocketAddress("127.0.0.1", 0);
-        var server = HttpServer.create(address, 0);
-        var embedding = new ArrayList<Double>();
-        for (int index = 0; index < 768; index++) {
-            embedding.add(index == 0 ? 1.0 : 0.0);
-        }
-        var vectorRow = Map.of("embedding", embedding);
-        var rows = List.of(vectorRow);
-        byte[] response = json.writeValueAsBytes(Map.of("data", rows));
-        server.createContext("/embeddings", exchange -> {
-            var request = json.readTree(exchange.getRequestBody());
-            assertEquals(768, request.path("dimensions").asInt());
-            assertEquals("Bearer test-only-key", exchange.getRequestHeaders().getFirst("Authorization"));
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, response.length);
-            exchange.getResponseBody().write(response);
-            exchange.close();
-        });
-        server.start();
-        try {
-            verifyVectorProcessing(server.getAddress().getPort());
-        } finally {
-            server.stop(0);
-        }
-    }
-
-    /** 原件和正文走真实存储；模型连接凭证经过真实加解密流程。 */
-    private void verifyVectorProcessing(int port) throws Exception {
-        var folder = createFolder();
-        byte[] bytes = "真实向量存储验证".getBytes(StandardCharsets.UTF_8);
-        var document = createUpload(folder.getId(), bytes, "vector.txt");
-        String etag = putPart(document.getId(), 1, bytes);
-        uploads.confirmPart(document.getId(), 1, etag);
-        uploads.completeUpload(document.getId());
-        var model = new ModelEntity();
-        model.setProviderCode("test");
-        model.setModelType("embedding");
-        model.setModelName("测试向量模型");
-        model.setModelCode("test-" + UUID.randomUUID());
-        model.setEmbedding(new Integer[] {768});
-        model.setSort(0);
-        RequestContext.getUser().setPlatformAdmin(true);
-        models.createModel(model);
-        RequestContext.getUser().setPlatformAdmin(false);
-        var connection = new ModelConnectionEntity();
-        connection.setModelId(model.getId());
-        connection.setProtocol("openai_compatible");
-        connection.setBaseUrl("http://127.0.0.1:" + port);
-        connection.setAuthType("api_key");
-        connections.createConnection(connection, "test-only-key");
-        var options = connections.fetchEmbeddingConnectionOptionList(KnowledgePolicy.DIMENSIONS);
-        var selected = options.stream().filter(option -> option.getId().equals(connection.getId())).findFirst().orElseThrow();
-        assertArrayEquals(new Integer[] {768}, selected.getEmbedding());
-        var input = documents.requireDocument(document.getId(), false);
-        Long version = input.getVersion();
-        input.setEmbeddingModelConnectionId(connection.getId());
-        input.setEmbedding(768);
-        input.setRetrievalMode("vector");
-        documentBiz.modifyDocument(document.getId(), input, version);
-        processing.createPreview(document.getId());
-        assertEquals("ready", processing.approvePreview(document.getId()).getProcessingStatus());
-        assertEquals(1, jdbc.queryForObject("select count(*) from ai_vector_768 where document_id = ?", Integer.class, document.getId()));
-        connections.removeConnection(connection.getId());
-        assertEquals("ready", documents.requireDocument(document.getId(), false).getProcessingStatus());
-        processing.createPreview(document.getId());
-        assertThrows(ApiRuntimeException.class, () -> processing.approvePreview(document.getId()));
-        assertEquals("failed", documents.requireDocument(document.getId(), false).getProcessingStatus());
     }
 
     /** 每个工作线程独立设置并释放数据权限上下文。 */

@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper">
+    <!-- 普通字段按驼峰规则自动映射，上传回执显式使用JSON类型处理器。 -->
+    <resultMap id="knowledgeDocument" type="org.etd.ai.knowledge.entity.KnowledgeDocumentEntity" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="uploadParts" column="upload_parts"
+                typeHandler="org.etd.ai.knowledge.mapper.typehandler.UploadPartsTypeHandler"/>
+    </resultMap>
+
     <!-- 仅后台任务调用，读取到期记录并在事务内串行取消，不改变完整原件的保留策略。 -->
-    <select id="selectExpiredUploadList" resultMap="mybatis-plus_KnowledgeDocumentEntity">
+    <select id="selectExpiredUploadList" resultMap="knowledgeDocument">
         select *
         from ai_knowledge_document
         where del_flag = 0
