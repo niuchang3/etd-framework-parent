@@ -92,7 +92,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
         Assert.notNull(request, "解析请求不能为空");
         validateFormat(request);
         ConvertDocumentRequest sdkRequest = createRequest(request);
-        Supplier<TaskStatusPollResponse> operation = () -> client.submit(sdkRequest);
+        Supplier<TaskStatusPollResponse> operation = () -> client.submit(sdkRequest, request.options().advanced());
         TaskStatusPollResponse response = invoke(operation);
         return requireTask(response, null);
     }
@@ -120,10 +120,8 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
     @Override
     public DocumentChunkResult chunk(DocumentChunkRequest request) {
         ChunkDocumentRequest sdkRequest = createChunkRequest(request);
-        Supplier<ChunkDocumentResponse> operation = () -> switch (sdkRequest) {
-            case HierarchicalChunkDocumentRequest hierarchical -> client.chunkSourceWithHierarchicalChunker(hierarchical);
-            case HybridChunkDocumentRequest hybrid -> client.chunkSourceWithHybridChunker(hybrid);
-        };
+        Supplier<ChunkDocumentResponse> operation = () -> client.chunk(sdkRequest,
+                request.document().options().advanced(), request.options());
         ChunkDocumentResponse response = invoke(operation);
         return convertChunkResult(response);
     }
@@ -131,10 +129,8 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
     @Override
     public DocumentParseTask submitChunk(DocumentChunkRequest request) {
         ChunkDocumentRequest sdkRequest = createChunkRequest(request);
-        Supplier<TaskStatusPollResponse> operation = () -> switch (sdkRequest) {
-            case HierarchicalChunkDocumentRequest hierarchical -> client.submitChunk(hierarchical);
-            case HybridChunkDocumentRequest hybrid -> client.submitChunk(hybrid);
-        };
+        Supplier<TaskStatusPollResponse> operation = () -> client.submitChunk(sdkRequest,
+                request.document().options().advanced(), request.options());
         TaskStatusPollResponse response = invoke(operation);
         return requireTask(response, null);
     }
@@ -235,6 +231,8 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
         if (!format.supportsOcrAndPageRange()) {
             Assert.isTrue(!options.ocr() && !options.forceOcr() && options.ocrLanguages().isEmpty()
                     && options.firstPage() == null, "该格式不支持OCR或页码范围选项");
+            Assert.isTrue(options.advanced() == null || !options.advanced().requiresPdfPipeline(),
+                    "该格式不支持PDF/图片流水线的高级解析选项");
         }
     }
 

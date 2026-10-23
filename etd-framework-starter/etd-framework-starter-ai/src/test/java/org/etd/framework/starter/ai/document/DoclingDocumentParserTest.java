@@ -21,6 +21,13 @@ import org.etd.framework.starter.ai.document.docling.DoclingTaskClient;
 import org.etd.framework.starter.ai.document.docling.converter.DoclingResultConverter;
 import org.etd.framework.starter.ai.document.exception.DocumentParseException;
 import org.etd.framework.starter.ai.document.model.DocumentParseOptions;
+import org.etd.framework.starter.ai.document.model.DocumentParseAdvancedOptions;
+import org.etd.framework.starter.ai.document.model.DocumentHeadingHierarchyOptions;
+import org.etd.framework.starter.ai.document.constant.DocumentImageExportMode;
+import org.etd.framework.starter.ai.document.constant.DocumentPdfBackend;
+import org.etd.framework.starter.ai.document.constant.DocumentProcessingPipeline;
+import org.etd.framework.starter.ai.document.constant.DocumentTableMode;
+import java.util.Map;
 import org.etd.framework.starter.ai.document.model.DocumentParseRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -253,7 +260,7 @@ class DoclingDocumentParserTest {
     @Test
     void preservesServiceDefaultsForOptionalHybridSettings() throws Exception {
         responseBody = chunkResponse(false);
-        var options = new HybridDocumentChunkOptions(false, false, null, null, null);
+        var options = new HybridDocumentChunkOptions(false, false, null, null, null, null, null);
         var document = request("sample.pdf");
         var request = new DocumentChunkRequest(document, options, false);
         parser.chunk(request);
@@ -291,9 +298,9 @@ class DoclingDocumentParserTest {
 
     @Test
     void invalidHybridSettingsFailBeforeCallingService() {
-        assertThatThrownBy(() -> new HybridDocumentChunkOptions(false, false, 0, null, null))
+        assertThatThrownBy(() -> new HybridDocumentChunkOptions(false, false, 0, null, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new HybridDocumentChunkOptions(false, false, 128, " ", null))
+        assertThatThrownBy(() -> new HybridDocumentChunkOptions(false, false, 128, " ", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(paths).isEmpty();
     }
@@ -311,11 +318,119 @@ class DoclingDocumentParserTest {
         assertThat(paths).hasSize(1);
     }
 
+    /** 同步和异步分块下发相同的现代Docling解析参数，不使用废弃字段。 */
+    @ParameterizedTest
+    @EnumSource(DocumentChunkStrategy.class)
+    void forwardsAdvancedOptionsForBothChunkStrategies(DocumentChunkStrategy strategy) throws Exception {
+        var advanced = createAdvancedOptions();
+        var original = request("sample.pdf");
+        var options = original.options();
+        var parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
+                1, 2, options.documentTimeout(), advanced);
+        var document = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
+        DocumentChunkOptions chunk = switch (strategy) {
+            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, true, "");
+            case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, true, "");
+        };
+        var request = new DocumentChunkRequest(document, chunk, true);
+        responseBody = chunkResponse(true);
+        parser.chunk(request);
+        verifyAdvancedPayload();
+        responseBody = "{\"task_id\":\"advanced-1\",\"task_status\":\"pending\"}";
+        parser.submitChunk(request);
+        verifyAdvancedPayload();
+    }
+
+    private DocumentParseAdvancedOptions createAdvancedOptions() {
+        var hierarchy = DocumentHeadingHierarchyOptions.builder().useBookmarks(false)
+                .maxLevel(4).styleSizeTolerance(0.1).bookmarkMatchThreshold(0.9).build();
+        Map<String, Object> layout = Map.of("kind", "docling_layout_default");
+        return DocumentParseAdvancedOptions.builder().ocrPreset("easyocr")
+                .pdfBackend(DocumentPdfBackend.DOCLING_PARSE).pipeline(DocumentProcessingPipeline.STANDARD)
+                .tableMode(DocumentTableMode.FAST).tableCellMatching(false).abortOnError(true)
+                .doPdfHeadingHierarchy(true).pdfHeadingHierarchyOptions(hierarchy)
+                .includeImages(true).includePageImages(true).imageExportMode(DocumentImageExportMode.EMBEDDED)
+                .imagesScale(1.5).mdPageBreakPlaceholder("---page---").mdCompactTables(true)
+                .doCodeEnrichment(true).doFormulaEnrichment(true).doPictureClassification(true)
+                .doPictureDescription(true).pictureDescriptionAreaThreshold(0.2).doChartExtraction(true)
+                .vlmPipelinePreset("default").pictureDescriptionPreset("default")
+                .pictureClassificationPreset("default").chartExtractionPreset("default")
+                .codeFormulaPreset("default").tableStructurePreset("default").layoutPreset("default")
+                .layoutCustomConfig(layout).build();
+    }
+
+    private void verifyAdvancedPayload() {
+        var options = requestBody.path("convert_options");
+        assertThat(options.path("ocr_preset").asText()).isEqualTo("easyocr");
+        assertThat(options.path("pdf_backend").asText()).isEqualTo("_docling_parse");
+        assertThat(options.path("pipeline").asText()).isEqualTo("standard");
+        assertThat(options.path("table_mode").asText()).isEqualTo("fast");
+        assertThat(options.path("table_cell_matching").asBoolean()).isFalse();
+        assertThat(options.path("do_pdf_heading_hierarchy").asBoolean()).isTrue();
+        assertThat(options.path("pdf_heading_hierarchy_options").path("max_level").asInt()).isEqualTo(4);
+        assertThat(options.path("image_export_mode").asText()).isEqualTo("embedded");
+        assertThat(options.path("images_scale").asDouble()).isEqualTo(1.5);
+        assertThat(options.path("md_compact_tables").asBoolean()).isTrue();
+        assertThat(options.path("do_chart_extraction").asBoolean()).isTrue();
+        assertThat(options.path("layout_custom_config").path("kind").asText()).isEqualTo("docling_layout_default");
+        assertThat(options.has("ocr_engine")).isFalse();
+        assertThat(requestBody.path("chunking_options").path("use_markdown_images").asBoolean()).isTrue();
+        assertThat(requestBody.path("chunking_options").path("image_placeholder").asText()).isEmpty();
+    }
+
+    /** 普通异步解析与分块共用高级选项，字段写入各自正确的原生节点。 */
+    @Test
+    void forwardsAdvancedOptionsForOrdinaryConversion() {
+        var advanced = DocumentParseAdvancedOptions.builder().mdCompactTables(true).build();
+        var original = request("sample.pdf");
+        var options = original.options();
+        var parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
+                1, 2, options.documentTimeout(), advanced);
+        var request = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
+        responseBody = "{\"task_id\":\"advanced-conversion\",\"task_status\":\"pending\"}";
+        parser.submit(request);
+        assertThat(requestBody.path("options").path("md_compact_tables").asBoolean()).isTrue();
+        assertThat(requestBody.path("options").has("ocr_preset")).isFalse();
+        assertThat(requestBody.has("convert_options")).isFalse();
+    }
+
+    /** 不支持PDF流水线的格式不能静默忽略高级选项。 */
+    @Test
+    void rejectsPdfAdvancedOptionsForMarkdown() {
+        var advanced = DocumentParseAdvancedOptions.builder().ocrPreset("easyocr").build();
+        var languages = List.<String>of();
+        var timeout = Duration.ofSeconds(60);
+        assertThatThrownBy(() -> new DocumentParseOptions(false, false, languages, false,
+                null, null, timeout, advanced)).isInstanceOf(IllegalArgumentException.class);
+        var pdfOptions = DocumentParseAdvancedOptions.builder().pdfBackend(DocumentPdfBackend.DOCLING_PARSE).build();
+        var options = new DocumentParseOptions(false, false, languages, false, null, null, timeout, pdfOptions);
+        var original = request("sample.md");
+        var request = new DocumentParseRequest(original.resource(), original.filename(), options);
+        assertThatThrownBy(() -> parser.submit(request)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(paths).isEmpty();
+    }
+
+    /** 非有限数值和非法层级组合必须在发起远端调用前拒绝。 */
+    @Test
+    void rejectsInvalidAdvancedRanges() {
+        assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().imagesScale(Double.NaN).build())
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().pictureDescriptionAreaThreshold(1.1).build())
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().doPdfHeadingHierarchy(true)
+                .pipeline(DocumentProcessingPipeline.NATIVE).build()).isInstanceOf(IllegalArgumentException.class);
+        var hierarchy = DocumentHeadingHierarchyOptions.builder().maxLevel(4).build();
+        assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().pdfHeadingHierarchyOptions(hierarchy).build())
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DocumentHeadingHierarchyOptions.builder().maxLevel(101).build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private DocumentChunkRequest chunkRequest(DocumentChunkStrategy strategy, boolean includeDocument) {
         var document = request("sample.pdf");
         DocumentChunkOptions options = switch (strategy) {
-            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true);
-            case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false);
+            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, null, null);
+            case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, null, null);
         };
         return new DocumentChunkRequest(document, options, includeDocument);
     }
@@ -358,7 +473,7 @@ class DoclingDocumentParserTest {
         var resource = new ByteArrayResource("test document".getBytes(StandardCharsets.UTF_8));
         var languages = List.of("zh", "en");
         Duration timeout = Duration.ofSeconds(120);
-        var options = new DocumentParseOptions(true, false, languages, true, 1, 2, timeout);
+        var options = new DocumentParseOptions(true, false, languages, true, 1, 2, timeout, null);
         return new DocumentParseRequest(resource, filename, options);
     }
 

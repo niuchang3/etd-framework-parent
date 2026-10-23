@@ -15,6 +15,7 @@ import org.etd.framework.starter.ai.document.docling.converter.DoclingResultConv
 import org.etd.framework.starter.ai.document.model.DocumentChunkOptions;
 import org.etd.framework.starter.ai.document.model.DocumentChunkRequest;
 import org.etd.framework.starter.ai.document.model.DocumentParseOptions;
+import org.etd.framework.starter.ai.document.model.DocumentParseAdvancedOptions;
 import org.etd.framework.starter.ai.document.model.DocumentParseRequest;
 import org.etd.framework.starter.ai.document.model.HierarchicalDocumentChunkOptions;
 import org.etd.framework.starter.ai.document.model.HybridDocumentChunkOptions;
@@ -77,11 +78,12 @@ class DoclingChunkLiveTest {
         var resource = new ByteArrayResource(bytes);
         var languages = List.<String>of();
         Duration timeout = Duration.ofSeconds(90);
-        var parseOptions = new DocumentParseOptions(false, false, languages, true, null, null, timeout);
+        var advanced = DocumentParseAdvancedOptions.builder().mdCompactTables(true).mdPageBreakPlaceholder("").build();
+        var parseOptions = new DocumentParseOptions(false, false, languages, true, null, null, timeout, advanced);
         var document = new DocumentParseRequest(resource, "chunk-test.md", parseOptions);
         DocumentChunkOptions options = switch (strategy) {
-            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true);
-            case HYBRID -> new HybridDocumentChunkOptions(true, true, MAX_TOKENS, null, true);
+            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, true, "[图片]");
+            case HYBRID -> new HybridDocumentChunkOptions(true, true, MAX_TOKENS, null, true, true, "[图片]");
         };
         return new DocumentChunkRequest(document, options, true);
     }

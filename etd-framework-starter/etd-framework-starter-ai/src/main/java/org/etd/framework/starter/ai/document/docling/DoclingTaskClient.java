@@ -1,10 +1,13 @@
 package org.etd.framework.starter.ai.document.docling;
 
 import ai.docling.serve.api.DoclingServeApi;
-import ai.docling.serve.api.chunk.request.HierarchicalChunkDocumentRequest;
-import ai.docling.serve.api.chunk.request.HybridChunkDocumentRequest;
+import ai.docling.serve.api.chunk.request.ChunkDocumentRequest;
 import ai.docling.serve.api.chunk.response.ChunkDocumentResponse;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.etd.framework.starter.ai.document.model.DocumentParseAdvancedOptions;
+import org.etd.framework.starter.ai.document.model.DocumentChunkOptions;
+import org.etd.framework.starter.ai.document.constant.DocumentChunkStrategy;
 import ai.docling.serve.api.convert.request.ConvertDocumentRequest;
 import ai.docling.serve.api.convert.response.InBodyConvertDocumentResponse;
 import ai.docling.serve.api.task.response.TaskStatusPollResponse;
@@ -16,7 +19,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 /**
- * 复用官方 SDK 的传输、认证及结果 API，只补充“提交后立即返回任务”的入口。
+ * 复用官方SDK的传输、认证及结果API，补充分块原生字段和提交后立即返回任务的入口。
  * SDK 的 convertSourceAsync 会自动轮询，无法把任务交给业务持久化管理，因此不直接使用。
  */
 public final class DoclingTaskClient extends DoclingServeClient {
@@ -28,6 +31,16 @@ public final class DoclingTaskClient extends DoclingServeClient {
     private static final String HIERARCHICAL_CHUNK_SUBMIT_PATH = "/v1/chunk/hierarchical/source/async";
     /** 官方 v1 的混合分块异步提交路径。 */
     private static final String HYBRID_CHUNK_SUBMIT_PATH = "/v1/chunk/hybrid/source/async";
+    /** 分块请求中的原文解析选项节点。 */
+    private static final String CONVERT_OPTIONS_FIELD = "convert_options";
+    /** 普通解析请求中的选项节点。 */
+    private static final String OPTIONS_FIELD = "options";
+    /** 分块请求中的切分选项节点。 */
+    private static final String CHUNKING_OPTIONS_FIELD = "chunking_options";
+    /** 原生图片序列化开关，官方SDK当前版本尚未声明。 */
+    private static final String MARKDOWN_IMAGES_FIELD = "use_markdown_images";
+    /** 原生图片占位文本，官方SDK当前版本尚未声明。 */
+    private static final String IMAGE_PLACEHOLDER_FIELD = "image_placeholder";
     /** 用于识别分块结果形状，防止把普通解析任务结果误当作空分块结果。 */
     private static final String CHUNKS_FIELD = "chunks";
     /** 原文结果数组，即使未请求返回原文也应由分块接口提供空数组。 */
@@ -47,11 +60,13 @@ public final class DoclingTaskClient extends DoclingServeClient {
 
     /**
      * @param request 单文件、内联结果的官方请求
+     * @param advanced 高级解析选项，不填使用默认值
      * @return 服务端任务快照，不启动后台轮询
      */
-    public TaskStatusPollResponse submit(ConvertDocumentRequest request) {
-        var context = RequestContext.<ConvertDocumentRequest, TaskStatusPollResponse>builder()
-                .uri(SUBMIT_PATH).request(request).responseType(TaskStatusPollResponse.class).build();
+    public TaskStatusPollResponse submit(ConvertDocumentRequest request, DocumentParseAdvancedOptions advanced) {
+        JsonNode payload = createPayload(request, advanced, null);
+        var context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
+                .uri(SUBMIT_PATH).request(payload).responseType(TaskStatusPollResponse.class).build();
         return executePost(context);
     }
 
@@ -92,23 +107,70 @@ public final class DoclingTaskClient extends DoclingServeClient {
     }
 
     /**
-     * @param request 层级分块 SDK 请求
-     * @return 任务快照，不启动后台轮询
+     * @param request SDK原生分块请求
+     * @param advanced 高级解析选项，不填使用默认值
+     * @param options 当前分块选项，包含图片序列化设置
+     * @return 同步分块结果，执行期间不启动轮询
      */
-    public TaskStatusPollResponse submitChunk(HierarchicalChunkDocumentRequest request) {
-        var context = RequestContext.<HierarchicalChunkDocumentRequest, TaskStatusPollResponse>builder()
-                .uri(HIERARCHICAL_CHUNK_SUBMIT_PATH).request(request).responseType(TaskStatusPollResponse.class).build();
+    public ChunkDocumentResponse chunk(ChunkDocumentRequest request, DocumentParseAdvancedOptions advanced,
+            DocumentChunkOptions options) {
+        String path = chunkPath(options.strategy(), false);
+        JsonNode payload = createPayload(request, advanced, options);
+        var context = RequestContext.<JsonNode, ChunkDocumentResponse>builder()
+                .uri(path).request(payload).responseType(ChunkDocumentResponse.class).build();
         return executePost(context);
     }
 
     /**
-     * @param request 混合分块 SDK 请求
+     * @param request SDK原生分块请求
+     * @param advanced 高级解析选项，不填使用默认值
+     * @param options 当前分块选项，包含图片序列化设置
      * @return 任务快照，不启动后台轮询
      */
-    public TaskStatusPollResponse submitChunk(HybridChunkDocumentRequest request) {
-        var context = RequestContext.<HybridChunkDocumentRequest, TaskStatusPollResponse>builder()
-                .uri(HYBRID_CHUNK_SUBMIT_PATH).request(request).responseType(TaskStatusPollResponse.class).build();
+    public TaskStatusPollResponse submitChunk(ChunkDocumentRequest request, DocumentParseAdvancedOptions advanced,
+            DocumentChunkOptions options) {
+        String path = chunkPath(options.strategy(), true);
+        JsonNode payload = createPayload(request, advanced, options);
+        var context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
+                .uri(path).request(payload).responseType(TaskStatusPollResponse.class).build();
         return executePost(context);
+    }
+
+    /** 同一策略的同步和异步请求共享payload，解析及切分全部交给Docling。 */
+    private String chunkPath(DocumentChunkStrategy strategy, boolean async) {
+        String submitPath = switch (strategy) {
+            case HIERARCHICAL -> HIERARCHICAL_CHUNK_SUBMIT_PATH;
+            case HYBRID -> HYBRID_CHUNK_SUBMIT_PATH;
+        };
+        return async ? submitPath : submitPath.substring(0, submitPath.length() - "/async".length());
+    }
+
+    /**
+     * 补齐SDK尚未声明的官方字段；仍复用SDK的HTTP、认证和错误处理。
+     * 选项来自明确类型，不允许覆盖文件来源、目标或原始任务路径。
+     */
+    private JsonNode createPayload(Object request, DocumentParseAdvancedOptions advanced, DocumentChunkOptions chunk) {
+        ObjectNode payload = mapper.valueToTree(request);
+        String optionsField = chunk == null ? OPTIONS_FIELD : CONVERT_OPTIONS_FIELD;
+        ObjectNode conversion = (ObjectNode) payload.get(optionsField);
+        if (advanced != null) {
+            ObjectNode additional = mapper.valueToTree(advanced);
+            conversion.setAll(additional);
+        }
+        if (chunk != null) {
+            applyImageOptions(payload, chunk);
+        }
+        return payload;
+    }
+
+    private void applyImageOptions(ObjectNode payload, DocumentChunkOptions options) {
+        ObjectNode chunk = (ObjectNode) payload.get(CHUNKING_OPTIONS_FIELD);
+        if (options.useMarkdownImages() != null) {
+            chunk.put(MARKDOWN_IMAGES_FIELD, options.useMarkdownImages());
+        }
+        if (options.imagePlaceholder() != null) {
+            chunk.put(IMAGE_PLACEHOLDER_FIELD, options.imagePlaceholder());
+        }
     }
 
     /**

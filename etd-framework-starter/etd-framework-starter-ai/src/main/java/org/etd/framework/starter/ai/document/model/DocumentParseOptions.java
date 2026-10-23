@@ -11,6 +11,7 @@ import org.springframework.util.Assert;
  * @param tableStructure 是否识别表格结构
  * @param firstPage 起始页，从 1 开始；与结束页同时提供或同时省略
  * @param lastPage 结束页，包含该页
+ * @param advanced 可选的引擎高级解析选项；为空时沿用服务及适配器默认值
  * @param documentTimeout 引擎处理单份文档的超时，必须大于零
  */
 public record DocumentParseOptions(
@@ -20,7 +21,8 @@ public record DocumentParseOptions(
         boolean tableStructure,
         Integer firstPage,
         Integer lastPage,
-        Duration documentTimeout) {
+        Duration documentTimeout,
+        DocumentParseAdvancedOptions advanced) {
 
     /** 固定选项快照，防止并发调用时被外部集合修改。 */
     public DocumentParseOptions {
@@ -33,6 +35,10 @@ public record DocumentParseOptions(
         Assert.isTrue((firstPage == null) == (lastPage == null), "起止页码必须同时提供");
         if (firstPage != null) {
             Assert.isTrue(firstPage >= DocumentSourceLocation.FIRST_PAGE_NUMBER && lastPage >= firstPage, "页码范围无效");
+        }
+        if (advanced != null) {
+            Assert.isTrue(ocr || advanced.ocrPreset() == null && advanced.ocrCustomConfig() == null,
+                    "配置OCR预设或引擎细项时必须开启OCR");
         }
         Assert.notNull(documentTimeout, "文档处理超时不能为空");
         Assert.isTrue(documentTimeout.compareTo(Duration.ZERO) > 0, "文档处理超时必须大于零");
