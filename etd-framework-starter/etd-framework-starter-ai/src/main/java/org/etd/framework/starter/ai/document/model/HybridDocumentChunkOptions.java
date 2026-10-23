@@ -1,7 +1,7 @@
 package org.etd.framework.starter.ai.document.model;
 
 import org.etd.framework.starter.ai.document.constant.DocumentChunkStrategy;
-import org.springframework.util.Assert;
+import org.etd.framework.starter.ai.document.validation.DocumentOptionValidator;
 /**
  * 结构与 Token 感知的混合分块；tokenizer 应与向量模型匹配，由解析服务加载。
  * @param useMarkdownTables 是否将表格序列化为 Markdown
@@ -23,10 +23,8 @@ public record HybridDocumentChunkOptions(
 
     /** 校验选项，不把显式空字符串当作未配置。 */
     public HybridDocumentChunkOptions {
-        Assert.isTrue(maxTokens == null || maxTokens > 0, "分块Token上限必须大于零");
-        if (tokenizer != null) {
-            Assert.hasText(tokenizer, "tokenizer不能为空白");
-        }
+        DocumentOptionValidator.requireTokenCount(maxTokens, "分块Token上限");
+        DocumentOptionValidator.requireTextWhenPresent(tokenizer, "分词器");
     }
 
     /** @return 混合分块策略 */

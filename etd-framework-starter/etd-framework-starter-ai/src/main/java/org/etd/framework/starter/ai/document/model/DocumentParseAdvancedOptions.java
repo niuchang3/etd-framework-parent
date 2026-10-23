@@ -10,6 +10,7 @@ import org.etd.framework.starter.ai.document.constant.DocumentPdfBackend;
 import org.etd.framework.starter.ai.document.constant.DocumentProcessingPipeline;
 import org.etd.framework.starter.ai.document.constant.DocumentTableMode;
 import org.springframework.util.Assert;
+import org.etd.framework.starter.ai.document.validation.DocumentOptionValidator;
 
 /**
  * Docling原生解析的高级选项；空值不下发，由服务决定默认值。
@@ -93,22 +94,22 @@ public record DocumentParseAdvancedOptions(
 
     /** 验证可在本地确定的范围；引擎专属配置交由Docling按官方schema验证。 */
     public DocumentParseAdvancedOptions {
-        requirePositive(imagesScale, "图片缩放倍数");
-        requireRatio(pictureDescriptionAreaThreshold, "图片描述面积阈值");
+        DocumentOptionValidator.requirePositive(imagesScale, "图片缩放倍数");
+        DocumentOptionValidator.requireRatio(pictureDescriptionAreaThreshold, "图片描述面积阈值");
         Assert.isTrue(pdfHeadingHierarchyOptions == null || Boolean.TRUE.equals(doPdfHeadingHierarchy),
                 "标题层级细项必须同时开启标题层级推断");
         Assert.isTrue(!Boolean.TRUE.equals(doPdfHeadingHierarchy)
                         || pipeline == null || pipeline == DocumentProcessingPipeline.STANDARD,
                 "标题层级推断仅支持标准解析流水线");
-        requirePreset(ocrPreset);
+        DocumentOptionValidator.requireTextWhenPresent(ocrPreset, "模型或引擎预设");
         ocrCustomConfig = ocrCustomConfig == null ? null : Map.copyOf(ocrCustomConfig);
-        requirePreset(vlmPipelinePreset);
-        requirePreset(pictureDescriptionPreset);
-        requirePreset(pictureClassificationPreset);
-        requirePreset(chartExtractionPreset);
-        requirePreset(codeFormulaPreset);
-        requirePreset(tableStructurePreset);
-        requirePreset(layoutPreset);
+        DocumentOptionValidator.requireTextWhenPresent(vlmPipelinePreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(pictureDescriptionPreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(pictureClassificationPreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(chartExtractionPreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(codeFormulaPreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(tableStructurePreset, "模型或引擎预设");
+        DocumentOptionValidator.requireTextWhenPresent(layoutPreset, "模型或引擎预设");
         vlmPipelineCustomConfig = vlmPipelineCustomConfig == null ? null : Map.copyOf(vlmPipelineCustomConfig);
         pictureDescriptionCustomConfig = pictureDescriptionCustomConfig == null ? null : Map.copyOf(pictureDescriptionCustomConfig);
         pictureClassificationCustomConfig = pictureClassificationCustomConfig == null ? null : Map.copyOf(pictureClassificationCustomConfig);
@@ -130,21 +131,6 @@ public record DocumentParseAdvancedOptions(
                 || layoutPreset != null || vlmPipelineCustomConfig != null || pictureDescriptionCustomConfig != null
                 || pictureClassificationCustomConfig != null || chartExtractionCustomConfig != null
                 || codeFormulaCustomConfig != null || tableStructureCustomConfig != null || layoutCustomConfig != null;
-    }
-
-    private static void requirePreset(String value) {
-        if (value != null) {
-            Assert.hasText(value, "预设ID不能为空白");
-        }
-    }
-
-    private static void requirePositive(Double value, String name) {
-        Assert.isTrue(value == null || Double.isFinite(value) && value > 0, name + "必须为有限正数");
-    }
-
-    private static void requireRatio(Double value, String name) {
-        Assert.isTrue(value == null || Double.isFinite(value) && value >= 0 && value <= 1,
-                name + "必须在0至1之间");
     }
 
     @Override

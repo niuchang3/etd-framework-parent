@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import java.util.List;
 import lombok.Builder;
 import org.springframework.util.Assert;
+import org.etd.framework.starter.ai.document.constant.DocumentOptionLimits;
+import org.etd.framework.starter.ai.document.validation.DocumentOptionValidator;
 
 /** PDF标题层级推断细项；是否启用统一由外层doPdfHeadingHierarchy控制。 */
 @Builder
@@ -31,9 +33,10 @@ public record DocumentHeadingHierarchyOptions(
 
     /** 验证数值范围，保留未指定字段的服务默认值。 */
     public DocumentHeadingHierarchyOptions {
-        requireRatio(styleSizeTolerance);
-        requireRatio(bookmarkMatchThreshold);
-        Assert.isTrue(maxLevel == null || maxLevel >= 1 && maxLevel <= 100, "标题层级上限必须在1至100之间");
+        DocumentOptionValidator.requireRatio(styleSizeTolerance, "字号分组容差");
+        DocumentOptionValidator.requireRatio(bookmarkMatchThreshold, "书签匹配阈值");
+        Assert.isTrue(maxLevel == null || maxLevel >= DocumentOptionLimits.MIN_HEADING_LEVEL
+                && maxLevel <= DocumentOptionLimits.MAX_HEADING_LEVEL, "标题层级上限必须在1至100之间");
         if (numberingSchemes != null) {
             numberingSchemes = List.copyOf(numberingSchemes);
             for (String scheme : numberingSchemes) {
@@ -42,8 +45,4 @@ public record DocumentHeadingHierarchyOptions(
         }
     }
 
-    private static void requireRatio(Double value) {
-        Assert.isTrue(value == null || Double.isFinite(value) && value >= 0 && value <= 1,
-                "标题匹配阈值和样式容差必须在0至1之间");
-    }
 }

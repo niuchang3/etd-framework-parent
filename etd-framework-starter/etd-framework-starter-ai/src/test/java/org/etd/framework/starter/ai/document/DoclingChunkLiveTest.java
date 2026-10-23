@@ -6,19 +6,16 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import org.etd.framework.starter.ai.document.constant.DocumentTaskStatus;
-import java.util.List;
 import org.etd.framework.starter.ai.document.constant.DocumentChunkStrategy;
 import org.etd.framework.starter.ai.document.constant.DocumentParseStatus;
 import org.etd.framework.starter.ai.document.docling.DoclingDocumentParser;
 import org.etd.framework.starter.ai.document.docling.DoclingTaskClient;
 import org.etd.framework.starter.ai.document.docling.converter.DoclingResultConverter;
 import org.etd.framework.starter.ai.document.model.DocumentChunkOptions;
+import org.etd.framework.starter.ai.document.model.DocumentChunkParameters;
+import org.etd.framework.starter.ai.document.converter.DocumentChunkParameterConverter;
 import org.etd.framework.starter.ai.document.model.DocumentChunkRequest;
-import org.etd.framework.starter.ai.document.model.DocumentParseOptions;
-import org.etd.framework.starter.ai.document.model.DocumentParseAdvancedOptions;
 import org.etd.framework.starter.ai.document.model.DocumentParseRequest;
-import org.etd.framework.starter.ai.document.model.HierarchicalDocumentChunkOptions;
-import org.etd.framework.starter.ai.document.model.HybridDocumentChunkOptions;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -36,7 +33,7 @@ class DoclingChunkLiveTest {
     private static final int MAX_FILE_BYTES = 1024 * 1024;
 
     @ParameterizedTest
-    @EnumSource(DocumentChunkStrategy.class)
+    @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void parsesAndChunksRealMarkdown(DocumentChunkStrategy strategy) {
         var parser = createParser();
         var request = createRequest(strategy);
@@ -53,7 +50,7 @@ class DoclingChunkLiveTest {
     }
 
     @ParameterizedTest
-    @EnumSource(DocumentChunkStrategy.class)
+    @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void submitsAndFetchesRealChunkTask(DocumentChunkStrategy strategy) throws InterruptedException {
         var parser = createParser();
         var request = createRequest(strategy);
@@ -76,15 +73,21 @@ class DoclingChunkLiveTest {
                 + "Document ingestion preserves headings and source context for retrieval. ".repeat(30);
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         var resource = new ByteArrayResource(bytes);
-        var languages = List.<String>of();
+        var basicBuilder = DocumentChunkParameters.Basic.builder().strategy(strategy)
+                .tableStructure(true).useMarkdownTables(true);
+        if (strategy == DocumentChunkStrategy.HYBRID) {
+            basicBuilder.maxTokens(MAX_TOKENS).mergePeers(true);
+        }
+        var basic = basicBuilder.build();
+        var normal = DocumentChunkParameters.Normal.builder().useMarkdownImages(true).imagePlaceholder("[图片]").build();
         Duration timeout = Duration.ofSeconds(90);
-        var advanced = DocumentParseAdvancedOptions.builder().mdCompactTables(true).mdPageBreakPlaceholder("").build();
-        var parseOptions = new DocumentParseOptions(false, false, languages, true, null, null, timeout, advanced);
+        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout)
+                .mdCompactTables(true).mdPageBreakPlaceholder("").build();
+        var parameters = new DocumentChunkParameters(basic, normal, advanced);
+        var converter = DocumentChunkParameterConverter.INSTANCE;
+        var parseOptions = converter.toParseOptions(parameters);
         var document = new DocumentParseRequest(resource, "chunk-test.md", parseOptions);
-        DocumentChunkOptions options = switch (strategy) {
-            case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, true, "[图片]");
-            case HYBRID -> new HybridDocumentChunkOptions(true, true, MAX_TOKENS, null, true, true, "[图片]");
-        };
+        DocumentChunkOptions options = converter.toNativeChunkOptions(parameters);
         return new DocumentChunkRequest(document, options, true);
     }
 

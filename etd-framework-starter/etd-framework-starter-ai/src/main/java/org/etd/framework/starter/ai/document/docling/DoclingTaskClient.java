@@ -25,12 +25,14 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 public final class DoclingTaskClient extends DoclingServeClient {
     /** 官方 v1 的任务结果路径。 */
     private static final String RESULT_PATH = "/v1/result/";
+    /** 官方异步提交端点的固定后缀。 */
+    private static final String ASYNC_PATH_SUFFIX = "/async";
     /** 官方 v1 的单文档异步提交路径。 */
-    private static final String SUBMIT_PATH = "/v1/convert/source/async";
-    /** 官方 v1 的层级分块异步提交路径。 */
-    private static final String HIERARCHICAL_CHUNK_SUBMIT_PATH = "/v1/chunk/hierarchical/source/async";
-    /** 官方 v1 的混合分块异步提交路径。 */
-    private static final String HYBRID_CHUNK_SUBMIT_PATH = "/v1/chunk/hybrid/source/async";
+    private static final String SUBMIT_PATH = "/v1/convert/source" + ASYNC_PATH_SUFFIX;
+    /** 官方v1层级分块基础路径，同步与异步共用。 */
+    private static final String HIERARCHICAL_CHUNK_PATH = "/v1/chunk/hierarchical/source";
+    /** 官方v1混合分块基础路径，同步与异步共用。 */
+    private static final String HYBRID_CHUNK_PATH = "/v1/chunk/hybrid/source";
     /** 分块请求中的原文解析选项节点。 */
     private static final String CONVERT_OPTIONS_FIELD = "convert_options";
     /** 普通解析请求中的选项节点。 */
@@ -138,11 +140,12 @@ public final class DoclingTaskClient extends DoclingServeClient {
 
     /** 同一策略的同步和异步请求共享payload，解析及切分全部交给Docling。 */
     private String chunkPath(DocumentChunkStrategy strategy, boolean async) {
-        String submitPath = switch (strategy) {
-            case HIERARCHICAL -> HIERARCHICAL_CHUNK_SUBMIT_PATH;
-            case HYBRID -> HYBRID_CHUNK_SUBMIT_PATH;
+        String path = switch (strategy) {
+            case HIERARCHICAL -> HIERARCHICAL_CHUNK_PATH;
+            case HYBRID -> HYBRID_CHUNK_PATH;
+            case REGEX -> throw new IllegalArgumentException("Docling原生接口不支持正则分片");
         };
-        return async ? submitPath : submitPath.substring(0, submitPath.length() - "/async".length());
+        return async ? path + ASYNC_PATH_SUFFIX : path;
     }
 
     /**

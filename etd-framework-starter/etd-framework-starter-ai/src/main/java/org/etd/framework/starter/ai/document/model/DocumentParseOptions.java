@@ -3,6 +3,7 @@ package org.etd.framework.starter.ai.document.model;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.util.Assert;
+import org.etd.framework.starter.ai.document.validation.DocumentOptionValidator;
 /**
  * 独立于解析引擎的公共选项；不支持的选项必须明确拒绝。
  * @param ocr 是否启用 OCR
@@ -32,10 +33,7 @@ public record DocumentParseOptions(
             Assert.hasText(language, "OCR语言不能为空白");
         }
         Assert.isTrue(!forceOcr || ocr, "强制OCR必须同时开启OCR");
-        Assert.isTrue((firstPage == null) == (lastPage == null), "起止页码必须同时提供");
-        if (firstPage != null) {
-            Assert.isTrue(firstPage >= DocumentSourceLocation.FIRST_PAGE_NUMBER && lastPage >= firstPage, "页码范围无效");
-        }
+        DocumentOptionValidator.requirePageRange(firstPage, lastPage);
         if (advanced != null) {
             Assert.isTrue(ocr || advanced.ocrPreset() == null && advanced.ocrCustomConfig() == null,
                     "配置OCR预设或引擎细项时必须开启OCR");

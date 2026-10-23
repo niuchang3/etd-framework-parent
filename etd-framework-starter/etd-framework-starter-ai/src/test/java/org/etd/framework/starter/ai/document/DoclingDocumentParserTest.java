@@ -204,7 +204,7 @@ class DoclingDocumentParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(DocumentChunkStrategy.class)
+    @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void synchronousChunkingPreservesOptionsAndContext(DocumentChunkStrategy strategy) throws Exception {
         responseBody = chunkResponse(true);
         DocumentChunkRequest request = chunkRequest(strategy, true);
@@ -240,7 +240,7 @@ class DoclingDocumentParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(DocumentChunkStrategy.class)
+    @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void asynchronousChunkSubmissionDoesNotPollAndUsesChunkResult(DocumentChunkStrategy strategy) throws Exception {
         responseBody = "{\"task_id\":\"chunk-1\",\"task_type\":\"chunk\",\"task_status\":\"pending\"}";
         var request = chunkRequest(strategy, false);
@@ -320,7 +320,7 @@ class DoclingDocumentParserTest {
 
     /** 同步和异步分块下发相同的现代Docling解析参数，不使用废弃字段。 */
     @ParameterizedTest
-    @EnumSource(DocumentChunkStrategy.class)
+    @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void forwardsAdvancedOptionsForBothChunkStrategies(DocumentChunkStrategy strategy) throws Exception {
         var advanced = createAdvancedOptions();
         var original = request("sample.pdf");
@@ -331,6 +331,7 @@ class DoclingDocumentParserTest {
         DocumentChunkOptions chunk = switch (strategy) {
             case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, true, "");
             case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, true, "");
+            case REGEX -> throw new IllegalArgumentException("该测试仅验证Docling原生策略");
         };
         var request = new DocumentChunkRequest(document, chunk, true);
         responseBody = chunkResponse(true);
@@ -431,6 +432,7 @@ class DoclingDocumentParserTest {
         DocumentChunkOptions options = switch (strategy) {
             case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, null, null);
             case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, null, null);
+            case REGEX -> throw new IllegalArgumentException("该测试仅验证Docling原生策略");
         };
         return new DocumentChunkRequest(document, options, includeDocument);
     }

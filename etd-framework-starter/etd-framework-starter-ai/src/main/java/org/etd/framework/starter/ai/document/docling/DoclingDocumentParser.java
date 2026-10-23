@@ -43,15 +43,16 @@ import org.etd.framework.starter.ai.document.model.DocumentParseTask;
 import org.etd.framework.starter.ai.document.model.DocumentParserCapabilities;
 import org.etd.framework.starter.ai.document.parser.AsynchronousDocumentParser;
 import org.springframework.util.Assert;
+import org.springframework.http.HttpStatus;
 
 /** Docling 单文档异步适配，不持久化任务、不自动轮询、不携带租户或业务实体。 */
 public final class DoclingDocumentParser implements AsynchronousDocumentParser, DocumentChunker {
     /** 稳定的 Docling 引擎代码。 */
     public static final String ENGINE = "docling";
-    /** 仅允许适合作为路径片段的任务标识，长度限制为 1 至 200 个字符。 */
-    private static final Pattern TASK_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,200}");
-    /** Docling 参数验证失败的 HTTP 状态，SDK 将该响应转换为 ValidationException。 */
-    private static final int HTTP_UNPROCESSABLE_ENTITY = 422;
+    /** Docling任务标识的长度上限，限制其作为URL路径片段的大小。 */
+    private static final int MAX_TASK_ID_LENGTH = 200;
+    /** 仅允许适合作为路径片段的任务标识字符，长度单独校验。 */
+    private static final Pattern TASK_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]+");
     /** 当前适配器暴露的原生分块策略，不对未实现策略提供兜底实现。 */
     private static final Set<DocumentChunkStrategy> CHUNK_STRATEGIES = Set.of(
             DocumentChunkStrategy.HIERARCHICAL, DocumentChunkStrategy.HYBRID);
@@ -220,7 +221,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     private void validateTaskId(String taskId) {
         Assert.hasText(taskId, "解析任务标识不能为空");
-        Assert.isTrue(TASK_ID_PATTERN.matcher(taskId).matches(), "解析任务标识格式无效");
+        Assert.isTrue(taskId.length() <= MAX_TASK_ID_LENGTH && TASK_ID_PATTERN.matcher(taskId).matches(), "解析任务标识格式无效");
     }
 
     private void validateFormat(DocumentParseRequest request) {
@@ -283,7 +284,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
             }
             throw new DocumentParseException("文档解析服务调用失败", exception.getStatusCode(), exception);
         } catch (ValidationException exception) {
-            throw new DocumentParseException("文档解析服务拒绝请求参数", HTTP_UNPROCESSABLE_ENTITY, exception);
+            throw new DocumentParseException("文档解析服务拒绝请求参数", HttpStatus.UNPROCESSABLE_ENTITY.value(), exception);
         } catch (RuntimeException exception) {
             throw new DocumentParseException("文档解析服务响应或请求处理失败", DocumentParseException.NO_HTTP_STATUS, exception);
         }
