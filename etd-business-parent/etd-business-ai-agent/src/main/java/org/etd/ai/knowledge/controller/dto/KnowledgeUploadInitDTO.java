@@ -7,6 +7,10 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 /** 创建上传记录的请求；扩展名参数仅供前端筛选，后端不按扩展名拒绝上传。 */
 @Data
 public class KnowledgeUploadInitDTO {
+    /** 是否在当前租户内共享读取，false仍按角色数据范围可见。 */
+    @NotNull
+    private Boolean isPublic;
+
     /** 上传目标目录ID，后端校验维护权限。 */
     @NotNull @Positive
     private Long folderId;

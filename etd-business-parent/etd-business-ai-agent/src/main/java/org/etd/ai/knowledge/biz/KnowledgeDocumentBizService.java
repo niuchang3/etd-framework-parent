@@ -8,6 +8,7 @@ import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
+import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
@@ -22,18 +23,23 @@ public class KnowledgeDocumentBizService {
     private final KnowledgeDocumentService documents;
     private final KnowledgeFolderService folders;
     private final KnowledgeObjectService objects;
+    private final KnowledgeChunkService chunks;
 
     /** @param id 资料ID @param input 可编辑配置 @param version 当前版本 */
     @Transactional
     public void modifyDocument(Long id, KnowledgeDocumentEntity input, Long version) {
         folders.lockStructure();
         var document = documents.requireDocument(id, true);
+        documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("资料已变化，请刷新后重试");
         }
         var folder = folders.requireWritable(input.getFolderId());
         if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("不能移入停用目录");
+        }
+        if (!Objects.equals(document.getIsPublic(), input.getIsPublic())) {
+            chunks.modifyPublicByDocument(id, input.getIsPublic());
         }
         KnowledgeDocumentConverter.INSTANCE.updateEntity(input, document);
         documents.modifyDocument(document);
@@ -43,6 +49,7 @@ public class KnowledgeDocumentBizService {
     @Transactional
     public void removeDocument(Long id) {
         var document = documents.requireDocument(id, true);
+        documents.requireChunkIdle(document);
         try {
             objects.abortUpload(document);
             objects.removeObject(document);
@@ -50,6 +57,7 @@ public class KnowledgeDocumentBizService {
             log.error("知识资料原件删除失败，资料ID={}，异常类型={}", id, exception.getClass().getSimpleName());
             throw new ApiRuntimeException("原件清理失败，请重试删除");
         }
+        chunks.removeChunkList(id);
         documents.removeDocument(id);
     }
 

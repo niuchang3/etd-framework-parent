@@ -2,6 +2,7 @@ package org.etd.ai.knowledge.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
+import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeFolderMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -28,6 +29,26 @@ public class KnowledgeFolderService {
     @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_folder", alias = "f"))
     public List<KnowledgeFolderEntity> fetchFolderList(Long orgId, Integer dataStatus) {
         return mapper.selectFolderList(orgId, dataStatus);
+    }
+
+    /**
+     * 资料页导航同时补齐共享资料所在目录及祖先，不授予这些目录维护权限。
+     * @param orgId 可选目录部门
+     * @param dataStatus 可选目录状态
+     * @return 角色范围目录和共享资料所在路径
+     */
+    @DataPermission(tables = {
+        @DataPermissionTable(table = "ai_knowledge_folder", alias = "f"),
+        @DataPermissionTable(table = "ai_knowledge_document", alias = "d", publicColumn = KnowledgePolicy.PUBLIC_COLUMN)
+    })
+    public List<KnowledgeFolderEntity> fetchDocumentFolderList(Long orgId, Integer dataStatus) {
+        var scope = DataPermissionScope.current();
+        if (scope.userId() == null) {
+            return List.of();
+        }
+        // 无角色范围时只读取共享路径，避免UNION内出现恒假分支触发连接池SQL防护。
+        boolean includeManaged = scope.all() || scope.self() || !scope.orgIds().isEmpty();
+        return mapper.selectDocumentFolderList(orgId, dataStatus, includeManaged);
     }
 
     /**

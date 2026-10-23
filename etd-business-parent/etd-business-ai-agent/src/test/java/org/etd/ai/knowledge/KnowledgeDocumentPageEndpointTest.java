@@ -98,6 +98,17 @@ class KnowledgeDocumentPageEndpointTest {
         verifyNoInteractions(documents);
     }
 
+    /** 共享标记必须显式选择，防止编辑请求意外撤回或放开共享范围。 */
+    @Test
+    void shouldRequireExplicitPublicFlag() throws Exception {
+        String body = """
+                {"version":3,"folderId":9,"documentName":"资料名称"}
+                """;
+        var request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
+        mvc.perform(request).andExpect(status().isBadRequest());
+        verifyNoInteractions(biz);
+    }
+
     /** 列表通过真实转换器返回上传状态，响应不再携带处理和检索字段。 */
     @ParameterizedTest
     @ValueSource(strings = {KnowledgePolicy.INITIALIZING, KnowledgePolicy.UPLOADING, KnowledgePolicy.COMPLETING,
@@ -121,11 +132,11 @@ class KnowledgeDocumentPageEndpointTest {
                 .andExpect(jsonPath("$.data.records[0].errorMessage").doesNotExist());
     }
 
-    /** 编辑基本信息无需提交分片、模型、公开范围和召回参数。 */
+    /** 编辑基本信息需提交共享标记，无需提交分片、模型和召回参数。 */
     @Test
     void shouldEditBasicInformationWithoutProcessingConfiguration() throws Exception {
         String body = """
-                {"version":3,"folderId":9,"documentName":"资料名称","description":"用途说明"}
+                {"version":3,"folderId":9,"documentName":"资料名称","description":"用途说明","isPublic":true}
                 """;
         var request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isOk());
@@ -134,6 +145,7 @@ class KnowledgeDocumentPageEndpointTest {
         assertEquals(9L, input.getValue().getFolderId());
         assertEquals("资料名称", input.getValue().getDocumentName());
         assertEquals("用途说明", input.getValue().getDescription());
+        assertEquals(true, input.getValue().getIsPublic());
     }
 
 }

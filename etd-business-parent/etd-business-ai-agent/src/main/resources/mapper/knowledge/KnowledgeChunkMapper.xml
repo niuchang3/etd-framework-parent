@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeChunkMapper">
+    <!-- 成功替换或删除资料时清理，包括已被合并的逻辑删除分片。 -->
+    <delete id="deleteByDocument">
+        delete from ai_knowledge_chunk
+        where document_id = #{documentId}
+    </delete>
+</mapper>

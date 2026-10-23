@@ -11,3 +11,10 @@ spring:
         deny: 192.168.56.1 # 明确拒绝该本地虚拟网卡地址访问。
         login-username: admin # 本地 Druid 监控页面登录账号。
         login-password: admin # 本地 Druid 监控页面登录密码。
+
+etd:
+  ai:
+    document:
+      docling:
+        enabled: ${DOCLING_ENABLED:true} # 本地默认连接已部署的Docling，可通过环境变量关闭。
+        base-url: ${DOCLING_BASE_URL:http://127.0.0.1:30501} # 已确认的本地NodePort地址，其他环境显式配置。

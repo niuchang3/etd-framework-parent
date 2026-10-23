@@ -29,6 +29,11 @@ import jakarta.servlet.Filter;
 
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
+import org.etd.ai.knowledge.controller.KnowledgeChunkController;
+import org.etd.ai.knowledge.service.KnowledgeChunkService;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
+import org.etd.ai.knowledge.biz.KnowledgeChunkGenerationBizService;
+import org.etd.ai.knowledge.biz.KnowledgeChunkEditBizService;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentNavigationController;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.controller.KnowledgeUploadController;
@@ -145,7 +150,7 @@ class AiEndpointAuthenticationTest {
     }
 
     /**
-     * 三个Controller的全部13个路由只授予知识库资源权限逐个验证；业务IO使用替身。
+     * 四个Controller的全部20个路由只授予知识库资源权限逐个验证；业务IO使用替身。
      * @param endpoint 路由及请求参数，写操作不能被只读菜单授权放行
      */
     @ParameterizedTest(name = "{0}")
@@ -178,10 +183,10 @@ class AiEndpointAuthenticationTest {
         String base = "/v1/knowledge-documents";
         String uploads = base + "/uploads";
         String hash = "0".repeat(64);
-        String initialization = "{\"folderId\":1,\"orgId\":1,\"originalFilename\":\"test.txt\","
+        String initialization = "{\"isPublic\":false,\"folderId\":1,\"orgId\":1,\"originalFilename\":\"test.txt\","
                 + "\"contentType\":\"text/plain\",\"fileSize\":100,\"fileSha256\":\"" + hash + "\"}";
         String configuration = """
-                {"version":0,"folderId":1,"documentName":"资料","description":"用途说明"}
+                {"version":0,"folderId":1,"documentName":"资料","description":"用途说明","isPublic":false}
                 """;
         addKnowledgeEndpoint(result, "GET", base, null, false);
         addKnowledgeEndpoint(result, "GET", base + "/folders", null, false);
@@ -196,6 +201,17 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "POST", uploads + "/1/resume", "{\"fileSha256\":\"" + hash + "\"}", true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/complete", null, true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/cancel", null, true);
+        String parameters = """
+                {"version":0,"parameters":{"basic":{"strategy":"hybrid","maxTokens":512},
+                "normal":{},"advanced":{"documentTimeout":"PT90S"}}}
+                """;
+        addKnowledgeEndpoint(result, "GET", base + "/1/chunks/state", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/1/chunks", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "/1/chunks/1", null, false);
+        addKnowledgeEndpoint(result, "POST", base + "/1/chunks/generate", parameters, true);
+        addKnowledgeEndpoint(result, "PUT", base + "/1/chunks", "{\"version\":0,\"chunks\":[{\"id\":1,\"content\":\"正文\"}]}", true);
+        addKnowledgeEndpoint(result, "POST", base + "/1/chunks/merge", "{\"version\":0,\"chunkIds\":[1,2]}", true);
+        addKnowledgeEndpoint(result, "POST", base + "/1/chunks/confirm", "{\"version\":0}", true);
         return result;
     }
 
@@ -232,7 +248,7 @@ class AiEndpointAuthenticationTest {
     @Test
     void shouldLogAllKnowledgeEndpoints() {
         var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
-                KnowledgeDocumentNavigationController.class);
+                KnowledgeDocumentNavigationController.class, KnowledgeChunkController.class);
         for (Class<?> controller : controllers) {
             for (var method : controller.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
@@ -513,7 +529,8 @@ class AiEndpointAuthenticationTest {
                         KnowledgeFolderController.class, "ai:knowledge-folder",
                         KnowledgeDocumentController.class, "ai:knowledge-document",
                         KnowledgeUploadController.class, "ai:knowledge-document",
-                        KnowledgeDocumentNavigationController.class, "ai:knowledge-document");
+                        KnowledgeDocumentNavigationController.class, "ai:knowledge-document",
+                        KnowledgeChunkController.class, "ai:knowledge-document");
         for (var resource : resources.entrySet()) {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
@@ -622,6 +639,25 @@ class AiEndpointAuthenticationTest {
             when(service.resumeUpload(1L, "0".repeat(64))).thenReturn(document);
             when(service.completeUpload(1L)).thenReturn(document);
             return service;
+        }
+
+        /** 分片接口使用真实Controller和权限链，外部IO及持久化在此隔离。 */
+        @Bean
+        KnowledgeChunkController knowledgeChunkController(KnowledgeDocumentService documents) {
+            var chunks = mock(KnowledgeChunkService.class);
+            var generation = mock(KnowledgeChunkGenerationBizService.class);
+            var editing = mock(KnowledgeChunkEditBizService.class);
+            var page = new Page<KnowledgeChunkEntity>(1L, 20L);
+            when(chunks.fetchChunkPage(1L, 1L, 20L)).thenReturn(page);
+            var chunk = new KnowledgeChunkEntity();
+            chunk.setId(1L);
+            when(chunks.requireChunk(1L, 1L)).thenReturn(chunk);
+            var document = createKnowledgeDocumentResponse();
+            when(generation.generateChunks(any(), any(), any())).thenReturn(document);
+            when(editing.modifyChunks(any(), any(), any())).thenReturn(document);
+            when(editing.mergeChunks(any(), any(), any())).thenReturn(document);
+            when(editing.confirmChunks(any(), any())).thenReturn(document);
+            return new KnowledgeChunkController(documents, chunks, generation, editing);
         }
 
         /** 仅提供路由转换所需字段，不模拟真实外部存储或模型处理结果。 */

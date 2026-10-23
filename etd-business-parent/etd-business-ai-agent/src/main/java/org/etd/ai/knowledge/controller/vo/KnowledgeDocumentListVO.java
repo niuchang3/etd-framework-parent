@@ -6,6 +6,10 @@ import java.time.Instant;
 /** 资料列表摘要；上传分片清单只在详情返回，避免分页传输大量回执。 */
 @Data
 public class KnowledgeDocumentListVO {
+    /** 是否在当前租户内共享读取；分片继承所属资料。 */
+    private Boolean isPublic;
+    /** 当前角色数据范围是否允许维护；还须具备接口write权限。 */
+    private Boolean writable;
     /** 资料ID。 */
     private Long id;
     /** 资料的数据归属部门ID。 */
@@ -41,4 +45,10 @@ public class KnowledgeDocumentListVO {
     private Instant createTime;
     /** 修改时间。 */
     private Instant updateTime;
+    /** 分片状态，与上传状态分开展示。 */
+    private String chunkStatus;
+    /** 已保存的分片数。 */
+    private Integer chunkCount;
+    /** 最近一次分片生成的脱敏错误摘要。 */
+    private String chunkErrorMessage;
 }

@@ -3,6 +3,9 @@ package org.etd.ai.knowledge.constant;
 /** 知识资料生命周期与本功能域协议约定。 */
 public final class KnowledgePolicy {
 
+    /** 文档与分片表供@DataPermissionTable声明的布尔共享列。 */
+    public static final String PUBLIC_COLUMN = "is_public";
+
     /** 原始文件无扩展名时的展示类型，前端使用通用文件图标。 */
     public static final String UNKNOWN_FILE_TYPE = "unknown";
 

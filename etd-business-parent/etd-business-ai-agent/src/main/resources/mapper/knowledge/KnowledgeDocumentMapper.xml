@@ -6,6 +6,8 @@
         <id property="id" column="id"/>
         <result property="uploadParts" column="upload_parts"
                 typeHandler="org.etd.ai.knowledge.mapper.typehandler.UploadPartsTypeHandler"/>
+        <result property="chunkParameters" column="chunk_parameters"
+                typeHandler="org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkParametersTypeHandler"/>
     </resultMap>
 
     <!-- 仅后台任务调用，读取到期记录并在事务内串行取消，不改变完整原件的保留策略。 -->

@@ -237,7 +237,10 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
     }
 
     private Expression appendOr(Expression left, Expression right) {
-        return left == null ? right : new OrExpression(left, right);
+        if (left == null) {
+            return right;
+        }
+        return right == null ? left : new OrExpression(left, right);
     }
 
     private Expression parenthesizeOr(Expression expression) {

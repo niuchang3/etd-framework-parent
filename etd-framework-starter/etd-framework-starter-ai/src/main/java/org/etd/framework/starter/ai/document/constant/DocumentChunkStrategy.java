@@ -8,7 +8,7 @@ public enum DocumentChunkStrategy {
     HIERARCHICAL("hierarchical"),
     /** 在结构分块基础上按 tokenizer 和 Token 上限进一步拆分、合并。 */
     HYBRID("hybrid"),
-    /** 在Docling解析后按正则规则二次切分；当前仅定义参数契约。 */
+    /** 在Docling解析后按正则规则二次切分；由Docling解析后独立执行。 */
     REGEX("regex");
 
     /** 稳定策略代码。 */

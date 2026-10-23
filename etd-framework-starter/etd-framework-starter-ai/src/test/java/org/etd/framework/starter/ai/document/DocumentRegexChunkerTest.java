@@ -1,0 +1,132 @@
+package org.etd.framework.starter.ai.document;
+
+import java.time.Duration;
+import java.util.List;
+import org.etd.framework.starter.ai.document.constant.*;
+import org.etd.framework.starter.ai.document.model.*;
+import org.etd.framework.starter.ai.document.parser.DocumentRegexChunker;
+import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import static org.assertj.core.api.Assertions.*;
+
+/** 验证正则边界、Unicode、结构保护及来源追踪，不依赖外部模型。 */
+class DocumentRegexChunkerTest {
+    private final DocumentRegexChunker chunker = new DocumentRegexChunker();
+
+    /** 标题边界归入下一片，拆分后页码和块引用仍对应正文。 */
+    @Test
+    void splitsHeadingsAndPreservesSource() {
+        var first = block("#/texts/0", DocumentBlockType.HEADING, "First", 1, 1);
+        var body = block("#/texts/1", DocumentBlockType.TEXT, "First content", null, 1);
+        var second = block("#/texts/2", DocumentBlockType.HEADING, "Second", 1, 2);
+        var tail = block("#/texts/3", DocumentBlockType.TEXT, "Second content", null, 2);
+        var result = parsed(List.of(first, body, second, tail));
+        var options = parameters("(?m)^# ", RegexBoundaryPlacement.NEXT, null, false, null);
+        var chunks = chunker.chunk("sample.pdf", result, options);
+        assertThat(chunks).hasSize(2);
+        assertThat(chunks.getFirst().rawText()).startsWith("# First");
+        assertThat(chunks.getLast().rawText()).startsWith("# Second");
+        assertThat(chunks.getLast().pageNumbers()).containsExactly(2);
+        assertThat(chunks.getLast().documentItemRefs()).containsExactly("#/texts/2", "#/texts/3");
+    }
+
+    /** 三种边界位置各自保留或丢弃匹配文本，短片段合并不恢复被丢弃内容。 */
+    @ParameterizedTest
+    @EnumSource(RegexBoundaryPlacement.class)
+    void respectsBoundaryPlacement(RegexBoundaryPlacement placement) {
+        var block = block("#/texts/0", DocumentBlockType.TEXT, "alpha---beta---gamma", null, 1);
+        var result = parsed(List.of(block));
+        var options = parameters("---", placement, null, false, null);
+        var chunks = chunker.chunk("sample.pdf", result, options);
+        assertThat(chunks).hasSize(3);
+        if (placement == RegexBoundaryPlacement.NEXT) { assertThat(chunks.get(1).rawText()).isEqualTo("---beta"); }
+        if (placement == RegexBoundaryPlacement.PREVIOUS) { assertThat(chunks.getFirst().rawText()).isEqualTo("alpha---"); }
+        if (placement == RegexBoundaryPlacement.DISCARD) {
+            assertThat(chunks.get(1).rawText()).isEqualTo("beta");
+            var merging = parameters("---", placement, 100, true, 50);
+            var merged = chunker.chunk("sample.pdf", result, merging);
+            assertThat(merged).hasSize(1);
+            assertThat(merged.getFirst().rawText()).doesNotContain("---").contains("alpha", "beta", "gamma");
+        }
+    }
+
+    /** 超长正文分割不损坏中文和代理对，每片本地Token计数均在上限内。 */
+    @Test
+    void splitsLongUnicodeWithoutCorruption() {
+        String text = "中文🙂测试内容".repeat(30);
+        var block = block("#/texts/0", DocumentBlockType.TEXT, text, null, 1);
+        var result = parsed(List.of(block));
+        var options = parameters("NEVER_MATCH", RegexBoundaryPlacement.NEXT, 30, false, null);
+        var chunks = chunker.chunk("sample.pdf", result, options);
+        StringBuilder joined = new StringBuilder();
+        for (DocumentChunk chunk : chunks) {
+            assertThat(DocumentTokenCounter.count(chunk.rawText())).isLessThanOrEqualTo(30);
+            assertThat(chunk.rawText()).doesNotContain("�");
+            joined.append(chunk.rawText());
+        }
+        assertThat(joined.toString()).isEqualTo(text);
+    }
+
+    /** 代码内部匹配不得切开代码块；原子结构超长时明确要求提高上限。 */
+    @Test
+    void protectsCodeAndRejectsOversizedAtomicContent() {
+        var block = block("#/texts/0", DocumentBlockType.CODE, "first---second", null, 1);
+        var result = parsed(List.of(block));
+        var options = parameters("---", RegexBoundaryPlacement.DISCARD, null, false, null);
+        assertThat(chunker.chunk("sample.pdf", result, options).getFirst().rawText()).contains("first---second");
+        var small = parameters("---", RegexBoundaryPlacement.DISCARD, 1, false, null);
+        assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, small)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** 表格按行列输出Markdown，正则匹配表格行时不能破坏原子结构。 */
+    @Test
+    void preservesMarkdownTableRowsAndHeaders() {
+        var header = new DocumentTableCell("Header", 0, 1, 0, 1, true, false);
+        var value = new DocumentTableCell("Value", 1, 2, 0, 1, false, false);
+        var cells = List.of(header, value);
+        var table = new DocumentTable(2, 1, cells);
+        List<DocumentSourceLocation> locations = List.of();
+        var block = new DocumentBlock("#/tables/0", null, DocumentBlockType.TABLE, null, null, locations, table);
+        var result = parsed(List.of(block));
+        var basic = DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.REGEX)
+                .pattern("(?m)^\\|").useMarkdownTables(true).build();
+        var normal = DocumentChunkParameters.Normal.builder().boundaryPlacement(RegexBoundaryPlacement.DISCARD).build();
+        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(Duration.ofSeconds(30)).build();
+        var options = new DocumentChunkParameters(basic, normal, advanced);
+        var chunks = chunker.chunk("sample.pdf", result, options);
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.getFirst().rawText()).contains("| Header |\n| --- |\n| Value |");
+    }
+
+    /** 病态回溯按读取预算停止，不会创建难以取消的执行线程。 */
+    @Test
+    void stopsPathologicalRegexBacktracking() {
+        var block = block("#/texts/0", DocumentBlockType.TEXT, "a".repeat(10000) + "!", null, 1);
+        var result = parsed(List.of(block));
+        var options = parameters("(a+)+$", RegexBoundaryPlacement.NEXT, null, false, null);
+        assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, options))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private DocumentChunkParameters parameters(String pattern, RegexBoundaryPlacement placement, Integer max,
+            boolean merge, Integer min) {
+        var basic = DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.REGEX)
+                .pattern(pattern).maxTokens(max).build();
+        var normal = DocumentChunkParameters.Normal.builder().boundaryPlacement(placement)
+                .mergeSmallChunks(merge).minTokens(min).build();
+        var timeout = Duration.ofSeconds(30);
+        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout).build();
+        return new DocumentChunkParameters(basic, normal, advanced);
+    }
+    private DocumentBlock block(String id, DocumentBlockType type, String text, Integer level, int page) {
+        var location = new DocumentSourceLocation(page, null, null, null, null, null, null);
+        var locations = List.of(location);
+        return new DocumentBlock(id, null, type, text, level, locations, null);
+    }
+    private DocumentParseResult parsed(List<DocumentBlock> blocks) {
+        List<String> warnings = List.of();
+        return new DocumentParseResult(DocumentParseStatus.SUCCESS, null, blocks, null, null, warnings);
+    }
+}

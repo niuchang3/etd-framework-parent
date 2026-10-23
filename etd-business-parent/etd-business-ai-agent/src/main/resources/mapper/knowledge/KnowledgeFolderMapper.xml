@@ -40,6 +40,33 @@
         <include refid="folderPaths"/>
     </select>
 
+    <!-- 共享只补齐资料所在路径；sf和祖先p用于导航，目录维护仍使用严格角色范围。 -->
+    <select id="selectDocumentFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
+        with recursive visible as (
+            <if test="includeManaged">
+                <include refid="managedFolderSource"/>
+                union
+            </if>
+            select sf.*
+            from ai_knowledge_folder sf
+            where sf.del_flag = 0
+              and exists (
+                select 1
+                from ai_knowledge_document d
+                where d.folder_id = sf.id
+                  and d.del_flag = 0
+                  and d.is_public = true
+              )
+            <if test="orgId != null">
+                and sf.org_id = #{orgId}
+            </if>
+            <if test="dataStatus != null">
+                and sf.data_status = #{dataStatus}
+            </if>
+        ),
+        <include refid="folderPaths"/>
+    </select>
+
     <!-- PostgreSQL事务级结构锁：统一固定命名，保护空树初始化和跨根移动，事务结束自动释放。 -->
     <select id="lockStructure" resultType="java.lang.String">
         select pg_advisory_xact_lock(hashtextextended('etd.ai.knowledge.structure', 0))

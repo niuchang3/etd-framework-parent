@@ -8,6 +8,10 @@ import java.util.List;
 /** 资料管理响应，省略原件位置和对象存储会话标识。 */
 @Data
 public class KnowledgeDocumentVO {
+    /** 是否在当前租户内共享读取；分片继承所属资料。 */
+    private Boolean isPublic;
+    /** 当前角色数据范围是否允许维护；还须具备接口write权限。 */
+    private Boolean writable;
     /** 资料ID。 */
     private Long id;
 
@@ -74,4 +78,10 @@ public class KnowledgeDocumentVO {
     /** 脱敏上传失败原因，不包含签名地址。 */
     private String uploadErrorMessage;
 
+    /** 分片状态，与上传状态分开展示。 */
+    private String chunkStatus;
+    /** 已保存的分片数。 */
+    private Integer chunkCount;
+    /** 最近一次分片生成的脱敏错误摘要。 */
+    private String chunkErrorMessage;
 }

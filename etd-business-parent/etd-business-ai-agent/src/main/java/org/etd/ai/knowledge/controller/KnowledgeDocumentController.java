@@ -28,7 +28,7 @@ public class KnowledgeDocumentController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeDocumentBizService biz;
     /** @param query 分页及筛选条件，批量目录优先于单目录；子孙目录由前端收集
-     * @return 当前管理范围内资料 */
+     * @return 角色范围及租户内共享的可读取资料 */
     @AutoLog("分页查询知识资料")
     @GetMapping
     public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {

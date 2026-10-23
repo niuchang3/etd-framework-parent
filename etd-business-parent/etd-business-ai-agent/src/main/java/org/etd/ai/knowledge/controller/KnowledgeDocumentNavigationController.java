@@ -28,7 +28,7 @@ public class KnowledgeDocumentNavigationController {
     public ResultModel<List<KnowledgeFolderVO>> list(@RequestParam(required = false) @Positive Long orgId,
             @RequestParam(required = false) @Min(BasicConstant.DataStatus.DISABLED_CODE)
             @Max(BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus) {
-        var entities = folders.fetchFolderList(orgId, dataStatus);
+        var entities = folders.fetchDocumentFolderList(orgId, dataStatus);
         var result = entities.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
         return ResultModel.success(result);
     }

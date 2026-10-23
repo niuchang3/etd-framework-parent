@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -15,11 +16,13 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.time.Instant;
+import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 
 /** 资料基础持久化能力，统一执行组织数据范围和版本检查。 */
 @Service
 @RequiredArgsConstructor
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_document"))
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_document", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
 public class KnowledgeDocumentService {
     private final KnowledgeDocumentMapper mapper;
 
@@ -43,7 +46,7 @@ public class KnowledgeDocumentService {
         return mapper.selectPage(page, query);
     }
 
-    /** @param id 资料ID @param lock 是否在当前事务加行锁 @return 可维护资料
+    /** @param id 资料ID @param lock 是否在当前事务加行锁 @return 可读取资料；lock为true时同时要求严格维护范围
      * @throws ApiRuntimeException 无权限或资料不存在 */
     public KnowledgeDocumentEntity requireDocument(Long id, boolean lock) {
         var query = Wrappers.<KnowledgeDocumentEntity>lambdaQuery().eq(KnowledgeDocumentEntity::getId, id);
@@ -51,10 +54,27 @@ public class KnowledgeDocumentService {
             query.last("for update");
         }
         var entity = mapper.selectOne(query);
-        if (entity == null) {
+        // SELECT包含共享读取；行锁调用属于维护流程，必须在外部副作用前校验严格角色范围。
+        if (entity == null || lock && !DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy())) {
             throw new ApiRuntimeException("资料不存在或无数据权限");
         }
         return entity;
+    }
+
+    /** @param document 已加载资料；有效生成请求期间禁止编辑、删除、合并及重复生成 */
+    public void requireChunkIdle(KnowledgeDocumentEntity document) {
+        if (KnowledgeChunkStatus.GENERATING.equals(document.getChunkStatus())
+                && document.getChunkGenerationExpiresAt() != null
+                && document.getChunkGenerationExpiresAt().isAfter(Instant.now())) {
+            throw new ApiRuntimeException("资料正在生成分片，请稍后操作");
+        }
+        if (KnowledgeChunkStatus.GENERATING.equals(document.getChunkStatus())) {
+            // 过期请求失去发布资格，后续用户编辑不能再被旧请求的失败状态覆盖。
+            document.setChunkGenerationId(null);
+            document.setChunkGenerationExpiresAt(null);
+            document.setChunkStatus(KnowledgeChunkStatus.FAILED);
+            document.setChunkErrorMessage("分片生成请求已超时，可以重新生成");
+        }
     }
 
     /** @param entity 上传主记录 @return 新建资料ID；INSERT主动校验组织维护范围 */

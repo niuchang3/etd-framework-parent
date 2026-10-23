@@ -127,7 +127,10 @@ class PublicReadDataPermissionTest {
     void shouldRequireLoginButAllowPublicWithoutRoleScope() throws Exception {
         useRule("documents");
         RequestContext.getUser().setPermissionTypes(Set.of());
-        assertTrue(select("select * from docs d").contains("d.is_public = true"));
+        String publicOnly = select("select * from docs d");
+        assertTrue(publicOnly.contains("d.is_public = true"), publicOnly);
+        assertFalse(publicOnly.contains(" OR "), publicOnly);
+        assertFalse(publicOnly.contains("NULL"), publicOnly);
         RequestContext.clean();
         String sql = select("select * from docs d");
         assertTrue(sql.contains("1 = 0"), sql);

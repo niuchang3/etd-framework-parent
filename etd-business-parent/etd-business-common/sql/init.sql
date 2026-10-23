@@ -2,6 +2,24 @@
 -- 先执行upms.sql；本文件不包含租户账号、组织或租户菜单授权。
 begin;
 
+-- 分片编辑状态独立于上传状态及未来向量处理状态。
+insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           type_code, type_name, built_in, enabled, remark)
+values (2200109, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_knowledge_chunk_status', '知识资料分片状态', true, true, '分片生成、人工编辑和确认状态，不代表可检索或已向量化');
+insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
+values (2300234, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200109, 'UNPROCESSED', '未分片', 'unprocessed', 10, true, true, '尚未生成分片'),
+       (2300235, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200109, 'GENERATING', '生成中', 'generating', 20, true, true, '正在生成新结果，旧分片保留且暂时只读'),
+       (2300236, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200109, 'DRAFT', '待确认', 'draft', 30, true, true, '可预览、编辑和合并'),
+       (2300237, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200109, 'CONFIRMED', '已确认', 'confirmed', 40, true, true, '用户确认当前结果，不触发向量化'),
+       (2300238, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200109, 'FAILED', '分片失败', 'failed', 50, true, true, '生成失败，保留已有分片和人工修改');
+
 -- 首页模型广场统一承接模型浏览与连接接入管理，按read/write授权，不另设连接器菜单。
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,

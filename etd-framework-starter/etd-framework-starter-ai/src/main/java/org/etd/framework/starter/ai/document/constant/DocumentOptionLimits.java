@@ -2,6 +2,10 @@ package org.etd.framework.starter.ai.document.constant;
 
 /** 文档参数的共享校验边界，不包含部署实例的容量和超时配置。 */
 public final class DocumentOptionLimits {
+    /** 正则表达式长度上限，避免无界规则输入。 */
+    public static final int MAX_REGEX_CHARACTERS = 4096;
+    /** 单份文档的分片数量上限。 */
+    public static final int MAX_CHUNK_COUNT = 10000;
     /** Token数量至少为1，零不代表无限制。 */
     public static final int MIN_TOKEN_COUNT = 1;
     /** 标题推断的最小层级。 */

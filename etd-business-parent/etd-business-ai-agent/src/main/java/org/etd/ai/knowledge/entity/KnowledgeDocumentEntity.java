@@ -9,12 +9,19 @@ import org.etd.framework.starter.mybaits.core.OrgScopedEntity;
 import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 import java.time.Instant;
 import java.util.List;
+import org.etd.framework.starter.ai.document.model.DocumentChunkParameters;
+import org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkParametersTypeHandler;
 
-/** 资料及上传主记录，仅维护基本信息、原件和上传进度。 */
+/** 资料主记录，维护原件上传、共享范围和分片工作状态。 */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ai_knowledge_document", autoResultMap = true)
 public class KnowledgeDocumentEntity extends OrgScopedEntity {
+    /** 是否在当前租户内共享读取，默认false；不授予维护权限。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("false")
+    private Boolean isPublic;
+
     /** 乐观锁版本，默认0，编辑时必须携带。 */
     @Version
     @TableField(fill = FieldFill.INSERT)
@@ -85,4 +92,27 @@ public class KnowledgeDocumentEntity extends OrgScopedEntity {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String uploadErrorMessage;
 
+    /** 分片状态：unprocessed、generating、draft、confirmed、failed。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.ai.knowledge.constant.KnowledgeChunkStatus).UNPROCESSED")
+    private String chunkStatus;
+    /** 已保存分片数量，生成失败时仍保留旧数量。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("0")
+    private Integer chunkCount;
+    /** 最近成功生成所用参数，失败请求不会覆盖此配置。 */
+    @TableField(typeHandler = KnowledgeChunkParametersTypeHandler.class)
+    private DocumentChunkParameters chunkParameters;
+    /** 当前生成请求标识，仅用于防止超时请求覆盖新结果。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long chunkGenerationId;
+    /** 允许重试生成的截止时间，过期请求结果不得发布。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Instant chunkGenerationExpiresAt;
+    /** 最近一次生成的脱敏错误摘要。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String chunkErrorMessage;
+    /** 用户确认当前结果的时间，修改或合并后清空。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Instant chunkConfirmedTime;
 }

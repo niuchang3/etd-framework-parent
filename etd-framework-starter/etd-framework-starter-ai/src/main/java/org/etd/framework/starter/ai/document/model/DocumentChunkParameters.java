@@ -1,11 +1,13 @@
 package org.etd.framework.starter.ai.document.model;
 
 import java.time.Duration;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import lombok.Builder;
 import org.etd.framework.starter.ai.document.constant.DocumentChunkStrategy;
+import org.etd.framework.starter.ai.document.constant.DocumentOptionLimits;
 import org.etd.framework.starter.ai.document.constant.DocumentImageExportMode;
 import org.etd.framework.starter.ai.document.constant.DocumentTableMode;
 import org.etd.framework.starter.ai.document.constant.RegexBoundaryPlacement;
@@ -14,7 +16,7 @@ import org.springframework.util.Assert;
 
 /**
  * 面向分片草稿的统一参数契约，按基础、普通、高级分层，同一能力的选项相邻组织。
- * 不包含向量模型、向量维度或用户确认状态；正则策略目前仅封装参数，不执行二次切分。
+ * 不包含向量模型、向量维度或用户确认状态；正则策略在Docling解析后执行二次切分。
  * @param basic 必填基础参数，页码范围属于此层
  * @param normal 必填普通参数对象，未使用的可空字段不配置
  * @param advanced 必填高级参数对象，处理超时必须显式指定
@@ -53,11 +55,14 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
 
     private static void validateRegex(Basic basic, Normal normal) {
         Assert.hasText(basic.pattern(), "正则策略必须指定切分表达式");
+        Assert.isTrue(basic.pattern().length() <= DocumentOptionLimits.MAX_REGEX_CHARACTERS, "正则表达式超过长度限制");
         Assert.notNull(normal.boundaryPlacement(), "正则策略必须指定匹配内容保留位置");
         try {
             Pattern.compile(basic.pattern());
         } catch (PatternSyntaxException exception) {
             throw new IllegalArgumentException("切分正则表达式语法无效", exception);
+        } catch (StackOverflowError error) {
+            throw new IllegalArgumentException("正则表达式嵌套过深");
         }
         Assert.isTrue(!Boolean.TRUE.equals(normal.mergeSmallChunks()) || normal.minTokens() != null,
                 "合并短片段时必须指定最小Token阈值");
@@ -75,7 +80,7 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
         Integer lastPage,
         /** 分片策略：hierarchical、hybrid或regex。 */
         DocumentChunkStrategy strategy,
-        /** 单片Token上限；正则超长片段处理方式尚待确定。 */
+        /** 单片Token上限；正则策略按Unicode安全边界拆分超长正文，表格和代码块超过上限时报错。 */
         Integer maxTokens,
         /** 仅混合策略：是否合并标题等元数据相同的相邻小块。 */
         Boolean mergePeers,
@@ -106,7 +111,7 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
     public record Normal(
         /** 正则匹配内容归入下一片、上一片或丢弃，仅正则策略使用。 */
         RegexBoundaryPlacement boundaryPlacement,
-        /** 仅正则策略：是否合并短片段，具体合并方向尚待确定。 */
+        /** 仅正则策略：是否合并短片段，优先向后，末片向前；不超过Token上限。 */
         Boolean mergeSmallChunks,
         /** 正则短片段的Token阈值，必须大于零。 */
         Integer minTokens,
@@ -162,6 +167,7 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
         /** 文档解析出错时是否中止。 */
         Boolean abortOnError,
         /** 单份文档处理超时，必填且大于零，不等于HTTP请求超时。 */
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
         Duration documentTimeout) {
 
         /** 校验范围，不在框架中固定某台部署实例的容量上限。 */

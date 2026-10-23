@@ -12,6 +12,12 @@ public interface KnowledgeFolderMapper extends BaseMapper<KnowledgeFolderEntity>
     /** @param orgId 所选部门标识 @param dataStatus 可选目录状态 @return 部门目录及必要祖先列表 */
     List<KnowledgeFolderEntity> selectFolderList(@Param("orgId") Long orgId, @Param("dataStatus") Integer dataStatus);
 
+    /** @param orgId 可选部门 @param dataStatus 可选目录状态
+     * @param includeManaged 是否存在可查询的角色范围，false时仅查询共享资料路径
+     * @return 资料页可导航目录及共享资料路径 */
+    List<KnowledgeFolderEntity> selectDocumentFolderList(@Param("orgId") Long orgId,
+            @Param("dataStatus") Integer dataStatus, @Param("includeManaged") boolean includeManaged);
+
     /** 结构变更共用事务锁，不接收客户端锁键，不改变租户或数据权限上下文。 */
     void lockStructure();
 

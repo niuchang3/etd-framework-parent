@@ -203,6 +203,7 @@ create table ai_knowledge_document
     org_id                      bigint not null,
     del_flag                    smallint not null default 0,
     version                     bigint not null default 0,
+    is_public                   boolean not null default false,
     folder_id                   bigint not null,
     description                 varchar(1000),
     upload_id                   text,
@@ -222,7 +223,17 @@ create table ai_knowledge_document
     content_type                varchar(255) not null,
     file_size                   bigint not null,
     file_sha256                 varchar(64) not null,
+    chunk_status                varchar(20) not null default 'unprocessed',
+    chunk_count                 integer not null default 0,
+    chunk_parameters            jsonb,
+    chunk_generation_id         bigint,
+    chunk_generation_expires_at timestamp(6) with time zone,
+    chunk_error_message         varchar(1000),
+    chunk_confirmed_time        timestamp(6) with time zone,
     primary key (id),
+    constraint ck_ai_document_chunk_status check (chunk_status in ('unprocessed', 'generating', 'draft', 'confirmed', 'failed')),
+    constraint ck_ai_document_chunk_count check (chunk_count between 0 and 10000),
+    constraint ck_ai_document_chunk_confirmed check (chunk_status <> 'confirmed' or chunk_confirmed_time is not null),
     constraint ck_ai_knowledge_document_status check (data_status in (0, 1)),
     constraint ck_ai_knowledge_document_deleted check (del_flag in (0, 1)),
     constraint ck_ai_knowledge_document_version check (version >= 0),
@@ -239,6 +250,7 @@ create table ai_knowledge_document
 );
 
 comment on table ai_knowledge_document is '知识资料：记录基本信息、原始文件的存储位置及上传进度；文件内容保存在对象存储中';
+comment on column ai_knowledge_document.is_public is '租户内共享读取标记，默认false；非共享仍按角色范围读取，共享不授予维护权限';
 comment on column ai_knowledge_document.id is '主键ID，由应用分配全局唯一的雪花ID，不使用数据库自增';
 comment on column ai_knowledge_document.create_time is '创建时间，默认当前时间；保存带时区的时间点';
 comment on column ai_knowledge_document.create_by is '文档创建用户ID，可为空；框架本人数据权限通过此字段匹配用户';
@@ -270,6 +282,20 @@ comment on column ai_knowledge_document.upload_expires_at is '允许恢复上传
 comment on column ai_knowledge_document.uploaded_time is '完整原件核验通过时间。';
 comment on column ai_knowledge_document.upload_error_message is '脱敏上传失败原因，不包含签名地址。';
 
+comment on column ai_knowledge_document.chunk_status is '分片状态，与上传及向量处理无关：unprocessed、generating、draft、confirmed、failed';
+comment on column ai_knowledge_document.chunk_count is '当前已保存分片数，生成失败不清空旧结果';
+comment on column ai_knowledge_document.chunk_parameters is '最近成功生成使用的三级参数，Duration为ISO-8601字符串';
+comment on column ai_knowledge_document.chunk_generation_id is '当前生成请求标识，防止超时请求覆盖新结果';
+comment on column ai_knowledge_document.chunk_generation_expires_at is '生成请求超时截止时间，过期后允许人工重试';
+comment on column ai_knowledge_document.chunk_error_message is '最近一次分片生成的脱敏错误摘要';
+comment on column ai_knowledge_document.chunk_confirmed_time is '用户确认当前结果的时间，编辑或合并后清空';
+
+-- 共享资料列表及共享目录定位；常规角色范围复用组织、创建人索引。
+create index idx_ai_document_public_created on ai_knowledge_document
+    (tenant_id, create_time desc, id desc) include (folder_id) where del_flag = 0 and is_public = true;
+create index idx_ai_document_public_folder on ai_knowledge_document
+    (tenant_id, folder_id) where del_flag = 0 and is_public = true;
+
 -- 组织数据范围直接按资料归属过滤。
 create index idx_ai_knowledge_document_org on ai_knowledge_document
     (tenant_id, org_id, create_time desc, id desc) where del_flag = 0;
@@ -285,5 +311,47 @@ create index idx_ai_document_creator on ai_knowledge_document (tenant_id, create
 
 -- 目录删除和移动按全局目录ID检查资料引用。
 create index idx_ai_document_folder on ai_knowledge_document (folder_id) where del_flag = 0;
+
+-- 分片直接按全局资料ID定位，索引支持预览排序、合并邻接检查和整份结果清理。
+create table ai_knowledge_chunk
+(
+    id bigint not null primary key,
+    create_time timestamp(6) with time zone not null default current_timestamp,
+    create_by bigint,
+    update_time timestamp(6) with time zone not null default current_timestamp,
+    update_by bigint,
+    data_status integer not null default 1,
+    tenant_id bigint not null,
+    org_id bigint not null,
+    del_flag smallint not null default 0,
+    is_public boolean not null default false,
+    document_id bigint not null,
+    chunk_index integer not null,
+    content text not null,
+    token_count integer not null,
+    source jsonb not null,
+    constraint ck_ai_chunk_content check (btrim(content) <> '' and char_length(content) <= 200000),
+    constraint ck_ai_chunk_order check (chunk_index >= 0 and token_count > 0),
+    constraint ck_ai_chunk_source check (jsonb_typeof(source) = 'object'),
+    constraint ck_ai_chunk_status check (data_status in (0, 1) and del_flag in (0, 1))
+);
+create unique index uk_ai_chunk_document_order on ai_knowledge_chunk (document_id, chunk_index) where del_flag = 0;
+create index idx_ai_chunk_document_cleanup on ai_knowledge_chunk (document_id);
+comment on table ai_knowledge_chunk is '文档分片草稿及确认结果，支持修改和相邻合并，不包含向量';
+comment on column ai_knowledge_chunk.is_public is '继承所属资料的共享标记，通过事务同步；不独立设置，不扩大写权限';
+comment on column ai_knowledge_chunk.id is '雪花主键';
+comment on column ai_knowledge_chunk.document_id is '所属资料ID，无物理外键，由业务事务保证关系';
+comment on column ai_knowledge_chunk.chunk_index is '原文顺序，从0开始，合并后允许空号';
+comment on column ai_knowledge_chunk.content is '可编辑的权威正文';
+comment on column ai_knowledge_chunk.token_count is 'cl100k_base正文Token数，与Docling切分所选分词器可不同';
+comment on column ai_knowledge_chunk.source is '来源标题、页码及Docling结构块引用';
+comment on column ai_knowledge_chunk.tenant_id is '复制所属资料租户';
+comment on column ai_knowledge_chunk.org_id is '复制所属资料组织归属';
+comment on column ai_knowledge_chunk.create_time is '创建时间';
+comment on column ai_knowledge_chunk.create_by is '继承所属资料创建人，保证本人数据权限一致；实际修改人由update_by记录';
+comment on column ai_knowledge_chunk.update_time is '修改时间';
+comment on column ai_knowledge_chunk.update_by is '修改人';
+comment on column ai_knowledge_chunk.data_status is '启停状态，默认1';
+comment on column ai_knowledge_chunk.del_flag is '逻辑删除标记，默认0';
 
 commit;
