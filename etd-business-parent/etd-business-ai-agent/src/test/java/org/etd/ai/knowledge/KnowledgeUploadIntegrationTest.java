@@ -15,6 +15,8 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import java.net.URI;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
@@ -98,7 +100,7 @@ class KnowledgeUploadIntegrationTest {
         assertThrows(ApiRuntimeException.class, () -> uploads.resumeUpload(document.getId(), "0".repeat(64)));
         assertEquals("completed", uploads.completeUpload(document.getId()).getUploadStatus());
         assertEquals("completed", uploads.completeUpload(document.getId()).getUploadStatus());
-        assertTrue(documentBiz.createDownloadUrl(document.getId()).contains("X-Amz"));
+        verifyOriginalDownload(document.getId(), "知识资料.md", bytes);
         var completed = documents.requireDocument(document.getId(), false);
         assertEquals("completed", completed.getUploadStatus());
         assertNotNull(completed.getUploadedTime());
@@ -110,6 +112,21 @@ class KnowledgeUploadIntegrationTest {
         documentBiz.removeDocument(document.getId());
         created.remove(document.getId());
         folderBiz.removeFolder(folder.getId());
+    }
+
+    /** 验证真实对象存储响应保留原始中文文件名、扩展名和原件字节。 */
+    private void verifyOriginalDownload(Long id, String filename, byte[] expected) throws Exception {
+        String url = documentBiz.createDownloadUrl(id);
+        var uri = URI.create(url);
+        var request = HttpRequest.newBuilder(uri).GET().build();
+        var client = HttpClient.newHttpClient();
+        var handler = HttpResponse.BodyHandlers.ofByteArray();
+        var response = client.send(request, handler);
+        assertEquals(200, response.statusCode());
+        String header = response.headers().firstValue(HttpHeaders.CONTENT_DISPOSITION).orElseThrow();
+        var disposition = ContentDisposition.parse(header);
+        assertEquals(filename, disposition.getFilename());
+        assertArrayEquals(expected, response.body());
     }
 
     /** 多个真实上传分片以乱序回执确认，再从持久化进度恢复上传。 */

@@ -11,7 +11,9 @@ import org.etd.ai.knowledge.model.UploadPart;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.storage.properties.StorageProperties;
 import org.springframework.stereotype.Service;
+import org.springframework.http.ContentDisposition;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
@@ -22,6 +24,9 @@ import java.util.concurrent.ExecutionException;
 @Service
 @RequiredArgsConstructor
 public class KnowledgeObjectService {
+    /** MinIO预签名GET请求覆盖下载响应文件名的参数，必须参与签名。 */
+    private static final String DOWNLOAD_DISPOSITION_QUERY = "response-content-disposition";
+
     private final CustomMinioClient client;
     private final StorageProperties storage;
     private final KnowledgeUploadProperties properties;
@@ -134,10 +139,14 @@ public class KnowledgeObjectService {
         return client.getObject(args).get();
     }
 
-    /** @param document 已完成上传的资料 @return 临时下载地址 */
+    /** @param document 已完成上传的资料 @return 携带原始文件名（含扩展名）的临时下载地址 */
     public String generateDownloadUrl(KnowledgeDocumentEntity document) throws Exception {
+        String disposition = ContentDisposition.attachment()
+                .filename(document.getOriginalFilename(), StandardCharsets.UTF_8).build().toString();
+        Map<String, String> query = Map.of(DOWNLOAD_DISPOSITION_QUERY, disposition);
         var args = GetPresignedObjectUrlArgs.builder().bucket(document.getStorageBucket())
-                .object(document.getStorageObjectKey()).method(Method.GET).expiry(properties.getUrlSeconds()).build();
+                .object(document.getStorageObjectKey()).method(Method.GET).expiry(properties.getUrlSeconds())
+                .extraQueryParams(query).build();
         return client.getPresignedObjectUrl(args);
     }
 
