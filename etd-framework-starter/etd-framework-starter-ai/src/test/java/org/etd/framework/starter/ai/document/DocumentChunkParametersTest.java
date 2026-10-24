@@ -127,6 +127,39 @@ class DocumentChunkParametersTest {
         assertThatThrownBy(() -> parameters(basic, normal)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** 重叠属于基础参数，传给原生混合分片器的预算须扣除重叠，JSON仍保留用户原始上限。 */
+    @Test
+    void reservesOverlapBudgetAndSerializesBasicOption() throws Exception {
+        var basic = DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.HYBRID)
+                .maxTokens(512).overlapTokens(50).build();
+        var normal = DocumentChunkParameters.Normal.builder().build();
+        var parameters = parameters(basic, normal);
+        var nativeOptions = (HybridDocumentChunkOptions) converter.toNativeChunkOptions(parameters);
+        assertThat(nativeOptions.maxTokens()).isEqualTo(462);
+        var json = JsonMapper.builder().findAndAddModules().build();
+        var payload = json.valueToTree(parameters);
+        assertThat(payload.path("basic").path("maxTokens").asInt()).isEqualTo(512);
+        assertThat(payload.path("basic").path("overlapTokens").asInt()).isEqualTo(50);
+        var restored = json.treeToValue(payload, DocumentChunkParameters.class);
+        assertThat(restored).isEqualTo(parameters);
+    }
+
+    /** 重叠不可为负或占满正文预算；混合策略须显式提供上限，短片段阈值也必须适配预留预算。 */
+    @Test
+    void rejectsInvalidOverlapBudget() {
+        assertThatThrownBy(() -> DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.REGEX)
+                .overlapTokens(-1).build()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.HYBRID)
+                .maxTokens(64).overlapTokens(64).build()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.HYBRID)
+                .overlapTokens(10).build()).isInstanceOf(IllegalArgumentException.class);
+        var basic = DocumentChunkParameters.Basic.builder().strategy(DocumentChunkStrategy.REGEX)
+                .pattern("rule").maxTokens(64).overlapTokens(16).build();
+        var normal = DocumentChunkParameters.Normal.builder().boundaryPlacement(RegexBoundaryPlacement.NEXT)
+                .mergeSmallChunks(true).minTokens(49).build();
+        assertThatThrownBy(() -> parameters(basic, normal)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     private DocumentChunkParameters parameters(DocumentChunkParameters.Basic basic, DocumentChunkParameters.Normal normal) {
         var timeout = Duration.ofSeconds(90);
         var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout).build();

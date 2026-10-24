@@ -5,6 +5,8 @@ import java.util.List;
 import org.etd.framework.starter.ai.document.constant.*;
 import org.etd.framework.starter.ai.document.model.*;
 import org.etd.framework.starter.ai.document.parser.DocumentRegexChunker;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException.Reason;
 import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -77,7 +79,30 @@ class DocumentRegexChunkerTest {
         var options = parameters("---", RegexBoundaryPlacement.DISCARD, null, false, null);
         assertThat(chunker.chunk("sample.pdf", result, options).getFirst().rawText()).contains("first---second");
         var small = parameters("---", RegexBoundaryPlacement.DISCARD, 1, false, null);
-        assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, small)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, small))
+                .isInstanceOfSatisfying(DocumentChunkException.class, exception ->
+                        assertThat(exception.getReason()).isEqualTo(Reason.PROTECTED_BLOCK_TOO_LARGE))
+                .hasMessageContaining("提高上限");
+    }
+
+    /** 规范条款正则可运行；代码整体超过512时准确提示，提高到1024后成功且正文不丢失。 */
+    @Test
+    void supportsRuleRegexAndReportsAtomicTokenLimit() {
+        String code = "public void test() { int value = 123; }\n".repeat(45);
+        var rule = block("#/texts/0", DocumentBlockType.LIST_ITEM, "1. 【强制】第一条规则", null, 1);
+        var example = block("#/texts/1", DocumentBlockType.CODE, code, null, 1);
+        var next = block("#/texts/2", DocumentBlockType.LIST_ITEM, "2. 【推荐】第二条规则", null, 2);
+        var result = parsed(List.of(rule, example, next));
+        String pattern = "(?m)^\\h*(?:[-*+]\\h+)?[0-9]+[.．、]\\h*【(?:强制|推荐|参考)】";
+        var small = parameters(pattern, RegexBoundaryPlacement.NEXT, 512, false, null);
+        assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, small))
+                .isInstanceOfSatisfying(DocumentChunkException.class, exception ->
+                        assertThat(exception.getReason()).isEqualTo(Reason.PROTECTED_BLOCK_TOO_LARGE));
+        var large = parameters(pattern, RegexBoundaryPlacement.NEXT, 1024, false, null);
+        var chunks = chunker.chunk("sample.pdf", result, large);
+        assertThat(chunks).hasSize(2);
+        assertThat(chunks.getFirst().rawText()).contains(code);
+        assertThat(chunks.getLast().rawText()).startsWith("2. 【推荐】");
     }
 
     /** 表格按行列输出Markdown，正则匹配表格行时不能破坏原子结构。 */
@@ -107,7 +132,7 @@ class DocumentRegexChunkerTest {
         var result = parsed(List.of(block));
         var options = parameters("(a+)+$", RegexBoundaryPlacement.NEXT, null, false, null);
         assertThatThrownBy(() -> chunker.chunk("sample.pdf", result, options))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(DocumentChunkException.class).hasMessageContaining("正则");
     }
 
     private DocumentChunkParameters parameters(String pattern, RegexBoundaryPlacement placement, Integer max,

@@ -29,12 +29,14 @@ public class KnowledgeDocumentService {
     /** @param current 页码 @param size 每页数量 @param folderId 可选目录
      * @param folderIds 优先筛选的目录集合，非空时忽略 folderId，不自动展开子孙目录
      * @param keyword 可选名称 @param uploadStatus 可选上传状态
+     * @param chunkStatus 可选分片状态，未传或空白时不筛选
      * @return 数据权限内资料分页 */
     public IPage<KnowledgeDocumentEntity> fetchDocumentPage(long current, long size, Long folderId,
-            List<Long> folderIds, String keyword, String uploadStatus) {
+            List<Long> folderIds, String keyword, String uploadStatus, String chunkStatus) {
         var query = Wrappers.<KnowledgeDocumentEntity>lambdaQuery()
                 .like(StringUtils.hasText(keyword), KnowledgeDocumentEntity::getDocumentName, keyword)
                 .eq(StringUtils.hasText(uploadStatus), KnowledgeDocumentEntity::getUploadStatus, uploadStatus)
+                .eq(StringUtils.hasText(chunkStatus), KnowledgeDocumentEntity::getChunkStatus, chunkStatus)
                 .orderByDesc(KnowledgeDocumentEntity::getCreateTime, KnowledgeDocumentEntity::getId);
         // 批量目录非空时只生成 IN 条件，避免与 folderId 取交集。
         if (!CollectionUtils.isEmpty(folderIds)) {

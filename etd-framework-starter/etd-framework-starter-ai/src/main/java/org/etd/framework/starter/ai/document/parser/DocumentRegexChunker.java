@@ -13,6 +13,8 @@ import org.etd.framework.starter.ai.document.constant.RegexBoundaryPlacement;
 import org.etd.framework.starter.ai.document.model.*;
 import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.util.Assert;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException.Reason;
 
 /** Docling结构化解析后的正则二次切分，保留块引用和页码，不执行向量化。 */
 public final class DocumentRegexChunker {
@@ -39,7 +41,7 @@ public final class DocumentRegexChunker {
         for (Span span : spans) { fullText.append(span.text()); }
         String text = fullText.toString();
         List<Range> ranges = matchRanges(text, spans, parameters);
-        List<Range> bounded = boundRanges(text, spans, ranges, parameters.basic().maxTokens());
+        List<Range> bounded = boundRanges(text, spans, ranges, parameters.basic().chunkTokenBudget());
         List<DocumentChunk> chunks = createChunkList(filename, text, spans, bounded);
         return mergeSmallChunks(chunks, parameters);
     }
@@ -62,7 +64,7 @@ public final class DocumentRegexChunker {
                 start = parameters.normal().boundaryPlacement() == RegexBoundaryPlacement.DISCARD ? matcher.end() : end;
             }
         } catch (StackOverflowError error) {
-            throw new IllegalArgumentException("正则递归过深，请简化表达式");
+            throw new DocumentChunkException(Reason.REGEX_TOO_DEEP);
         }
         addRange(ranges, start, text.length());
         return ranges;
@@ -185,7 +187,7 @@ public final class DocumentRegexChunker {
                 for (Span span : spans) {
                     if (span.protectedBlock() && end > span.start() && end < span.end()) {
                         if (span.start() > start) { end = span.start(); }
-                        else { throw new IllegalArgumentException("表格或代码块超过Token上限，请提高上限后重试"); }
+                        else { throw new DocumentChunkException(Reason.PROTECTED_BLOCK_TOO_LARGE); }
                         break;
                     }
                 }
@@ -238,7 +240,7 @@ public final class DocumentRegexChunker {
             if (other < 0) { break; }
             int first = Math.min(index, other);
             DocumentChunk combined = combineChunks(result.get(first), result.get(first + 1));
-            Integer max = parameters.basic().maxTokens();
+            Integer max = parameters.basic().chunkTokenBudget();
             if (max != null && combined.tokenCount() > max) { index++; continue; }
             result.set(first, combined);
             result.remove(first + 1);
@@ -325,7 +327,7 @@ public final class DocumentRegexChunker {
         private GuardedText(String value) { this.value = value; }
         @Override public int length() { return value.length(); }
         @Override public char charAt(int index) {
-            if (--remaining < 0 || System.nanoTime() > deadline) { throw new IllegalArgumentException("正则匹配超过执行预算，请简化表达式"); }
+            if (--remaining < 0 || System.nanoTime() > deadline) { throw new DocumentChunkException(Reason.REGEX_BUDGET_EXCEEDED); }
             return value.charAt(index);
         }
         @Override public CharSequence subSequence(int start, int end) { return value.subSequence(start, end); }

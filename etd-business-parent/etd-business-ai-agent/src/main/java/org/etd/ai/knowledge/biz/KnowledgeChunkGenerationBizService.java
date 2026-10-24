@@ -14,6 +14,7 @@ import org.etd.ai.knowledge.service.*;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.ai.document.docling.DoclingProperties;
 import org.etd.framework.starter.ai.document.model.DocumentChunk;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
 import org.etd.framework.starter.ai.document.model.DocumentChunkParameters;
 import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.core.io.ByteArrayResource;
@@ -41,8 +42,14 @@ public class KnowledgeChunkGenerationBizService {
             var records = createChunkList(task, result);
             return transactions.execute(status -> finishGeneration(task, parameters, records));
         } catch (Exception exception) {
-            log.warn("知识资料分片生成失败，资料ID={}，异常类型={}", id, exception.getClass().getSimpleName());
-            return transactions.execute(status -> failGeneration(task));
+            String failureMessage = resolveFailureMessage(exception);
+            String reason = exception instanceof DocumentChunkException chunkException
+                    ? chunkException.getReason().getCode() : exception.getClass().getSimpleName();
+            // Throwable作为最后一个日志参数记录完整堆栈及cause链；不额外输出正文、规则或认证参数。
+            log.error("知识资料分片生成失败，资料ID={}，生成请求ID={}，分片策略={}，异常类型={}，原因={}",
+                    id, task.getChunkGenerationId(), parameters.basic().strategy(),
+                    exception.getClass().getSimpleName(), reason, exception);
+            return transactions.execute(status -> failGeneration(task, failureMessage));
         }
     }
 
@@ -97,14 +104,22 @@ public class KnowledgeChunkGenerationBizService {
         return document;
     }
 
+    /** 只允许固定规则提示进入接口，其他异常仍脱敏，避免泄露SDK响应或文档正文。 */
+    private String resolveFailureMessage(Exception exception) {
+        if (exception instanceof DocumentChunkException chunkException) {
+            return chunkException.getReason().getMessage() + "；已有分片已保留";
+        }
+        return "分片生成失败，请检查Docling服务、文件格式及参数后重试；已有分片已保留";
+    }
+
     /** 只更新仍属于当前请求的失败；超时后重试的新结果不会被旧请求覆盖。 */
-    private KnowledgeDocumentEntity failGeneration(KnowledgeDocumentEntity task) {
+    private KnowledgeDocumentEntity failGeneration(KnowledgeDocumentEntity task, String failureMessage) {
         var document = documents.requireDocument(task.getId(), true);
         if (!Objects.equals(document.getChunkGenerationId(), task.getChunkGenerationId())) {
             throw new ApiRuntimeException("本次生成请求已失效，当前分片未被替换，请刷新查看");
         }
         document.setChunkStatus(KnowledgeChunkStatus.FAILED);
-        document.setChunkErrorMessage("分片生成失败，请检查Docling服务、文件格式及参数后重试；已有分片已保留");
+        document.setChunkErrorMessage(failureMessage);
         releaseGeneration(document);
         documents.modifyDocument(document);
         return document;

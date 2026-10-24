@@ -32,6 +32,23 @@ public interface KnowledgeChunkConverter {
     @Mapping(target = "content", source = "chunk.rawText")
     @Mapping(target = "source", source = "chunk")
     KnowledgeChunkEntity toEntity(KnowledgeDocumentEntity document, DocumentChunk chunk);
+    /**
+     * @param original 已校验的原分片
+     * @param content 第二片的权威正文
+     * @return 继承归属、共享、启停及原始来源的新分片，不复制主键、顺序和时间审计
+     */
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "documentId", source = "original.documentId")
+    @Mapping(target = "tenantId", source = "original.tenantId")
+    @Mapping(target = "orgId", source = "original.orgId")
+    @Mapping(target = "createBy", source = "original.createBy")
+    @Mapping(target = "isPublic", source = "original.isPublic")
+    @Mapping(target = "dataStatus", source = "original.dataStatus")
+    @Mapping(target = "source", source = "original.source")
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "tokenCount", expression = "java(DocumentTokenCounter.count(content))")
+    KnowledgeChunkEntity toSplitEntity(KnowledgeChunkEntity original, String content);
+
     /** @param chunk 引擎分片 @return 来源集合 */
     KnowledgeChunkSource toSource(DocumentChunk chunk);
     /** @param entity 分片实体 @return 预览信息 */

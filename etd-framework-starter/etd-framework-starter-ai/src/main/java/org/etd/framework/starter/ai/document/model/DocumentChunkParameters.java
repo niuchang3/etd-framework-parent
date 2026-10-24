@@ -67,8 +67,8 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
         Assert.isTrue(!Boolean.TRUE.equals(normal.mergeSmallChunks()) || normal.minTokens() != null,
                 "合并短片段时必须指定最小Token阈值");
         Assert.isTrue(normal.minTokens() == null || basic.maxTokens() == null
-                        || normal.minTokens() <= basic.maxTokens(),
-                "短片段阈值不能超过单片Token上限");
+                        || normal.minTokens() <= basic.chunkTokenBudget(),
+                "短片段阈值不能超过扣除重叠后的正文Token预算");
     }
 
     /** 基础参数：处理范围、分片策略、文字识别及表格处理。 */
@@ -80,8 +80,10 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
         Integer lastPage,
         /** 分片策略：hierarchical、hybrid或regex。 */
         DocumentChunkStrategy strategy,
-        /** 单片Token上限；正则策略按Unicode安全边界拆分超长正文，表格和代码块超过上限时报错。 */
+        /** 单片Token上限；开启重叠后最终正文按cl100k_base再次校验，核心正文预留overlapTokens预算。 */
         Integer maxTokens,
+        /** 最多重叠Token数，默认0关闭；自动生成时回溯前片连续普通文本并优先对齐段落或句首，按cl100k_base严格限制上限。 */
+        int overlapTokens,
         /** 仅混合策略：是否合并标题等元数据相同的相邻小块。 */
         Boolean mergePeers,
         /** 仅正则策略：用于识别切分边界的Java正则表达式，不记录正文或规则到日志。 */
@@ -98,6 +100,15 @@ public record DocumentChunkParameters(Basic basic, Normal normal, Advanced advan
             Assert.notNull(strategy, "分片策略不能为空");
             DocumentOptionValidator.requirePageRange(firstPage, lastPage);
             DocumentOptionValidator.requireTokenCount(maxTokens, "单片Token上限");
+            Assert.isTrue(overlapTokens >= 0, "重叠Token数不能为负");
+            Assert.isTrue(maxTokens == null || overlapTokens < maxTokens, "重叠Token数必须小于单片Token上限");
+            Assert.isTrue(strategy != DocumentChunkStrategy.HYBRID || overlapTokens == 0 || maxTokens != null,
+                    "混合分片开启重叠时必须指定单片Token上限");
+        }
+
+        /** @return 为重叠预留预算后的正文上限；未设置上限时仍为空，不改变层级策略语义 */
+        public Integer chunkTokenBudget() {
+            return maxTokens == null ? null : maxTokens - overlapTokens;
         }
 
         @Override

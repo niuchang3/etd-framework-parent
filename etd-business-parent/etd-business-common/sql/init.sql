@@ -268,8 +268,8 @@ values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
         'json', true, true, '前端超时时间、请求重试次数及字典等数据缓存时效'),
        (4000005, current_timestamp, 1, current_timestamp, 1, 1,
         'ai.knowledge.upload', '知识库上传文件格式',
-        '{"allowedExtensions":[".txt",".md",".csv",".json",".html",".docx"]}',
-        'json', true, true, '仅供前端文件选择器accept筛选，不作为服务端上传格式校验；实际解析能力以资料处理结果为准')
+        '{"allowedExtensions":[".pdf",".docx",".pptx",".xlsx",".html",".htm",".md",".csv",".png",".jpg",".jpeg",".tif",".tiff",".bmp",".webp"]}',
+        'json', true, true, '与当前Docling解析适配器支持格式一致，仅供前端文件选择器accept筛选，不作为服务端上传格式校验')
 on conflict (id) do nothing;
 
 commit;

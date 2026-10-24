@@ -16,7 +16,7 @@
 
 ## 数据库初始化
 
-`../etd-business-common/sql/ai.sql` 定义模型、模型连接器、知识库目录及资料上传表，由部署人员显式执行，不随应用启动执行。知识资料支持原件上传、Docling手动分片、预览、正文编辑、相邻合并和用户确认，结果存入 `ai_knowledge_chunk`。资料通过 `isPublic` 设置租户内共享读取，分片同步继承；`@DataPermissionTable.publicColumn` 仅扩大读取范围，维护操作仍按角色数据范围校验。暂不提供向量化、检索发布或工作流编排，也不创建检索扩展。
+`../etd-business-common/sql/ai.sql` 定义模型、模型连接器、知识库目录及资料上传表，由部署人员显式执行，不随应用启动执行。知识资料支持原件上传、Docling手动分片、基础参数 `overlapTokens` 控制的本地Token重叠（默认0关闭）、预览、正文编辑、相邻合并和用户确认，结果存入 `ai_knowledge_chunk`。资料通过 `isPublic` 设置租户内共享读取，分片同步继承；`@DataPermissionTable.publicColumn` 仅扩大读取范围，维护操作仍按角色数据范围校验。暂不提供向量化、检索发布或工作流编排，也不创建检索扩展。
 
 `../etd-business-common/sql/init.sql` 在 UPMS 数据库统一初始化 UPMS、AI、Event 的公共字典、菜单和系统参数；先执行 `../etd-business-common/sql/upms.sql`，再执行 `init.sql` 和 `upms_data.sql`。默认租户菜单授权与其他UPMS专属数据统一放在 `upms_data.sql`。脚本不自动执行，也不作为旧环境清理脚本；旧模型配置菜单及其租户关系已从初始化定义中删除。
 

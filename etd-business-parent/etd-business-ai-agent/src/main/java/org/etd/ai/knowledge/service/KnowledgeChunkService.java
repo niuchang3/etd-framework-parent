@@ -58,6 +58,25 @@ public class KnowledgeChunkService {
     public void removeChunk(Long id) {
         if (mapper.deleteById(id) != 1) { throw new ApiRuntimeException("分片已变化，请刷新后重试"); }
     }
+    /**
+     * 为拆分插入一片腾出位置，调用方必须持有资料行锁并在事务内执行。
+     * @param documentId 已校验维护权限的资料ID
+     * @param chunkIndex 原分片顺序，新分片将插入其后
+     */
+    public void moveFollowingChunkList(Long documentId, Integer chunkIndex) {
+        var query = Wrappers.<KnowledgeChunkEntity>lambdaQuery()
+                .select(KnowledgeChunkEntity::getId, KnowledgeChunkEntity::getChunkIndex)
+                .eq(KnowledgeChunkEntity::getDocumentId, documentId)
+                .gt(KnowledgeChunkEntity::getChunkIndex, chunkIndex)
+                .orderByDesc(KnowledgeChunkEntity::getChunkIndex);
+        var following = mapper.selectList(query);
+        // 降序逐条移动，先释放后一位置，避免触发(document_id, chunk_index)即时唯一约束。
+        for (KnowledgeChunkEntity chunk : following) {
+            chunk.setChunkIndex(Math.incrementExact(chunk.getChunkIndex()));
+            modifyChunk(chunk);
+        }
+    }
+
     /** @param documentId 已校验维护权限的资料ID @param isPublic 新共享标记；与资料更新处于同一事务 */
     public void modifyPublicByDocument(Long documentId, Boolean isPublic) {
         var changes = new KnowledgeChunkEntity();

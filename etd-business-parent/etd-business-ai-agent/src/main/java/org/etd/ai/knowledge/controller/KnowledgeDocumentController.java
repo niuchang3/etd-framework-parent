@@ -33,7 +33,7 @@ public class KnowledgeDocumentController {
     @GetMapping
     public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {
         var page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
-                query.getFolderIds(), query.getKeyword(), query.getUploadStatus());
+                query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getChunkStatus());
         var result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
         return ResultModel.success(result);
     }

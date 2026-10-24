@@ -36,4 +36,7 @@ public class KnowledgeDocumentPageQuery {
     /** 上传状态，未传时不按上传状态筛选。 */
     private String uploadStatus;
 
+    /** 分片状态：unprocessed、generating、draft、confirmed、failed；未传或空白时不筛选。 */
+    private String chunkStatus;
+
 }

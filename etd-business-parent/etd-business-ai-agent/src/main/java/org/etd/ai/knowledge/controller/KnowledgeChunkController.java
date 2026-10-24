@@ -20,7 +20,7 @@ import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-/** 分片工作页入口，生成、预览、修改、合并及确认均为用户显式操作。 */
+/** 分片工作页入口，生成、预览、修改、合并、拆分、删除及确认均为用户显式操作。 */
 @RestController
 @Validated
 @RequiredArgsConstructor
@@ -87,6 +87,36 @@ public class KnowledgeChunkController {
     @AutoLog("合并知识资料相邻分片")
     public ResultModel<KnowledgeChunkStateVO> updateMerge(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkMergeDTO dto) {
         var document = editing.mergeChunks(id, dto.getVersion(), dto.getChunkIds());
+        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        return ResultModel.success(result);
+    }
+
+    /**
+     * @param id 资料ID
+     * @param chunkId 待拆分分片ID
+     * @param dto 当前版本及两片完整正文，可包含尚未保存的修改
+     * @return 拆分后的资料状态，第一片保留原ID，列表接口可读取紧随其后的第二片
+     */
+    @PostMapping("/{chunkId}/split")
+    @AutoLog("拆分知识资料分片")
+    public ResultModel<KnowledgeChunkStateVO> updateSplit(@PathVariable Long id, @PathVariable Long chunkId,
+            @Valid @RequestBody KnowledgeChunkSplitDTO dto) {
+        var document = editing.splitChunk(id, chunkId, dto.getVersion(), dto.getFirstContent(), dto.getSecondContent());
+        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        return ResultModel.success(result);
+    }
+
+    /**
+     * @param id 资料ID
+     * @param chunkId 待删除分片ID，必须属于当前资料
+     * @param version 当前资料版本，必填且不能为负
+     * @return 删除后的数量、版本和待确认状态
+     */
+    @DeleteMapping("/{chunkId}")
+    @AutoLog("删除知识资料分片")
+    public ResultModel<KnowledgeChunkStateVO> remove(@PathVariable Long id, @PathVariable Long chunkId,
+            @RequestParam @Min(0) Long version) {
+        var document = editing.removeChunk(id, chunkId, version);
         var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }

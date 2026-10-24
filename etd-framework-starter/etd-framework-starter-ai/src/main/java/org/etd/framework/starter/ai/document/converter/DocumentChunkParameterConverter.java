@@ -73,7 +73,7 @@ public interface DocumentChunkParameterConverter {
     @Mapping(target = "useMarkdownImages", source = "normal.useMarkdownImages")
     @Mapping(target = "imagePlaceholder", source = "normal.imagePlaceholder")
     @Mapping(target = "includeRawText", constant = "true")
-    @Mapping(target = "maxTokens", source = "basic.maxTokens")
+    @Mapping(target = "maxTokens", expression = "java(parameters.basic().chunkTokenBudget())")
     @Mapping(target = "mergePeers", source = "basic.mergePeers")
     @Mapping(target = "tokenizer", source = "advanced.tokenizer")
     HybridDocumentChunkOptions toHybridOptions(DocumentChunkParameters parameters);

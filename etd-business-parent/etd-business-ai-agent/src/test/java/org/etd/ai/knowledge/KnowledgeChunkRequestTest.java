@@ -2,6 +2,9 @@ package org.etd.ai.knowledge;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.etd.ai.knowledge.controller.dto.KnowledgeChunkSaveDTO;
+import org.etd.ai.knowledge.controller.dto.KnowledgeChunkSplitDTO;
+import org.etd.ai.knowledge.constant.KnowledgeChunkLimits;
+import jakarta.validation.Validation;
 import org.etd.ai.knowledge.controller.dto.KnowledgeChunkGenerateDTO;
 import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -32,6 +35,27 @@ class KnowledgeChunkRequestTest {
         assertThat(payload.path("advanced").path("documentTimeout").asText()).isEqualTo("PT1M30S");
         assertThat(json.writeValueAsString(request)).doesNotContain("parameters");
     }
+    /** 拆分正文只用于请求，不能进入参数日志或异常cURL，两个正文独立校验。 */
+    @Test
+    void validatesSplitContentsAndHidesThemFromLogs() throws Exception {
+        String body = """
+                {"version":2,"firstContent":"拆分前半段","secondContent":"拆分后半段"}
+                """;
+        var input = json.readValue(body, KnowledgeChunkSplitDTO.class);
+        assertThat(input.getFirstContent()).isEqualTo("拆分前半段");
+        assertThat(input.getSecondContent()).isEqualTo("拆分后半段");
+        assertThat(json.writeValueAsString(input)).doesNotContain("拆分前半段", "拆分后半段");
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            assertThat(validator.validate(input)).isEmpty();
+            input.setVersion(-1L);
+            input.setFirstContent(" ");
+            input.setSecondContent("字".repeat(KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS + 1));
+            assertThat(validator.validate(input)).extracting(violation -> violation.getPropertyPath().toString())
+                    .containsExactlyInAnyOrder("version", "firstContent", "secondContent");
+        }
+    }
+
     /** 同一个分片ID出现两次时明确拒绝，不用后提交内容静默覆盖前者。 */
     @Test
     void rejectsDuplicateEditIds() throws Exception {

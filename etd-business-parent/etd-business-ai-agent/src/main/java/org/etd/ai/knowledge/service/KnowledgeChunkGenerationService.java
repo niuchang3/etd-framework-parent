@@ -39,7 +39,9 @@ public class KnowledgeChunkGenerationService {
         awaitTask(parser, task, deadline);
         var result = chunker.fetchChunkResult(task.taskId());
         requireCompleteDocuments(result);
-        return result.chunks();
+        var overlap = new DocumentChunkOverlapProcessor();
+        var blocks = result.documents().getFirst().result().blocks();
+        return overlap.apply(result.chunks(), blocks, parameters);
     }
 
     private List<DocumentChunk> generateRegex(AsynchronousDocumentParser parser, DocumentParseRequest request,
@@ -49,7 +51,9 @@ public class KnowledgeChunkGenerationService {
         var result = parser.fetchResult(task.taskId());
         if (result.status() != DocumentParseStatus.SUCCESS) { throw new ApiRuntimeException("文档未完整解析成功，请调整参数后重试"); }
         var chunker = new DocumentRegexChunker();
-        return chunker.chunk(request.filename(), result, parameters);
+        var chunks = chunker.chunk(request.filename(), result, parameters);
+        var overlap = new DocumentChunkOverlapProcessor();
+        return overlap.apply(chunks, result.blocks(), parameters);
     }
 
     private void requireCompleteDocuments(DocumentChunkResult result) {

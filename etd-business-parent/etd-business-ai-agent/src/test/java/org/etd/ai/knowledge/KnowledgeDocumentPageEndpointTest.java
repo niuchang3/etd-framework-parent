@@ -6,6 +6,7 @@ import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
+import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
@@ -44,7 +45,7 @@ class KnowledgeDocumentPageEndpointTest {
         var controller = new KnowledgeDocumentController(documents, biz);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(page);
+        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any())).thenReturn(page);
     }
 
     /** 重复键和逗号分隔两种传参形式均绑定为目录列表，原单目录参数同时保留。 */
@@ -52,7 +53,8 @@ class KnowledgeDocumentPageEndpointTest {
     @ValueSource(booleans = {true, false})
     void shouldBindFolderIds(boolean repeated) throws Exception {
         var request = get("/v1/knowledge-documents").param("folderId", "9")
-                .param("keyword", "说明").param("uploadStatus", "completed");
+                .param("keyword", "说明").param("uploadStatus", "completed")
+                .param("chunkStatus", KnowledgeChunkStatus.DRAFT);
         if (repeated) {
             request.param("folderIds", "1", "2");
         } else {
@@ -60,7 +62,7 @@ class KnowledgeDocumentPageEndpointTest {
         }
         mvc.perform(request).andExpect(status().isOk());
         List<Long> folderIds = List.of(1L, 2L);
-        verify(documents).fetchDocumentPage(1L, 10L, 9L, folderIds, "说明", "completed");
+        verify(documents).fetchDocumentPage(1L, 10L, 9L, folderIds, "说明", "completed", KnowledgeChunkStatus.DRAFT);
     }
 
     /** 原有单目录调用及分页参数继续按原字段名绑定。 */
@@ -69,7 +71,7 @@ class KnowledgeDocumentPageEndpointTest {
         var request = get("/v1/knowledge-documents").param("folderId", "9")
                 .param("current", "2").param("size", "20");
         mvc.perform(request).andExpect(status().isOk());
-        verify(documents).fetchDocumentPage(2L, 20L, 9L, null, null, null);
+        verify(documents).fetchDocumentPage(2L, 20L, 9L, null, null, null, null);
     }
 
     /** 不传目录时维持原有不按目录筛选的入口行为。 */
@@ -77,7 +79,7 @@ class KnowledgeDocumentPageEndpointTest {
     void shouldKeepDefaultPage() throws Exception {
         var request = get("/v1/knowledge-documents");
         mvc.perform(request).andExpect(status().isOk());
-        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null);
+        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, null);
     }
 
     /** 非正整数或不能转换的集合元素不进入业务查询。 */
@@ -122,7 +124,7 @@ class KnowledgeDocumentPageEndpointTest {
         var records = List.of(document);
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         page.setRecords(records);
-        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(page);
+        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any())).thenReturn(page);
         var request = get("/v1/knowledge-documents");
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records[0].documentName").value("资料.pdf"))
@@ -148,4 +150,13 @@ class KnowledgeDocumentPageEndpointTest {
         assertEquals(true, input.getValue().getIsPublic());
     }
 
+    /** 分片状态作为独立可选参数绑定，和上传状态使用相互独立的字段。 */
+    @ParameterizedTest
+    @ValueSource(strings = {KnowledgeChunkStatus.UNPROCESSED, KnowledgeChunkStatus.GENERATING,
+            KnowledgeChunkStatus.DRAFT, KnowledgeChunkStatus.CONFIRMED, KnowledgeChunkStatus.FAILED})
+    void shouldBindChunkStatus(String chunkStatus) throws Exception {
+        var request = get("/v1/knowledge-documents").param("chunkStatus", chunkStatus);
+        mvc.perform(request).andExpect(status().isOk());
+        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, chunkStatus);
+    }
 }

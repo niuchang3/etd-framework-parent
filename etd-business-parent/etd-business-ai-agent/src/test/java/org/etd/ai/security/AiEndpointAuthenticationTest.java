@@ -150,7 +150,7 @@ class AiEndpointAuthenticationTest {
     }
 
     /**
-     * 四个Controller的全部20个路由只授予知识库资源权限逐个验证；业务IO使用替身。
+     * 四个Controller的全部路由只授予知识库资源权限逐个验证；业务IO使用替身。
      * @param endpoint 路由及请求参数，写操作不能被只读菜单授权放行
      */
     @ParameterizedTest(name = "{0}")
@@ -212,6 +212,9 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "PUT", base + "/1/chunks", "{\"version\":0,\"chunks\":[{\"id\":1,\"content\":\"正文\"}]}", true);
         addKnowledgeEndpoint(result, "POST", base + "/1/chunks/merge", "{\"version\":0,\"chunkIds\":[1,2]}", true);
         addKnowledgeEndpoint(result, "POST", base + "/1/chunks/confirm", "{\"version\":0}", true);
+        addKnowledgeEndpoint(result, "DELETE", base + "/1/chunks/1?version=0", null, true);
+        addKnowledgeEndpoint(result, "POST", base + "/1/chunks/1/split",
+                "{\"version\":0,\"firstContent\":\"第一片\",\"secondContent\":\"第二片\"}", true);
         return result;
     }
 
@@ -614,7 +617,7 @@ class AiEndpointAuthenticationTest {
         KnowledgeDocumentService knowledgeDocumentService() {
             var service = mock(KnowledgeDocumentService.class);
             var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-            when(service.fetchDocumentPage(1L, 10L, null, null, null, null)).thenReturn(page);
+            when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null)).thenReturn(page);
             var document = createKnowledgeDocumentResponse();
             when(service.requireDocument(1L, false)).thenReturn(document);
             return service;

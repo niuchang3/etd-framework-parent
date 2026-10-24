@@ -6,7 +6,12 @@ import java.time.Duration;
 import java.util.*;
 import org.etd.ai.knowledge.biz.*;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
+import org.etd.framework.starter.ai.document.exception.DocumentChunkException.Reason;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
+import org.etd.ai.knowledge.constant.KnowledgeChunkLimits;
+import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
+import org.springframework.dao.DataAccessException;
 import org.etd.ai.knowledge.service.*;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserDetails;
@@ -147,6 +152,167 @@ class KnowledgeChunkPersistenceTest {
         assertThat(documents.requireDocument(1L, false).getChunkConfirmedTime()).isNull();
     }
 
+    /** 删除已确认分片后清除确认状态，递增资料版本；重复、跨资料和旧版本请求不改变数量。 */
+    @Test
+    void deletesChunkAndInvalidatesConfirmation() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        generation.generateChunks(2L, 0L, parameters);
+        var foreign = chunks.fetchChunkList(2L).getFirst();
+        var removed = chunks.fetchChunkList(1L).getFirst();
+        state = editing.confirmChunks(1L, state.getVersion());
+        Long oldVersion = state.getVersion();
+        var result = editing.removeChunk(1L, removed.getId(), oldVersion);
+        assertThat(result.getVersion()).isEqualTo(oldVersion + 1);
+        assertThat(result.getChunkCount()).isEqualTo(2);
+        assertThat(result.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+        assertThat(result.getChunkConfirmedTime()).isNull();
+        assertThat(chunks.fetchChunkList(1L)).hasSize(2);
+        assertThatThrownBy(() -> chunks.requireChunk(1L, removed.getId())).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.removeChunk(1L, removed.getId(), oldVersion)).isInstanceOf(ApiRuntimeException.class);
+        Long version = result.getVersion();
+        assertThatThrownBy(() -> editing.removeChunk(1L, removed.getId(), version)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.removeChunk(1L, foreign.getId(), version)).isInstanceOf(ApiRuntimeException.class);
+        assertThat(documents.requireDocument(1L, false).getChunkCount()).isEqualTo(2);
+        assertThat(documents.requireDocument(1L, false).getVersion()).isEqualTo(version);
+    }
+
+    /** 最后一片允许删除，空结果不能确认；显式重新生成后恢复新的完整结果。 */
+    @Test
+    void allowsDeletingLastChunkAndRegenerating() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        var records = chunks.fetchChunkList(1L);
+        for (var record : records) {
+            state = editing.removeChunk(1L, record.getId(), state.getVersion());
+        }
+        assertThat(state.getChunkCount()).isZero();
+        assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+        assertThat(chunks.fetchChunkPage(1L, 1L, 20L).getTotal()).isZero();
+        Long version = state.getVersion();
+        assertThatThrownBy(() -> editing.confirmChunks(1L, version)).isInstanceOf(ApiRuntimeException.class);
+        state = generation.generateChunks(1L, version, parameters);
+        assertThat(state.getChunkCount()).isEqualTo(3);
+        assertThat(chunks.fetchChunkList(1L)).extracting("id")
+                .doesNotContainAnyElementsOf(records.stream().map(record -> record.getId()).toList());
+    }
+
+    /** 正在生成时禁止删除，避免用户修改正在被替换的分片集合。 */
+    @Test
+    void rejectsDeletionDuringGeneration() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        var first = chunks.fetchChunkList(1L).getFirst();
+        setupJdbc.update("""
+                update ai_knowledge_document
+                set chunk_status = 'generating', chunk_generation_expires_at = current_timestamp + interval '1 minute'
+                where id = 1
+                """);
+        Long version = state.getVersion();
+        assertThatThrownBy(() -> editing.removeChunk(1L, first.getId(), version))
+                .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("正在生成");
+        assertThatThrownBy(() -> editing.splitChunk(1L, first.getId(), version, "前", "后"))
+                .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("正在生成");
+        assertThat(chunks.fetchChunkList(1L)).hasSize(3);
+        assertThat(documents.requireDocument(1L, false).getChunkCount()).isEqualTo(3);
+    }
+
+    /** 拆分保留原ID，第二片插入紧邻位置，继承来源和共享范围，保存尚未落库的正文修改。 */
+    @Test
+    void splitsChunkAndPreservesSourceAndPermissions() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var initial = generation.generateChunks(1L, 0L, parameters);
+        var configuration = publicConfiguration(true);
+        documentEditing.modifyDocument(1L, configuration, initial.getVersion());
+        var before = chunks.fetchChunkList(1L);
+        var confirmed = editing.confirmChunks(1L, documents.requireDocument(1L, false).getVersion());
+        clearInvocations(engine);
+        var state = editing.splitChunk(1L, before.get(1).getId(), confirmed.getVersion(), "人工修改后的前半段😀", "后半段正文");
+        var after = chunks.fetchChunkList(1L);
+        assertThat(after).hasSize(4);
+        assertThat(after).extracting("chunkIndex").containsExactly(0, 1, 2, 3);
+        assertThat(after.get(1).getId()).isEqualTo(before.get(1).getId());
+        assertThat(after.get(3).getId()).isEqualTo(before.get(2).getId());
+        assertThat(after.get(2).getId()).isNotIn(before.stream().map(chunk -> chunk.getId()).toList());
+        assertThat(after.get(1).getContent()).isEqualTo("人工修改后的前半段😀");
+        assertThat(after.get(2).getContent()).isEqualTo("后半段正文");
+        assertThat(after.get(2).getSource()).isEqualTo(before.get(1).getSource());
+        assertThat(after.get(2).getCreateBy()).isEqualTo(before.get(1).getCreateBy());
+        assertThat(after).allSatisfy(chunk -> {
+            assertThat(chunk.getTokenCount()).isEqualTo(DocumentTokenCounter.count(chunk.getContent()));
+            assertThat(chunk.getIsPublic()).isTrue();
+        });
+        assertThat(state.getChunkCount()).isEqualTo(4);
+        assertThat(state.getVersion()).isEqualTo(confirmed.getVersion() + 1);
+        assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+        assertThat(state.getChunkConfirmedTime()).isNull();
+        verifyNoInteractions(engine);
+    }
+
+    /** 删除留下空号后仍能拆分第一片与末片，并能继续按实际相邻关系合并。 */
+    @Test
+    void splitsAroundIndexGapsAndCanMergeAgain() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        var records = chunks.fetchChunkList(1L);
+        state = editing.removeChunk(1L, records.get(1).getId(), state.getVersion());
+        state = editing.splitChunk(1L, records.getFirst().getId(), state.getVersion(), "第一段", "第二段");
+        assertThat(chunks.fetchChunkList(1L)).extracting("chunkIndex").containsExactly(0, 1, 3);
+        state = editing.splitChunk(1L, records.getLast().getId(), state.getVersion(), "第三段", "第四段");
+        var split = chunks.fetchChunkList(1L);
+        assertThat(split).extracting("content").containsExactly("第一段", "第二段", "第三段", "第四段");
+        var ids = List.of(split.getFirst().getId(), split.get(1).getId());
+        state = editing.mergeChunks(1L, state.getVersion(), ids);
+        assertThat(state.getChunkCount()).isEqualTo(3);
+        assertThat(chunks.fetchChunkList(1L).getFirst().getContent()).isEqualTo("第一段\n\n第二段");
+    }
+
+    /** 拒绝旧版本、跨资料、无效正文及分片数量上限，原结果和资料版本保持不变。 */
+    @Test
+    void rejectsInvalidSplitRequests() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        generation.generateChunks(2L, 0L, parameters);
+        var original = chunks.fetchChunkList(1L).getFirst();
+        var foreign = chunks.fetchChunkList(2L).getFirst();
+        Long version = state.getVersion();
+        assertThatThrownBy(() -> editing.splitChunk(1L, original.getId(), 0L, "前", "后")).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.splitChunk(1L, foreign.getId(), version, "前", "后")).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.splitChunk(1L, original.getId(), version, " ", "后")).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.splitChunk(1L, original.getId(), version, "前", null)).isInstanceOf(ApiRuntimeException.class);
+        String oversized = "字".repeat(KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS + 1);
+        assertThatThrownBy(() -> editing.splitChunk(1L, original.getId(), version, "前", oversized)).isInstanceOf(ApiRuntimeException.class);
+        setupJdbc.update("update ai_knowledge_document set chunk_count = ? where id = 1", KnowledgeChunkLimits.MAX_CHUNKS);
+        assertThatThrownBy(() -> editing.splitChunk(1L, original.getId(), version, "前", "后"))
+                .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("上限");
+        assertThat(chunks.fetchChunkList(1L)).hasSize(3);
+        assertThat(chunks.fetchChunkList(1L).getFirst().getContent()).isEqualTo(original.getContent());
+        assertThat(documents.requireDocument(1L, false).getVersion()).isEqualTo(version);
+    }
+
+    /** 模拟第二片落库失败，已移动顺序及原片内容必须和数量、确认状态一起回滚。 */
+    @Test
+    void rollsBackSplitWhenNewChunkCannotBeStored() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var initial = generation.generateChunks(1L, 0L, parameters);
+        var state = editing.confirmChunks(1L, initial.getVersion());
+        var before = chunks.fetchChunkList(1L);
+        setupJdbc.execute("alter table ai_knowledge_chunk add constraint ck_test_split_failure check (content <> '模拟落库失败')");
+        try {
+            Long version = state.getVersion();
+            assertThatThrownBy(() -> editing.splitChunk(1L, before.getFirst().getId(), version, "修改第一片", "模拟落库失败"))
+                    .isInstanceOf(DataAccessException.class);
+            assertThat(chunks.fetchChunkList(1L)).usingRecursiveComparison().isEqualTo(before);
+            var reloaded = documents.requireDocument(1L, false);
+            assertThat(reloaded.getVersion()).isEqualTo(version);
+            assertThat(reloaded.getChunkCount()).isEqualTo(3);
+            assertThat(reloaded.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.CONFIRMED);
+            assertThat(reloaded.getChunkConfirmedTime()).isEqualTo(state.getChunkConfirmedTime());
+        } finally {
+            setupJdbc.execute("alter table ai_knowledge_chunk drop constraint ck_test_split_failure");
+        }
+    }
+
     /** 重新生成失败不删除人工内容，也不覆盖最近成功参数。 */
     @Test
     void preservesOldResultsWhenRegenerationFails() {
@@ -156,8 +322,25 @@ class KnowledgeChunkPersistenceTest {
         when(engine.generateChunkList(any(), any(), any())).thenThrow(new ApiRuntimeException("测试引擎失败"));
         state = generation.generateChunks(1L, state.getVersion(), parameters);
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.FAILED);
+        assertThat(state.getChunkErrorMessage()).doesNotContain("测试引擎失败");
         assertThat(state.getChunkCount()).isEqualTo(3);
         assertThat(chunks.fetchChunkList(1L)).extracting("id").containsExactlyElementsOf(before.stream().map(c -> c.getId()).toList());
+        assertThat(documents.requireDocument(1L, false).getChunkParameters()).isEqualTo(parameters);
+    }
+
+    /** 固定分片规则原因可以安全回显，生成失败仍保留旧正文、参数和分片ID。 */
+    @Test
+    void reportsSafeChunkFailureWithoutDiscardingSavedResults() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var initial = generation.generateChunks(1L, 0L, parameters);
+        var before = chunks.fetchChunkList(1L);
+        var failure = new DocumentChunkException(Reason.PROTECTED_BLOCK_TOO_LARGE);
+        when(engine.generateChunkList(any(), any(), any())).thenThrow(failure);
+        var result = generation.generateChunks(1L, initial.getVersion(), parameters);
+        assertThat(result.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.FAILED);
+        assertThat(result.getChunkErrorMessage()).contains("表格或代码块", "提高上限", "已有分片已保留");
+        assertThat(chunks.fetchChunkList(1L)).usingRecursiveComparison().isEqualTo(before);
+        assertThat(documents.requireDocument(1L, false).getChunkErrorMessage()).isEqualTo(result.getChunkErrorMessage());
         assertThat(documents.requireDocument(1L, false).getChunkParameters()).isEqualTo(parameters);
     }
 
@@ -232,7 +415,7 @@ class KnowledgeChunkPersistenceTest {
         var chunkIds = chunks.fetchChunkList(1L).stream().map(chunk -> chunk.getId()).toList();
         RequestContext.getUser().setId(200L);
         RequestContext.getUser().setScopeOrgIds(Set.of(11L));
-        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null).getRecords())
+        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null, null).getRecords())
                 .extracting("id").containsExactly(1L);
         assertThat(KnowledgeDocumentConverter.INSTANCE.toVO(documents.requireDocument(1L, false)).getWritable()).isFalse();
         assertThat(chunks.fetchChunkList(1L)).hasSize(3)
@@ -252,6 +435,8 @@ class KnowledgeChunkPersistenceTest {
         assertThatThrownBy(() -> editing.modifyChunks(1L, version, edits)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> editing.mergeChunks(1L, version, chunkIds)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> editing.confirmChunks(1L, version)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.removeChunk(1L, chunkIds.getFirst(), version)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> editing.splitChunk(1L, chunkIds.getFirst(), version, "前", "后")).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> generation.generateChunks(1L, version, parameters)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> documentEditing.modifyDocument(1L, input, version)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> documentEditing.removeDocument(1L)).isInstanceOf(ApiRuntimeException.class);
@@ -324,6 +509,50 @@ class KnowledgeChunkPersistenceTest {
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
         assertThat(chunks.fetchChunkList(1L)).isNotEmpty();
         assertThat(chunks.fetchChunkList(1L).getFirst().getSource().documentItemRefs()).isNotEmpty();
+    }
+
+    /** 三种策略均经过实际Docling解析和本地重叠处理，参数及追加正文可以真实落库。 */
+    @ParameterizedTest
+    @EnumSource(DocumentChunkStrategy.class)
+    void generatesAndPersistsOverlapThroughRealDocling(DocumentChunkStrategy strategy) throws Exception {
+        var actual = new KnowledgeChunkGenerationService(registry);
+        when(engine.generateChunkList(any(), any(), any())).thenAnswer(call ->
+                actual.generateChunkList(call.getArgument(0), call.getArgument(1), call.getArgument(2)));
+        var original = new StringBuilder();
+        for (int index = 0; index < 12; index++) {
+            original.append("## Section ").append(index).append("\n\nDocument paragraph ").append(index)
+                    .append(" explains a distinct rule with complete context. Preserve its explanation and examples. Boundary marker ")
+                    .append(index).append(".\n\n");
+        }
+        byte[] bytes = original.toString().getBytes(StandardCharsets.UTF_8);
+        when(objects.openObject(any())).thenAnswer(call -> new ByteArrayInputStream(bytes));
+        var parameters = overlapParameters(strategy);
+        var state = generation.generateChunks(1L, 0L, parameters);
+        assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+        assertThat(documents.requireDocument(1L, false).getChunkParameters().basic().overlapTokens()).isEqualTo(8);
+        var records = chunks.fetchChunkList(1L);
+        assertThat(records).hasSizeGreaterThan(1);
+        String second = records.get(1).getContent();
+        assertThat(second.substring(0, second.indexOf("\n\n"))).contains("Boundary marker 0.");
+        if (strategy != DocumentChunkStrategy.HIERARCHICAL) {
+            assertThat(records).allSatisfy(chunk -> assertThat(chunk.getTokenCount()).isLessThanOrEqualTo(128));
+        }
+    }
+
+    private DocumentChunkParameters overlapParameters(DocumentChunkStrategy strategy) {
+        var basic = DocumentChunkParameters.Basic.builder().strategy(strategy).overlapTokens(8);
+        var normal = DocumentChunkParameters.Normal.builder();
+        if (strategy != DocumentChunkStrategy.HIERARCHICAL) {
+            basic.maxTokens(128);
+        }
+        if (strategy == DocumentChunkStrategy.REGEX) {
+            basic.pattern("(?m)^#{1,6} ");
+            normal.boundaryPlacement(RegexBoundaryPlacement.NEXT);
+        }
+        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(Duration.ofSeconds(90)).build();
+        var baseOptions = basic.build();
+        var normalOptions = normal.build();
+        return new DocumentChunkParameters(baseOptions, normalOptions, advanced);
     }
 
     private void insertDocument(long id) {

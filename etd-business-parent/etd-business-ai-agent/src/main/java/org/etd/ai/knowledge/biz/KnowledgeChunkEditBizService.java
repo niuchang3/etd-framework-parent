@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.constant.*;
 import org.etd.ai.knowledge.entity.*;
 import org.etd.ai.knowledge.model.KnowledgeChunkSource;
+import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -13,7 +14,7 @@ import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 分片人工编辑、相邻合并和确认；以资料行锁和版本串行化整份结果的修改。 */
+/** 分片人工编辑、相邻合并、拆分、删除和确认；以资料行锁和版本串行化整份结果的修改。 */
 @Service
 @RequiredArgsConstructor
 public class KnowledgeChunkEditBizService {
@@ -48,6 +49,64 @@ public class KnowledgeChunkEditBizService {
         chunks.modifyChunk(first);
         for (int index = 1; index < selected.size(); index++) { chunks.removeChunk(selected.get(index).getId()); }
         document.setChunkCount(records.size() - selected.size() + 1);
+        markDraft(document);
+        return document;
+    }
+
+    /**
+     * 将一片拆成两片，使用用户提交的最终正文，不重新调用Docling。
+     * @param id 资料ID
+     * @param chunkId 原分片ID，第一片保留此ID
+     * @param version 当前资料版本
+     * @param firstContent 第一片正文
+     * @param secondContent 第二片正文，两片均继承原来源，不能据此推断精确页码
+     * @return 数量加一、版本递增且确认状态已清除的资料
+     * @throws ApiRuntimeException 权限、状态、版本、正文或数量不符合要求时
+     */
+    @Transactional
+    public KnowledgeDocumentEntity splitChunk(Long id, Long chunkId, Long version,
+            String firstContent, String secondContent) {
+        var document = requireEditable(id, version);
+        requireSplitContent(firstContent);
+        requireSplitContent(secondContent);
+        if (document.getChunkCount() >= KnowledgeChunkLimits.MAX_CHUNKS) {
+            throw new ApiRuntimeException("分片数量已达上限，不能继续拆分");
+        }
+        var original = chunks.requireChunk(id, chunkId);
+        var second = KnowledgeChunkConverter.INSTANCE.toSplitEntity(original, secondContent);
+        second.setChunkIndex(Math.incrementExact(original.getChunkIndex()));
+        chunks.moveFollowingChunkList(id, original.getChunkIndex());
+        original.setContent(firstContent);
+        original.setTokenCount(DocumentTokenCounter.count(firstContent));
+        chunks.modifyChunk(original);
+        var newChunks = List.of(second);
+        chunks.createChunkList(newChunks);
+        document.setChunkCount(document.getChunkCount() + 1);
+        markDraft(document);
+        return document;
+    }
+
+    /** 在同一业务入口约束两段正文，内部调用也不能绕过HTTP校验写入无效内容。 */
+    private void requireSplitContent(String content) {
+        if (content == null || content.isBlank() || content.length() > KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS) {
+            throw new ApiRuntimeException("拆分后的每片正文不能为空白且不能超过长度限制");
+        }
+    }
+
+    /**
+     * 删除错误分片；允许删除最后一片，空结果不能确认，重新生成会重新计算全部分片。
+     * @param id 资料ID
+     * @param chunkId 必须属于当前资料的分片ID
+     * @param version 当前资料版本
+     * @return 数量和版本已更新的待确认状态
+     * @throws ApiRuntimeException 无维护权限、生成中、版本冲突或分片不存在时
+     */
+    @Transactional
+    public KnowledgeDocumentEntity removeChunk(Long id, Long chunkId, Long version) {
+        var document = requireEditable(id, version);
+        var chunk = chunks.requireChunk(id, chunkId);
+        chunks.removeChunk(chunk.getId());
+        document.setChunkCount(document.getChunkCount() - 1);
         markDraft(document);
         return document;
     }
