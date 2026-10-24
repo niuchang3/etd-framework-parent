@@ -23,16 +23,21 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.function.Function;
+import java.util.Date;
 
 /**
  * Web 接口时间序列化规范。
  * <p>
- * 时间点统一转换到配置时区并携带偏移量；无时区的 LocalDateTime 按配置时区解释。
+ * 时间点统一转换到配置时区，以年月日时分秒输出，不包含毫秒和时区后缀。
+ * 无时区的 LocalDateTime 按配置时区解释。
  */
 final class WebJacksonTimeModule {
 
+    /** HTTP 时间点显示格式，精确到秒。 */
+    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSXXX");
+            DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
@@ -44,6 +49,8 @@ final class WebJacksonTimeModule {
     static JavaTimeModule create(ZoneId zoneId) {
         JavaTimeModule module = new JavaTimeModule();
         module.addSerializer(Instant.class, instantSerializer(zoneId, Function.identity()));
+        // 仅适配第三方边界的传统日期返回值，业务模型仍使用 Instant。
+        module.addSerializer(Date.class, instantSerializer(zoneId, Date::toInstant));
         module.addSerializer(OffsetDateTime.class, instantSerializer(zoneId, OffsetDateTime::toInstant));
         module.addSerializer(ZonedDateTime.class, instantSerializer(zoneId, ZonedDateTime::toInstant));
         module.addSerializer(LocalDateTime.class, localDateTimeSerializer(zoneId));
