@@ -4,19 +4,22 @@ import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.springframework.stereotype.Service;
+import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 独立目录维护用例，结构变更统一在事务内串行化。 */
+/** 知识库内部分类维护用例，结构变更统一在事务内串行化。 */
 @Service
 @RequiredArgsConstructor
 public class KnowledgeFolderBizService {
     private final KnowledgeFolderService folders;
+    private final KnowledgeBaseService bases;
 
     /** @param entity 新目录信息 @return 新建目录标识 */
     @Transactional
     public Long createFolder(KnowledgeFolderEntity entity) {
         folders.lockStructure();
-        folders.requireParent(entity.getParentId(), entity.getOrgId());
+        bases.requireBase(entity.getKnowledgeBaseId(), true, true);
+        folders.requireParent(entity.getParentId(), entity.getKnowledgeBaseId());
         return folders.createFolder(entity);
     }
 
@@ -24,8 +27,9 @@ public class KnowledgeFolderBizService {
     @Transactional
     public void modifyFolder(KnowledgeFolderEntity entity, Long version) {
         folders.lockStructure();
-        folders.requireFolderByOrganization(entity.getId(), entity.getOrgId());
-        folders.requireParent(entity.getParentId(), entity.getOrgId());
+        bases.requireBase(entity.getKnowledgeBaseId(), true, true);
+        folders.requireFolderByBase(entity.getId(), entity.getKnowledgeBaseId());
+        folders.requireParent(entity.getParentId(), entity.getKnowledgeBaseId());
         folders.requireAcyclic(entity.getId(), entity.getParentId());
         folders.modifyFolder(entity, version);
     }

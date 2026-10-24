@@ -88,9 +88,10 @@ class KnowledgeChunkPersistenceTest {
     /** 每例重建两份独立资料，提供固定原件及引擎结果；不使用真实业务桶。 */
     @BeforeEach
     void prepare() throws Exception {
-        setupJdbc.execute("truncate table ai_knowledge_chunk, ai_knowledge_document, ai_knowledge_folder");
+        setupJdbc.execute("truncate table ai_knowledge_chunk, ai_knowledge_document, ai_knowledge_folder, ai_knowledge_base, ai_vector_768, ai_vector_1024, ai_vector_1536");
+        setupJdbc.execute("insert into ai_knowledge_base (id, tenant_id, org_id, create_by, name) values (10, 900001, 10, 100, '测试库')");
         setupJdbc.execute("""
-                insert into ai_knowledge_folder (id, tenant_id, org_id, create_by, parent_id, folder_name)
+                insert into ai_knowledge_folder (id, tenant_id, knowledge_base_id, create_by, parent_id, folder_name)
                 values (4, 900001, 10, 100, null, '共享祖先'),
                        (1, 900001, 10, 100, 4, '资料目录'),
                        (3, 900001, 10, 100, null, '非共享目录')
@@ -318,8 +319,8 @@ class KnowledgeChunkPersistenceTest {
     void maintainsChineseFullTextIndex() {
         String insert = """
                 insert into ai_knowledge_chunk
-                    (id, tenant_id, org_id, document_id, chunk_index, content, token_count, source)
-                values (9101, 900001, 10, 1, 0, '设备安装指南 PostgreSQL 2026', 12, '{}')
+                    (id, knowledge_base_id, tenant_id, org_id, document_id, chunk_index, content, token_count, source)
+                values (9101, 10, 900001, 10, 1, 0, '设备安装指南 PostgreSQL 2026', 12, '{}')
                 """;
         setupJdbc.update(insert);
         String search = """
@@ -444,17 +445,17 @@ class KnowledgeChunkPersistenceTest {
         var chunkIds = chunks.fetchChunkList(1L).stream().map(chunk -> chunk.getId()).toList();
         RequestContext.getUser().setId(200L);
         RequestContext.getUser().setScopeOrgIds(Set.of(11L));
-        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null, null).getRecords())
+        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null, null, 1L, null).getRecords())
                 .extracting("id").containsExactly(1L);
         assertThat(KnowledgeDocumentConverter.INSTANCE.toVO(documents.requireDocument(1L, false)).getWritable()).isFalse();
         assertThat(chunks.fetchChunkList(1L)).hasSize(3)
                 .allSatisfy(chunk -> assertThat(KnowledgeChunkConverter.INSTANCE.toVO(chunk).getWritable()).isFalse());
-        assertThat(folders.fetchDocumentFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
-        assertThat(folders.fetchDocumentFolderList(null, null)).allSatisfy(folder ->
+        assertThat(folders.fetchFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
+        assertThat(folders.fetchFolderList(null, null)).allSatisfy(folder ->
                 assertThat(KnowledgeFolderConverter.INSTANCE.toVO(folder).getNavigationOnly()).isTrue());
         assertThat(folders.fetchFolderList(null, null)).isEmpty();
         RequestContext.getUser().setPermissionTypes(Set.of());
-        assertThat(folders.fetchDocumentFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
+        assertThat(folders.fetchFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
         assertThat(documents.requireDocument(1L, false)).isNotNull();
         assertThat(chunks.fetchChunkList(1L)).hasSize(3);
         assertThatThrownBy(() -> documents.requireDocument(2L, false)).isInstanceOf(ApiRuntimeException.class);
@@ -474,7 +475,7 @@ class KnowledgeChunkPersistenceTest {
         RequestContext.setTenantCode(900002L);
         assertThatThrownBy(() -> documents.requireDocument(1L, false)).isInstanceOf(ApiRuntimeException.class);
         assertThat(chunks.fetchChunkList(1L)).isEmpty();
-        assertThat(folders.fetchDocumentFolderList(null, null)).isEmpty();
+        assertThat(folders.fetchFolderList(null, null)).isEmpty();
     }
 
     /** 撤回共享与分片标记同事务更新，已保存结果不被重新生成或删除。 */
@@ -492,7 +493,7 @@ class KnowledgeChunkPersistenceTest {
         RequestContext.getUser().setScopeOrgIds(Set.of(11L));
         assertThatThrownBy(() -> documents.requireDocument(1L, false)).isInstanceOf(ApiRuntimeException.class);
         assertThat(chunks.fetchChunkList(1L)).isEmpty();
-        assertThat(folders.fetchDocumentFolderList(null, null)).isEmpty();
+        assertThat(folders.fetchFolderList(null, null)).isEmpty();
     }
 
     /** 由其他部门管理者生成时，分片继承资料创建人，保证原作者本人范围始终一致。 */
@@ -587,10 +588,10 @@ class KnowledgeChunkPersistenceTest {
     private void insertDocument(long id) {
         String sql = """
                 insert into ai_knowledge_document
-                    (id, tenant_id, org_id, create_by, folder_id, document_name, original_filename, file_type,
+                    (id, knowledge_base_id, tenant_id, org_id, create_by, folder_id, document_name, original_filename, file_type,
                      storage_bucket, storage_object_key, content_type, file_size, file_sha256,
                      part_size_bytes, part_count, upload_expires_at, upload_status, uploaded_time)
-                values (?, 900001, 10, 100, 1, '测试资料', 'sample.md', 'md', 'test', 'test', 'text/markdown',
+                values (?, 10, 900001, 10, 100, 1, '测试资料', 'sample.md', 'md', 'test', 'test', 'text/markdown',
                         100, ?, 10485760, 1, current_timestamp + interval '1 day', 'completed', current_timestamp)
                 """;
         setupJdbc.update(sql, id, "0".repeat(64));

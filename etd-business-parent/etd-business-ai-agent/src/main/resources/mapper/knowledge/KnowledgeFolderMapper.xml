@@ -1,101 +1,53 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeFolderMapper">
-    <sql id="managedFolderSource">
-        select f.*
-        from ai_knowledge_folder f
-        <where>
-            <if test="orgId != null">
-                f.org_id = #{orgId}
-            </if>
+    <!-- 非维护者只返回公开文档所在分类与祖先，避免泄露私有资料分类。 -->
+    <select id="selectFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
+        with recursive visible as (
+            select f.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable
+            from ai_knowledge_folder f
+            join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
+            where f.del_flag = 0 and f.knowledge_base_id = #{knowledgeBaseId}
+              and (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
+                   or exists (select 1 from ai_knowledge_document d
+                              where d.folder_id = f.id and d.del_flag = 0 and d.is_public = true))
             <if test="dataStatus != null">
                 and f.data_status = #{dataStatus}
             </if>
-        </where>
-    </sql>
-
-    <!-- 只补齐同部门祖先路径；orgId可选，真实可见来源由框架数据权限过滤，不展开下级部门。 -->
-    <sql id="folderPaths">
-        paths as (
-            select *
-            from visible
+        ), paths as (
+            select * from visible
             union
-            select p.*
+            select p.*, child.writable
             from ai_knowledge_folder p
-            join paths child on p.id = child.parent_id
-                             and p.org_id = child.org_id
-            <if test="orgId != null">
-                where p.org_id = #{orgId}
-            </if>
+            join paths child on p.id = child.parent_id and p.knowledge_base_id = child.knowledge_base_id
+            where p.del_flag = 0
         )
-        select *
-        from paths
-        order by sort_order, id
-    </sql>
-
-    <select id="selectFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
-        with recursive visible as (
-            <include refid="managedFolderSource"/>
-        ),
-        <include refid="folderPaths"/>
+        select * from paths order by sort_order, id
     </select>
-
-    <!-- 共享只补齐资料所在路径；sf和祖先p用于导航，目录维护仍使用严格角色范围。 -->
-    <select id="selectDocumentFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
-        with recursive visible as (
-            <if test="includeManaged">
-                <include refid="managedFolderSource"/>
-                union
-            </if>
-            select sf.*
-            from ai_knowledge_folder sf
-            where sf.del_flag = 0
-              and exists (
-                select 1
-                from ai_knowledge_document d
-                where d.folder_id = sf.id
-                  and d.del_flag = 0
-                  and d.is_public = true
-              )
-            <if test="orgId != null">
-                and sf.org_id = #{orgId}
-            </if>
-            <if test="dataStatus != null">
-                and sf.data_status = #{dataStatus}
-            </if>
-        ),
-        <include refid="folderPaths"/>
+    <select id="selectWritable" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
+        select f.*, true as writable
+        from ai_knowledge_folder f
+        join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
+        where f.id = #{id} and f.del_flag = 0
+          and <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
     </select>
-
-    <!-- PostgreSQL事务级结构锁：统一固定命名，保护空树初始化和跨根移动，事务结束自动释放。 -->
     <select id="lockStructure" resultType="java.lang.String">
         select pg_advisory_xact_lock(hashtextextended('etd.ai.knowledge.structure', 0))
     </select>
-
-    <select id="selectAncestorCount" resultType="java.lang.Long">
+    <select id="selectAncestorCount" resultType="long">
         with recursive ancestors as (
-            select id, parent_id, tenant_id
-            from ai_knowledge_folder
-            where id = #{targetId}
+            select id, parent_id, knowledge_base_id from ai_knowledge_folder where id = #{targetId} and del_flag = 0
             union
-            select p.id, p.parent_id, p.tenant_id
-            from ai_knowledge_folder p
-            join ancestors a on p.id = a.parent_id
+            select p.id, p.parent_id, p.knowledge_base_id
+            from ai_knowledge_folder p join ancestors a on p.id = a.parent_id and p.knowledge_base_id = a.knowledge_base_id
+            where p.del_flag = 0
         )
-        select count(*)
-        from ancestors
-        where id = #{folderId}
+        select count(*) from ancestors where id = #{folderId}
     </select>
-
-    <select id="selectChildCount" resultType="java.lang.Long">
-        select count(*)
-        from ai_knowledge_folder
-        where parent_id = #{folderId}
+    <select id="selectChildCount" resultType="long">
+        select count(*) from ai_knowledge_folder where parent_id = #{folderId} and del_flag = 0
     </select>
-    <select id="selectDocumentCount" resultType="java.lang.Long">
-        select count(*)
-        from ai_knowledge_document
-        where folder_id = #{folderId}
-          and del_flag = 0
+    <select id="selectDocumentCount" resultType="long">
+        select count(*) from ai_knowledge_document where folder_id = #{folderId} and del_flag = 0
     </select>
 </mapper>

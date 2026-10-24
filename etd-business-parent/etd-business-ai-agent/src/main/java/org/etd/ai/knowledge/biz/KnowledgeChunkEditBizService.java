@@ -1,6 +1,7 @@
 package org.etd.ai.knowledge.biz;
 
 import java.time.Instant;
+import org.etd.framework.common.core.constants.BasicConstant;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.constant.*;
@@ -173,6 +174,8 @@ public class KnowledgeChunkEditBizService {
     }
 
     private void markDraft(KnowledgeDocumentEntity document) {
+        document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
+        document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
         document.setChunkStatus(KnowledgeChunkStatus.DRAFT);
         document.setChunkConfirmedTime(null);
         documents.modifyDocument(document);

@@ -17,6 +17,16 @@ import org.etd.framework.starter.mybaits.core.OrgScopedEntity;
 @ToString(onlyExplicitlyIncluded = true)
 @TableName(value = "ai_knowledge_chunk", autoResultMap = true)
 public class KnowledgeChunkEntity extends OrgScopedEntity {
+    /** 所属知识库，写入时由可信归属校验。 */
+    private Long knowledgeBaseId;
+    /** 正文处理版本，内容变更后递增，防止旧向量继续被召回。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("0")
+    private Long processingVersion;
+    /** 知识库维护资格，不由文档上传人决定。 */
+    @TableField(exist = false)
+    private Boolean writable;
+
     /** 继承所属资料的共享标记，默认false；仅扩大读取范围，不单独设置。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("false")

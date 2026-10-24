@@ -24,7 +24,7 @@ public interface KnowledgeDocumentConverter {
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "isPublic", source = "isPublic")
     @Mapping(target = "folderId", source = "folderId")
-    @Mapping(target = "orgId", source = "orgId")
+    @Mapping(target = "knowledgeBaseId", source = "knowledgeBaseId")
     @Mapping(target = "originalFilename", source = "originalFilename")
     @Mapping(target = "contentType", source = "contentType")
     @Mapping(target = "fileSize", source = "fileSize")
@@ -47,6 +47,6 @@ public interface KnowledgeDocumentConverter {
 
     /** @param entity 已授权读取的资料 @return 当前角色范围是否允许维护该资料 */
     default boolean canManageDocument(KnowledgeDocumentEntity entity) {
-        return DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy());
+        return Boolean.TRUE.equals(entity.getWritable());
     }
 }

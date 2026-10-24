@@ -22,8 +22,8 @@ public class KnowledgeFolderVO {
     /** 更新时间点。 */
     private Instant updateTime;
 
-    /** 所属部门标识，用于左侧部门与右侧目录树联动。 */
-    private Long orgId;
+    /** 所属知识库ID。 */
+    private Long knowledgeBaseId;
 
     /** 父目录标识，根目录为空。 */
     private Long parentId;

@@ -8,6 +8,9 @@ import org.etd.ai.knowledge.model.KnowledgeChunkSource;
 @Data
 @ToString(onlyExplicitlyIncluded = true)
 public class KnowledgeChunkVO {
+    /** 所属知识库ID。 */
+    private Long knowledgeBaseId;
+
     /** 是否在当前租户内共享读取；分片继承所属资料。 */
     private Boolean isPublic;
     /** 当前角色数据范围是否允许维护；还须具备接口write权限。 */

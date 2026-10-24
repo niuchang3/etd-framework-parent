@@ -6,7 +6,7 @@
 
 - `ai_model`：平台管理员通过模型管理接口维护的模型信息，无 `tenant_id`；模型代码、Logo、密钥获取链接和接入指南在此维护。`GET /v1/models` 支持 `providerCode`、`modelType`、`dataStatus`、`current`、`size`；`GET /v1/models/{id}` 返回详情。资源码 `ai:model`。`POST /v1/models` 新增，`PUT /v1/models/{id}` 按版本修改，`DELETE /v1/models/{id}` 逻辑删除；仅平台管理员允许写，普通租户只读已启用记录，管理员可查询停用记录。
 - `ai_model_connection`：一条连接器对应一个平台模型，保存 `model_id`、`protocol`、实际服务地址与加密凭证，没有连接名称。`/v1/model-connections` 提供 GET/POST，`/{id}` 提供 GET/PUT/DELETE。资源码 `ai:model-connection`。分页支持 `modelId`、`dataStatus`、`current`、`size`，响应通过 SQL 关联返回模型名称、类型、Logo 和服务商。
-- 独立目录：`/v1/knowledge-folders`，资源码 `ai:knowledge-folder`，原部门归属和数据权限语义不变。
+- 知识库入口：`/v1/knowledge-bases`，资源码 `ai:knowledge-base`；库内分类使用 `/v1/knowledge-folders?knowledgeBaseId=...`，继承知识库权限，不再独立按部门授权。
 
 模型管理通过服务商字典值分类；一个服务商下有效模型代码唯一，不同服务商可收录相同模型。不从服务商品牌推断协议；租户在连接器中选择协议，当前可保存 `dashscope`、`ollama`、`openai_compatible`。保存配置不表示完成了连通性测试，也不表示所有类型的模型调用均已实现。本次不新增模型调用、模型发现或探测接口。
 
@@ -16,7 +16,7 @@
 
 ## 数据库初始化
 
-`../etd-business-common/sql/ai.sql` 定义模型、模型连接器、知识库目录及资料上传表，由部署人员显式执行，不随应用启动执行。知识资料支持原件上传、Docling手动分片、基础参数 `overlapTokens` 控制的本地Token重叠（默认0关闭）、预览、正文编辑、相邻合并和用户确认，结果存入 `ai_knowledge_chunk`。资料通过 `isPublic` 设置租户内共享读取，分片同步继承；`@DataPermissionTable.publicColumn` 仅扩大读取范围，维护操作仍按角色数据范围校验。暂不提供向量化、检索发布或工作流编排，也不创建检索扩展。
+`../etd-business-common/sql/ai.sql` 定义模型、连接器、知识库、库内分类、资料、分片及 768/1024/1536 维向量表，由部署人员显式执行，依赖 zhparser 和 pgvector。现有上传、Docling 分片及人工编辑功能保留；资料默认禁用但可进行管理召回测试，启用且分片确认、索引就绪后参与正式检索。知识库提供公开默认值，文档可单独调整；公开不授予维护权限。索引通过知识库详情展示后台进度，模型或维度变化后构建新代次并切换。支持全文、向量、RRF 混合召回和可选 DashScope 原生重排；向量调用支持 DashScope、OpenAI 兼容与 Ollama。API 根地址分别使用服务商的 `/api/v1`、OpenAI 兼容 `/v1` 根路径或 Ollama 服务根地址，不自动尝试其他协议。暂不提供 Agent 工作流编排。
 
 `../etd-business-common/sql/init.sql` 在 UPMS 数据库统一初始化 UPMS、AI、Event 的公共字典、菜单和系统参数；先执行 `../etd-business-common/sql/upms.sql`，再执行 `init.sql` 和 `upms_data.sql`。默认租户菜单授权与其他UPMS专属数据统一放在 `upms_data.sql`。脚本不自动执行，也不作为旧环境清理脚本；旧模型配置菜单及其租户关系已从初始化定义中删除。
 

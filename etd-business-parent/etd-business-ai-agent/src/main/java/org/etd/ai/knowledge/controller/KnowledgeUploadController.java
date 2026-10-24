@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents/uploads")
-@Permission(KnowledgePermissionCode.DOCUMENT)
+@Permission(KnowledgePermissionCode.BASE)
 public class KnowledgeUploadController {
     private final KnowledgeUploadBizService uploads;
     private final KnowledgeUploadProperties properties;

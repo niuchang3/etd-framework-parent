@@ -4,10 +4,25 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 /** 资料及上传主记录的数据访问。 */
+// 继承权限由知识库可信范围SQL/授权入口控制，避免对子表按上传人重复过滤；租户拦截仍启用。
+@InterceptorIgnore(dataPermission = "true")
 public interface KnowledgeDocumentMapper extends BaseMapper<KnowledgeDocumentEntity> {
+    /** @param page 分页 @param knowledgeBaseId 知识库 @param folderId 单目录 @param folderIds 多目录
+     * @param keyword 名称 @param uploadStatus 上传状态 @param chunkStatus 分片状态 @param dataStatus 启停 @param scope 可信范围 @return 可读文档 */
+    IPage<KnowledgeDocumentEntity> selectReadablePage(IPage<KnowledgeDocumentEntity> page,
+        @Param("knowledgeBaseId") Long knowledgeBaseId, @Param("folderId") Long folderId,
+        @Param("folderIds") List<Long> folderIds, @Param("keyword") String keyword,
+        @Param("uploadStatus") String uploadStatus, @Param("chunkStatus") String chunkStatus,
+        @Param("dataStatus") Integer dataStatus, @Param("scope") DataPermissionScope scope);
+    /** @param id 文档 @param lock 是否锁定 @param scope 可信范围 @return 可读文档 */
+    KnowledgeDocumentEntity selectAccessible(@Param("id") Long id, @Param("lock") boolean lock,
+        @Param("scope") DataPermissionScope scope);
+
     /** 后台清理专用入口，跨租户读取到期上传并加行锁，不向Controller暴露。
      * @return 小批量过期上传记录，跳过其他实例持有的锁 */
     @InterceptorIgnore(tenantLine = "true", dataPermission = "true")

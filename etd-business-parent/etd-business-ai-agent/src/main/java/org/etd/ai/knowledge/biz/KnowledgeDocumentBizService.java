@@ -9,6 +9,10 @@ import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
+import org.etd.ai.knowledge.service.KnowledgeBaseService;
+import org.etd.ai.knowledge.service.KnowledgeRetrievalService;
+import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,8 @@ public class KnowledgeDocumentBizService {
     private final KnowledgeFolderService folders;
     private final KnowledgeObjectService objects;
     private final KnowledgeChunkService chunks;
+    private final KnowledgeBaseService bases;
+    private final KnowledgeRetrievalService retrieval;
 
     /** @param id 资料ID @param input 可编辑配置 @param version 当前版本 */
     @Transactional
@@ -34,7 +40,7 @@ public class KnowledgeDocumentBizService {
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("资料已变化，请刷新后重试");
         }
-        var folder = folders.requireWritable(input.getFolderId());
+        var folder = folders.requireFolderByBase(input.getFolderId(), document.getKnowledgeBaseId());
         if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("不能移入停用目录");
         }
@@ -57,8 +63,30 @@ public class KnowledgeDocumentBizService {
             log.error("知识资料原件删除失败，资料ID={}，异常类型={}", id, exception.getClass().getSimpleName());
             throw new ApiRuntimeException("原件清理失败，请重试删除");
         }
+        retrieval.removeDocumentVectors(id);
         chunks.removeChunkList(id);
         documents.removeDocument(id);
+    }
+
+    /** @param id 文档 @param version 当前版本 @param dataStatus 正式启停，禁用不删除索引 */
+    @Transactional
+    public void modifyDocumentStatus(Long id, Long version, Integer dataStatus) {
+        var document = documents.requireDocument(id, true);
+        if (!Objects.equals(document.getVersion(), version)) {
+            throw new ApiRuntimeException("文档已变化，请刷新后重试");
+        }
+        if (dataStatus == BasicConstant.DataStatus.ENABLED_CODE) {
+            var base = bases.requireBase(document.getKnowledgeBaseId(), true, false);
+            if (!KnowledgeChunkStatus.CONFIRMED.equals(document.getChunkStatus()) || document.getChunkCount() == 0
+                    || !KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
+                throw new ApiRuntimeException("请先完成上传并确认有效分片");
+            }
+            if (!KnowledgeRetrievalPolicy.KEYWORD.equals(base.getRetrievalMode()) && !retrieval.isDocumentIndexed(base, id)) {
+                throw new ApiRuntimeException("文档当前内容尚未完成生效向量索引，请先初始化");
+            }
+        }
+        document.setDataStatus(dataStatus);
+        documents.modifyDocument(document);
     }
 
     /** @param id 已上传资料ID @return 受鉴权保护的临时下载地址 */

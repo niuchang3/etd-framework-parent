@@ -17,6 +17,24 @@ import org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkParametersTypeHandl
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ai_knowledge_document", autoResultMap = true)
 public class KnowledgeDocumentEntity extends OrgScopedEntity {
+    /** 当前检索模式下的索引是否就绪，实时关联确认状态及生效向量版本。 */
+    @TableField(exist = false)
+    private Boolean indexReady;
+
+    /** 文档默认禁用，测试确认后显式启用。 */
+    @TableField(value = "data_status", fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.framework.common.core.constants.BasicConstant$DataStatus).DISABLED.getCode()")
+    private Integer dataStatus;
+    /** 所属知识库，写入时由可信归属校验。 */
+    private Long knowledgeBaseId;
+    /** 正文处理版本，内容变更后递增，防止旧向量继续被召回。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("0")
+    private Long processingVersion;
+    /** 知识库维护资格，不由文档上传人决定。 */
+    @TableField(exist = false)
+    private Boolean writable;
+
     /** 是否在当前租户内共享读取，默认false；不授予维护权限。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("false")

@@ -4,6 +4,7 @@ import org.etd.common.permission.constant.KnowledgePermissionCode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.etd.framework.starter.client.core.permission.annotation.Permission;
 import jakarta.validation.Valid;
+import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentStatusDTO;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentSaveDTO;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents")
-@Permission(KnowledgePermissionCode.DOCUMENT)
+@Permission(KnowledgePermissionCode.BASE)
 public class KnowledgeDocumentController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeDocumentBizService biz;
@@ -33,7 +34,7 @@ public class KnowledgeDocumentController {
     @GetMapping
     public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {
         var page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
-                query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getChunkStatus());
+                query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getChunkStatus(), query.getKnowledgeBaseId(), query.getDataStatus());
         var result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
         return ResultModel.success(result);
     }
@@ -51,6 +52,13 @@ public class KnowledgeDocumentController {
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody KnowledgeDocumentSaveDTO dto) {
         var input = KnowledgeDocumentConverter.INSTANCE.toEntity(dto);
         biz.modifyDocument(id, input, dto.getVersion());
+        return ResultModel.success(true);
+    }
+    /** @param id 文档 @param dto 当前版本及目标启停 @return 修改结果 */
+    @PutMapping("/{id}/status")
+    @AutoLog("修改知识文档正式启停状态")
+    public ResultModel<Boolean> updateStatus(@PathVariable Long id, @Valid @RequestBody KnowledgeDocumentStatusDTO dto) {
+        biz.modifyDocumentStatus(id, dto.getVersion(), dto.getDataStatus());
         return ResultModel.success(true);
     }
     /** @param id 资料ID @return 临时下载地址，不得长期保存 */

@@ -22,6 +22,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class KnowledgeUploadBizService {
     private final KnowledgeFolderService folders;
+    private final KnowledgeBaseService bases;
     private final KnowledgeDocumentService documents;
     private final KnowledgeObjectService objects;
     private final KnowledgeUploadProperties properties;
@@ -52,8 +53,16 @@ public class KnowledgeUploadBizService {
 
     /** 目录结构锁避免上传初始化与目录删除交叉，INSERT权限由资料服务校验。 */
     private KnowledgeDocumentEntity initializeUpload(KnowledgeDocumentEntity document) {
+        var base = bases.requireBase(document.getKnowledgeBaseId(), true, false);
+        if (base.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
+            throw new ApiRuntimeException("停用知识库不能上传文档");
+        }
+        document.setOrgId(base.getOrgId());
+        if (document.getIsPublic() == null) {
+            document.setIsPublic(base.getIsPublic());
+        }
         folders.lockStructure();
-        var folder = folders.requireWritable(document.getFolderId());
+        var folder = folders.requireFolderByBase(document.getFolderId(), document.getKnowledgeBaseId());
         if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("停用目录不能上传资料");
         }

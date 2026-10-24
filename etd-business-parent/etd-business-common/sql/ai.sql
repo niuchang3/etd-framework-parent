@@ -155,6 +155,84 @@ create index idx_ai_model_connection_model on ai_model_connection (model_id)
 /*==============================================================*/
 /* table: ai_knowledge_folder */
 /*==============================================================*/
+-- 知识库承接数据权限；分类与资料均属于该边界。
+create table ai_knowledge_base
+(
+    id bigint not null primary key,
+    create_time timestamp(6) with time zone not null default current_timestamp,
+    create_by bigint,
+    update_time timestamp(6) with time zone not null default current_timestamp,
+    update_by bigint,
+    tenant_id bigint not null,
+    org_id bigint not null,
+    del_flag smallint not null default 0,
+    data_status integer not null default 1,
+    version bigint not null default 0,
+    name varchar(100) not null,
+    description varchar(1000),
+    is_public boolean not null default false,
+    retrieval_mode varchar(16) not null default 'keyword',
+    keyword_recall_size integer not null default 30,
+    vector_recall_size integer not null default 30,
+    top_k integer not null default 5,
+    similarity_threshold double precision,
+    rerank_enabled boolean not null default false,
+    rerank_connection_id bigint,
+    rerank_threshold double precision,
+    embedding_connection_id bigint,
+    dimensions integer,
+    active_connection_id bigint,
+    active_dimensions integer,
+    active_index_version bigint not null default 0,
+    building_index_version bigint not null default 0,
+    index_status varchar(16) not null default 'idle',
+    index_total integer not null default 0,
+    index_completed integer not null default 0,
+    index_error varchar(1000),
+    index_started_time timestamp(6) with time zone,
+    index_lease_until timestamp(6) with time zone,
+    constraint ck_ai_base_name check (btrim(name) <> ''),
+    constraint ck_ai_base_status check (data_status in (0, 1) and del_flag in (0, 1)),
+    constraint ck_ai_base_mode check (retrieval_mode in ('keyword', 'vector', 'hybrid')),
+    constraint ck_ai_base_dimensions check (dimensions in (768, 1024, 1536) and active_dimensions in (768, 1024, 1536)),
+    constraint ck_ai_base_embedding check ((embedding_connection_id is null) = (dimensions is null)),
+    constraint ck_ai_base_active check ((active_connection_id is null) = (active_dimensions is null)
+        and ((active_index_version = 0 and active_connection_id is null) or (active_index_version > 0 and active_connection_id is not null))),
+    constraint ck_ai_base_rerank check ((not rerank_enabled and rerank_connection_id is null) or (rerank_enabled and rerank_connection_id is not null)),
+    constraint ck_ai_base_counts check (keyword_recall_size between 1 and 200 and vector_recall_size between 1 and 200 and top_k between 1 and 100),
+    constraint ck_ai_base_threshold check (similarity_threshold between -1 and 1),
+    constraint ck_ai_base_index check (index_status in ('idle', 'building', 'ready', 'failed') and index_total >= 0 and index_completed between 0 and index_total)
+);
+comment on table ai_knowledge_base is '知识库基本信息、检索配置及当前/待生效索引状态';
+create unique index uk_ai_base_name on ai_knowledge_base (tenant_id, name) where del_flag = 0;
+create index idx_ai_base_org on ai_knowledge_base (tenant_id, org_id, create_time desc, id desc) where del_flag = 0;
+create index idx_ai_base_creator on ai_knowledge_base (tenant_id, create_by) where del_flag = 0;
+create index idx_ai_base_public on ai_knowledge_base (tenant_id) where is_public = true and del_flag = 0;
+
+comment on column ai_knowledge_base.version is '乐观锁版本，更新时必须回传。';
+comment on column ai_knowledge_base.name is '知识库名称，租户内唯一。';
+comment on column ai_knowledge_base.description is '知识库简介。';
+comment on column ai_knowledge_base.is_public is '是否租户内共享，并作为新文档公开默认值。';
+comment on column ai_knowledge_base.retrieval_mode is '检索模式：keyword、vector、hybrid。';
+comment on column ai_knowledge_base.keyword_recall_size is '全文召回数量。';
+comment on column ai_knowledge_base.vector_recall_size is '向量召回数量。';
+comment on column ai_knowledge_base.top_k is '最终返回数量上限。';
+comment on column ai_knowledge_base.similarity_threshold is '原始余弦相似度下限，空表示不过滤。';
+comment on column ai_knowledge_base.rerank_enabled is '是否启用重排。';
+comment on column ai_knowledge_base.rerank_connection_id is '重排模型连接ID，关闭时为空。';
+comment on column ai_knowledge_base.rerank_threshold is '重排分数下限，空表示不限制。';
+comment on column ai_knowledge_base.embedding_connection_id is '待构建的向量模型连接ID。';
+comment on column ai_knowledge_base.dimensions is '待构建维度，仅768、1024或1536。';
+comment on column ai_knowledge_base.active_connection_id is '正式生效索引使用的模型连接ID。';
+comment on column ai_knowledge_base.active_dimensions is '正式生效索引维度。';
+comment on column ai_knowledge_base.active_index_version is '生效向量索引代次，0表示尚未初始化。';
+comment on column ai_knowledge_base.building_index_version is '正在构建或最近失败的索引代次。';
+comment on column ai_knowledge_base.index_status is 'idle、building、ready或failed。';
+comment on column ai_knowledge_base.index_total is '本次需要处理的分片数。';
+comment on column ai_knowledge_base.index_completed is '本次已完成分片数。';
+comment on column ai_knowledge_base.index_error is '脱敏后的索引错误。';
+comment on column ai_knowledge_base.index_started_time is '本次构建开始时间，用于超时恢复。';
+
 create table ai_knowledge_folder
 (
     id                          bigint not null,
@@ -164,7 +242,7 @@ create table ai_knowledge_folder
     update_by                   bigint,
     data_status                 integer not null default 1,
     tenant_id                   bigint not null,
-    org_id                      bigint not null,
+    knowledge_base_id           bigint not null,
     del_flag                    smallint not null default 0,
     version                     bigint not null default 0,
     parent_id                   bigint,
@@ -180,52 +258,41 @@ create table ai_knowledge_folder
     constraint ck_ai_knowledge_folder_parent check (parent_id is null or parent_id <> id)
 );
 
-comment on table ai_knowledge_folder is '知识库目录：按部门维护的分类目录树，资料直接归属于目录';
+comment on table ai_knowledge_folder is '知识库目录：知识库内部分类树，资料直接归属于目录';
 comment on column ai_knowledge_folder.id is '主键ID，由应用分配全局唯一的雪花ID，不使用数据库自增';
 comment on column ai_knowledge_folder.create_time is '创建时间，默认当前时间；保存带时区的时间点';
-comment on column ai_knowledge_folder.create_by is '目录创建用户ID，可为空；本人数据范围是否可见由框架数据权限规则决定';
+comment on column ai_knowledge_folder.create_by is '目录创建用户ID，可为空；仅用于审计，不决定目录权限';
 comment on column ai_knowledge_folder.update_time is '最后修改时间，新增时默认当前时间，后续修改由应用更新';
 comment on column ai_knowledge_folder.update_by is '最后修改用户ID，可为空';
 comment on column ai_knowledge_folder.data_status is '启停状态：0禁用、1启用，默认1';
 comment on column ai_knowledge_folder.tenant_id is '所属租户ID，由后端租户上下文确定';
-comment on column ai_knowledge_folder.org_id is '目录所属部门ID，采用前端传入值；访问范围由框架数据权限控制，不在AI服务中校验部门归属';
 comment on column ai_knowledge_folder.del_flag is '逻辑删除标记：0未删除、1已删除，默认0';
 comment on column ai_knowledge_folder.version is '乐观锁版本号，默认0且不能为负；用于检测并发修改，由应用维护递增';
-comment on column ai_knowledge_folder.parent_id is '父目录ID，关联本表id；根目录为空，父子目录须属于同一租户和部门，不允许目录循环引用';
-comment on column ai_knowledge_folder.folder_name is '目录名称，最多100字；不能有首尾空格，同租户同部门同父目录的未删除目录不能重名';
+comment on column ai_knowledge_folder.parent_id is '父目录ID，关联本表id；根目录为空，父子目录须属于同一知识库，不允许目录循环引用';
+comment on column ai_knowledge_folder.folder_name is '目录名称，最多100字；不能有首尾空格，同知识库同父目录的未删除目录不能重名';
 comment on column ai_knowledge_folder.description is '目录用途或分类说明，可为空，最多500字';
 comment on column ai_knowledge_folder.sort_order is '同级目录排序值，默认0且不能为负；数值越小越靠前，相同时按ID排序';
 
--- PostgreSQL 16 使用 NULLS NOT DISTINCT，根目录 parent_id 为空时也禁止同级重名。
+-- 同一知识库同级目录唯一，根目录空父节点同样受约束。
 create unique index uk_ai_knowledge_folder_name on ai_knowledge_folder
-    (tenant_id, org_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
--- 支持同级目录排序及递归树查询，关联完整性由目录业务层校验。
+    (knowledge_base_id, parent_id, folder_name) nulls not distinct where del_flag = 0;
 create index idx_ai_knowledge_folder_parent on ai_knowledge_folder
-    (tenant_id, org_id, parent_id, sort_order, id);
-
--- 所选部门列表过滤及全树排序，状态为可选筛选字段。
-create index idx_ai_knowledge_folder_org_sort on ai_knowledge_folder
-    (tenant_id, org_id, sort_order, id) include (data_status) where del_flag = 0;
-
--- 不指定部门时按租户读取全树，并保持目录排序。
-create index idx_ai_knowledge_folder_tenant_sort on ai_knowledge_folder
-    (tenant_id, sort_order, id) include (data_status) where del_flag = 0;
-
--- 本人范围按创建人过滤，部门作为可选附加筛选字段。
-create index idx_ai_knowledge_folder_creator_sort on ai_knowledge_folder
-    (tenant_id, create_by, sort_order, id) include (org_id) where del_flag = 0;
+    (knowledge_base_id, parent_id, sort_order, id) where del_flag = 0;
+comment on column ai_knowledge_folder.knowledge_base_id is '所属知识库ID，分类无独立数据权限';
 
 /*==============================================================*/
 /* table: ai_knowledge_document */
 /*==============================================================*/
 create table ai_knowledge_document
 (
+    knowledge_base_id bigint not null,
+    processing_version bigint not null default 0,
     id                          bigint not null,
     create_time                 timestamp(6) with time zone not null default current_timestamp,
     create_by                   bigint,
     update_time                 timestamp(6) with time zone not null default current_timestamp,
     update_by                   bigint,
-    data_status                 integer not null default 1,
+    data_status                 integer not null default 0,
     tenant_id                   bigint not null,
     org_id                      bigint not null,
     del_flag                    smallint not null default 0,
@@ -283,7 +350,7 @@ comment on column ai_knowledge_document.create_time is '创建时间，默认当
 comment on column ai_knowledge_document.create_by is '文档创建用户ID，可为空；框架本人数据权限通过此字段匹配用户';
 comment on column ai_knowledge_document.update_time is '最后修改时间，新增时默认当前时间，后续修改由应用更新';
 comment on column ai_knowledge_document.update_by is '最后修改用户ID，可为空';
-comment on column ai_knowledge_document.data_status is '启停状态：0禁用、1启用，默认1';
+comment on column ai_knowledge_document.data_status is '正式检索资格：0禁用、1启用，默认禁用但允许管理及召回测试';
 comment on column ai_knowledge_document.tenant_id is '所属租户ID，由后端租户上下文确定';
 comment on column ai_knowledge_document.org_id is '文档的数据归属部门ID，用于组织数据权限过滤；独立于目录归属部门';
 comment on column ai_knowledge_document.del_flag is '逻辑删除标记：0未删除、1已删除，默认0';
@@ -342,6 +409,8 @@ create index idx_ai_document_folder on ai_knowledge_document (folder_id) where d
 -- 分片直接按全局资料ID定位，索引支持预览排序、合并邻接检查和整份结果清理。
 create table ai_knowledge_chunk
 (
+    knowledge_base_id bigint not null,
+    processing_version bigint not null default 0,
     id bigint not null primary key,
     create_time timestamp(6) with time zone not null default current_timestamp,
     create_by bigint,
@@ -386,4 +455,133 @@ comment on column ai_knowledge_chunk.update_by is '修改人';
 comment on column ai_knowledge_chunk.data_status is '启停状态，默认1';
 comment on column ai_knowledge_chunk.del_flag is '逻辑删除标记，默认0';
 
+
+
+
+create extension if not exists vector with schema public;
+
+-- 固定768维，模型不同或索引代次不同的向量不得混查。
+create table ai_vector_768
+(
+    id bigint not null primary key,
+    content text not null,
+    metadata jsonb not null,
+    vector vector(768) not null,
+    tenant_id bigint generated always as ((metadata->>'tenant_id')::bigint) stored not null,
+    knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
+    document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
+    chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
+    index_version bigint generated always as ((metadata->>'index_version')::bigint) stored not null,
+    processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
+    constraint ck_ai_vector_768_content check (btrim(content) <> ''),
+    constraint ck_ai_vector_768_metadata check (jsonb_typeof(metadata) = 'object'),
+    constraint uk_ai_vector_768_chunk unique (knowledge_base_id, index_version, chunk_id, processing_version)
+);
+comment on table ai_vector_768 is '768维向量副本，权限与正式发布状态由知识库及文档实时JOIN校验，不缓存公开标记';
+comment on column ai_vector_768.index_version is '知识库构建代次，与生效或待生效版本匹配';
+comment on column ai_vector_768.processing_version is '向量化时的文档内容轮次，正文变化后失效';
+create index idx_ai_vector_768_hnsw on ai_vector_768 using hnsw (vector vector_cosine_ops);
+create index idx_ai_vector_768_scope on ai_vector_768 (tenant_id, knowledge_base_id, index_version);
+create index idx_ai_vector_768_document on ai_vector_768 (document_id, processing_version);
+
+-- 固定1024维，模型不同或索引代次不同的向量不得混查。
+create table ai_vector_1024
+(
+    id bigint not null primary key,
+    content text not null,
+    metadata jsonb not null,
+    vector vector(1024) not null,
+    tenant_id bigint generated always as ((metadata->>'tenant_id')::bigint) stored not null,
+    knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
+    document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
+    chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
+    index_version bigint generated always as ((metadata->>'index_version')::bigint) stored not null,
+    processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
+    constraint ck_ai_vector_1024_content check (btrim(content) <> ''),
+    constraint ck_ai_vector_1024_metadata check (jsonb_typeof(metadata) = 'object'),
+    constraint uk_ai_vector_1024_chunk unique (knowledge_base_id, index_version, chunk_id, processing_version)
+);
+comment on table ai_vector_1024 is '1024维向量副本，权限与正式发布状态由知识库及文档实时JOIN校验，不缓存公开标记';
+comment on column ai_vector_1024.index_version is '知识库构建代次，与生效或待生效版本匹配';
+comment on column ai_vector_1024.processing_version is '向量化时的文档内容轮次，正文变化后失效';
+create index idx_ai_vector_1024_hnsw on ai_vector_1024 using hnsw (vector vector_cosine_ops);
+create index idx_ai_vector_1024_scope on ai_vector_1024 (tenant_id, knowledge_base_id, index_version);
+create index idx_ai_vector_1024_document on ai_vector_1024 (document_id, processing_version);
+
+-- 固定1536维，模型不同或索引代次不同的向量不得混查。
+create table ai_vector_1536
+(
+    id bigint not null primary key,
+    content text not null,
+    metadata jsonb not null,
+    vector vector(1536) not null,
+    tenant_id bigint generated always as ((metadata->>'tenant_id')::bigint) stored not null,
+    knowledge_base_id bigint generated always as ((metadata->>'knowledge_base_id')::bigint) stored not null,
+    document_id bigint generated always as ((metadata->>'document_id')::bigint) stored not null,
+    chunk_id bigint generated always as ((metadata->>'chunk_id')::bigint) stored not null,
+    model_connection_id bigint generated always as ((metadata->>'model_connection_id')::bigint) stored not null,
+    index_version bigint generated always as ((metadata->>'index_version')::bigint) stored not null,
+    processing_version bigint generated always as ((metadata->>'processing_version')::bigint) stored not null,
+    constraint ck_ai_vector_1536_content check (btrim(content) <> ''),
+    constraint ck_ai_vector_1536_metadata check (jsonb_typeof(metadata) = 'object'),
+    constraint uk_ai_vector_1536_chunk unique (knowledge_base_id, index_version, chunk_id, processing_version)
+);
+comment on table ai_vector_1536 is '1536维向量副本，权限与正式发布状态由知识库及文档实时JOIN校验，不缓存公开标记';
+comment on column ai_vector_1536.index_version is '知识库构建代次，与生效或待生效版本匹配';
+comment on column ai_vector_1536.processing_version is '向量化时的文档内容轮次，正文变化后失效';
+create index idx_ai_vector_1536_hnsw on ai_vector_1536 using hnsw (vector vector_cosine_ops);
+create index idx_ai_vector_1536_scope on ai_vector_1536 (tenant_id, knowledge_base_id, index_version);
+create index idx_ai_vector_1536_document on ai_vector_1536 (document_id, processing_version);
+
+-- 覆盖正式/测试召回的知识库与启停筛选，携带权限与内容版本复核字段。
+create index idx_ai_document_recall on ai_knowledge_document (knowledge_base_id, data_status, id)
+    include (is_public, processing_version)
+    where del_flag = 0 and upload_status = 'completed' and chunk_status = 'confirmed';
+-- 覆盖库内分页、公开资料入口及全文/向量候选关联。
+create index idx_ai_document_base on ai_knowledge_document (knowledge_base_id, create_time desc, id desc) where del_flag = 0;
+create index idx_ai_document_public on ai_knowledge_document (knowledge_base_id, folder_id) where is_public = true and del_flag = 0;
+create index idx_ai_chunk_base on ai_knowledge_chunk (knowledge_base_id, document_id) where del_flag = 0;
+comment on column ai_knowledge_document.knowledge_base_id is '所属知识库，上传与移动须校验分类归属';
+comment on column ai_knowledge_document.processing_version is '正文处理轮次，正文编辑和重新生成递增，元数据编辑不变';
+comment on column ai_knowledge_chunk.knowledge_base_id is '所属知识库，由资料继承';
+comment on column ai_knowledge_chunk.processing_version is '生成时的资料轮次，召回最终以资料当前轮次校验';
+comment on column ai_knowledge_base.id is '全局雪花主键';
+comment on column ai_knowledge_base.tenant_id is '所属租户，普通用户由框架隔离';
+comment on column ai_knowledge_base.org_id is '知识库组织归属，子资源权限由本库继承';
+comment on column ai_knowledge_base.create_time is '创建时间点';
+comment on column ai_knowledge_base.create_by is '创建人，同时参与知识库本人数据范围';
+comment on column ai_knowledge_base.update_time is '修改时间点';
+comment on column ai_knowledge_base.update_by is '最后修改人';
+comment on column ai_knowledge_base.data_status is '知识库启停状态：0禁用、1启用';
+comment on column ai_knowledge_base.del_flag is '逻辑删除：0未删除、1已删除';
+comment on column ai_knowledge_base.index_lease_until is '后台任务租约，工作线程重启或失效后可重新领取';
+comment on column ai_vector_768.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
+comment on column ai_vector_768.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_768.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
+comment on column ai_vector_768.vector is '固定768维非零向量';
+comment on column ai_vector_768.tenant_id is '由metadata生成的租户ID';
+comment on column ai_vector_768.knowledge_base_id is '由metadata生成的知识库ID，用于检索边界过滤';
+comment on column ai_vector_768.document_id is '所属文档ID，检索时实时校验文档启停及公开状态';
+comment on column ai_vector_768.chunk_id is '分片ID，业务层保证关联完整性';
+comment on column ai_vector_768.model_connection_id is '生成向量所用的租户模型连接ID';
+comment on column ai_vector_1024.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
+comment on column ai_vector_1024.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_1024.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
+comment on column ai_vector_1024.vector is '固定1024维非零向量';
+comment on column ai_vector_1024.tenant_id is '由metadata生成的租户ID';
+comment on column ai_vector_1024.knowledge_base_id is '由metadata生成的知识库ID，用于检索边界过滤';
+comment on column ai_vector_1024.document_id is '所属文档ID，检索时实时校验文档启停及公开状态';
+comment on column ai_vector_1024.chunk_id is '分片ID，业务层保证关联完整性';
+comment on column ai_vector_1024.model_connection_id is '生成向量所用的租户模型连接ID';
+comment on column ai_vector_1536.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
+comment on column ai_vector_1536.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_1536.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
+comment on column ai_vector_1536.vector is '固定1536维非零向量';
+comment on column ai_vector_1536.tenant_id is '由metadata生成的租户ID';
+comment on column ai_vector_1536.knowledge_base_id is '由metadata生成的知识库ID，用于检索边界过滤';
+comment on column ai_vector_1536.document_id is '所属文档ID，检索时实时校验文档启停及公开状态';
+comment on column ai_vector_1536.chunk_id is '分片ID，业务层保证关联完整性';
+comment on column ai_vector_1536.model_connection_id is '生成向量所用的租户模型连接ID';
 commit;

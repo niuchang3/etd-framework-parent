@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-documents/{id}/chunks")
-@Permission(KnowledgePermissionCode.DOCUMENT)
+@Permission(KnowledgePermissionCode.BASE)
 public class KnowledgeChunkController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeChunkService chunks;
@@ -56,8 +56,11 @@ public class KnowledgeChunkController {
     public ResultModel<IPage<KnowledgeChunkVO>> page(@PathVariable Long id,
             @RequestParam(defaultValue = "1") @Min(1) long current,
             @RequestParam(defaultValue = "20") @Min(1) @Max(KnowledgeChunkLimits.MAX_EDIT_BATCH) long size) {
-        documents.requireDocument(id, false);
+        var document = documents.requireDocument(id, false);
         var page = chunks.fetchChunkPage(id, current, size);
+        for (var chunk : page.getRecords()) {
+            chunk.setWritable(document.getWritable());
+        }
         var result = page.convert(KnowledgeChunkConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
@@ -66,8 +69,9 @@ public class KnowledgeChunkController {
     @GetMapping("/{chunkId}")
     @AutoLog("查询知识资料分片详情")
     public ResultModel<KnowledgeChunkVO> get(@PathVariable Long id, @PathVariable Long chunkId) {
-        documents.requireDocument(id, false);
+        var document = documents.requireDocument(id, false);
         var chunk = chunks.requireChunk(id, chunkId);
+        chunk.setWritable(document.getWritable());
         var result = KnowledgeChunkConverter.INSTANCE.toVO(chunk);
         return ResultModel.success(result);
     }

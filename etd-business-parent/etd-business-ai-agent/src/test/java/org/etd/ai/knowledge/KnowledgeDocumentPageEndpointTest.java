@@ -45,14 +45,14 @@ class KnowledgeDocumentPageEndpointTest {
         var controller = new KnowledgeDocumentController(documents, biz);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any())).thenReturn(page);
+        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);
     }
 
     /** 重复键和逗号分隔两种传参形式均绑定为目录列表，原单目录参数同时保留。 */
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldBindFolderIds(boolean repeated) throws Exception {
-        var request = get("/v1/knowledge-documents").param("folderId", "9")
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
                 .param("keyword", "说明").param("uploadStatus", "completed")
                 .param("chunkStatus", KnowledgeChunkStatus.DRAFT);
         if (repeated) {
@@ -62,31 +62,31 @@ class KnowledgeDocumentPageEndpointTest {
         }
         mvc.perform(request).andExpect(status().isOk());
         List<Long> folderIds = List.of(1L, 2L);
-        verify(documents).fetchDocumentPage(1L, 10L, 9L, folderIds, "说明", "completed", KnowledgeChunkStatus.DRAFT);
+        verify(documents).fetchDocumentPage(1L, 10L, 9L, folderIds, "说明", "completed", KnowledgeChunkStatus.DRAFT, 1L, null);
     }
 
     /** 原有单目录调用及分页参数继续按原字段名绑定。 */
     @Test
     void shouldKeepSingleFolderQuery() throws Exception {
-        var request = get("/v1/knowledge-documents").param("folderId", "9")
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
                 .param("current", "2").param("size", "20");
         mvc.perform(request).andExpect(status().isOk());
-        verify(documents).fetchDocumentPage(2L, 20L, 9L, null, null, null, null);
+        verify(documents).fetchDocumentPage(2L, 20L, 9L, null, null, null, null, 1L, null);
     }
 
     /** 不传目录时维持原有不按目录筛选的入口行为。 */
     @Test
     void shouldKeepDefaultPage() throws Exception {
-        var request = get("/v1/knowledge-documents");
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
         mvc.perform(request).andExpect(status().isOk());
-        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, null);
+        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, null, 1L, null);
     }
 
     /** 非正整数或不能转换的集合元素不进入业务查询。 */
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "abc", "1,0"})
     void shouldRejectInvalidFolderIds(String value) throws Exception {
-        var request = get("/v1/knowledge-documents").param("folderIds", value);
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderIds", value);
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(documents);
     }
@@ -95,7 +95,7 @@ class KnowledgeDocumentPageEndpointTest {
     @ParameterizedTest
     @ValueSource(strings = {"current", "size", "folderId"})
     void shouldKeepExistingValidation(String parameter) throws Exception {
-        var request = get("/v1/knowledge-documents").param(parameter, "0");
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param(parameter, "0");
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(documents);
     }
@@ -124,8 +124,8 @@ class KnowledgeDocumentPageEndpointTest {
         var records = List.of(document);
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         page.setRecords(records);
-        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any())).thenReturn(page);
-        var request = get("/v1/knowledge-documents");
+        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records[0].documentName").value("资料.pdf"))
                 .andExpect(jsonPath("$.data.records[0].fileType").value("pdf"))
@@ -155,8 +155,8 @@ class KnowledgeDocumentPageEndpointTest {
     @ValueSource(strings = {KnowledgeChunkStatus.UNPROCESSED, KnowledgeChunkStatus.GENERATING,
             KnowledgeChunkStatus.DRAFT, KnowledgeChunkStatus.CONFIRMED, KnowledgeChunkStatus.FAILED})
     void shouldBindChunkStatus(String chunkStatus) throws Exception {
-        var request = get("/v1/knowledge-documents").param("chunkStatus", chunkStatus);
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("chunkStatus", chunkStatus);
         mvc.perform(request).andExpect(status().isOk());
-        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, chunkStatus);
+        verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, chunkStatus, 1L, null);
     }
 }

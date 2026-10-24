@@ -1,43 +1,25 @@
 package org.etd.ai.knowledge.mapper;
-
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
-
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import java.util.List;
-
-/** 独立目录树查询及结构约束。 */
+/** 库内分类及树结构约束。 */
+// 继承权限由知识库可信范围SQL/授权入口控制，避免对子表按上传人重复过滤；租户拦截仍启用。
+@InterceptorIgnore(dataPermission = "true")
 public interface KnowledgeFolderMapper extends BaseMapper<KnowledgeFolderEntity> {
-    /** @param orgId 所选部门标识 @param dataStatus 可选目录状态 @return 部门目录及必要祖先列表 */
-    List<KnowledgeFolderEntity> selectFolderList(@Param("orgId") Long orgId, @Param("dataStatus") Integer dataStatus);
-
-    /** @param orgId 可选部门 @param dataStatus 可选目录状态
-     * @param includeManaged 是否存在可查询的角色范围，false时仅查询共享资料路径
-     * @return 资料页可导航目录及共享资料路径 */
-    List<KnowledgeFolderEntity> selectDocumentFolderList(@Param("orgId") Long orgId,
-            @Param("dataStatus") Integer dataStatus, @Param("includeManaged") boolean includeManaged);
-
-    /** 结构变更共用事务锁，不接收客户端锁键，不改变租户或数据权限上下文。 */
+    /** @param knowledgeBaseId 知识库 @param dataStatus 状态 @param scope 可信角色范围 @return 可见分类 */
+    List<KnowledgeFolderEntity> selectFolderList(@Param("knowledgeBaseId") Long knowledgeBaseId,
+            @Param("dataStatus") Integer dataStatus, @Param("scope") DataPermissionScope scope);
+    /** @param id 分类 @param scope 可信范围 @return 可维护分类 */
+    KnowledgeFolderEntity selectWritable(@Param("id") Long id, @Param("scope") DataPermissionScope scope);
+    /** 串行保护分类树结构。 */
     void lockStructure();
-
-    /**
-     * 内部结构检查覆盖隐藏祖先；调用前已校验待移动目录及目标父目录的管理权限。
-     * @param folderId 当前目录标识
-     * @param targetId 待移动到的父目录
-     * @return 祖先链中当前目录的出现次数
-     */
-    @InterceptorIgnore(dataPermission = "true")
+    /** @param folderId 分类 @param targetId 目标 @return 祖先中出现次数 */
     Long selectAncestorCount(@Param("folderId") Long folderId, @Param("targetId") Long targetId);
-
-    /**
-     * 内部非空检查包括不可见子目录，调用前已校验当前目录管理权限。
-     * @param folderId 已校验管理权限的目录标识
-     * @return 有效子目录数量
-     */
-    @InterceptorIgnore(dataPermission = "true")
+    /** @param folderId 分类 @return 子目录数量 */
     Long selectChildCount(@Param("folderId") Long folderId);
-    /** @param folderId 已校验维护权限的目录 @return 包括隐藏资料的占用数量 */
-    @InterceptorIgnore(dataPermission = "true")
+    /** @param folderId 分类 @return 文档数量 */
     Long selectDocumentCount(@Param("folderId") Long folderId);
 }

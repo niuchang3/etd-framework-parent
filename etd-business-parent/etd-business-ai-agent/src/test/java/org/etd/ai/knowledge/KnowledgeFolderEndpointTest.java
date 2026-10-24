@@ -37,11 +37,11 @@ class KnowledgeFolderEndpointTest {
     @Test
     void shouldAllowOptionalOrganizationOnList() throws Exception {
         var missing = get("/v1/knowledge-folders");
-        mvc.perform(missing).andExpect(status().isOk());
-        verify(folders).fetchFolderList(null, null);
+        mvc.perform(missing).andExpect(status().isBadRequest());
+        verifyNoInteractions(folders);
         List<KnowledgeFolderEntity> empty = List.of();
         when(folders.fetchFolderList(777L, null)).thenReturn(empty);
-        var selected = get("/v1/knowledge-folders").param("orgId", "777");
+        var selected = get("/v1/knowledge-folders").param("knowledgeBaseId", "777");
         mvc.perform(selected).andExpect(status().isOk());
         verify(folders).fetchFolderList(777L, null);
     }
@@ -50,13 +50,13 @@ class KnowledgeFolderEndpointTest {
     @Test
     void shouldPassSelectedOrganizationOnCreation() throws Exception {
         String body = """
-                {"orgId":"777","parentId":null,"folderName":"产品资料", "description":"说明","sortOrder":0}
+                {"knowledgeBaseId":"777","parentId":null,"folderName":"产品资料", "description":"说明","sortOrder":0}
                 """;
         var request = post("/v1/knowledge-folders").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isOk());
         var entity = ArgumentCaptor.forClass(KnowledgeFolderEntity.class);
         verify(biz).createFolder(entity.capture());
-        assertEquals(777L, entity.getValue().getOrgId());
+        assertEquals(777L, entity.getValue().getKnowledgeBaseId());
         assertEquals("说明", entity.getValue().getDescription());
         verifyNoInteractions(folders);
     }

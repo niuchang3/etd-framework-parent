@@ -2,6 +2,7 @@ package org.etd.ai.knowledge.biz;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import java.time.Instant;
+import org.etd.framework.common.core.constants.BasicConstant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -93,7 +94,12 @@ public class KnowledgeChunkGenerationBizService {
     private KnowledgeDocumentEntity finishGeneration(KnowledgeDocumentEntity task, DocumentChunkParameters parameters,
             List<KnowledgeChunkEntity> records) {
         var document = requireCurrentGeneration(task);
+        document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
+        document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
         chunks.removeChunkList(document.getId());
+        for (var record : records) {
+            record.setProcessingVersion(document.getProcessingVersion());
+        }
         chunks.createChunkList(records);
         document.setChunkParameters(parameters);
         document.setChunkCount(records.size());

@@ -8,8 +8,6 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -19,10 +17,9 @@ import java.util.List;
 import java.time.Instant;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 
-/** 资料基础持久化能力，统一执行组织数据范围和版本检查。 */
+/** 资料基础持久化能力，读取及维护权限继承知识库并检查文档共享范围。 */
 @Service
 @RequiredArgsConstructor
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_document", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
 public class KnowledgeDocumentService {
     private final KnowledgeDocumentMapper mapper;
 
@@ -30,35 +27,23 @@ public class KnowledgeDocumentService {
      * @param folderIds 优先筛选的目录集合，非空时忽略 folderId，不自动展开子孙目录
      * @param keyword 可选名称 @param uploadStatus 可选上传状态
      * @param chunkStatus 可选分片状态，未传或空白时不筛选
+     * @param knowledgeBaseId 必填知识库 @param dataStatus 可选正式启停
      * @return 数据权限内资料分页 */
     public IPage<KnowledgeDocumentEntity> fetchDocumentPage(long current, long size, Long folderId,
-            List<Long> folderIds, String keyword, String uploadStatus, String chunkStatus) {
-        var query = Wrappers.<KnowledgeDocumentEntity>lambdaQuery()
-                .like(StringUtils.hasText(keyword), KnowledgeDocumentEntity::getDocumentName, keyword)
-                .eq(StringUtils.hasText(uploadStatus), KnowledgeDocumentEntity::getUploadStatus, uploadStatus)
-                .eq(StringUtils.hasText(chunkStatus), KnowledgeDocumentEntity::getChunkStatus, chunkStatus)
-                .orderByDesc(KnowledgeDocumentEntity::getCreateTime, KnowledgeDocumentEntity::getId);
-        // 批量目录非空时只生成 IN 条件，避免与 folderId 取交集。
-        if (!CollectionUtils.isEmpty(folderIds)) {
-            query.in(KnowledgeDocumentEntity::getFolderId, folderIds);
-        } else if (folderId != null) {
-            query.eq(KnowledgeDocumentEntity::getFolderId, folderId);
-        }
+            List<Long> folderIds, String keyword, String uploadStatus, String chunkStatus, Long knowledgeBaseId, Integer dataStatus) {
         var page = new Page<KnowledgeDocumentEntity>(current, size);
-        return mapper.selectPage(page, query);
+        var scope = DataPermissionScope.current();
+        return mapper.selectReadablePage(page, knowledgeBaseId, folderId, folderIds, keyword,
+                uploadStatus, chunkStatus, dataStatus, scope);
     }
 
     /** @param id 资料ID @param lock 是否在当前事务加行锁 @return 可读取资料；lock为true时同时要求严格维护范围
      * @throws ApiRuntimeException 无权限或资料不存在 */
     public KnowledgeDocumentEntity requireDocument(Long id, boolean lock) {
-        var query = Wrappers.<KnowledgeDocumentEntity>lambdaQuery().eq(KnowledgeDocumentEntity::getId, id);
-        if (lock) {
-            query.last("for update");
-        }
-        var entity = mapper.selectOne(query);
-        // SELECT包含共享读取；行锁调用属于维护流程，必须在外部副作用前校验严格角色范围。
-        if (entity == null || lock && !DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy())) {
-            throw new ApiRuntimeException("资料不存在或无数据权限");
+        var scope = DataPermissionScope.current();
+        var entity = mapper.selectAccessible(id, lock, scope);
+        if (entity == null || lock && !Boolean.TRUE.equals(entity.getWritable())) {
+            throw new ApiRuntimeException("资料不存在或无知识库操作权限");
         }
         return entity;
     }
@@ -81,10 +66,6 @@ public class KnowledgeDocumentService {
 
     /** @param entity 上传主记录 @return 新建资料ID；INSERT主动校验组织维护范围 */
     public Long createDocument(KnowledgeDocumentEntity entity) {
-        var scope = DataPermissionScope.current();
-        if (!scope.canManage(entity.getOrgId(), scope.userId())) {
-            throw new ApiRuntimeException("无资料新增数据权限");
-        }
         mapper.insert(entity);
         return entity.getId();
     }

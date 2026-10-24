@@ -7,16 +7,15 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 /** 创建上传记录的请求；扩展名参数仅供前端筛选，后端不按扩展名拒绝上传。 */
 @Data
 public class KnowledgeUploadInitDTO {
-    /** 是否在当前租户内共享读取，false仍按角色数据范围可见。 */
-    @NotNull
+    /** 是否共享读取，未传时继承知识库默认值。 */
     private Boolean isPublic;
 
     /** 上传目标目录ID，后端校验维护权限。 */
     @NotNull @Positive
     private Long folderId;
-    /** 资料数据归属部门，须在当前用户可维护范围中。 */
+    /** 所属知识库ID，须具备维护权限。 */
     @NotNull @Positive
-    private Long orgId;
+    private Long knowledgeBaseId;
     /** 原始文件名，不作为对象键。 */
     @NotBlank @Size(max = 255)
     private String originalFilename;

@@ -28,6 +28,8 @@ public interface KnowledgeChunkConverter {
     @Mapping(target = "createBy", source = "document.createBy")
     @Mapping(target = "tenantId", source = "document.tenantId")
     @Mapping(target = "orgId", source = "document.orgId")
+    @Mapping(target = "knowledgeBaseId", source = "document.knowledgeBaseId")
+    @Mapping(target = "processingVersion", source = "document.processingVersion")
     @Mapping(target = "chunkIndex", source = "chunk.index")
     @Mapping(target = "content", source = "chunk.rawText")
     @Mapping(target = "source", source = "chunk")
@@ -41,6 +43,8 @@ public interface KnowledgeChunkConverter {
     @Mapping(target = "documentId", source = "original.documentId")
     @Mapping(target = "tenantId", source = "original.tenantId")
     @Mapping(target = "orgId", source = "original.orgId")
+    @Mapping(target = "knowledgeBaseId", source = "original.knowledgeBaseId")
+    @Mapping(target = "processingVersion", source = "original.processingVersion")
     @Mapping(target = "createBy", source = "original.createBy")
     @Mapping(target = "isPublic", source = "original.isPublic")
     @Mapping(target = "dataStatus", source = "original.dataStatus")
@@ -60,7 +64,7 @@ public interface KnowledgeChunkConverter {
     KnowledgeChunkStateVO toStateVO(KnowledgeDocumentEntity entity);
     /** @param entity 已授权分片 @return 当前角色范围是否允许维护该分片 */
     default boolean canManageChunk(KnowledgeChunkEntity entity) {
-        return DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy());
+        return Boolean.TRUE.equals(entity.getWritable());
     }
     /** @param inputs 通过字段校验的编辑列表 @return 去重后的编辑值，重复ID明确拒绝 */
     default Map<Long, String> toEditValues(List<KnowledgeChunkEditDTO> inputs) {

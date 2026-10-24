@@ -5,14 +5,21 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import org.etd.framework.starter.mybaits.core.OrgScopedEntity;
+import org.etd.framework.starter.mybaits.core.BaseEntity;
 import org.etd.framework.starter.mybaits.fill.annotation.TableFieldExtend;
 
 /** KnowledgeFolderEntity 持久化记录；租户及审计字段由框架可信上下文填充。 */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("ai_knowledge_folder")
-public class KnowledgeFolderEntity extends OrgScopedEntity {
+public class KnowledgeFolderEntity extends BaseEntity {
+    /** 所属知识库，父子目录必须相同。 */
+    private Long knowledgeBaseId;
+
+    /** 知识库维护权限，不持久化。 */
+    @TableField(exist = false)
+    private Boolean writable;
+
     /** 非负乐观锁版本，修改时必须提交当前值。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("0")

@@ -7,6 +7,9 @@ import org.etd.framework.starter.ai.document.model.DocumentChunkParameters;
 /** 分片工作页状态；所有写操作使用这里返回的资料version。 */
 @Data
 public class KnowledgeChunkStateVO {
+    /** 所属知识库ID。 */
+    private Long knowledgeBaseId;
+
     /** 是否在当前租户内共享读取；分片继承所属资料。 */
     private Boolean isPublic;
     /** 当前角色数据范围是否允许维护；还须具备接口write权限。 */

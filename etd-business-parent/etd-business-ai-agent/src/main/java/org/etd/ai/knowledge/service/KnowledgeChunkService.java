@@ -9,15 +9,12 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeChunkMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
-import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 /** 分片持久化能力；事务、资料权限及整份结果的版本由Biz层统一控制。 */
 @Service
 @RequiredArgsConstructor
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_chunk", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
 public class KnowledgeChunkService {
     private final KnowledgeChunkMapper mapper;
     /** @param documentId 已授权资料ID @param current 页码 @param size 单页数量 @return 按原文顺序排列的分片 */

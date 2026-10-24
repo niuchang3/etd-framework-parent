@@ -212,8 +212,9 @@ class KnowledgeUploadIntegrationTest {
 
     /** 创建独立目录，名称全局随机避免测试相互影响。 */
     private KnowledgeFolderEntity createFolder() {
+        jdbc.update("insert into ai_knowledge_base (id, tenant_id, org_id, create_by, name) values (10, 900001, 10, 100, '上传测试库') on conflict (id) do nothing");
         var folder = new KnowledgeFolderEntity();
-        folder.setOrgId(10L);
+        folder.setKnowledgeBaseId(10L);
         folder.setFolderName("集成测试-" + UUID.randomUUID());
         folderBiz.createFolder(folder);
         return folder;
@@ -224,6 +225,7 @@ class KnowledgeUploadIntegrationTest {
         var digest = MessageDigest.getInstance("SHA-256");
         var document = new KnowledgeDocumentEntity();
         document.setOrgId(10L);
+        document.setKnowledgeBaseId(10L);
         document.setFolderId(folderId);
         document.setOriginalFilename(name);
         document.setContentType("application/octet-stream");

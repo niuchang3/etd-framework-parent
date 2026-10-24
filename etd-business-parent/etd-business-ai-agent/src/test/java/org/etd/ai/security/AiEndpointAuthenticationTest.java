@@ -29,12 +29,18 @@ import jakarta.servlet.Filter;
 
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
+import org.etd.ai.knowledge.controller.KnowledgeBaseController;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
+import org.etd.ai.knowledge.service.KnowledgeBaseService;
+import org.etd.ai.knowledge.biz.KnowledgeBaseBizService;
+import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
 import org.etd.ai.knowledge.controller.KnowledgeChunkController;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.biz.KnowledgeChunkGenerationBizService;
 import org.etd.ai.knowledge.biz.KnowledgeChunkEditBizService;
-import org.etd.ai.knowledge.controller.KnowledgeDocumentNavigationController;
+import org.etd.ai.knowledge.controller.KnowledgeFolderController;
+import org.etd.ai.knowledge.biz.KnowledgeFolderBizService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.controller.KnowledgeUploadController;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
@@ -131,10 +137,10 @@ class AiEndpointAuthenticationTest {
     void shouldProtectKnowledgeUploadsAndKeepDownloadsReadable() throws Exception {
         var anonymous = get("/v1/knowledge-documents");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var session = createSession("ai:knowledge-document:read");
-        var list = get("/v1/knowledge-documents").session(session);
+        var session = createSession("ai:knowledge-base:read");
+        var list = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").session(session);
         mvc.perform(list).andExpect(status().isOk());
-        var folders = get("/v1/knowledge-documents/folders").session(session);
+        var folders = get("/v1/knowledge-folders").param("knowledgeBaseId", "1").session(session);
         mvc.perform(folders).andExpect(status().isOk());
         var policy = get("/v1/knowledge-documents/uploads/policy").session(session);
         mvc.perform(policy).andExpect(status().isOk());
@@ -142,7 +148,7 @@ class AiEndpointAuthenticationTest {
         mvc.perform(download).andExpect(status().isOk());
         var denied = post("/v1/knowledge-documents/uploads/1/cancel").session(session);
         mvc.perform(denied).andExpect(status().isForbidden());
-        var writable = createSession("ai:knowledge-document:read", "ai:knowledge-document:write");
+        var writable = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
         var allowed = post("/v1/knowledge-documents/uploads/1/cancel").session(writable);
         mvc.perform(allowed).andExpect(status().isOk());
         var uploads = context.getBean(KnowledgeUploadBizService.class);
@@ -161,10 +167,10 @@ class AiEndpointAuthenticationTest {
         var ungrantedSession = createSession();
         var ungranted = createKnowledgeRequest(endpoint, ungrantedSession);
         mvc.perform(ungranted).andExpect(status().isForbidden());
-        var readSession = createSession("ai:knowledge-document:read");
+        var readSession = createSession("ai:knowledge-base:read");
         var read = createKnowledgeRequest(endpoint, readSession);
         mvc.perform(read).andExpect(endpoint.write() ? status().isForbidden() : status().isOk());
-        var writeSession = createSession("ai:knowledge-document:read", "ai:knowledge-document:write");
+        var writeSession = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
         var write = createKnowledgeRequest(endpoint, writeSession);
         mvc.perform(write).andExpect(status().isOk());
         if (endpoint.write()) {
@@ -180,21 +186,35 @@ class AiEndpointAuthenticationTest {
      */
     private static List<KnowledgeEndpoint> knowledgeEndpointList() {
         var result = new ArrayList<KnowledgeEndpoint>();
+        String bases = "/v1/knowledge-bases";
+        String settings = """
+                {"version":0,"name":"测试库","orgId":1,"dataStatus":1,"isPublic":false,
+                 "retrievalMode":"keyword","keywordRecallSize":30,"vectorRecallSize":30,"topK":5,"rerankEnabled":false}
+                """;
+        addKnowledgeEndpoint(result, "GET", bases, null, false);
+        addKnowledgeEndpoint(result, "GET", bases + "/1", null, false);
+        addKnowledgeEndpoint(result, "POST", bases, settings, true);
+        addKnowledgeEndpoint(result, "PUT", bases + "/1", settings, true);
+        addKnowledgeEndpoint(result, "DELETE", bases + "/1", null, true);
+        addKnowledgeEndpoint(result, "POST", bases + "/1/index", "{\"version\":0}", true);
+        addKnowledgeEndpoint(result, "POST", bases + "/1/recall-test", "{\"query\":\"测试问题\"}", true);
+        addKnowledgeEndpoint(result, "POST", bases + "/1/search", "{\"query\":\"测试问题\"}", false);
         String base = "/v1/knowledge-documents";
         String uploads = base + "/uploads";
         String hash = "0".repeat(64);
-        String initialization = "{\"isPublic\":false,\"folderId\":1,\"orgId\":1,\"originalFilename\":\"test.txt\","
+        String initialization = "{\"isPublic\":false,\"folderId\":1,\"knowledgeBaseId\":1,\"originalFilename\":\"test.txt\","
                 + "\"contentType\":\"text/plain\",\"fileSize\":100,\"fileSha256\":\"" + hash + "\"}";
         String configuration = """
                 {"version":0,"folderId":1,"documentName":"资料","description":"用途说明","isPublic":false}
                 """;
-        addKnowledgeEndpoint(result, "GET", base, null, false);
-        addKnowledgeEndpoint(result, "GET", base + "/folders", null, false);
+        addKnowledgeEndpoint(result, "GET", base + "?knowledgeBaseId=1", null, false);
+        addKnowledgeEndpoint(result, "GET", "/v1/knowledge-folders?knowledgeBaseId=1", null, false);
         addKnowledgeEndpoint(result, "GET", base + "/1", null, false);
         addKnowledgeEndpoint(result, "GET", uploads + "/policy", null, false);
         addKnowledgeEndpoint(result, "POST", base + "/1/download-url", null, false);
         addKnowledgeEndpoint(result, "PUT", base + "/1", configuration, true);
         addKnowledgeEndpoint(result, "DELETE", base + "/1", null, true);
+        addKnowledgeEndpoint(result, "PUT", base + "/1/status", "{\"version\":0,\"dataStatus\":0}", true);
         addKnowledgeEndpoint(result, "POST", uploads, initialization, true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/parts/1/url", null, true);
         addKnowledgeEndpoint(result, "PUT", uploads + "/1/parts/1", "{\"etag\":\"test-etag\"}", true);
@@ -251,7 +271,7 @@ class AiEndpointAuthenticationTest {
     @Test
     void shouldLogAllKnowledgeEndpoints() {
         var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
-                KnowledgeDocumentNavigationController.class, KnowledgeChunkController.class);
+                KnowledgeFolderController.class, KnowledgeChunkController.class, KnowledgeBaseController.class);
         for (Class<?> controller : controllers) {
             for (var method : controller.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
@@ -529,11 +549,11 @@ class AiEndpointAuthenticationTest {
                 Map.of(
                         ModelController.class, "ai:model",
                         ModelSquareController.class, "ai:model-square",
-                        KnowledgeFolderController.class, "ai:knowledge-folder",
-                        KnowledgeDocumentController.class, "ai:knowledge-document",
-                        KnowledgeUploadController.class, "ai:knowledge-document",
-                        KnowledgeDocumentNavigationController.class, "ai:knowledge-document",
-                        KnowledgeChunkController.class, "ai:knowledge-document");
+                        KnowledgeFolderController.class, "ai:knowledge-base",
+                        KnowledgeDocumentController.class, "ai:knowledge-base",
+                        KnowledgeUploadController.class, "ai:knowledge-base",
+                        KnowledgeBaseController.class, "ai:knowledge-base",
+                        KnowledgeChunkController.class, "ai:knowledge-base");
         for (var resource : resources.entrySet()) {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
@@ -607,9 +627,10 @@ class AiEndpointAuthenticationTest {
 
         /** 页面目录导航能力替身；读目录不要求拥有目录维护菜单资源权限。 */
         @Bean
-        KnowledgeDocumentNavigationController knowledgeDocumentNavigationController() {
+        KnowledgeFolderController knowledgeFolderController() {
             var folders = mock(KnowledgeFolderService.class);
-            return new KnowledgeDocumentNavigationController(folders);
+            var biz = mock(KnowledgeFolderBizService.class);
+            return new KnowledgeFolderController(folders, biz);
         }
 
         /** 资料接口服务替身，实际认证与方法权限不做替身。 */
@@ -617,7 +638,7 @@ class AiEndpointAuthenticationTest {
         KnowledgeDocumentService knowledgeDocumentService() {
             var service = mock(KnowledgeDocumentService.class);
             var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-            when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null)).thenReturn(page);
+            when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null, 1L, null)).thenReturn(page);
             var document = createKnowledgeDocumentResponse();
             when(service.requireDocument(1L, false)).thenReturn(document);
             return service;
@@ -668,6 +689,20 @@ class AiEndpointAuthenticationTest {
             var document = new KnowledgeDocumentEntity();
             document.setId(1L);
             return document;
+        }
+
+        /** 知识库新入口使用真实Controller和认证链，模型与数据库能力隔离。 */
+        @Bean
+        KnowledgeBaseController knowledgeBaseController() {
+            var bases = mock(KnowledgeBaseService.class);
+            var biz = mock(KnowledgeBaseBizService.class);
+            var recall = mock(KnowledgeRecallBizService.class);
+            var page = new Page<KnowledgeBaseEntity>(1, 12);
+            when(bases.fetchBasePage(1, 12, null)).thenReturn(page);
+            var base = new KnowledgeBaseEntity();
+            base.setId(1L);
+            when(bases.requireBase(1L, false, false)).thenReturn(base);
+            return new KnowledgeBaseController(bases, biz, recall);
         }
 
         /** 装配真实资料控制器。 */

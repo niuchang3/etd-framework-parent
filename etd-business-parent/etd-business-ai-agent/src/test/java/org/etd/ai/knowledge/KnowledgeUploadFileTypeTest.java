@@ -8,6 +8,8 @@ import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
+import org.etd.ai.knowledge.service.KnowledgeBaseService;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +43,15 @@ class KnowledgeUploadFileTypeTest {
         var properties = new KnowledgeUploadProperties();
         var folder = new KnowledgeFolderEntity();
         folder.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
-        when(folders.requireWritable(1L)).thenReturn(folder);
+        var bases = mock(KnowledgeBaseService.class);
+        var base = new KnowledgeBaseEntity();
+        base.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
+        base.setOrgId(10L);
+        base.setIsPublic(false);
+        when(bases.requireBase(1L, true, false)).thenReturn(base);
+        when(folders.requireFolderByBase(1L, 1L)).thenReturn(folder);
         when(objects.initUpload(any())).thenReturn("test-upload");
-        uploads = new KnowledgeUploadBizService(folders, documents, objects, properties, transactions);
+        uploads = new KnowledgeUploadBizService(folders, bases, documents, objects, properties, transactions);
     }
 
     /** 大小写、复合扩展名及无扩展名按统一规则保存，不采信预置类型或MIME声明。 */
@@ -53,6 +61,7 @@ class KnowledgeUploadFileTypeTest {
     void shouldGenerateFileTypeFromOriginalFilename(String filename, String expected) {
         var document = new KnowledgeDocumentEntity();
         document.setFolderId(1L);
+        document.setKnowledgeBaseId(1L);
         document.setOriginalFilename(filename);
         document.setFileSize(10L);
         document.setContentType("application/octet-stream");

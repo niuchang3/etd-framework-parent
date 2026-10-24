@@ -27,7 +27,8 @@ class KnowledgeDocumentMapperTest {
         configuration.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(configuration);
         var resource = new ClassPathResource("mapper/knowledge/KnowledgeDocumentMapper.xml");
-        factory.setMapperLocations(resource);
+        var baseResource = new ClassPathResource("mapper/knowledge/KnowledgeBaseMapper.xml");
+        factory.setMapperLocations(baseResource, resource);
         var sessionFactory = factory.getObject();
         try (var session = sessionFactory.openSession()) {
             var mapper = session.getMapper(KnowledgeDocumentMapper.class);

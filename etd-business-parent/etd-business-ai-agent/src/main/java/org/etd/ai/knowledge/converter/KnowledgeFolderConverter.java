@@ -24,7 +24,7 @@ public interface KnowledgeFolderConverter {
      * @return 待保存的业务实体
      */
     @BeanMapping(ignoreByDefault = true)
-    @Mapping(target = "orgId", source = "orgId")
+    @Mapping(target = "knowledgeBaseId", source = "knowledgeBaseId")
     @Mapping(target = "parentId", source = "parentId")
     @Mapping(target = "folderName", expression = "java(dto.getFolderName().trim())")
     @Mapping(target = "description", source = "description")
@@ -43,7 +43,7 @@ public interface KnowledgeFolderConverter {
 
     /** @param entity 目录记录 @return 框架角色范围是否允许维护该目录 */
     default boolean canManageFolder(KnowledgeFolderEntity entity) {
-        return DataPermissionScope.current().canManage(entity.getOrgId(), entity.getCreateBy());
+        return Boolean.TRUE.equals(entity.getWritable());
     }
 
     /**

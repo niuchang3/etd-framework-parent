@@ -24,20 +24,20 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** 独立目录维护接口，返回平铺节点供前端构建树，不依赖文档列表。 */
+/** 知识库文档管理内部分类接口，返回平铺节点供前端构建树。 */
 @RestController
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-folders")
-@Permission(KnowledgePermissionCode.FOLDER)
+@Permission(KnowledgePermissionCode.BASE)
 public class KnowledgeFolderController {
     private final KnowledgeFolderService service;
     private final KnowledgeFolderBizService biz;
 
     /**
-     * 独立返回可读目录及必要祖先，空目录正常展示，navigationOnly节点不得维护。
+     * 返回当前知识库可见分类及必要祖先，维护者可查看空分类。
      *
-     * @param orgId 可选部门标识，不传时查询当前数据权限范围内全部目录
+     * @param knowledgeBaseId 必填知识库标识，所有查询限定当前库
      * @param dataStatus 可选启停状态：0停用、1启用；不传表示全部状态
      * @return 统一业务响应；code=2000表示成功，data语义见方法说明
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
@@ -45,18 +45,18 @@ public class KnowledgeFolderController {
     @AutoLog("查询知识库目录列表")
     @GetMapping
     public ResultModel<List<KnowledgeFolderVO>> list(
-            @RequestParam(required = false) @Min(1) Long orgId,
+            @RequestParam @Min(1) Long knowledgeBaseId,
             @RequestParam(required = false)
                     @Min(BasicConstant.DataStatus.DISABLED_CODE)
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
-        var folders = service.fetchFolderList(orgId, dataStatus);
+        var folders = service.fetchFolderList(knowledgeBaseId, dataStatus);
         var result = folders.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
         return ResultModel.success(result);
     }
 
     /**
-     * 在前端所选部门下创建目录。
+     * 在已授权的知识库内创建分类。
      *
      * @param dto 经过接口参数校验的页面请求，不包含可信身份字段
      * @return 统一业务响应；code=2000表示成功，data语义见方法说明

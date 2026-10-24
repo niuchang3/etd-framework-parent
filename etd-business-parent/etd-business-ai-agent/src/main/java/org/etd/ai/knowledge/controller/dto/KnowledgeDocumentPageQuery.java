@@ -13,6 +13,14 @@ import java.util.List;
 @Data
 public class KnowledgeDocumentPageQuery {
 
+    /** 必填知识库范围。 */
+    @NotNull @Positive
+    private Long knowledgeBaseId;
+
+    /** 可选文档启停状态：0禁用、1启用。 */
+    @Min(0) @Max(1)
+    private Integer dataStatus;
+
     /** 页码，从 1 开始，默认查询第一页。 */
     @Min(1)
     private long current = 1;
