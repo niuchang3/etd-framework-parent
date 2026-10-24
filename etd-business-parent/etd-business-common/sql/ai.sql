@@ -3,9 +3,36 @@
 /* 本脚本描述当前最终结构，由部署流程显式执行，不在应用启动时执行。 */
 /*==============================================================*/
 
--- 当前仅维护模型、目录和原件上传，不安装分片检索所需扩展。
+-- 数据库服务端须预先安装 zhparser 及其 SCWS 依赖；分片全文索引使用固定中文分词配置。
 begin;
 set local search_path = public, pg_catalog;
+
+create extension if not exists zhparser with schema public;
+
+-- 保留常用中文词、英文及数字词元；建索引和查询必须显式使用同一个配置。
+create text search configuration public.etd_knowledge_zh (parser = public.zhparser);
+alter text search configuration public.etd_knowledge_zh
+    add mapping for n, v, a, i, e, l, j, x, m, t with pg_catalog.simple;
+comment on text search configuration public.etd_knowledge_zh is '知识分片中文全文检索配置，基于zhparser分词并保留英文和数字词元';
+
+-- 固定短词复合分词，保留复合词及其短词；避免不同连接设置导致建索引和查询的分词不一致。
+create function public.etd_knowledge_to_tsvector(content text) returns tsvector
+    language sql immutable strict
+    set zhparser.multi_short = on
+    set zhparser.multi_duality = off
+    set zhparser.multi_zmain = off
+    set zhparser.multi_zall = off
+    as $$ select pg_catalog.to_tsvector('public.etd_knowledge_zh'::regconfig, content) $$;
+comment on function public.etd_knowledge_to_tsvector(text) is '知识分片正文分词入口，固定启用短词复合，供全文GIN索引和查询使用';
+
+create function public.etd_knowledge_to_tsquery(keyword text) returns tsquery
+    language sql immutable strict
+    set zhparser.multi_short = on
+    set zhparser.multi_duality = off
+    set zhparser.multi_zmain = off
+    set zhparser.multi_zall = off
+    as $$ select pg_catalog.plainto_tsquery('public.etd_knowledge_zh'::regconfig, keyword) $$;
+comment on function public.etd_knowledge_to_tsquery(text) is '知识分片查询词分词入口，采用与正文相同的分词设置，不解释用户输入为tsquery语法';
 
 create table ai_model
 (
@@ -337,6 +364,11 @@ create table ai_knowledge_chunk
 );
 create unique index uk_ai_chunk_document_order on ai_knowledge_chunk (document_id, chunk_index) where del_flag = 0;
 create index idx_ai_chunk_document_cleanup on ai_knowledge_chunk (document_id);
+-- 正文全文表达式索引随写入自动维护；查询须使用相同分词函数并包含 del_flag = 0 条件。
+create index idx_ai_chunk_content_fts on ai_knowledge_chunk
+    using gin (public.etd_knowledge_to_tsvector(content))
+    where del_flag = 0;
+comment on index idx_ai_chunk_content_fts is '未逻辑删除分片的正文全文GIN索引，采用etd_knowledge_zh中文分词配置';
 comment on table ai_knowledge_chunk is '文档分片草稿及确认结果，支持修改和相邻合并，不包含向量';
 comment on column ai_knowledge_chunk.is_public is '继承所属资料的共享标记，通过事务同步；不独立设置，不扩大写权限';
 comment on column ai_knowledge_chunk.id is '雪花主键';

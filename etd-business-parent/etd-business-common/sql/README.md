@@ -14,6 +14,6 @@
 
 UPMS 初始化顺序：`upms.sql` → `init.sql` → `upms_data.sql`。公共菜单定义与特定租户的授权关系分开维护，后者属于 `upms_data.sql`。
 
-Event、AI、OAuth 分别在对应数据库执行建表脚本，不把本目录所有文件依次执行到同一个数据库。AI 初始化顺序为 `ai.sql` → `ai_data.sql`。`ai.sql` 当前仅创建模型、知识库目录、资料上传和分片表，不依赖 vector、zhparser 或 SCWS。
+Event、AI、OAuth 分别在对应数据库执行建表脚本，不把本目录所有文件依次执行到同一个数据库。AI 初始化顺序为 `ai.sql` → `ai_data.sql`。`ai.sql` 创建模型、知识库目录、资料上传和分片表，使用 zhparser 为分片正文建立中文全文 GIN 索引；执行前须在 PostgreSQL 服务端安装 zhparser 及其 SCWS 依赖，执行账号须有创建扩展权限。不依赖 vector。全文查询须使用 `public.etd_knowledge_to_tsvector(content) @@ public.etd_knowledge_to_tsquery(?)` 并包含 `del_flag = 0` 条件；两个分词函数固定启用短词复合，保持索引和查询设置一致。
 
 脚本由部署人员显式执行，不随应用启动自动运行。工程资源目录不保留 SQL 副本；业务父 POM 仅将本目录的 `*.sql` 加入测试资源，测试使用 `classpath:sql/ai.sql`、`classpath:sql/event.sql` 等平铺路径，不进入应用运行资源。

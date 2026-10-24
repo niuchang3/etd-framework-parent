@@ -313,6 +313,35 @@ class KnowledgeChunkPersistenceTest {
         }
     }
 
+    /** 真实中文全文索引支持中文、英文和数字，正文更新与逻辑删除后查询结果同步变化。 */
+    @Test
+    void maintainsChineseFullTextIndex() {
+        String insert = """
+                insert into ai_knowledge_chunk
+                    (id, tenant_id, org_id, document_id, chunk_index, content, token_count, source)
+                values (9101, 900001, 10, 1, 0, '设备安装指南 PostgreSQL 2026', 12, '{}')
+                """;
+        setupJdbc.update(insert);
+        String search = """
+                select id from ai_knowledge_chunk
+                where del_flag = 0
+                  and public.etd_knowledge_to_tsvector(content)
+                      @@ public.etd_knowledge_to_tsquery(?)
+                """;
+        for (String keyword : List.of("安装", "PostgreSQL", "2026")) {
+            var ids = setupJdbc.queryForList(search, Long.class, keyword);
+            assertThat(ids).containsExactly(9101L);
+        }
+        setupJdbc.update("update ai_knowledge_chunk set content = '设备维修说明' where id = 9101");
+        var oldMatches = setupJdbc.queryForList(search, Long.class, "安装");
+        var updatedMatches = setupJdbc.queryForList(search, Long.class, "维修");
+        assertThat(oldMatches).isEmpty();
+        assertThat(updatedMatches).containsExactly(9101L);
+        setupJdbc.update("update ai_knowledge_chunk set del_flag = 1 where id = 9101");
+        var deletedMatches = setupJdbc.queryForList(search, Long.class, "维修");
+        assertThat(deletedMatches).isEmpty();
+    }
+
     /** 重新生成失败不删除人工内容，也不覆盖最近成功参数。 */
     @Test
     void preservesOldResultsWhenRegenerationFails() {
