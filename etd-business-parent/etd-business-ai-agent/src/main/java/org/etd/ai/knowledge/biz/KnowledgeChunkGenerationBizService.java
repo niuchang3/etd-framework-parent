@@ -13,6 +13,7 @@ import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.ai.knowledge.entity.*;
 import org.etd.ai.knowledge.service.*;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.ai.knowledge.exception.KnowledgeChunkGenerationException;
 import org.etd.framework.starter.ai.document.docling.DoclingProperties;
 import org.etd.framework.starter.ai.document.model.DocumentChunk;
 import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
@@ -44,12 +45,11 @@ public class KnowledgeChunkGenerationBizService {
             return transactions.execute(status -> finishGeneration(task, parameters, records));
         } catch (Exception exception) {
             String failureMessage = resolveFailureMessage(exception);
-            String reason = exception instanceof DocumentChunkException chunkException
-                    ? chunkException.getReason().getCode() : exception.getClass().getSimpleName();
+            String reason = resolveFailureReason(exception);
             // Throwable作为最后一个日志参数记录完整堆栈及cause链；不额外输出正文、规则或认证参数。
-            log.error("知识资料分片生成失败，资料ID={}，生成请求ID={}，分片策略={}，异常类型={}，原因={}",
+            log.error("知识资料分片生成失败，资料ID={}，生成请求ID={}，分片策略={}，异常类型={}，原因={}，失败说明={}",
                     id, task.getChunkGenerationId(), parameters.basic().strategy(),
-                    exception.getClass().getSimpleName(), reason, exception);
+                    exception.getClass().getSimpleName(), reason, failureMessage, exception);
             return transactions.execute(status -> failGeneration(task, failureMessage));
         }
     }
@@ -110,12 +110,26 @@ public class KnowledgeChunkGenerationBizService {
         return document;
     }
 
-    /** 只允许固定规则提示进入接口，其他异常仍脱敏，避免泄露SDK响应或文档正文。 */
+    /** 只允许固定规则及受控数字诊断进入接口，其他异常仍脱敏，避免泄露SDK响应或文档正文。 */
     private String resolveFailureMessage(Exception exception) {
+        if (exception instanceof KnowledgeChunkGenerationException generationException) {
+            return generationException.getMessage() + "；已有分片已保留";
+        }
         if (exception instanceof DocumentChunkException chunkException) {
             return chunkException.getReason().getMessage() + "；已有分片已保留";
         }
         return "分片生成失败，请检查Docling服务、文件格式及参数后重试；已有分片已保留";
+    }
+
+    /** 日志使用明确分类，不从任意第三方异常消息中推断或暴露正文。 */
+    private String resolveFailureReason(Exception exception) {
+        if (exception instanceof KnowledgeChunkGenerationException generationException) {
+            return generationException.getReason().getCode();
+        }
+        if (exception instanceof DocumentChunkException chunkException) {
+            return chunkException.getReason().getCode();
+        }
+        return exception.getClass().getSimpleName();
     }
 
     /** 只更新仍属于当前请求的失败；超时后重试的新结果不会被旧请求覆盖。 */

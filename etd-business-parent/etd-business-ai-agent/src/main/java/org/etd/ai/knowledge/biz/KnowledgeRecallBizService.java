@@ -20,7 +20,7 @@ import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 
-/** 知识库检索用例，复用同一路径提供正式业务召回与管理页召回测试。 */
+/** 知识库管理页召回测试用例，允许检索尚未启用的已确认资料。 */
 @Service
 @RequiredArgsConstructor
 public class KnowledgeRecallBizService {
@@ -29,26 +29,22 @@ public class KnowledgeRecallBizService {
     private final KnowledgeModelSettingsService settings;
     private final ModelInferenceService inference;
 
-    /** @param id 知识库 @param query 问题 @return 可读的已确认资料，包含尚未启用资料 */
+    /**
+     * 查询及重排期间不持有数据库事务，最后复核当前权限、配置及资料轮次。
+     * @param id 知识库
+     * @param query 问题
+     * @return 可读的已确认资料，包含尚未启用资料
+     * @throws ApiRuntimeException 问题无效、无读取权限、配置变化或模型不可用
+     */
     public List<KnowledgeRecallHit> testRecall(Long id, String query) {
-        return recallList(id, query, true);
-    }
-
-    /** @param id 知识库 @param query 问题 @return 已启用且可读的已确认资料，供业务调用 */
-    public List<KnowledgeRecallHit> recallList(Long id, String query) {
-        return recallList(id, query, false);
-    }
-
-    /** 查询及重排期间不持有数据库事务，最后再次检查当前权限、配置及资料轮次。 */
-    private List<KnowledgeRecallHit> recallList(Long id, String query, boolean test) {
         if (query == null || query.isBlank() || query.length() > KnowledgeRetrievalPolicy.MAX_QUERY_CHARACTERS) {
             throw new ApiRuntimeException("检索问题不能为空且不能超过2000个字符");
         }
         var base = bases.requireBase(id, false, false);
         String text = query.trim();
         var keyword = KnowledgeRetrievalPolicy.VECTOR.equals(base.getRetrievalMode())
-                ? List.<KnowledgeRecallHit>of() : recall.fetchKeywordList(base, text, test);
-        var vector = fetchVectorList(base, text, test);
+                ? List.<KnowledgeRecallHit>of() : recall.fetchKeywordList(base, text);
+        var vector = fetchVectorList(base, text);
         boolean hybrid = KnowledgeRetrievalPolicy.HYBRID.equals(base.getRetrievalMode());
         var candidates = recall.mergeCandidateList(keyword, vector, hybrid);
         if (Boolean.TRUE.equals(base.getRerankEnabled()) && !candidates.isEmpty()) {
@@ -58,12 +54,12 @@ public class KnowledgeRecallBizService {
         if (!Objects.equals(base.getVersion(), latest.getVersion())) {
             throw new ApiRuntimeException("知识库配置已变化，请重新检索");
         }
-        var current = recall.retainCurrentList(id, candidates, test);
+        var current = recall.retainCurrentList(id, candidates);
         var selected = current.subList(0, Math.min(base.getTopK(), current.size()));
         return List.copyOf(selected);
     }
 
-    private List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, String query, boolean test) {
+    private List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, String query) {
         if (KnowledgeRetrievalPolicy.KEYWORD.equals(base.getRetrievalMode())) {
             return List.of();
         }
@@ -75,7 +71,7 @@ public class KnowledgeRecallBizService {
         settings.validate(base.getActiveConnectionId(), ModelType.EMBEDDING, base.getActiveDimensions());
         var questions = List.of(query);
         var vectors = inference.createEmbeddingList(base.getActiveConnectionId(), base.getActiveDimensions(), questions);
-        return recall.fetchVectorList(base, vectors.getFirst(), test);
+        return recall.fetchVectorList(base, vectors.getFirst());
     }
 
     /** SDK结果通过稳定ID匹配，禁止使用服务商返回正文替代数据库权威正文。 */

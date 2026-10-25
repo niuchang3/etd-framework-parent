@@ -23,18 +23,18 @@ public class KnowledgeRecallService {
     private static final int RRF_OFFSET = 60;
     private final KnowledgeRecallMapper mapper;
 
-    /** @param base 已授权知识库 @param query 问题 @param test 是否召回未启用资料 @return 全文候选 */
-    public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query, boolean test) {
-        return mapper.selectKeywordList(base.getId(), query, base.getKeywordRecallSize(), test);
+    /** @param base 已授权知识库 @param query 问题 @return 全文候选 */
+    public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query) {
+        return mapper.selectKeywordList(base.getId(), query, base.getKeywordRecallSize());
     }
 
-    /** @param base 已授权且已建立向量空间的知识库 @param vector 问题向量 @param test 是否允许禁用资料
+    /** @param base 已授权且已建立向量空间的知识库 @param vector 问题向量
      * @return 当前代次且内容轮次有效的向量候选 */
-    public List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, float[] vector, boolean test) {
+    public List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, float[] vector) {
         String table = KnowledgeVectorService.resolveTable(base.getActiveDimensions());
         String value = KnowledgeVectorService.formatVector(vector);
         return mapper.selectVectorList(base.getId(), table, value, base.getActiveConnectionId(),
-                base.getActiveIndexVersion(), base.getSimilarityThreshold(), base.getVectorRecallSize(), test);
+                base.getActiveIndexVersion(), base.getSimilarityThreshold(), base.getVectorRecallSize());
     }
 
     /** @param keyword 全文候选 @param vector 向量候选 @param hybrid 是否混合排名 @return 去重后的有序候选 */
@@ -68,15 +68,15 @@ public class KnowledgeRecallService {
     }
 
     /**
-     * @param baseId 当前知识库 @param candidates 模型调用前的候选 @param test 是否测试召回
+     * @param baseId 当前知识库 @param candidates 模型调用前的候选
      * @return 外部调用后仍有权限且内容轮次、正文未变化的候选，保持排序
      */
-    public List<KnowledgeRecallHit> retainCurrentList(Long baseId, List<KnowledgeRecallHit> candidates, boolean test) {
+    public List<KnowledgeRecallHit> retainCurrentList(Long baseId, List<KnowledgeRecallHit> candidates) {
         if (candidates.isEmpty()) {
             return candidates;
         }
         var ids = candidates.stream().map(KnowledgeRecallHit::getChunkId).toList();
-        var current = mapper.selectCurrentList(baseId, ids, test);
+        var current = mapper.selectCurrentList(baseId, ids);
         Map<Long, KnowledgeRecallHit> readable = new LinkedHashMap<>();
         for (var hit : current) {
             readable.put(hit.getChunkId(), hit);

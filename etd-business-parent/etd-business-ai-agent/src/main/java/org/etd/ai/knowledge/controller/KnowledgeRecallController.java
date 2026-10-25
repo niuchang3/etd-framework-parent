@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 知识库检索入口，参数不能覆盖权限、模型或资料启停规则。 */
+/** 知识库召回测试入口，仅查询权限内已确认资料，允许资料尚未启用。 */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/v1/knowledge-bases/{id}")
@@ -38,13 +38,4 @@ public class KnowledgeRecallController {
         return ResultModel.success(result);
     }
 
-    /** @param id 知识库ID @param dto 检索问题 @return 已启用资料的正式召回结果 */
-    @PostMapping("/recall")
-    @AutoLog("检索知识库内容")
-    public ResultModel<List<KnowledgeRecallHitVO>> getRecall(@PathVariable Long id,
-            @Valid @RequestBody KnowledgeRecallDTO dto) {
-        var hits = biz.recallList(id, dto.getQuery());
-        var result = KnowledgeRecallConverter.INSTANCE.toVOList(hits);
-        return ResultModel.success(result);
-    }
 }

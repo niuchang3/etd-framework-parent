@@ -30,9 +30,6 @@
         and d.chunk_status = 'confirmed'
         and d.upload_status = 'completed'
         and (d.is_public = true or <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>)
-        <if test="!test">
-            and d.data_status = 1
-        </if>
     </sql>
 
     <select id="selectKeywordList" resultMap="hit">

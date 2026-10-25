@@ -124,11 +124,11 @@ class AiEndpointAuthenticationTest {
         RequestContext.clean();
     }
 
-    /** 未提供的手动全库索引及search入口不注册路由，召回使用独立入口。 */
+    /** 未提供的手动全库索引、search及正式recall入口不注册路由，仅保留召回测试。 */
     @Test
     void shouldKeepUnimplementedKnowledgeEndpointsUnregistered() throws Exception {
         var session = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
-        for (var action : List.of("index", "search")) {
+        for (var action : List.of("index", "search", "recall")) {
             var request = post("/v1/knowledge-bases/1/" + action).session(session)
                     .contentType(MediaType.APPLICATION_JSON).content("{}");
             mvc.perform(request).andExpect(status().isNotFound());
@@ -219,7 +219,6 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "DELETE", bases + "/1", null, true);
         String query = "{\"query\":\"安装指南\"}";
         addKnowledgeEndpoint(result, "POST", bases + "/1/recall-test", query, false);
-        addKnowledgeEndpoint(result, "POST", bases + "/1/recall", query, false);
         String base = "/v1/knowledge-documents";
         String uploads = base + "/uploads";
         String hash = "0".repeat(64);
@@ -692,7 +691,6 @@ class AiEndpointAuthenticationTest {
         KnowledgeRecallController knowledgeRecallController() {
             var biz = mock(KnowledgeRecallBizService.class);
             when(biz.testRecall(any(), any())).thenReturn(List.of());
-            when(biz.recallList(any(), any())).thenReturn(List.of());
             return new KnowledgeRecallController(biz);
         }
 

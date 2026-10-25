@@ -116,9 +116,9 @@ class KnowledgeRecallPersistenceTest {
         RequestContext.clean();
     }
 
-    /** 确认后向量和中文全文均可测试召回，正式召回要求资料显式启用。 */
+    /** 确认后向量和中文全文均可测试召回，资料启停不影响召回测试。 */
     @Test
-    void confirmsAndRecallsWithPublicationGate() {
+    void confirmsAndRecallsRegardlessOfPublicationStatus() {
         var state = editing.confirmChunks(1L, 0L);
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.CONFIRMED);
         assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isEqualTo(2);
@@ -127,9 +127,9 @@ class KnowledgeRecallPersistenceTest {
         assertThat(hits.getFirst().getChunkId()).isEqualTo(101L);
         assertThat(hits.getFirst().getKeywordScore()).isPositive();
         assertThat(hits.getFirst().getVectorScore()).isCloseTo(1.0, within(0.000001));
-        assertThat(recall.recallList(10L, "安装")).isEmpty();
+        assertThat(documents.requireDocument(1L, false).getDataStatus()).isZero();
         jdbc.update("update ai_knowledge_document set data_status = 1 where id = 1");
-        assertThat(recall.recallList(10L, "安装")).hasSize(2);
+        assertThat(recall.testRecall(10L, "安装")).hasSize(2);
     }
 
     /** 编辑后的草稿不能命中旧向量；重新确认使用资料当前轮次替换全部向量。 */
