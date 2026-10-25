@@ -8,8 +8,9 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -18,6 +19,8 @@ import java.time.Instant;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 
 /** 资料基础持久化能力，读取及维护权限继承知识库并检查文档共享范围。 */
+// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeDocumentService {
@@ -32,16 +35,14 @@ public class KnowledgeDocumentService {
     public IPage<KnowledgeDocumentEntity> fetchDocumentPage(long current, long size, Long folderId,
             List<Long> folderIds, String keyword, String uploadStatus, String chunkStatus, Long knowledgeBaseId, Integer dataStatus) {
         var page = new Page<KnowledgeDocumentEntity>(current, size);
-        var scope = DataPermissionScope.current();
         return mapper.selectReadablePage(page, knowledgeBaseId, folderId, folderIds, keyword,
-                uploadStatus, chunkStatus, dataStatus, scope);
+                uploadStatus, chunkStatus, dataStatus);
     }
 
     /** @param id 资料ID @param lock 是否在当前事务加行锁 @return 可读取资料；lock为true时同时要求严格维护范围
      * @throws ApiRuntimeException 无权限或资料不存在 */
     public KnowledgeDocumentEntity requireDocument(Long id, boolean lock) {
-        var scope = DataPermissionScope.current();
-        var entity = mapper.selectAccessible(id, lock, scope);
+        var entity = mapper.selectAccessible(id, lock);
         if (entity == null || lock && !Boolean.TRUE.equals(entity.getWritable())) {
             throw new ApiRuntimeException("资料不存在或无知识库操作权限");
         }

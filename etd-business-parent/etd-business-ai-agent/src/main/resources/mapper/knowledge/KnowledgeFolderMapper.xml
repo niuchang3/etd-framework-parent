@@ -7,6 +7,7 @@
             select f.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable
             from ai_knowledge_folder f
             join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
+            <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
             where f.del_flag = 0 and f.knowledge_base_id = #{knowledgeBaseId}
               and (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
                    or exists (select 1 from ai_knowledge_document d
@@ -28,6 +29,7 @@
         select f.*, true as writable
         from ai_knowledge_folder f
         join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
+        <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
         where f.id = #{id} and f.del_flag = 0
           and <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
     </select>

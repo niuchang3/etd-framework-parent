@@ -7,7 +7,11 @@ import org.etd.ai.knowledge.mapper.KnowledgeBaseMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 /** 知识库基础读写能力；共享读取与维护权限严格分离。 */
+// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeBaseService {
@@ -15,13 +19,11 @@ public class KnowledgeBaseService {
     /** @param current 页码 @param size 页大小 @param keyword 名称关键字 @return 权限内卡片 */
     public IPage<KnowledgeBaseEntity> fetchBasePage(long current, long size, String keyword) {
         var page = new Page<KnowledgeBaseEntity>(current, size);
-        var scope = DataPermissionScope.current();
-        return mapper.selectReadablePage(page, keyword, scope);
+        return mapper.selectReadablePage(page, keyword);
     }
     /** @param id 知识库 @param write 是否要求维护资格 @param lock 是否行锁 @return 可访问记录 */
     public KnowledgeBaseEntity requireBase(Long id, boolean write, boolean lock) {
-        var scope = DataPermissionScope.current();
-        var base = mapper.selectAccessible(id, scope, lock);
+        var base = mapper.selectAccessible(id, lock);
         if (base == null || write && !Boolean.TRUE.equals(base.getWritable())) {
             throw new ApiRuntimeException("知识库不存在或无操作权限");
         }
@@ -37,6 +39,7 @@ public class KnowledgeBaseService {
         return entity.getId();
     }
     /** @param entity 已锁定配置，索引状态与用户配置统一乐观锁检查 */
+    @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base"))
     public void modifyBase(KnowledgeBaseEntity entity) {
         entity.setUpdateTime(null);
         entity.setUpdateBy(null);
@@ -45,6 +48,7 @@ public class KnowledgeBaseService {
         }
     }
     /** @param id 已授权空知识库；资料占用阻止删除 */
+    @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base"))
     public void removeBase(Long id) {
         if (mapper.selectDocumentCount(id) > 0) {
             throw new ApiRuntimeException("知识库仍有文档，请先删除文档");

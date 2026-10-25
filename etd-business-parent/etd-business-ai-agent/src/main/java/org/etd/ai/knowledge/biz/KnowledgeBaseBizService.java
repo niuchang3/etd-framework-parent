@@ -1,7 +1,6 @@
 package org.etd.ai.knowledge.biz;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.component.KnowledgeModelClient;
+import org.etd.ai.knowledge.service.KnowledgeModelSettingsService;
 import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.converter.KnowledgeBaseConverter;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
@@ -11,15 +10,14 @@ import org.etd.ai.model.constant.ModelType;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Instant;
 import java.util.Objects;
-/** 知识库配置与索引提交用例，外部模型调用由后台任务执行。 */
+/** 知识库配置维护用例，仅保存并校验模型及检索参数。 */
 @Service
 @RequiredArgsConstructor
 public class KnowledgeBaseBizService {
     private final KnowledgeBaseService bases;
     private final KnowledgeFolderService folders;
-    private final KnowledgeModelClient models;
+    private final KnowledgeModelSettingsService models;
     /** @param input 用户设置 @return 新知识库ID */
     @Transactional
     public Long createBase(KnowledgeBaseEntity input) {
@@ -31,56 +29,18 @@ public class KnowledgeBaseBizService {
     public void modifyBase(Long id, KnowledgeBaseEntity input, Long version) {
         var base = bases.requireBase(id, true, true);
         requireVersion(base, version);
-        if (KnowledgeRetrievalPolicy.BUILDING.equals(base.getIndexStatus())) {
-            throw new ApiRuntimeException("索引构建中，请完成后再修改设置");
-        }
         if (!Objects.equals(base.getOrgId(), input.getOrgId())) {
             throw new ApiRuntimeException("知识库创建后不允许变更组织归属");
         }
         validateSettings(input);
-        // 模型或维度改变后不能复用旧失败任务；其余设置不改变向量空间。
-        boolean changed = !Objects.equals(base.getEmbeddingConnectionId(), input.getEmbeddingConnectionId())
-                || !Objects.equals(base.getDimensions(), input.getDimensions());
-        if (changed) {
-            base.setBuildingIndexVersion(0L);
-            base.setIndexStatus(KnowledgeRetrievalPolicy.IDLE);
-            base.setIndexCompleted(0);
-            base.setIndexTotal(0);
-            base.setIndexError(null);
-        }
         KnowledgeBaseConverter.INSTANCE.updateEntity(input, base);
         bases.modifyBase(base);
     }
-    /** @param id 知识库 @param version 当前版本 @return 本次构建代次 */
-    @Transactional
-    public Long initIndex(Long id, Long version) {
-        var base = bases.requireBase(id, true, true);
-        requireVersion(base, version);
-        if (KnowledgeRetrievalPolicy.BUILDING.equals(base.getIndexStatus())) {
-            throw new ApiRuntimeException("已有索引任务，请等待完成");
-        }
-        requireEmbedding(base);
-        // 同配置失败重试继续同一代次，后台复用已完成分片，避免重复模型调用。
-        if (!KnowledgeRetrievalPolicy.FAILED.equals(base.getIndexStatus()) || base.getBuildingIndexVersion() == 0) {
-            base.setBuildingIndexVersion(IdWorker.getId());
-        }
-        base.setIndexStatus(KnowledgeRetrievalPolicy.BUILDING);
-        base.setIndexTotal(0);
-        base.setIndexCompleted(0);
-        base.setIndexError(null);
-        base.setIndexLeaseUntil(null);
-        base.setIndexStartedTime(Instant.now());
-        bases.modifyBase(base);
-        return base.getBuildingIndexVersion();
-    }
-    /** @param id 空知识库，构建期间禁止删除 */
+    /** @param id 已授权的空知识库 */
     @Transactional
     public void removeBase(Long id) {
         folders.lockStructure();
-        var base = bases.requireBase(id, true, true);
-        if (KnowledgeRetrievalPolicy.BUILDING.equals(base.getIndexStatus())) {
-            throw new ApiRuntimeException("索引构建中不能删除知识库");
-        }
+        bases.requireBase(id, true, true);
         bases.removeBase(id);
         folders.removeFolderList(id);
     }
@@ -90,7 +50,9 @@ public class KnowledgeBaseBizService {
         }
     }
     private void requireEmbedding(KnowledgeBaseEntity base) {
-        KnowledgeRetrievalPolicy.vectorTable(base.getDimensions());
+        if (base.getDimensions() == null || !KnowledgeRetrievalPolicy.DIMENSIONS.contains(base.getDimensions())) {
+            throw new ApiRuntimeException("仅支持768、1024、1536维向量");
+        }
         models.validate(base.getEmbeddingConnectionId(), ModelType.EMBEDDING, base.getDimensions());
     }
     private void validateSettings(KnowledgeBaseEntity base) {

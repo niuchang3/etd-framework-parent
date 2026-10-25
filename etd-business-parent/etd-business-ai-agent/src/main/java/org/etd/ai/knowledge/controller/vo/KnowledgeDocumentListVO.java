@@ -6,8 +6,6 @@ import java.time.Instant;
 /** 资料列表摘要；上传分片清单只在详情返回，避免分页传输大量回执。 */
 @Data
 public class KnowledgeDocumentListVO {
-    /** 当前内容是否满足知识库生效检索配置，独立于正式启停。 */
-    private Boolean indexReady;
 
     /** 所属知识库ID。 */
     private Long knowledgeBaseId;

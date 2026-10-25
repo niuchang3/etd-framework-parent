@@ -6,7 +6,6 @@ import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.MappingTarget;
-import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

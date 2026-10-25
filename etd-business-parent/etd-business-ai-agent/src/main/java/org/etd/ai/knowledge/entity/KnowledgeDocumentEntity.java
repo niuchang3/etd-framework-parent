@@ -17,9 +17,6 @@ import org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkParametersTypeHandl
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ai_knowledge_document", autoResultMap = true)
 public class KnowledgeDocumentEntity extends OrgScopedEntity {
-    /** 当前检索模式下的索引是否就绪，实时关联确认状态及生效向量版本。 */
-    @TableField(exist = false)
-    private Boolean indexReady;
 
     /** 文档默认禁用，测试确认后显式启用。 */
     @TableField(value = "data_status", fill = FieldFill.INSERT)

@@ -6,7 +6,6 @@ import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentListVO;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.mapstruct.*;
-import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.mapstruct.factory.Mappers;
 
 /** 资料接口边界转换，不允许请求覆盖可信身份与内部状态。 */

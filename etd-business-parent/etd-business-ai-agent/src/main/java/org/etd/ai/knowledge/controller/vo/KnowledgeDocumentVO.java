@@ -8,8 +8,6 @@ import java.util.List;
 /** 资料管理响应，省略原件位置和对象存储会话标识。 */
 @Data
 public class KnowledgeDocumentVO {
-    /** 当前内容是否满足知识库生效检索配置，独立于正式启停。 */
-    private Boolean indexReady;
 
     /** 所属知识库ID。 */
     private Long knowledgeBaseId;

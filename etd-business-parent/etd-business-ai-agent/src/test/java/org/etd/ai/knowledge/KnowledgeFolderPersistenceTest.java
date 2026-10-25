@@ -17,7 +17,7 @@ class KnowledgeFolderPersistenceTest {
         var service = new KnowledgeFolderService(mapper);
         var folder = new KnowledgeFolderEntity();
         folder.setKnowledgeBaseId(10L);
-        when(mapper.selectWritable(eq(1L), any())).thenReturn(folder);
+        when(mapper.selectWritable(1L)).thenReturn(folder);
         assertThrows(ApiRuntimeException.class, () -> service.requireParent(1L, 20L));
         service.requireParent(1L, 10L);
     }

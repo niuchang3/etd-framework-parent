@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import org.etd.ai.knowledge.controller.dto.KnowledgeChunkEditDTO;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.mapstruct.factory.Mappers;
-import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 
 /** 分片边界转换，可信归属只来自已授权资料。 */
 @Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR, imports = DocumentTokenCounter.class)

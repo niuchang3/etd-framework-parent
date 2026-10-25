@@ -4,23 +4,24 @@ import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeFolderMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import java.util.List;
 /** 知识库内部分类能力，不具有独立组织数据权限。 */
+// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeFolderService {
     private final KnowledgeFolderMapper mapper;
     /** @param knowledgeBaseId 知识库 @param dataStatus 可选目录状态 @return 可见目录与必要祖先 */
     public List<KnowledgeFolderEntity> fetchFolderList(Long knowledgeBaseId, Integer dataStatus) {
-        var scope = DataPermissionScope.current();
-        return mapper.selectFolderList(knowledgeBaseId, dataStatus, scope);
+        return mapper.selectFolderList(knowledgeBaseId, dataStatus);
     }
     /** @param id 分类ID @return 继承知识库维护资格的分类 */
     public KnowledgeFolderEntity requireWritable(Long id) {
-        var scope = DataPermissionScope.current();
-        var entity = mapper.selectWritable(id, scope);
+        var entity = mapper.selectWritable(id);
         if (entity == null) {
             throw new ApiRuntimeException("分类不存在或无知识库维护权限");
         }

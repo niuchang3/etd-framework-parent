@@ -10,9 +10,13 @@ import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeChunkMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
+import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import java.util.List;
 
 /** 分片持久化能力；事务、资料权限及整份结果的版本由Biz层统一控制。 */
+// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeChunkService {

@@ -107,13 +107,9 @@ public class KnowledgeBaseEntity extends OrgScopedEntity {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Instant indexLeaseUntil;
 
-    /** 待构建向量模型展示名称。 */
+    /** 配置的向量模型展示名称。 */
     @TableField(exist = false)
     private String embeddingModelName;
-
-    /** 当前生效向量模型展示名称。 */
-    @TableField(exist = false)
-    private String activeModelName;
 
     /** 当前用户可读文档数量。 */
     @TableField(exist = false)

@@ -10,47 +10,14 @@
                 typeHandler="org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkParametersTypeHandler"/>
     </resultMap>
 
-    <!-- dimensionTable由include属性固定指定，不能由HTTP请求传入。 -->
-    <sql id="dimensionReady">
-        not exists (
-            select 1 from ai_knowledge_chunk pending
-            where pending.document_id = d.id and pending.knowledge_base_id = b.id and pending.del_flag = 0
-              and not exists (
-                  select 1 from ${dimensionTable} vector_row
-                  where vector_row.chunk_id = pending.id and vector_row.knowledge_base_id = b.id
-                    and vector_row.index_version = b.active_index_version
-                    and vector_row.model_connection_id = b.active_connection_id
-                    and vector_row.processing_version = d.processing_version
-              )
-        )
-    </sql>
-    <sql id="indexReady">
-        case
-            when d.chunk_status != 'confirmed' or d.chunk_count = 0 or d.upload_status != 'completed' then false
-            when b.retrieval_mode = 'keyword' then true
-            when b.active_dimensions = 768 then
-                <include refid="dimensionReady">
-                    <property name="dimensionTable" value="ai_vector_768"/>
-                </include>
-            when b.active_dimensions = 1024 then
-                <include refid="dimensionReady">
-                    <property name="dimensionTable" value="ai_vector_1024"/>
-                </include>
-            when b.active_dimensions = 1536 then
-                <include refid="dimensionReady">
-                    <property name="dimensionTable" value="ai_vector_1536"/>
-                </include>
-            else false
-        end as index_ready
-    </sql>
     <sql id="documentAccess">
         (d.is_public = true or <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>)
     </sql>
     <select id="selectReadablePage" resultMap="knowledgeDocument">
-        select d.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable,
-               <include refid="indexReady"/>
+        select d.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable
         from ai_knowledge_document d
         join ai_knowledge_base b on b.id = d.knowledge_base_id and b.del_flag = 0
+        <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
         where d.knowledge_base_id = #{knowledgeBaseId} and d.del_flag = 0 and <include refid="documentAccess"/>
         <choose>
             <when test="folderIds != null and !folderIds.isEmpty()">
@@ -78,14 +45,20 @@
         order by d.create_time desc, d.id desc
     </select>
     <select id="selectAccessible" resultMap="knowledgeDocument">
-        select d.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable,
-               <include refid="indexReady"/>
-        from ai_knowledge_document d
+        select d.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable
+        <!-- 单表子查询保留仅锁文档的语义，避免Druid无法解析FOR UPDATE OF。 -->
+        from
+        <choose>
+            <when test="lock">
+                (select * from ai_knowledge_document where id = #{id} and del_flag = 0 for update) d
+            </when>
+            <otherwise>
+                ai_knowledge_document d
+            </otherwise>
+        </choose>
         join ai_knowledge_base b on b.id = d.knowledge_base_id and b.del_flag = 0
+        <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
         where d.id = #{id} and d.del_flag = 0 and <include refid="documentAccess"/>
-        <if test="lock">
-            for update of d
-        </if>
     </select>
     <!-- 仅后台任务调用，读取到期记录并在事务内串行取消，不改变完整原件的保留策略。 -->
     <select id="selectExpiredUploadList" resultMap="knowledgeDocument">

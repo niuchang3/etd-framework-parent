@@ -33,7 +33,6 @@ import org.etd.ai.knowledge.controller.KnowledgeBaseController;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.biz.KnowledgeBaseBizService;
-import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
 import org.etd.ai.knowledge.controller.KnowledgeChunkController;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
@@ -123,6 +122,17 @@ class AiEndpointAuthenticationTest {
         RequestContext.clean();
     }
 
+    /** 三个已删除入口不再注册路由，持有知识库读写权限也不可调用。 */
+    @Test
+    void shouldRemoveKnowledgeIndexAndRecallEndpoints() throws Exception {
+        var session = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
+        for (var action : List.of("index", "recall-test", "search")) {
+            var request = post("/v1/knowledge-bases/1/" + action).session(session)
+                    .contentType(MediaType.APPLICATION_JSON).content("{}");
+            mvc.perform(request).andExpect(status().isNotFound());
+        }
+    }
+
     /** 匿名业务请求仍被框架认证入口拒绝。 */
     @Test
     void shouldRequireAuthenticationForBusinessEndpoints() throws Exception {
@@ -196,9 +206,6 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "POST", bases, settings, true);
         addKnowledgeEndpoint(result, "PUT", bases + "/1", settings, true);
         addKnowledgeEndpoint(result, "DELETE", bases + "/1", null, true);
-        addKnowledgeEndpoint(result, "POST", bases + "/1/index", "{\"version\":0}", true);
-        addKnowledgeEndpoint(result, "POST", bases + "/1/recall-test", "{\"query\":\"测试问题\"}", true);
-        addKnowledgeEndpoint(result, "POST", bases + "/1/search", "{\"query\":\"测试问题\"}", false);
         String base = "/v1/knowledge-documents";
         String uploads = base + "/uploads";
         String hash = "0".repeat(64);
@@ -696,13 +703,12 @@ class AiEndpointAuthenticationTest {
         KnowledgeBaseController knowledgeBaseController() {
             var bases = mock(KnowledgeBaseService.class);
             var biz = mock(KnowledgeBaseBizService.class);
-            var recall = mock(KnowledgeRecallBizService.class);
             var page = new Page<KnowledgeBaseEntity>(1, 12);
             when(bases.fetchBasePage(1, 12, null)).thenReturn(page);
             var base = new KnowledgeBaseEntity();
             base.setId(1L);
             when(bases.requireBase(1L, false, false)).thenReturn(base);
-            return new KnowledgeBaseController(bases, biz, recall);
+            return new KnowledgeBaseController(bases, biz);
         }
 
         /** 装配真实资料控制器。 */

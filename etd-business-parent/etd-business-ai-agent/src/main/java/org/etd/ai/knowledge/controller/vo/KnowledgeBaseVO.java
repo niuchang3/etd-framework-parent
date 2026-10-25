@@ -54,44 +54,14 @@ public class KnowledgeBaseVO {
     /** 重排分数下限，空表示不限制。 */
     private Double rerankThreshold;
 
-    /** 待构建的向量模型连接ID。 */
+    /** 配置的向量模型连接ID。 */
     private Long embeddingConnectionId;
 
-    /** 待构建维度，仅768、1024或1536。 */
+    /** 配置的向量维度，仅768、1024或1536。 */
     private Integer dimensions;
 
-    /** 正式生效索引使用的模型连接ID。 */
-    private Long activeConnectionId;
-
-    /** 正式生效索引维度。 */
-    private Integer activeDimensions;
-
-    /** 生效向量索引代次，0表示尚未初始化。 */
-    private Long activeIndexVersion;
-
-    /** 正在构建或最近失败的索引代次。 */
-    private Long buildingIndexVersion;
-
-    /** idle、building、ready或failed。 */
-    private String indexStatus;
-
-    /** 本次需要处理的分片数。 */
-    private Integer indexTotal;
-
-    /** 本次已完成分片数。 */
-    private Integer indexCompleted;
-
-    /** 脱敏后的索引错误。 */
-    private String indexError;
-
-    /** 本次构建开始时间，用于超时恢复。 */
-    private Instant indexStartedTime;
-
-    /** 待构建向量模型展示名称。 */
+    /** 配置的向量模型展示名称。 */
     private String embeddingModelName;
-
-    /** 当前生效向量模型展示名称。 */
-    private String activeModelName;
 
     /** 当前用户可读文档数量。 */
     private Long documentCount;

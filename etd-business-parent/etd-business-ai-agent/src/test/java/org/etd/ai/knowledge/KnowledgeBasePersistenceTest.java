@@ -3,12 +3,6 @@ package org.etd.ai.knowledge;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
-import org.etd.ai.knowledge.biz.KnowledgeIndexBuildBizService;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-import org.etd.ai.knowledge.component.KnowledgeModelClient;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.mapper.*;
 import org.etd.ai.knowledge.service.*;
@@ -30,11 +24,12 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import java.util.*;
+import java.sql.SQLException;
+import org.etd.framework.starter.mybaits.permission.aspect.DataPermissionAspect;
+import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
-/** 仅在新建隔离PostgreSQL库执行生产DDL及真实拦截链，验证全文、向量和公开边界。 */
+/** 仅在新建隔离PostgreSQL库执行生产DDL及真实拦截链，验证权限继承、公开边界及行锁。 */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIfEnvironmentVariable(named = "AI_KNOWLEDGE_TEST_JDBC_URL", matches = ".+")
 class KnowledgeBasePersistenceTest {
@@ -110,9 +105,11 @@ class KnowledgeBasePersistenceTest {
     /** 分类继承库权限，不能依赖目录创建人；公开库中的私有文档不可读。 */
     @Test
     void shouldInheritBasePermissionsAndProtectPrivateDocuments() {
-        var bases = new KnowledgeBaseService(session.getMapper(KnowledgeBaseMapper.class));
-        var documents = new KnowledgeDocumentService(session.getMapper(KnowledgeDocumentMapper.class));
-        var folders = new KnowledgeFolderService(session.getMapper(KnowledgeFolderMapper.class));
+        var bases = createBaseService(session);
+        var documents = createDocumentService(session);
+        var folderMapper = session.getMapper(KnowledgeFolderMapper.class);
+        var folderService = new KnowledgeFolderService(folderMapper);
+        var folders = permissionProxy(folderService);
         assertThat(bases.fetchBasePage(1, 12, null).getRecords()).extracting("id").containsExactly(2L, 1L);
         assertThat(documents.requireDocument(2L, false).getWritable()).isTrue();
         assertThat(documents.requireDocument(4L, false).getWritable()).isFalse();
@@ -124,47 +121,58 @@ class KnowledgeBasePersistenceTest {
         RequestContext.getUser().setPlatformAdmin(true);
         assertThat(documents.requireDocument(5L, false)).isNotNull();
     }
-    /** 管理召回允许禁用文档，正式接口强制启用，知识库关闭后正式查询拒绝。 */
+    /** 本人范围按知识库创建人判断，不能误用上传人或分类创建人。 */
     @Test
-    void shouldSeparateTestAndProductionRecall() {
-        var bases = new KnowledgeBaseService(session.getMapper(KnowledgeBaseMapper.class));
-        var retrieval = new KnowledgeRetrievalService(session.getMapper(KnowledgeRetrievalMapper.class));
-        var models = mock(KnowledgeModelClient.class);
-        var biz = new KnowledgeRecallBizService(bases, retrieval, models);
-        assertThat(biz.recall(1L, "安装", null, true)).extracting("documentId").containsExactlyInAnyOrder(1L, 2L);
-        assertThat(biz.recall(1L, "安装", 0, false)).extracting("documentId").containsExactly(2L);
-        assertThat(biz.recall(2L, "安装", null, false)).extracting("documentId").containsExactly(4L);
-        jdbc.update("update ai_knowledge_document set data_status = 0 where id = 2");
+    void shouldApplySelfScopeToBaseAndInheritItForChildren() {
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
+        var documents = createDocumentService(session);
+        var folders = createFolderService(session);
+        assertThat(documents.requireDocument(1L, true).getWritable()).isTrue();
+        assertThat(folders.fetchFolderList(1L, null)).extracting("id").containsExactly(1L);
+        var chunkMapper = session.getMapper(KnowledgeChunkMapper.class);
+        var chunkService = new KnowledgeChunkService(chunkMapper);
+        var chunks = permissionProxy(chunkService);
+        assertThat(chunks.fetchChunkList(1L)).extracting("id").containsExactly(1L);
+        RequestContext.getUser().setId(999L);
         session.clearCache();
-        assertThat(biz.recall(1L, "安装", null, false)).isEmpty();
-        jdbc.update("update ai_knowledge_base set data_status = 0 where id = 1");
-        session.clearCache();
-        assertThatThrownBy(() -> biz.recall(1L, "安装", null, false)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> documents.requireDocument(1L, false)).isInstanceOf(ApiRuntimeException.class);
+        assertThat(folders.fetchFolderList(1L, null)).isEmpty();
     }
-    /** 相同维度必须匹配知识库、模型、索引和正文版本；停用实时生效且不删除向量。 */
+
+    /** 无角色范围仍可读取公开资料及其祖先分类，但不能维护，也不能泄露私有文档数量。 */
     @Test
-    void shouldFilterVectorGenerationAndPublicationState() throws Exception {
-        jdbc.update("update ai_knowledge_base set retrieval_mode = 'vector', active_connection_id = 99, active_dimensions = 768, active_index_version = 10 where id = 1");
-        var mapper = session.getMapper(KnowledgeRetrievalMapper.class);
-        float[] embedding = new float[768];
-        embedding[0] = 1;
-        String vector = Arrays.toString(embedding);
-        var metadata = Map.of("tenant_id", "900001", "knowledge_base_id", "1", "document_id", "2", "chunk_id", "2",
-                "model_connection_id", "99", "index_version", "10", "processing_version", "0");
-        var json = new ObjectMapper();
-        String encoded = json.writeValueAsString(metadata);
-        mapper.insertVector("ai_vector_768", 1L, "设备安装指南", encoded, vector);
-        var bases = new KnowledgeBaseService(session.getMapper(KnowledgeBaseMapper.class));
-        var retrieval = new KnowledgeRetrievalService(mapper);
-        var models = mock(KnowledgeModelClient.class);
-        when(models.embed(eq(99L), eq(768), anyString(), eq(true))).thenReturn(embedding);
-        var biz = new KnowledgeRecallBizService(bases, retrieval, models);
-        assertThat(biz.recall(1L, "安装", null, false)).extracting("documentId").containsExactly(2L);
-        jdbc.update("update ai_knowledge_document set processing_version = 1 where id = 2");
-        session.clearCache();
-        assertThat(biz.recall(1L, "安装", null, false)).isEmpty();
-        assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Long.class)).isEqualTo(1);
+    void shouldKeepPublicReadSeparateFromMaintenanceScope() {
+        RequestContext.getUser().setPermissionTypes(Set.of());
+        jdbc.update("update ai_knowledge_document set is_public = true where id = 2");
+        var bases = createBaseService(session);
+        var documents = createDocumentService(session);
+        var folders = createFolderService(session);
+        var cards = bases.fetchBasePage(1, 12, null).getRecords();
+        assertThat(cards).extracting("id").containsExactly(2L, 1L);
+        assertThat(cards).extracting("documentCount").containsExactly(1L, 1L);
+        assertThat(cards).extracting("writable").containsOnly(false);
+        assertThat(documents.requireDocument(2L, false).getWritable()).isFalse();
+        assertThatThrownBy(() -> documents.requireDocument(2L, true)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> bases.requireBase(1L, true, false)).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> folders.requireWritable(1L)).isInstanceOf(ApiRuntimeException.class);
+        assertThat(folders.fetchFolderList(1L, null)).extracting("id").containsExactly(1L);
+        assertThat(folders.fetchFolderList(3L, null)).isEmpty();
     }
+
+    /** 修改知识库使用框架严格写范围，不能因为公开可读就更新其他组织配置。 */
+    @Test
+    void shouldEnforceFrameworkScopeForBaseUpdates() {
+        var bases = createBaseService(session);
+        var base = bases.requireBase(2L, false, false);
+        base.setName("未授权修改");
+        assertThatThrownBy(() -> bases.modifyBase(base)).isInstanceOf(ApiRuntimeException.class);
+        assertThat(jdbc.queryForObject("select name from ai_knowledge_base where id = 2", String.class)).isEqualTo("公开库");
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.ALL.getCode()));
+        session.clearCache();
+        assertThat(bases.requireBase(2L, true, false).getWritable()).isTrue();
+        assertThatThrownBy(() -> bases.requireBase(3L, false, false)).isInstanceOf(ApiRuntimeException.class);
+    }
+
     /** MyBatis真实自动填充必须与DDL默认禁用一致，不能被基类默认启用覆盖。 */
     @Test
     void shouldFillNewDocumentAsDisabled() {
@@ -177,46 +185,60 @@ class KnowledgeBasePersistenceTest {
         assertThat(jdbc.queryForObject("select data_status from ai_knowledge_document where id = 99", Integer.class)).isZero();
     }
 
-    /** 新维度后台构建后原子切换；后续模型失败不会覆盖当前生效版本。 */
+    /** 实际执行行锁SQL；目标行被锁住，关联知识库或模型表不应被扩大加锁。 */
     @Test
-    void shouldPublishNewDimensionsAndKeepActiveIndexOnFailure() {
-        jdbc.update("""
-                update ai_knowledge_base set embedding_connection_id = 99, dimensions = 1024,
-                    building_index_version = 10, index_status = 'building', index_lease_until = current_timestamp + interval '1 hour'
-                where id = 1
-                """);
-        var mapper = session.getMapper(KnowledgeBaseMapper.class);
-        var vectors = session.getMapper(KnowledgeRetrievalMapper.class);
-        var models = mock(KnowledgeModelClient.class);
-        float[] embedding = new float[1024];
-        embedding[0] = 1;
-        when(models.embed(eq(99L), eq(1024), anyString(), eq(false))).thenReturn(embedding);
-        var manager = new DataSourceTransactionManager(jdbc.getDataSource());
-        var transactions = new TransactionTemplate(manager);
-        var json = new ObjectMapper();
-        var worker = new KnowledgeIndexBuildBizService(mapper, vectors, models, json, transactions);
-        var task = mapper.selectById(1L);
-        worker.buildIndex(task);
-        session.clearCache();
-        var published = mapper.selectById(1L);
-        assertThat(published.getActiveDimensions()).isEqualTo(1024);
-        assertThat(published.getActiveIndexVersion()).isEqualTo(10);
-        assertThat(published.getIndexStatus()).isEqualTo("ready");
-        assertThat(jdbc.queryForObject("select count(*) from ai_vector_1024", Long.class)).isEqualTo(2);
-        jdbc.update("""
-                update ai_knowledge_base set embedding_connection_id = 100, dimensions = 1536,
-                    building_index_version = 11, index_status = 'building', index_lease_until = current_timestamp + interval '1 hour'
-                where id = 1
-                """);
-        when(models.embed(eq(100L), eq(1536), anyString(), eq(false))).thenThrow(ApiRuntimeException.class);
-        session.clearCache();
-        var failedTask = mapper.selectById(1L);
-        worker.buildIndex(failedTask);
-        session.clearCache();
-        var failed = mapper.selectById(1L);
-        assertThat(failed.getIndexStatus()).isEqualTo("failed");
-        assertThat(failed.getActiveDimensions()).isEqualTo(1024);
-        assertThat(failed.getActiveIndexVersion()).isEqualTo(10);
+    void shouldLockOnlyRequestedBaseOrDocument() throws Exception {
+        try (var locked = factory.openSession(false);
+             var probe = jdbc.getDataSource().getConnection()) {
+            // 独立会话不经过Spring事务代理，显式关闭JDBC自动提交以持有行锁。
+            var connection = locked.getConnection();
+            connection.setAutoCommit(false);
+            var bases = createBaseService(locked);
+            assertThat(bases.requireBase(1L, true, true)).isNotNull();
+            try (var statement = probe.createStatement()) {
+                statement.execute("set lock_timeout = '200ms'");
+                assertThatThrownBy(() -> statement.executeUpdate("update ai_knowledge_base set name = name where id = 1"))
+                        .isInstanceOf(SQLException.class).hasMessageContaining("lock timeout");
+                connection.rollback();
+                locked.clearCache();
+                var documents = createDocumentService(locked);
+                assertThat(documents.requireDocument(1L, true)).isNotNull();
+                assertThat(statement.executeUpdate("update ai_knowledge_base set name = name where id = 1")).isEqualTo(1);
+                assertThatThrownBy(() -> statement.executeUpdate("update ai_knowledge_document set document_name = document_name where id = 1"))
+                        .isInstanceOf(SQLException.class).hasMessageContaining("lock timeout");
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    /** 复用生产切面，验证Service注解确实驱动框架SQL注入。 */
+    private <T> T permissionProxy(T service) {
+        var proxy = new AspectJProxyFactory(service);
+        var aspect = new DataPermissionAspect();
+        proxy.addAspect(aspect);
+        return proxy.getProxy();
+    }
+
+    /** 构造带权限切面的知识库服务。 */
+    private KnowledgeBaseService createBaseService(SqlSession sqlSession) {
+        var mapper = sqlSession.getMapper(KnowledgeBaseMapper.class);
+        var service = new KnowledgeBaseService(mapper);
+        return permissionProxy(service);
+    }
+
+    /** 构造带权限切面的分类服务。 */
+    private KnowledgeFolderService createFolderService(SqlSession sqlSession) {
+        var mapper = sqlSession.getMapper(KnowledgeFolderMapper.class);
+        var service = new KnowledgeFolderService(mapper);
+        return permissionProxy(service);
+    }
+
+    /** 构造带权限切面的文档服务。 */
+    private KnowledgeDocumentService createDocumentService(SqlSession sqlSession) {
+        var mapper = sqlSession.getMapper(KnowledgeDocumentMapper.class);
+        var service = new KnowledgeDocumentService(mapper);
+        return permissionProxy(service);
     }
 
     private void insertDocument(long id, long base, boolean shared, int status) {
