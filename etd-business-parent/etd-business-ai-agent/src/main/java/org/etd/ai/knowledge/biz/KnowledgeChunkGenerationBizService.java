@@ -77,10 +77,17 @@ public class KnowledgeChunkGenerationBizService {
     }
 
     private ByteArrayResource readResource(KnowledgeDocumentEntity document) throws Exception {
-        if (document.getFileSize() > properties.getMaxFileBytes()) { throw new ApiRuntimeException("原件超过单次文档解析的大小限制"); }
+        if (document.getFileSize() > properties.getMaxFileBytes()) {
+            throw KnowledgeChunkGenerationException.fileTooLarge(properties.getMaxFileBytes());
+        }
         byte[] bytes;
         try (var input = objects.openObject(document)) { bytes = input.readNBytes(properties.getMaxFileBytes() + 1); }
-        if (bytes.length == 0 || bytes.length > properties.getMaxFileBytes()) { throw new ApiRuntimeException("原件为空或超过解析大小限制"); }
+        if (bytes.length == 0) {
+            throw new KnowledgeChunkGenerationException(Reason.EMPTY_FILE);
+        }
+        if (bytes.length > properties.getMaxFileBytes()) {
+            throw KnowledgeChunkGenerationException.fileTooLarge(properties.getMaxFileBytes());
+        }
         return new ByteArrayResource(bytes);
     }
 

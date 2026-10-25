@@ -1,6 +1,7 @@
 package org.etd.ai.knowledge.exception;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 
 /** 分片生成的可展示失败；动态信息仅由时限和页数构成，禁止携带文档正文或服务商原始错误。 */
@@ -41,6 +42,15 @@ public final class KnowledgeChunkGenerationException extends RuntimeException {
         return new KnowledgeChunkGenerationException(Reason.WAIT_TIMEOUT, message);
     }
 
+    /** @param maxBytes 后端配置的原件大小上限，单位字节 @return 可展示的解析大小限制，明确使用MiB */
+    public static KnowledgeChunkGenerationException fileTooLarge(long maxBytes) {
+        var bytes = BigDecimal.valueOf(maxBytes);
+        var bytesPerMiB = BigDecimal.valueOf(1024L * 1024L);
+        String limit = bytes.divide(bytesPerMiB, 2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+        String message = "原件超过单次文档解析的" + limit + " MiB上限；请拆分文件或联系管理员调整解析大小限制";
+        return new KnowledgeChunkGenerationException(Reason.FILE_TOO_LARGE, message);
+    }
+
     /** 避免整秒被输出为90.0，同时保留用户配置的亚秒精度。 */
     private static String formatSeconds(Duration duration) {
         var seconds = BigDecimal.valueOf(duration.getSeconds());
@@ -50,6 +60,10 @@ public final class KnowledgeChunkGenerationException extends RuntimeException {
 
     /** 仅供知识库生成流程使用的固定分类，code用于日志，message可展示给用户。 */
     public enum Reason {
+        /** 上传允许的大小不等于单次解析允许的大小，超限时尚未调用解析服务。 */
+        FILE_TOO_LARGE("file_too_large", "原件超过单次文档解析的大小限制，请拆分文件或联系管理员"),
+        /** 对象存储中实际读到空文件，不能提交无效任务。 */
+        EMPTY_FILE("empty_file", "原件内容为空，无法解析，请重新上传有效文件"),
         /** 引擎已经明确报告文档处理超时。 */
         PARSE_TIMEOUT("parse_timeout", "文档解析超时，请增大处理时限或缩小页码范围"),
         /** 业务轮询等待预算耗尽，不能冒充引擎已经报告解析超时。 */

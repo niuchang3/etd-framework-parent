@@ -191,6 +191,27 @@ class KnowledgeChunkGenerationFailureTest {
         assertThat(result.getChunkCount()).isEqualTo(2);
     }
 
+    /** 文件超限在读取和外部解析前明确返回配置上限，不得泛化为解析服务或内存故障。 */
+    @Test
+    void reportsConfiguredFileSizeLimitBeforeCallingParser() {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var document = createDocument(parameters);
+        var properties = new DoclingProperties();
+        document.setFileSize(properties.getMaxFileBytes() + 1L);
+        var documents = mock(KnowledgeDocumentService.class);
+        when(documents.requireDocument(1L, true)).thenReturn(document);
+        var objects = mock(KnowledgeObjectService.class);
+        var chunks = mock(KnowledgeChunkService.class);
+        var transactions = createTransactions();
+        var biz = new KnowledgeChunkGenerationBizService(documents, objects, chunks, generation, properties, transactions);
+        var result = biz.generateChunks(1L, 0L, parameters);
+        assertThat(result.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.FAILED);
+        assertThat(result.getChunkErrorMessage()).contains("20 MiB上限", "已有分片已保留")
+                .doesNotContain("分片生成失败", "Docling", "超时");
+        verifyNoInteractions(objects, chunks);
+        verify(parser, never()).submitChunk(any());
+    }
+
     /** 返回边界覆盖列表、详情和分片状态，保留业务诊断数字但不向用户显示内部引擎名称。 */
     @ParameterizedTest
     @ValueSource(strings = {"Docling解析超时，已等待90秒", "DOCLING连接中断，已等待90秒", "docling处理失败，已等待90秒", "请检查Docling服务，已等待90秒"})
