@@ -1,29 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper">
-    <!-- 角色范围由框架注入permission_base；这里只表达知识库归属及维护资格关联。 -->
-    <sql id="managed">
-        permission.id is not null
-    </sql>
-    <sql id="permissionJoin">
-        left join (
-            select id
-            from ai_knowledge_base permission_base
-            where del_flag = 0
-        ) permission on permission.id = b.id
-    </sql>
-    <sql id="readable">
-        (<include refid="managed"/>
-         or b.is_public = true
-         or exists (select 1 from ai_knowledge_document shared
-                    where shared.knowledge_base_id = b.id and shared.del_flag = 0 and shared.is_public = true))
-    </sql>
     <sql id="display">
         b.*,
-        (<include refid="managed"/>) as writable,
         (select count(*) from ai_knowledge_document d
-         where d.knowledge_base_id = b.id and d.del_flag = 0
-           and (d.is_public = true or <include refid="managed"/>)) as document_count,
+         where d.knowledge_base_id = b.id and d.del_flag = 0) as document_count,
         m.model_name as embedding_model_name
     </sql>
     <sql id="modelJoins">
@@ -33,9 +14,8 @@
     <select id="selectReadablePage" resultType="org.etd.ai.knowledge.entity.KnowledgeBaseEntity">
         select <include refid="display"/>
         from ai_knowledge_base b
-        <include refid="permissionJoin"/>
         <include refid="modelJoins"/>
-        where b.del_flag = 0 and <include refid="readable"/>
+        where b.del_flag = 0
         <if test="keyword != null and keyword != ''">
             and b.name ilike concat('%', #{keyword}, '%')
         </if>
@@ -53,10 +33,8 @@
                 ai_knowledge_base b
             </otherwise>
         </choose>
-        <include refid="permissionJoin"/>
         <include refid="modelJoins"/>
         where b.id = #{id} and b.del_flag = 0
-          and <include refid="readable"/>
     </select>
     <select id="selectDocumentCount" resultType="long">
         select count(*) from ai_knowledge_document where knowledge_base_id = #{id} and del_flag = 0

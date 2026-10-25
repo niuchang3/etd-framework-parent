@@ -29,7 +29,7 @@ import org.etd.framework.starter.mybaits.permission.aspect.DataPermissionAspect;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import static org.assertj.core.api.Assertions.*;
 
-/** 仅在新建隔离PostgreSQL库执行生产DDL及真实拦截链，验证权限继承、公开边界及行锁。 */
+/** 仅在新建隔离PostgreSQL库执行生产DDL及真实拦截链，验证资源独立权限、公开边界及行锁。 */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIfEnvironmentVariable(named = "AI_KNOWLEDGE_TEST_JDBC_URL", matches = ".+")
 class KnowledgeBasePersistenceTest {
@@ -102,9 +102,9 @@ class KnowledgeBasePersistenceTest {
     /** 清理会话与可信身份。 */
     @AfterEach
     void cleanup() { session.close(); RequestContext.clean(); }
-    /** 分类继承库权限，不能依赖目录创建人；公开库中的私有文档不可读。 */
+    /** 目录继承库权限，文档使用自身归属；公开库中的私有文档不可读。 */
     @Test
-    void shouldInheritBasePermissionsAndProtectPrivateDocuments() {
+    void shouldApplyResourcePermissionsAndProtectPrivateDocuments() {
         var bases = createBaseService(session);
         var documents = createDocumentService(session);
         var folderMapper = session.getMapper(KnowledgeFolderMapper.class);
@@ -121,25 +121,30 @@ class KnowledgeBasePersistenceTest {
         RequestContext.getUser().setPlatformAdmin(true);
         assertThat(documents.requireDocument(5L, false)).isNotNull();
     }
-    /** 本人范围按知识库创建人判断，不能误用上传人或分类创建人。 */
+    /** 本人范围分别按知识库和资料创建人判断，分片继承资料归属。 */
     @Test
-    void shouldApplySelfScopeToBaseAndInheritItForChildren() {
+    void shouldApplySelfScopeToEachResource() {
         RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
         var documents = createDocumentService(session);
         var folders = createFolderService(session);
+        assertThatThrownBy(() -> documents.requireDocument(1L, true)).isInstanceOf(ApiRuntimeException.class);
+        RequestContext.getUser().setId(999L);
+        session.clearCache();
         assertThat(documents.requireDocument(1L, true).getWritable()).isTrue();
+        RequestContext.getUser().setId(100L);
+        session.clearCache();
         assertThat(folders.fetchFolderList(1L, null)).extracting("id").containsExactly(1L);
         var chunkMapper = session.getMapper(KnowledgeChunkMapper.class);
         var chunkService = new KnowledgeChunkService(chunkMapper);
         var chunks = permissionProxy(chunkService);
-        assertThat(chunks.fetchChunkList(1L)).extracting("id").containsExactly(1L);
-        RequestContext.getUser().setId(999L);
+        assertThat(chunks.fetchChunkList(1L)).isEmpty();
+        RequestContext.getUser().setId(888L);
         session.clearCache();
         assertThatThrownBy(() -> documents.requireDocument(1L, false)).isInstanceOf(ApiRuntimeException.class);
         assertThat(folders.fetchFolderList(1L, null)).isEmpty();
     }
 
-    /** 无角色范围仍可读取公开资料及其祖先分类，但不能维护，也不能泄露私有文档数量。 */
+    /** 无角色范围只展示公开知识库；公开资料可以独立读取，但不会公开所属私有库。 */
     @Test
     void shouldKeepPublicReadSeparateFromMaintenanceScope() {
         RequestContext.getUser().setPermissionTypes(Set.of());
@@ -148,14 +153,14 @@ class KnowledgeBasePersistenceTest {
         var documents = createDocumentService(session);
         var folders = createFolderService(session);
         var cards = bases.fetchBasePage(1, 12, null).getRecords();
-        assertThat(cards).extracting("id").containsExactly(2L, 1L);
-        assertThat(cards).extracting("documentCount").containsExactly(1L, 1L);
+        assertThat(cards).extracting("id").containsExactly(2L);
+        assertThat(cards).extracting("documentCount").containsExactly(1L);
         assertThat(cards).extracting("writable").containsOnly(false);
         assertThat(documents.requireDocument(2L, false).getWritable()).isFalse();
         assertThatThrownBy(() -> documents.requireDocument(2L, true)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> bases.requireBase(1L, true, false)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> folders.requireWritable(1L)).isInstanceOf(ApiRuntimeException.class);
-        assertThat(folders.fetchFolderList(1L, null)).extracting("id").containsExactly(1L);
+        assertThat(folders.fetchFolderList(1L, null)).isEmpty();
         assertThat(folders.fetchFolderList(3L, null)).isEmpty();
     }
 
@@ -249,13 +254,13 @@ class KnowledgeBasePersistenceTest {
                      file_type, storage_bucket, storage_object_key, content_type, file_size, file_sha256,
                      part_size_bytes, part_count, upload_expires_at, upload_status, uploaded_time, is_public,
                      data_status, chunk_status, chunk_confirmed_time, chunk_count)
-                values (?, ?, ?, 10, 999, ?, '测试资料', 'sample.md', 'md', 'test', 'test', 'text/markdown',
+                values (?, ?, ?, ?, 999, ?, '测试资料', 'sample.md', 'md', 'test', 'test', 'text/markdown',
                         100, ?, 10485760, 1, current_timestamp + interval '1 day', 'completed', current_timestamp,
                         ?, ?, 'confirmed', current_timestamp, 1)
-                """, id, base, tenant, base, "0".repeat(64), shared, status);
+                """, id, base, tenant, base == 1 ? 10 : 20, base, "0".repeat(64), shared, status);
         jdbc.update("""
-                insert into ai_knowledge_chunk (id, knowledge_base_id, tenant_id, org_id, document_id, chunk_index, content, token_count, source)
-                values (?, ?, ?, 10, ?, 0, '设备安装指南', 4, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}')
+                insert into ai_knowledge_chunk (id, knowledge_base_id, tenant_id, org_id, create_by, document_id, chunk_index, content, token_count, source)
+                values (?, ?, ?, 10, 999, ?, 0, '设备安装指南', 4, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}')
                 """, id, base, tenant, id);
     }
 }

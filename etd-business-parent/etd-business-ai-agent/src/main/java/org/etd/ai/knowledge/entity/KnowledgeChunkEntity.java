@@ -23,7 +23,7 @@ public class KnowledgeChunkEntity extends OrgScopedEntity {
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("0")
     private Long processingVersion;
-    /** 知识库维护资格，不由文档上传人决定。 */
+    /** 资料自身角色范围计算出的维护资格，不因公开读取而扩大。 */
     @TableField(exist = false)
     private Boolean writable;
 

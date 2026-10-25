@@ -155,7 +155,7 @@ create index idx_ai_model_connection_model on ai_model_connection (model_id)
 /*==============================================================*/
 /* table: ai_knowledge_folder */
 /*==============================================================*/
--- 知识库承接数据权限；分类与资料均属于该边界。
+-- 知识库与资料分别承接自身数据权限；分类继承知识库，分片继承资料。
 create table ai_knowledge_base
 (
     id bigint not null primary key,
@@ -555,7 +555,7 @@ comment on column ai_knowledge_chunk.knowledge_base_id is '所属知识库，由
 comment on column ai_knowledge_chunk.processing_version is '生成时的资料轮次，召回最终以资料当前轮次校验';
 comment on column ai_knowledge_base.id is '全局雪花主键';
 comment on column ai_knowledge_base.tenant_id is '所属租户，普通用户由框架隔离';
-comment on column ai_knowledge_base.org_id is '知识库组织归属，子资源权限由本库继承';
+comment on column ai_knowledge_base.org_id is '知识库自身组织归属；目录继承本库权限，资料按自身组织及创建人授权';
 comment on column ai_knowledge_base.create_time is '创建时间点';
 comment on column ai_knowledge_base.create_by is '创建人，同时参与知识库本人数据范围';
 comment on column ai_knowledge_base.update_time is '修改时间点';

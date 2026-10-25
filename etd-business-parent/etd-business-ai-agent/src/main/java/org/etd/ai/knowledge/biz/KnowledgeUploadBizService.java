@@ -57,7 +57,6 @@ public class KnowledgeUploadBizService {
         if (base.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("停用知识库不能上传文档");
         }
-        document.setOrgId(base.getOrgId());
         if (document.getIsPublic() == null) {
             document.setIsPublic(base.getIsPublic());
         }

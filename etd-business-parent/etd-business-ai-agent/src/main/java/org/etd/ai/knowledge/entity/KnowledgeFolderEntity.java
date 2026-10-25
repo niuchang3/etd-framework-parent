@@ -20,6 +20,14 @@ public class KnowledgeFolderEntity extends BaseEntity {
     @TableField(exist = false)
     private Boolean writable;
 
+    /** 关联知识库的组织，仅用于框架范围计算，不作为目录独立归属持久化。 */
+    @TableField(exist = false)
+    private Long permissionOrgId;
+
+    /** 关联知识库的创建人，仅用于维护能力计算。 */
+    @TableField(exist = false)
+    private Long permissionCreateBy;
+
     /** 非负乐观锁版本，修改时必须提交当前值。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("0")

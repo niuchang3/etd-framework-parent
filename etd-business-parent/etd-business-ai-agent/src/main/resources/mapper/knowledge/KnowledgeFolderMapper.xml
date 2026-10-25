@@ -1,38 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeFolderMapper">
-    <!-- 非维护者只返回公开文档所在分类与祖先，避免泄露私有资料分类。 -->
+    <!-- 分类没有独立组织归属，由框架过滤关联知识库，XML不拼装授权条件。 -->
     <select id="selectFolderList" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
-        with recursive visible as (
-            select f.*, (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>) as writable
-            from ai_knowledge_folder f
-            join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
-            <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
-            where f.del_flag = 0 and f.knowledge_base_id = #{knowledgeBaseId}
-              and (<include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
-                   or exists (select 1 from ai_knowledge_document d
-                              where d.folder_id = f.id and d.del_flag = 0 and d.is_public = true))
-            <if test="dataStatus != null">
-                and f.data_status = #{dataStatus}
-            </if>
-        ), paths as (
-            select * from visible
-            union
-            select p.*, child.writable
-            from ai_knowledge_folder p
-            join paths child on p.id = child.parent_id and p.knowledge_base_id = child.knowledge_base_id
-            where p.del_flag = 0
-        )
-        select * from paths order by sort_order, id
-    </select>
-    <select id="selectWritable" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
-        select f.*, true as writable
+        select f.*, b.org_id as permission_org_id, b.create_by as permission_create_by
         from ai_knowledge_folder f
         join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
-        <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
-        where f.id = #{id} and f.del_flag = 0
-          and <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>
+        where f.del_flag = 0
+          and f.knowledge_base_id = #{knowledgeBaseId}
+        <if test="dataStatus != null">
+            and f.data_status = #{dataStatus}
+        </if>
+        order by f.sort_order, f.id
     </select>
+
+    <select id="selectWritable" resultType="org.etd.ai.knowledge.entity.KnowledgeFolderEntity">
+        select f.*, b.org_id as permission_org_id, b.create_by as permission_create_by
+        from ai_knowledge_folder f
+        join ai_knowledge_base b on b.id = f.knowledge_base_id and b.del_flag = 0
+        where f.id = #{id}
+          and f.del_flag = 0
+    </select>
+
     <select id="lockStructure" resultType="java.lang.String">
         select pg_advisory_xact_lock(hashtextextended('etd.ai.knowledge.structure', 0))
     </select>

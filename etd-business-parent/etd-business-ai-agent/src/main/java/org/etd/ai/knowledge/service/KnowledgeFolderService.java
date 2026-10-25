@@ -1,6 +1,8 @@
 package org.etd.ai.knowledge.service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
+import org.etd.ai.knowledge.constant.KnowledgePolicy;
+import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeFolderMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -9,15 +11,21 @@ import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import java.util.List;
 /** 知识库内部分类能力，不具有独立组织数据权限。 */
-// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
+// 分类无独立组织字段，查询通过关联知识库交由框架授权。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base"))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeFolderService {
     private final KnowledgeFolderMapper mapper;
     /** @param knowledgeBaseId 知识库 @param dataStatus 可选目录状态 @return 可见目录与必要祖先 */
+    @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
     public List<KnowledgeFolderEntity> fetchFolderList(Long knowledgeBaseId, Integer dataStatus) {
-        return mapper.selectFolderList(knowledgeBaseId, dataStatus);
+        var records = mapper.selectFolderList(knowledgeBaseId, dataStatus);
+        var scope = DataPermissionScope.current();
+        for (var folder : records) {
+            folder.setWritable(scope.canManage(folder.getPermissionOrgId(), folder.getPermissionCreateBy()));
+        }
+        return records;
     }
     /** @param id 分类ID @return 继承知识库维护资格的分类 */
     public KnowledgeFolderEntity requireWritable(Long id) {
@@ -25,6 +33,7 @@ public class KnowledgeFolderService {
         if (entity == null) {
             throw new ApiRuntimeException("分类不存在或无知识库维护权限");
         }
+        entity.setWritable(true);
         return entity;
     }
     /** @param parentId 可选父目录 @param knowledgeBaseId 所属知识库 */

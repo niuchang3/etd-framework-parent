@@ -445,17 +445,19 @@ class KnowledgeChunkPersistenceTest {
         var chunkIds = chunks.fetchChunkList(1L).stream().map(chunk -> chunk.getId()).toList();
         RequestContext.getUser().setId(200L);
         RequestContext.getUser().setScopeOrgIds(Set.of(11L));
-        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null, null, 1L, null).getRecords())
+        assertThat(documents.fetchDocumentPage(1L, 20L, null, null, null, null, null, 10L, null).getRecords())
                 .extracting("id").containsExactly(1L);
         assertThat(KnowledgeDocumentConverter.INSTANCE.toVO(documents.requireDocument(1L, false)).getWritable()).isFalse();
         assertThat(chunks.fetchChunkList(1L)).hasSize(3)
                 .allSatisfy(chunk -> assertThat(KnowledgeChunkConverter.INSTANCE.toVO(chunk).getWritable()).isFalse());
-        assertThat(folders.fetchFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
-        assertThat(folders.fetchFolderList(null, null)).allSatisfy(folder ->
+        // 文档公开不会隐式公开所属私有库及目录；库公开后才允许导航，仍不可维护。
+        assertThat(folders.fetchFolderList(10L, null)).isEmpty();
+        setupJdbc.update("update ai_knowledge_base set is_public = true where id = 10");
+        assertThat(folders.fetchFolderList(10L, null)).extracting("id").containsExactly(1L, 3L, 4L);
+        assertThat(folders.fetchFolderList(10L, null)).allSatisfy(folder ->
                 assertThat(KnowledgeFolderConverter.INSTANCE.toVO(folder).getNavigationOnly()).isTrue());
-        assertThat(folders.fetchFolderList(null, null)).isEmpty();
         RequestContext.getUser().setPermissionTypes(Set.of());
-        assertThat(folders.fetchFolderList(null, null)).extracting("id").containsExactly(1L, 4L);
+        assertThat(folders.fetchFolderList(10L, null)).hasSize(3);
         assertThat(documents.requireDocument(1L, false)).isNotNull();
         assertThat(chunks.fetchChunkList(1L)).hasSize(3);
         assertThatThrownBy(() -> documents.requireDocument(2L, false)).isInstanceOf(ApiRuntimeException.class);

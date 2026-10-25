@@ -20,4 +20,10 @@ public interface KnowledgeRecallMapper {
     /** @param baseId 已授权知识库 @param ids 候选分片ID
      * @return 外部模型返回后仍有读取权限且已确认的当前正文 */
     List<KnowledgeRecallHit> selectCurrentList(@Param("baseId") Long baseId, @Param("ids") List<Long> ids);
+    /** @param documentId 已命中资料 @param processingVersion 候选正文轮次
+     * @param minIndex 起始分片下标 @param maxIndex 结束分片下标
+     * @return 再次通过资料权限及确认状态校验的相邻正文 */
+    List<KnowledgeRecallHit> selectContextList(@Param("documentId") Long documentId,
+            @Param("processingVersion") Long processingVersion, @Param("minIndex") int minIndex,
+            @Param("maxIndex") int maxIndex);
 }

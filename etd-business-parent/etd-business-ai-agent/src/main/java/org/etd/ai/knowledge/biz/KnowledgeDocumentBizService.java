@@ -38,9 +38,9 @@ public class KnowledgeDocumentBizService {
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("资料已变化，请刷新后重试");
         }
-        var folder = folders.requireFolderByBase(input.getFolderId(), document.getKnowledgeBaseId());
-        if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
-            throw new ApiRuntimeException("不能移入停用目录");
+        // 仅移动目录需要目标目录维护资格；资料自身编辑不再额外要求知识库维护权。
+        if (!Objects.equals(input.getFolderId(), document.getFolderId())) {
+            requireTargetFolder(input.getFolderId(), document.getKnowledgeBaseId());
         }
         if (!Objects.equals(document.getIsPublic(), input.getIsPublic())) {
             chunks.modifyPublicByDocument(id, input.getIsPublic());
@@ -51,6 +51,14 @@ public class KnowledgeDocumentBizService {
             document.setVectorStatus(KnowledgeVectorStatus.STALE);
         }
         documents.modifyDocument(document);
+    }
+
+    /** 目标目录仍按知识库授权，移动不能把资料放入无权维护或已停用的目录。 */
+    private void requireTargetFolder(Long folderId, Long baseId) {
+        var folder = folders.requireFolderByBase(folderId, baseId);
+        if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
+            throw new ApiRuntimeException("不能移入停用目录");
+        }
     }
 
     /** @param id 资料ID；清理失败保留资料记录，允许用户重试删除 */

@@ -3,7 +3,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.ibatis.annotations.Param;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
-/** 知识库持久化及继承权限的读取入口。 */
+/** 知识库持久化入口，角色范围及公开读取由框架统一注入。 */
 public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBaseEntity> {
     /** @param page 分页 @param keyword 名称 @return 可见知识库 */
     IPage<KnowledgeBaseEntity> selectReadablePage(IPage<KnowledgeBaseEntity> page, @Param("keyword") String keyword);

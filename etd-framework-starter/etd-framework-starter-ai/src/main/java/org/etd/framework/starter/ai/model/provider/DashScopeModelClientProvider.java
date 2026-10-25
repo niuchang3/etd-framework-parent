@@ -7,6 +7,9 @@ import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingOptions;
 import com.alibaba.cloud.ai.dashscope.rerank.DashScopeRerankModel;
 import com.alibaba.cloud.ai.dashscope.rerank.DashScopeRerankOptions;
+import com.alibaba.cloud.ai.dashscope.spec.DashScopeApiSpec;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.model.Model;
 import org.etd.framework.starter.ai.model.client.ModelClientTransport;
@@ -19,6 +22,7 @@ import org.springframework.ai.model.NoopApiKey;
 import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.retry.RetryUtils;
 import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 
 /** 复用Spring AI Alibaba原生聊天、向量与重排SDK，不重新实现HTTP协议。 */
 public class DashScopeModelClientProvider implements ModelClientProvider {
@@ -77,8 +81,29 @@ public class DashScopeModelClientProvider implements ModelClientProvider {
         ApiKey apiKey = secret == null ? new NoopApiKey() : new SimpleApiKey(secret);
         var headers = new LinkedMultiValueMap<String, String>();
         var rest = transport.restClientBuilder();
+        // 百炼现有文本向量模型分别返回text_index或index；仅修正当前SDK向量记录的反序列化。
+        // 复制客户端专属Mapper，避免影响其他协议、业务HTTP响应和全局Jackson配置。
+        rest.messageConverters(converters -> {
+            for (var converter : converters) {
+                if (converter instanceof MappingJackson2HttpMessageConverter jackson) {
+                    var mapper = jackson.getObjectMapper().copy();
+                    mapper.addMixIn(DashScopeApiSpec.Embedding.class, EmbeddingIndexMixin.class);
+                    jackson.setObjectMapper(mapper);
+                }
+            }
+        });
         var web = transport.webClientBuilder();
         return new DashScopeApi(configuration.baseUrl().toString(), apiKey, headers, null,
                 CHAT_PATH, EMBEDDING_PATH, RERANK_PATH, rest, web, RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER);
+    }
+
+    /**
+     * SDK 1.1.2.1只声明text_index，qwen3.7文本向量实际返回index；两者都表示原始输入下标。
+     * 修正仅限该SDK响应类型；SDK原生支持这两种服务端字段后可删除此映射。
+     */
+    private abstract static class EmbeddingIndexMixin {
+        /** 序号始终来自服务端，禁止用响应列表位置猜测乱序结果对应的正文。 */
+        EmbeddingIndexMixin(@JsonProperty("text_index") @JsonAlias("index") Integer textIndex,
+                @JsonProperty("embedding") float[] embedding) { }
     }
 }

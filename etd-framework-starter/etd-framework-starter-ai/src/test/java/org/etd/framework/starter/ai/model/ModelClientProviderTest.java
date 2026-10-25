@@ -27,6 +27,8 @@ import org.etd.framework.starter.ai.model.spi.ModelClientProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
@@ -43,6 +45,8 @@ class ModelClientProviderTest {
     private HttpServer server;
     private ModelClientTransport transport;
     private ModelClientFactory factory;
+    /** 当前真实模型的两种序号字段；只控制本地服务的向量响应。 */
+    private String embeddingIndexField = "text_index";
 
     /** 创建真实HTTP传输及生产适配器，初始化时不得发送任何请求。 */
     @BeforeEach
@@ -117,6 +121,25 @@ class ModelClientProviderTest {
                 || requests.getLast().body().path("dimensions").isNull()).isTrue();
     }
 
+    /** 原生协议应保留服务端乱序下标，覆盖qwen3.7的index和text-embedding的text_index。 */
+    @ParameterizedTest
+    @ValueSource(strings = {"index", "text_index"})
+    void shouldReadDashScopeEmbeddingIndices(String indexField) {
+        embeddingIndexField = indexField;
+        var configuration = configuration(ModelClientProtocol.DASHSCOPE, ModelCapability.EMBEDDING, null);
+        var model = createModel(configuration, EmbeddingModel.class);
+        var options = EmbeddingOptions.builder().dimensions(2).build();
+        var texts = List.of("正文甲", "正文乙");
+        var request = new EmbeddingRequest(texts, options);
+        var results = model.call(request).getResults();
+        assertThat(results).hasSize(2);
+        assertThat(results.getFirst().getIndex()).isEqualTo(1);
+        assertThat(results.getFirst().getOutput()).containsExactly(1.0f, 0.0f);
+        assertThat(results.getLast().getIndex()).isZero();
+        assertThat(results.getLast().getOutput()).containsExactly(0.0f, 1.0f);
+        assertThat(requests.getLast().body().path("parameters").path("dimension").asInt()).isEqualTo(2);
+    }
+
     /** 原生重排仅匹配DashScope；OpenAI兼容接口不能被当作通用重排协议。 */
     @Test
     void shouldCreateDashScopeRerankAndRejectUnsupportedCombinations() {
@@ -160,6 +183,13 @@ class ModelClientProviderTest {
         boolean stream = body.path("stream").asBoolean(false)
                 || "enable".equals(exchange.getRequestHeaders().getFirst("X-DashScope-SSE"));
         String response = response(path, stream);
+        if (path.endsWith("/text-embedding") && body.path("input").path("texts").size() == 2) {
+            response = """
+                    {"request_id":"1","output":{"embeddings":[
+                    {"%s":1,"embedding":[1.0,0.0]}, {"%s":0,"embedding":[0.0,1.0]}]},
+                    "usage":{"prompt_tokens":2,"total_tokens":2}}
+                    """.formatted(embeddingIndexField, embeddingIndexField);
+        }
         String contentType = stream ? "text/event-stream" : "application/json";
         if (stream && "/api/chat".equals(path)) { contentType = "application/x-ndjson"; }
         exchange.getResponseHeaders().set("Content-Type", contentType);
@@ -189,8 +219,8 @@ class ModelClientProviderTest {
                     {"request_id":"1","output":{"choices":[{"message":{"role":"assistant","content":"本地响应"},"finish_reason":"stop"}]},"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}
                     """;
             case "/api/v1/services/embeddings/text-embedding/text-embedding" -> """
-                    {"request_id":"1","output":{"embeddings":[{"text_index":0,"embedding":[1.0,0.0]}]},"usage":{"total_tokens":1}}
-                    """;
+                    {"request_id":"1","output":{"embeddings":[{"%s":0,"embedding":[1.0,0.0]}]},"usage":{"total_tokens":1}}
+                    """.formatted(embeddingIndexField);
             case "/api/v1/services/rerank/text-rerank/text-rerank" -> """
                     {"request_id":"1","output":{"results":[{"index":0,"relevance_score":0.9}]},"usage":{"total_tokens":1}}
                     """;

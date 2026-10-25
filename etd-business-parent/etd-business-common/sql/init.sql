@@ -285,9 +285,9 @@ values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
         '{"request":{"timeoutMs":5000,"retryTimes":3},"cache":{"dictTtlSeconds":600,"userMenuTtlSeconds":1800}}',
         'json', true, true, '前端超时时间、请求重试次数及字典等数据缓存时效'),
        (4000005, current_timestamp, 1, current_timestamp, 1, 1,
-        'ai.knowledge.upload', '知识库上传文件格式',
-        '{"allowedExtensions":[".pdf",".docx",".pptx",".xlsx",".html",".htm",".md",".csv",".png",".jpg",".jpeg",".tif",".tiff",".bmp",".webp"]}',
-        'json', true, true, '与当前文档解析服务支持格式一致，仅供前端文件选择器accept筛选，不作为服务端上传格式校验')
+        'ai.knowledge.upload', '知识库上传策略',
+        '{"maxSizeMb":20,"allowedExtensions":[".pdf",".docx",".pptx",".xlsx",".html",".htm",".md",".csv",".png",".jpg",".jpeg",".tif",".tiff",".bmp",".webp"]}',
+        'json', true, true, '前端单文件大小限制及扩展名筛选；maxSizeMb按1024×1024字节换算，演示默认20MiB；服务端保留独立上传及解析限制')
 on conflict (id) do nothing;
 
 commit;

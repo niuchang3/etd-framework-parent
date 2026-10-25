@@ -1,17 +1,14 @@
 package org.etd.ai.knowledge.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
-import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
-import org.etd.ai.knowledge.mapper.KnowledgeChunkMapper;
+import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.mapper.KnowledgeRecallMapper;
 import org.etd.ai.knowledge.model.KnowledgeRecallHit;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
@@ -21,12 +18,12 @@ import org.springframework.stereotype.Service;
 /** 召回查询及排名融合能力，所有正文关联均在SQL完成。 */
 @Service
 @RequiredArgsConstructor
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
+// 召回以资料为授权边界；分片、向量通过SQL归属关联，不能因知识库公开而放行私有资料。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_document", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
 public class KnowledgeRecallService {
     /** RRF常用平滑常数，按排名融合，避免直接相加不同量纲的全文与余弦分数。 */
     private static final int RRF_OFFSET = 60;
     private final KnowledgeRecallMapper mapper;
-    private final KnowledgeChunkMapper chunkMapper;
 
     /** @param base 已授权知识库 @param query 问题 @return 全文候选 */
     public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query) {
@@ -116,23 +113,29 @@ public class KnowledgeRecallService {
             }
             int minIdx = Math.max(0, hit.getChunkIndex() - windowSize);
             int maxIdx = hit.getChunkIndex() + windowSize;
-            var query = new LambdaQueryWrapper<KnowledgeChunkEntity>()
-                    .eq(KnowledgeChunkEntity::getDocumentId, hit.getDocumentId())
-                    .ge(KnowledgeChunkEntity::getChunkIndex, minIdx)
-                    .le(KnowledgeChunkEntity::getChunkIndex, maxIdx)
-                    .orderByAsc(KnowledgeChunkEntity::getChunkIndex);
-            var neighbors = chunkMapper.selectList(query);
-            if (neighbors != null && !neighbors.isEmpty()) {
-                String mergedContent = neighbors.stream()
-                        .map(KnowledgeChunkEntity::getContent)
-                        .filter(content -> content != null && !content.isBlank())
-                        .collect(Collectors.joining("\n\n"));
-                if (!mergedContent.isBlank()) {
-                    hit.setContent(mergedContent);
-                }
+            // 扩展时重新关联资料并执行同一框架权限规则，同时拒绝已变化的正文轮次。
+            var neighbors = mapper.selectContextList(hit.getDocumentId(), hit.getProcessingVersion(), minIdx, maxIdx);
+            if (neighbors.isEmpty()) {
+                continue;
             }
+            hit.setContent(mergeContextContent(neighbors));
             expandedHits.add(hit);
         }
         return expandedHits;
     }
+
+    /** 只拼接本次SQL重新授权的相邻正文，不拼入旧候选快照中的文本。 */
+    private String mergeContextContent(List<KnowledgeRecallHit> neighbors) {
+        StringBuilder content = new StringBuilder();
+        for (var neighbor : neighbors) {
+            if (neighbor.getContent() != null && !neighbor.getContent().isBlank()) {
+                if (!content.isEmpty()) {
+                    content.append("\n\n");
+                }
+                content.append(neighbor.getContent());
+            }
+        }
+        return content.toString();
+    }
+
 }

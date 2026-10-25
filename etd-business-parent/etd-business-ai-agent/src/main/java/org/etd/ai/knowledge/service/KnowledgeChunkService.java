@@ -15,8 +15,8 @@ import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTab
 import java.util.List;
 
 /** 分片持久化能力；事务、资料权限及整份结果的版本由Biz层统一控制。 */
-// 框架过滤知识库维护资格关联；公开范围仍由SQL业务条件控制，子资源不按上传人重复过滤。
-@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", alias = "permission_base"))
+// 读取由框架合并本资源公开标记与角色范围；UPDATE、DELETE始终使用严格角色范围。
+@DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_chunk", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
 @Service
 @RequiredArgsConstructor
 public class KnowledgeChunkService {

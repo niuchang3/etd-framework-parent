@@ -8,12 +8,15 @@ import java.util.Map;
 import java.util.Set;
 import org.etd.ai.knowledge.biz.KnowledgeChunkEditBizService;
 import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
+import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
 import org.etd.ai.knowledge.converter.KnowledgeDocumentConverter;
 import org.etd.ai.knowledge.biz.KnowledgeBaseBizService;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
+import org.etd.ai.knowledge.service.KnowledgeRecallService;
 import org.etd.ai.model.service.ModelInferenceService;
 import org.etd.ai.model.component.BusinessModelConnectionResolver;
 import org.etd.framework.starter.ai.model.constant.ModelCapability;
@@ -63,6 +66,8 @@ class KnowledgeRecallPersistenceTest {
     @Autowired private KnowledgeChunkEditBizService editing;
     @Autowired private KnowledgeRecallBizService recall;
     @Autowired private KnowledgeDocumentService documents;
+    @Autowired private KnowledgeRecallService recallQueries;
+    @Autowired private KnowledgeDocumentBizService documentEditing;
     @Autowired private KnowledgeBaseBizService baseEditing;
     @MockitoBean private ModelInferenceService inference;
     @Autowired private BusinessModelConnectionResolver connectionResolver;
@@ -99,9 +104,9 @@ class KnowledgeRecallPersistenceTest {
                         100, repeat('0',64), 10485760, 1, current_timestamp + interval '1 day',
                         'completed', current_timestamp, 'draft', 2);
                 insert into ai_knowledge_chunk
-                    (id, knowledge_base_id, tenant_id, org_id, document_id, chunk_index, content, token_count, source)
-                values (101, 10, 900001, 10, 1, 0, '设备安装指南', 5, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}'),
-                       (102, 10, 900001, 10, 1, 1, '设备维修流程', 5, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}');
+                    (id, knowledge_base_id, tenant_id, org_id, create_by, document_id, chunk_index, content, token_count, source)
+                values (101, 10, 900001, 10, 100, 1, 0, '设备安装指南', 5, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}'),
+                       (102, 10, 900001, 10, 100, 1, 1, '设备维修流程', 5, '{"headings":[],"pageNumbers":[],"documentItemRefs":[]}');
                 """);
         var user = new UserDetails();
         user.setId(100L);
@@ -212,12 +217,64 @@ class KnowledgeRecallPersistenceTest {
         RequestContext.getUser().setScopeOrgIds(Set.of(11L));
         assertThatThrownBy(() -> recall.testRecall(10L, "安装")).isInstanceOf(ApiRuntimeException.class);
         jdbc.update("update ai_knowledge_document set is_public = true where id = 1");
+        jdbc.update("update ai_knowledge_base set is_public = true where id = 10");
         assertThat(recall.testRecall(10L, "安装")).hasSize(2);
         assertThatThrownBy(() -> editing.confirmChunks(1L, 1L)).isInstanceOf(ApiRuntimeException.class);
         RequestContext.setTenantCode(900002L);
         assertThatThrownBy(() -> recall.testRecall(10L, "安装")).isInstanceOf(ApiRuntimeException.class);
         RequestContext.getUser().setPlatformAdmin(true);
         assertThat(recall.testRecall(10L, "安装")).hasSize(2);
+    }
+
+    /** 本人范围按资料创建人判断，库公开不能放行他人的私有资料。 */
+    @Test
+    void appliesSelfScopeToDocumentsInsteadOfBaseOwner() {
+        editing.confirmChunks(1L, 0L);
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
+        jdbc.update("update ai_knowledge_base set create_by = 200, is_public = true where id = 10");
+        assertThat(recall.testRecall(10L, "安装")).isNotEmpty();
+        RequestContext.getUser().setId(200L);
+        assertThatThrownBy(() -> documents.requireDocument(1L, false)).isInstanceOf(ApiRuntimeException.class);
+        assertThat(recall.testRecall(10L, "安装")).isEmpty();
+        jdbc.update("update ai_knowledge_document set is_public = true where id = 1");
+        assertThat(recall.testRecall(10L, "安装")).isNotEmpty();
+        assertThatThrownBy(() -> documents.requireDocument(1L, true)).isInstanceOf(ApiRuntimeException.class);
+    }
+
+    /** 资料拥有者可发布索引派生状态，但不能借确认操作改写知识库配置。 */
+    @Test
+    void allowsDocumentOwnerToConfirmWithoutBaseWritePermission() {
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
+        jdbc.update("update ai_knowledge_base set create_by = 200 where id = 10");
+        assertThat(editing.confirmChunks(1L, 0L).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.READY);
+        assertThat(jdbc.queryForObject("select create_by from ai_knowledge_base where id = 10", Long.class)).isEqualTo(200L);
+        assertThat(jdbc.queryForObject("select active_index_version from ai_knowledge_base where id = 10", Long.class)).isEqualTo(1L);
+    }
+
+    /** 资料拥有者可编辑自己的配置，不额外继承知识库创建人的维护限制。 */
+    @Test
+    void allowsDocumentOwnerToEditWithoutBaseWritePermission() {
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
+        jdbc.update("update ai_knowledge_base set create_by = 200 where id = 10");
+        var input = new KnowledgeDocumentEntity();
+        input.setFolderId(1L);
+        input.setDocumentName("资料拥有者修改后的名称");
+        input.setIsPublic(false);
+        documentEditing.modifyDocument(1L, input, 0L);
+        assertThat(documents.requireDocument(1L, false).getDocumentName()).isEqualTo(input.getDocumentName());
+        RequestContext.getUser().setId(200L);
+        assertThatThrownBy(() -> documentEditing.modifyDocument(1L, input, 1L)).isInstanceOf(ApiRuntimeException.class);
+    }
+
+    /** 扩展时重查资料授权和确认轮次，不能复用已失效的候选正文访问资格。 */
+    @Test
+    void rechecksDocumentPermissionWhenExpandingContext() {
+        editing.confirmChunks(1L, 0L);
+        RequestContext.getUser().setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode()));
+        var hits = recall.testRecall(10L, "安装");
+        assertThat(hits).isNotEmpty();
+        jdbc.update("update ai_knowledge_document set create_by = 200 where id = 1");
+        assertThat(recallQueries.expandContextWindow(hits, 1)).isEmpty();
     }
 
     /** 全文模式确认完全不调用模型，并且测试召回仍只查询已确认分片。 */

@@ -67,7 +67,7 @@ public class KnowledgeChunkConfirmBizService {
     /** 先锁知识库再锁资料，与知识库配置失效流程保持锁顺序；提交processing后释放行锁。 */
     private ConfirmationSnapshot readSnapshot(Long id, Long version) {
         var readable = documents.requireDocument(id, false);
-        var base = bases.requireBase(readable.getKnowledgeBaseId(), true, true);
+        var base = bases.requireIndexBase(readable);
         var document = requireConfirmable(id, version);
         var records = chunks.fetchChunkList(id);
         if (records.isEmpty() || records.size() != document.getChunkCount()) {
@@ -83,13 +83,13 @@ public class KnowledgeChunkConfirmBizService {
 
     /** 两次读取使用相同锁顺序；编辑或知识库设置变化会使在途结果失去发布资格。 */
     private KnowledgeDocumentEntity publishConfirmation(ConfirmationSnapshot snapshot, List<float[]> embeddings) {
-        var base = bases.requireBase(snapshot.base().getId(), true, true);
+        var base = bases.requireIndexBase(snapshot.document());
         var document = requireConfirmable(snapshot.document().getId(), snapshot.document().getVersion());
         if (!Objects.equals(base.getVersion(), snapshot.base().getVersion())) {
             throw new ApiRuntimeException("知识库配置已变化，请重新确认分片");
         }
         if (!embeddings.isEmpty()) {
-            activateIndex(base);
+            activateIndex(base, document);
         }
         vectors.replaceVectorList(document, base, snapshot.chunks(), embeddings);
         String vectorStatus = embeddings.isEmpty() ? KnowledgeVectorStatus.NOT_REQUIRED : KnowledgeVectorStatus.READY;
@@ -101,7 +101,7 @@ public class KnowledgeChunkConfirmBizService {
     }
 
     /** 模型或维度切换使用新代次；其他资料须重新确认后才能进入这一向量空间。 */
-    private void activateIndex(KnowledgeBaseEntity base) {
+    private void activateIndex(KnowledgeBaseEntity base, KnowledgeDocumentEntity document) {
         if (Objects.equals(base.getActiveConnectionId(), base.getEmbeddingConnectionId())
                 && Objects.equals(base.getActiveDimensions(), base.getDimensions())) {
             return;
@@ -109,7 +109,7 @@ public class KnowledgeChunkConfirmBizService {
         base.setActiveIndexVersion(Math.incrementExact(base.getActiveIndexVersion()));
         base.setActiveConnectionId(base.getEmbeddingConnectionId());
         base.setActiveDimensions(base.getDimensions());
-        bases.modifyBase(base);
+        bases.activateIndexByDocument(base, document);
     }
 
     /** 人工确认和发布均要求维护权限、上传完成、有效分片及同一资料版本。 */
