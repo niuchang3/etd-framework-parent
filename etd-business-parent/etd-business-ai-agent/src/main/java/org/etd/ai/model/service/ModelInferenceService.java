@@ -85,8 +85,9 @@ public class ModelInferenceService {
             String tenantId = requireTenantId(connectionId);
             String key = connectionId.toString();
             var model = clients.getRerankModel(tenantId, key);
-            // 当前原生重排由DashScope实现，显式请求全部候选，避免服务商默认Top N提前截断。
-            var options = DashScopeRerankOptions.builder().topN(documents.size()).returnDocuments(false).build();
+            // SDK请求选项自带默认模型，必须显式清空，才能沿用连接配置；数量只覆盖本次候选上限。
+            var options = DashScopeRerankOptions.builder().model(null)
+                    .topN(documents.size()).returnDocuments(false).build();
             var request = new RerankRequest(query, documents, options);
             return model.call(request).getResults();
         } catch (RuntimeException exception) {

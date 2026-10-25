@@ -48,6 +48,18 @@ spec:
             # 仅缓存一组转换器配置，减少多套模型驻留内存。
             - name: DOCLING_SERVE_OPTIONS_CACHE_SIZE
               value: "1"
+            # 流水线页队列最多缓存四页，降低大文档解析时的内存峰值。
+            - name: DOCLING_SERVE_QUEUE_MAX_SIZE
+              value: "4"
+            # OCR 每批处理一页，以吞吐量换取更低的内存峰值。
+            - name: DOCLING_SERVE_OCR_BATCH_SIZE
+              value: "1"
+            # 版面检测每批处理一页，减少同时驻留的页面及推理数据。
+            - name: DOCLING_SERVE_LAYOUT_BATCH_SIZE
+              value: "1"
+            # 表格结构识别每批处理一页，控制复杂文档的推理内存。
+            - name: DOCLING_SERVE_TABLE_BATCH_SIZE
+              value: "1"
             # 将处理工作目录和额外下载缓存放到持久卷。
             - name: DOCLING_SERVE_SCRATCH_PATH
               value: /var/lib/docling/scratch
