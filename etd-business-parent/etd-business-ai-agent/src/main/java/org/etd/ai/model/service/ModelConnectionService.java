@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.etd.ai.model.component.ModelCredentialCipher;
 import org.etd.ai.model.constant.ModelProtocol;
+import org.etd.framework.starter.ai.model.constant.ModelClientProtocol;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.mapper.ModelConnectionMapper;
 import org.etd.framework.common.core.context.model.RequestContext;
@@ -186,7 +187,7 @@ public class ModelConnectionService {
 
     /** 校验实际协议和认证组合；保存配置不表示已具备外部调用或验证能力。 */
     private void validateConnection(ModelConnectionEntity entity) {
-        if (!entity.getProtocol().matches(ModelProtocol.PROTOCOL_PATTERN)
+        if (!entity.getProtocol().matches(ModelClientProtocol.PATTERN)
                 || !entity.getAuthType().matches(ModelProtocol.AUTH_PATTERN)) {
             throw new ApiRuntimeException("不支持的协议或认证方式");
         }

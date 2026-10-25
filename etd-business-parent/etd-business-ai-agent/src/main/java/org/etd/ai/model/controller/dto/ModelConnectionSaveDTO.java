@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import org.etd.ai.model.constant.ModelProtocol;
+import org.etd.framework.starter.ai.model.constant.ModelClientProtocol;
 import org.etd.framework.starter.web.validation.UpdateRequest;
 
 /** ModelConnectionSaveDTO 页面请求；不接收租户、创建人或存储对象键。 */
@@ -19,7 +20,7 @@ public class ModelConnectionSaveDTO {
 
     /** 租户选择的接入协议，不是服务商代码。 */
     @NotBlank
-    @Pattern(regexp = ModelProtocol.PROTOCOL_PATTERN)
+    @Pattern(regexp = ModelClientProtocol.PATTERN)
     private String protocol;
 
     /** API根地址，不得含凭证、查询参数或片段。 */

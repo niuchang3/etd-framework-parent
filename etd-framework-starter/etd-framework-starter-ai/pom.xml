@@ -46,6 +46,15 @@
             <!-- 上游 BOM 将 SDK 标记为可选，本 starter 必须向业务应用传递该能力。 -->
             <optional>false</optional>
         </dependency>
+        <!-- 动态接入现有OpenAI兼容与Ollama协议，仅使用SDK，不引入供应商自动配置。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-ollama</artifactId>
+        </dependency>
         <!-- 文档解析仅在显式启用时装配，不要求应用启动时存在 Docling 服务。 -->
         <dependency>
             <groupId>ai.docling</groupId>

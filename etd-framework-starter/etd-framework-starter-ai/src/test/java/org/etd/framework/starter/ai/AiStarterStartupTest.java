@@ -2,8 +2,14 @@ package org.etd.framework.starter.ai;
 
 import com.alibaba.cloud.ai.dashscope.agent.DashScopeAgent;
 import org.junit.jupiter.api.Test;
+import org.etd.framework.starter.ai.model.client.ModelClientFactory;
+import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.audio.transcription.TranscriptionModel;
+import org.springframework.ai.audio.tts.TextToSpeechModel;
+import org.springframework.ai.image.ImageModel;
+import org.springframework.ai.moderation.ModerationModel;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
@@ -19,8 +25,14 @@ class AiStarterStartupTest {
         ApplicationContextRunner runner = new ApplicationContextRunner();
         runner.withUserConfiguration(StartupConfiguration.class).run(context -> {
             assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ModelClientFactory.class);
+            assertThat(context).doesNotHaveBean(ModelClientRegistry.class);
             assertThat(context).doesNotHaveBean(ChatModel.class);
             assertThat(context).doesNotHaveBean(EmbeddingModel.class);
+            assertThat(context).doesNotHaveBean(ImageModel.class);
+            assertThat(context).doesNotHaveBean(TranscriptionModel.class);
+            assertThat(context).doesNotHaveBean(TextToSpeechModel.class);
+            assertThat(context).doesNotHaveBean(ModerationModel.class);
             assertThat(context).doesNotHaveBean(DashScopeAgent.class);
         });
     }

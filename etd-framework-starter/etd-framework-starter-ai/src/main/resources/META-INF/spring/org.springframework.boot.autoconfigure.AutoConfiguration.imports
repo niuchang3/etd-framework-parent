@@ -1,1 +1,2 @@
 org.etd.framework.starter.ai.document.autoconfigure.DocumentParserAutoConfiguration
+org.etd.framework.starter.ai.model.autoconfigure.ModelClientAutoConfiguration
