@@ -2,7 +2,7 @@
 -- 先执行upms.sql；本文件不包含租户账号、组织或租户菜单授权。
 begin;
 
--- 分片编辑状态独立于上传状态及未来向量处理状态。
+-- 分片编辑状态独立于上传状态及向量处理状态。
 insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            type_code, type_name, built_in, enabled, remark)
 values (2200109, current_timestamp, 1, current_timestamp, 1, 1, 0,
@@ -168,6 +168,27 @@ values (2300201, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300217, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200105, 'DIMENSION_1536', '1536 维', '1536', 30, true, true, '对应系统 1536 维向量存储');
 
+-- 文档独立向量状态，与上传状态及分片状态分别展示。
+insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           type_code, type_name, built_in, enabled, remark)
+values (2200110, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'ai_knowledge_vector_status', '知识资料向量状态', true, true, '文档向量生成、写入及失效状态，仅由后端维护');
+
+insert into sys_dict_data (id, create_time, create_by, update_time, update_by, data_status, del_flag,
+                           dict_type_id, dict_code, dict_label, dict_value, sort, built_in, enabled, remark)
+values (2300240, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'PENDING', '未向量化', 'pending', 10, true, true, '尚未执行向量处理，不表示已有后台任务'),
+       (2300241, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'PROCESSING', '向量化中', 'processing', 20, true, true, '正在生成或写入当前确认请求的向量'),
+       (2300242, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'READY', '已向量化', 'ready', 30, true, true, '当前正文与知识库向量配置对应的向量已写入'),
+       (2300243, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'FAILED', '向量化失败', 'failed', 40, true, true, '最近一次向量生成或写入失败，刷新版本后可重试'),
+       (2300244, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'STALE', '向量已失效', 'stale', 50, true, true, '正文、模型或维度变化，需重新确认分片'),
+       (2300245, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        2200110, 'NOT_REQUIRED', '无需向量化', 'not_required', 60, true, true, '知识库采用全文检索，无需生成向量');
+
 -- 知识资料字典：统一维护上传状态、处理状态和检索方式；字典定义不代表对应处理能力已经实现。
 insert into sys_dict_type (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                            type_code, type_name, built_in, enabled, remark)
@@ -266,7 +287,7 @@ values (4000001, current_timestamp, 1, current_timestamp, 1, 1,
        (4000005, current_timestamp, 1, current_timestamp, 1, 1,
         'ai.knowledge.upload', '知识库上传文件格式',
         '{"allowedExtensions":[".pdf",".docx",".pptx",".xlsx",".html",".htm",".md",".csv",".png",".jpg",".jpeg",".tif",".tiff",".bmp",".webp"]}',
-        'json', true, true, '与当前Docling解析适配器支持格式一致，仅供前端文件选择器accept筛选，不作为服务端上传格式校验')
+        'json', true, true, '与当前文档解析服务支持格式一致，仅供前端文件选择器accept筛选，不作为服务端上传格式校验')
 on conflict (id) do nothing;
 
 commit;

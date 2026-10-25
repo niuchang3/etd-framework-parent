@@ -46,6 +46,10 @@ public class KnowledgeBaseEntity extends OrgScopedEntity {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Double similarityThreshold;
 
+    /** 检索命中后的指针滑动上下文扩展窗口，0表示不扩展，1表示向前后各扩展1个相邻切片，上限为3。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Integer contextWindowSize;
+
     /** 是否启用重排。 */
     private Boolean rerankEnabled;
 

@@ -168,6 +168,7 @@ public class KnowledgeChunkEditBizService {
     }
 
     private void markDraft(KnowledgeDocumentEntity document) {
+        document.setVectorStatus(KnowledgeVectorStatus.afterContentChange(document.getVectorStatus()));
         document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
         document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
         document.setChunkStatus(KnowledgeChunkStatus.DRAFT);

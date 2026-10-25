@@ -27,10 +27,11 @@ class ModelConnectionResolutionTest {
         var resolver = new BusinessModelConnectionResolver(connections, models, cipher);
         var connection = createConnection();
         var model = createModel();
-        when(connections.selectById("30")).thenReturn(connection);
+        when(connections.selectById(30L)).thenReturn(connection);
         when(models.selectById(20L)).thenReturn(model);
         var original = resolver.resolveAuthorized("900001", "30");
         assertThat(original.resolveApiKey()).isNull();
+        verify(connections).selectById(30L);
         verifyNoInteractions(cipher);
         model.setVersion(1L);
         var changedModel = resolver.resolveAuthorized("900001", "30");

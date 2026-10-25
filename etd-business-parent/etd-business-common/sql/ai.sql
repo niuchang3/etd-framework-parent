@@ -176,6 +176,7 @@ create table ai_knowledge_base
     vector_recall_size integer not null default 30,
     top_k integer not null default 5,
     similarity_threshold double precision,
+    context_window_size integer not null default 0,
     rerank_enabled boolean not null default false,
     rerank_connection_id bigint,
     rerank_threshold double precision,
@@ -201,6 +202,7 @@ create table ai_knowledge_base
     constraint ck_ai_base_rerank check ((not rerank_enabled and rerank_connection_id is null) or (rerank_enabled and rerank_connection_id is not null)),
     constraint ck_ai_base_counts check (keyword_recall_size between 1 and 200 and vector_recall_size between 1 and 200 and top_k between 1 and 100),
     constraint ck_ai_base_threshold check (similarity_threshold between -1 and 1),
+    constraint ck_ai_base_context check (context_window_size between 0 and 3),
     constraint ck_ai_base_index check (index_status in ('idle', 'building', 'ready', 'failed') and index_total >= 0 and index_completed between 0 and index_total)
 );
 comment on table ai_knowledge_base is '知识库基本信息、检索配置及当前/待生效索引状态';
@@ -218,6 +220,7 @@ comment on column ai_knowledge_base.keyword_recall_size is '全文召回数量�
 comment on column ai_knowledge_base.vector_recall_size is '向量召回数量。';
 comment on column ai_knowledge_base.top_k is '最终返回数量上限。';
 comment on column ai_knowledge_base.similarity_threshold is '原始余弦相似度下限，空表示不过滤。';
+comment on column ai_knowledge_base.context_window_size is '检索命中后的指针滑动上下文扩展窗口，0表示不扩展，1表示向前后各扩展1个相邻切片，上限为3。';
 comment on column ai_knowledge_base.rerank_enabled is '是否启用重排。';
 comment on column ai_knowledge_base.rerank_connection_id is '重排模型连接ID，关闭时为空。';
 comment on column ai_knowledge_base.rerank_threshold is '重排分数下限，空表示不限制。';
@@ -318,6 +321,7 @@ create table ai_knowledge_document
     file_size                   bigint not null,
     file_sha256                 varchar(64) not null,
     chunk_status                varchar(20) not null default 'unprocessed',
+    vector_status               varchar(20) not null default 'pending',
     chunk_count                 integer not null default 0,
     chunk_parameters            jsonb,
     chunk_generation_id         bigint,
@@ -326,6 +330,7 @@ create table ai_knowledge_document
     chunk_confirmed_time        timestamp(6) with time zone,
     primary key (id),
     constraint ck_ai_document_chunk_status check (chunk_status in ('unprocessed', 'generating', 'draft', 'confirmed', 'failed')),
+    constraint ck_ai_document_vector_status check (vector_status in ('pending', 'processing', 'ready', 'failed', 'stale', 'not_required')),
     constraint ck_ai_document_chunk_count check (chunk_count between 0 and 10000),
     constraint ck_ai_document_chunk_confirmed check (chunk_status <> 'confirmed' or chunk_confirmed_time is not null),
     constraint ck_ai_knowledge_document_status check (data_status in (0, 1)),
@@ -376,6 +381,7 @@ comment on column ai_knowledge_document.upload_expires_at is '允许恢复上传
 comment on column ai_knowledge_document.uploaded_time is '完整原件核验通过时间。';
 comment on column ai_knowledge_document.upload_error_message is '脱敏上传失败原因，不包含签名地址。';
 
+comment on column ai_knowledge_document.vector_status is '独立向量状态：pending未向量化、processing向量化中、ready已向量化、failed向量化失败、stale已失效、not_required无需向量化；由后端随确认及失效流程维护';
 comment on column ai_knowledge_document.chunk_status is '分片状态，与上传及向量处理无关：unprocessed、generating、draft、confirmed、failed';
 comment on column ai_knowledge_document.chunk_count is '当前已保存分片数，生成失败不清空旧结果';
 comment on column ai_knowledge_document.chunk_parameters is '最近成功生成使用的三级参数，Duration为ISO-8601字符串';

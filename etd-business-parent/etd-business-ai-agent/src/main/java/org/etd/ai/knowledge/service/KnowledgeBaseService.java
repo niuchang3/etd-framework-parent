@@ -35,6 +35,9 @@ public class KnowledgeBaseService {
         if (!scope.canManage(entity.getOrgId(), scope.userId())) {
             throw new ApiRuntimeException("无知识库新增数据权限");
         }
+        if (entity.getContextWindowSize() == null) {
+            entity.setContextWindowSize(0);
+        }
         mapper.insert(entity);
         return entity.getId();
     }

@@ -63,6 +63,11 @@ public class KnowledgeBaseSaveDTO {
     @DecimalMax("1")
     private Double similarityThreshold;
 
+    /** 检索命中后的指针滑动上下文扩展窗口，0表示不扩展，1表示向前后各扩展1个相邻切片，上限为3。 */
+    @Min(0)
+    @Max(3)
+    private Integer contextWindowSize;
+
     /** 是否启用重排。 */
     @NotNull
     private Boolean rerankEnabled;

@@ -52,6 +52,7 @@
         join ai_knowledge_chunk c on c.id = v.chunk_id and c.document_id = v.document_id
         <include refid="joins"/>
         where <include refid="access"/>
+          and d.vector_status = 'ready'
           and v.knowledge_base_id = b.id
           and v.model_connection_id = #{connectionId}
           and v.index_version = #{indexVersion}

@@ -16,7 +16,8 @@ import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.mapstruct.factory.Mappers;
 
 /** 分片边界转换，可信归属只来自已授权资料。 */
-@Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR, imports = DocumentTokenCounter.class)
+@Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR, imports = DocumentTokenCounter.class,
+        uses = KnowledgeDocumentConverter.class)
 public interface KnowledgeChunkConverter {
     /** 编译期生成的无状态转换器。 */
     KnowledgeChunkConverter INSTANCE = Mappers.getMapper(KnowledgeChunkConverter.class);
@@ -60,6 +61,7 @@ public interface KnowledgeChunkConverter {
     /** @param entity 资料实体 @return 工作页状态 */
     @Mapping(target = "writable", expression = "java(KnowledgeDocumentConverter.INSTANCE.canManageDocument(entity))")
     @Mapping(target = "tokenCountTokenizer", expression = "java(DocumentTokenCounter.TOKENIZER)")
+    @Mapping(target = "chunkErrorMessage", source = "chunkErrorMessage", qualifiedByName = "safeChunkError")
     KnowledgeChunkStateVO toStateVO(KnowledgeDocumentEntity entity);
     /** @param entity 已授权分片 @return 当前角色范围是否允许维护该分片 */
     default boolean canManageChunk(KnowledgeChunkEntity entity) {

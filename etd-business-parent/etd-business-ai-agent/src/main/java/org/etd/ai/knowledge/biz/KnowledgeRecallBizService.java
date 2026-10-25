@@ -56,7 +56,8 @@ public class KnowledgeRecallBizService {
         }
         var current = recall.retainCurrentList(id, candidates);
         var selected = current.subList(0, Math.min(base.getTopK(), current.size()));
-        return List.copyOf(selected);
+        var expanded = recall.expandContextWindow(selected, base.getContextWindowSize());
+        return List.copyOf(expanded);
     }
 
     private List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, String query) {

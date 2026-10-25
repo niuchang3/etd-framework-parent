@@ -60,7 +60,6 @@ class ModelCredentialInvocationTest {
         connections = mock(ModelConnectionMapper.class);
         models = mock(ModelMapper.class);
         when(connections.selectById(30L)).thenReturn(connection);
-        when(connections.selectById("30")).thenReturn(connection);
         var model = createModel();
         when(models.selectById(20L)).thenReturn(model);
     }

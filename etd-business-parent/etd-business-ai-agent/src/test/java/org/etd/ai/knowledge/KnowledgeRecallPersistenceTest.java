@@ -9,8 +9,14 @@ import java.util.Set;
 import org.etd.ai.knowledge.biz.KnowledgeChunkEditBizService;
 import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
+import org.etd.ai.knowledge.converter.KnowledgeDocumentConverter;
+import org.etd.ai.knowledge.biz.KnowledgeBaseBizService;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.model.service.ModelInferenceService;
+import org.etd.ai.model.component.BusinessModelConnectionResolver;
+import org.etd.framework.starter.ai.model.constant.ModelCapability;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -57,7 +63,9 @@ class KnowledgeRecallPersistenceTest {
     @Autowired private KnowledgeChunkEditBizService editing;
     @Autowired private KnowledgeRecallBizService recall;
     @Autowired private KnowledgeDocumentService documents;
+    @Autowired private KnowledgeBaseBizService baseEditing;
     @MockitoBean private ModelInferenceService inference;
+    @Autowired private BusinessModelConnectionResolver connectionResolver;
 
     /** 只对显式指定的专用空库执行初始化脚本。 */
     @BeforeAll
@@ -106,6 +114,9 @@ class KnowledgeRecallPersistenceTest {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             int dimensions = call.getArgument(1);
             List<String> texts = call.getArgument(2);
+            if (texts.size() == 2) {
+                assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.PROCESSING);
+            }
             return texts.stream().map(text -> vector(dimensions)).toList();
         });
     }
@@ -116,11 +127,25 @@ class KnowledgeRecallPersistenceTest {
         RequestContext.clean();
     }
 
+    /** 框架字符串连接ID必须转换为Long后绑定，真实PostgreSQL不能用varchar与bigint主键比较。 */
+    @Test
+    void resolvesStringConnectionIdAgainstPostgreSql() {
+        var configuration = connectionResolver.resolveAuthorized("900001", "30");
+        assertThat(configuration.connectionId()).isEqualTo("30");
+        assertThat(configuration.tenantId()).isEqualTo("900001");
+        assertThat(configuration.capability()).isEqualTo(ModelCapability.EMBEDDING);
+        assertThat(configuration.resolveApiKey()).isNull();
+    }
+
     /** 确认后向量和中文全文均可测试召回，资料启停不影响召回测试。 */
     @Test
     void confirmsAndRecallsRegardlessOfPublicationStatus() {
         var state = editing.confirmChunks(1L, 0L);
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.CONFIRMED);
+        assertThat(state.getVectorStatus()).isEqualTo(KnowledgeVectorStatus.READY);
+        var page = documents.fetchDocumentPage(1, 10, null, null, null, null, null, 10L, null);
+        var listed = KnowledgeDocumentConverter.INSTANCE.toListVO(page.getRecords().getFirst());
+        assertThat(listed.getVectorStatus()).isEqualTo(KnowledgeVectorStatus.READY);
         assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isEqualTo(2);
         var hits = recall.testRecall(10L, "安装");
         assertThat(hits).hasSize(2);
@@ -138,6 +163,7 @@ class KnowledgeRecallPersistenceTest {
         var state = editing.confirmChunks(1L, 0L);
         Map<Long, String> changes = Map.of(101L, "设备安装新规");
         state = editing.modifyChunks(1L, state.getVersion(), changes);
+        assertThat(state.getVectorStatus()).isEqualTo(KnowledgeVectorStatus.STALE);
         assertThat(recall.testRecall(10L, "安装")).isEmpty();
         editing.confirmChunks(1L, state.getVersion());
         assertThat(recall.testRecall(10L, "安装")).extracting("content").contains("设备安装新规");
@@ -164,13 +190,17 @@ class KnowledgeRecallPersistenceTest {
         when(inference.createEmbeddingList(any(), any(), any())).thenThrow(new ApiRuntimeException("模拟模型失败"));
         assertThatThrownBy(() -> editing.confirmChunks(1L, 0L)).hasMessageContaining("模拟模型失败");
         assertThat(documents.requireDocument(1L, false).getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.FAILED);
+        Long retryVersion = documents.requireDocument(1L, false).getVersion();
         doAnswer(call -> {
             Map<Long, String> changes = Map.of(101L, "在途人工修改");
-            editing.modifyChunks(1L, 0L, changes);
+            Long currentVersion = documents.requireDocument(1L, false).getVersion();
+            editing.modifyChunks(1L, currentVersion, changes);
             var value = vector(768);
             return List.of(value, value);
         }).when(inference).createEmbeddingList(any(), any(), any());
-        assertThatThrownBy(() -> editing.confirmChunks(1L, 0L)).hasMessageContaining("分片已变化");
+        assertThatThrownBy(() -> editing.confirmChunks(1L, retryVersion)).hasMessageContaining("分片已变化");
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.STALE);
         assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isZero();
         assertThat(documents.requireDocument(1L, false).getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
     }
@@ -195,7 +225,8 @@ class KnowledgeRecallPersistenceTest {
     void supportsKeywordModeWithoutModel() {
         jdbc.update("update ai_knowledge_base set retrieval_mode = 'keyword', embedding_connection_id = null, dimensions = null where id = 10");
         assertThat(recall.testRecall(10L, "安装")).isEmpty();
-        editing.confirmChunks(1L, 0L);
+        var confirmed = editing.confirmChunks(1L, 0L);
+        assertThat(confirmed.getVectorStatus()).isEqualTo(KnowledgeVectorStatus.NOT_REQUIRED);
         assertThat(recall.testRecall(10L, "安装")).extracting("chunkId").containsExactly(101L);
         verifyNoInteractions(inference);
     }
@@ -209,6 +240,7 @@ class KnowledgeRecallPersistenceTest {
             assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isZero();
             assertThat(jdbc.queryForObject("select active_index_version from ai_knowledge_base where id=10", Long.class)).isZero();
             assertThat(documents.requireDocument(1L, false).getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
+            assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.FAILED);
         } finally {
             jdbc.execute("alter table ai_vector_768 drop constraint ck_test_write_failure");
         }
@@ -245,6 +277,66 @@ class KnowledgeRecallPersistenceTest {
             return List.of();
         }).when(inference).createRerankList(eq(31L), any(), any());
         assertThat(recall.testRecall(10L, "安装")).isEmpty();
+    }
+
+    /** 验证开启滑动指针窗口扩展（contextWindowSize=1）时，召回命中结果会自动拼接相邻前后分片的正文。 */
+    @Test
+    void expandsContextWindowForRecallHits() {
+        editing.confirmChunks(1L, 0L);
+        long baseId = 10L;
+        String query = "安装";
+        jdbc.update("update ai_knowledge_base set retrieval_mode = 'keyword', embedding_connection_id = null, dimensions = null, context_window_size = 0 where id = 10");
+        var directHits = recall.testRecall(baseId, query);
+        assertThat(directHits).hasSize(1);
+        assertThat(directHits.getFirst().getContent()).isEqualTo("设备安装指南");
+
+        jdbc.update("update ai_knowledge_base set context_window_size = 1 where id = 10");
+        var expandedHits = recall.testRecall(baseId, query);
+        assertThat(expandedHits).hasSize(1);
+        assertThat(expandedHits.getFirst().getContent()).isEqualTo("设备安装指南\n\n设备维修流程");
+    }
+
+    /** 调整模型维度会使原有文档状态失效，旧确认请求不能重新发布旧配置的向量。 */
+    @Test
+    void invalidatesVectorStatusAfterBaseConfigurationChanges() {
+        editing.confirmChunks(1L, 0L);
+        var input = createBaseSettings(1024);
+        baseEditing.modifyBase(10L, input, 1L);
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.STALE);
+        var keyword = createBaseSettings(1024);
+        keyword.setRetrievalMode("keyword");
+        baseEditing.modifyBase(10L, keyword, 2L);
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.NOT_REQUIRED);
+    }
+
+    /** 检索数量变更不批量失效已有向量；在途发布遇到配置版本冲突时应记录失败。 */
+    @Test
+    void marksFailureWhenConfigurationChangesDuringInference() {
+        doAnswer(call -> {
+            jdbc.update("update ai_knowledge_base set top_k = 4, version = version + 1 where id = 10");
+            var value = vector(768);
+            return List.of(value, value);
+        }).when(inference).createEmbeddingList(any(), any(), any());
+        assertThatThrownBy(() -> editing.confirmChunks(1L, 0L)).hasMessageContaining("配置已变化");
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.FAILED);
+    }
+
+    /** 构造完整知识库设置以执行真实Biz校验和失效SQL。 */
+    private KnowledgeBaseEntity createBaseSettings(int dimensions) {
+        var input = new KnowledgeBaseEntity();
+        input.setOrgId(10L);
+        input.setName("测试库");
+        input.setIsPublic(false);
+        input.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
+        input.setRetrievalMode("hybrid");
+        input.setKeywordRecallSize(30);
+        input.setVectorRecallSize(30);
+        input.setTopK(5);
+        input.setEmbeddingConnectionId(30L);
+        input.setDimensions(dimensions);
+        input.setRerankEnabled(false);
+        input.setContextWindowSize(0);
+        return input;
     }
 
     /** 生成非零单位向量，让余弦结果精确可控。 */

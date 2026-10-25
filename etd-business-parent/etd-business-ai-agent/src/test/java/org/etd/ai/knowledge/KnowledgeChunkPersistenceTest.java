@@ -541,10 +541,10 @@ class KnowledgeChunkPersistenceTest {
         assertThat(chunks.fetchChunkList(1L).getFirst().getSource().documentItemRefs()).isNotEmpty();
     }
 
-    /** 三种策略均经过实际Docling解析和本地重叠处理，参数及追加正文可以真实落库。 */
+    /** 三种策略均经过实际Docling解析，参数及纯净正文真实落库。 */
     @ParameterizedTest
     @EnumSource(DocumentChunkStrategy.class)
-    void generatesAndPersistsOverlapThroughRealDocling(DocumentChunkStrategy strategy) throws Exception {
+    void generatesAndPersistsThroughRealDocling(DocumentChunkStrategy strategy) throws Exception {
         var actual = new KnowledgeChunkGenerationService(registry);
         when(engine.generateChunkList(any(), any(), any())).thenAnswer(call ->
                 actual.generateChunkList(call.getArgument(0), call.getArgument(1), call.getArgument(2)));
@@ -556,33 +556,14 @@ class KnowledgeChunkPersistenceTest {
         }
         byte[] bytes = original.toString().getBytes(StandardCharsets.UTF_8);
         when(objects.openObject(any())).thenAnswer(call -> new ByteArrayInputStream(bytes));
-        var parameters = overlapParameters(strategy);
+        var parameters = parameters(strategy);
         var state = generation.generateChunks(1L, 0L, parameters);
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.DRAFT);
-        assertThat(documents.requireDocument(1L, false).getChunkParameters().basic().overlapTokens()).isEqualTo(8);
         var records = chunks.fetchChunkList(1L);
         assertThat(records).hasSizeGreaterThan(1);
-        String second = records.get(1).getContent();
-        assertThat(second.substring(0, second.indexOf("\n\n"))).contains("Boundary marker 0.");
         if (strategy != DocumentChunkStrategy.HIERARCHICAL) {
             assertThat(records).allSatisfy(chunk -> assertThat(chunk.getTokenCount()).isLessThanOrEqualTo(128));
         }
-    }
-
-    private DocumentChunkParameters overlapParameters(DocumentChunkStrategy strategy) {
-        var basic = DocumentChunkParameters.Basic.builder().strategy(strategy).overlapTokens(8);
-        var normal = DocumentChunkParameters.Normal.builder();
-        if (strategy != DocumentChunkStrategy.HIERARCHICAL) {
-            basic.maxTokens(128);
-        }
-        if (strategy == DocumentChunkStrategy.REGEX) {
-            basic.pattern("(?m)^#{1,6} ");
-            normal.boundaryPlacement(RegexBoundaryPlacement.NEXT);
-        }
-        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(Duration.ofSeconds(90)).build();
-        var baseOptions = basic.build();
-        var normalOptions = normal.build();
-        return new DocumentChunkParameters(baseOptions, normalOptions, advanced);
     }
 
     private void insertDocument(long id) {

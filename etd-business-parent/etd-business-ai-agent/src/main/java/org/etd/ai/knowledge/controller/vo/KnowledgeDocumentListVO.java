@@ -51,6 +51,8 @@ public class KnowledgeDocumentListVO {
     private Instant updateTime;
     /** 分片状态，与上传状态分开展示。 */
     private String chunkStatus;
+    /** 独立向量状态，取值对应ai_knowledge_vector_status字典，由后端维护。 */
+    private String vectorStatus;
     /** 已保存的分片数。 */
     private Integer chunkCount;
     /** 最近一次分片生成的脱敏错误摘要。 */

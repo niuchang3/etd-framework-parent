@@ -57,7 +57,7 @@ public interface DocumentChunkParameterConverter {
         return switch (parameters.basic().strategy()) {
             case HIERARCHICAL -> toHierarchicalOptions(parameters);
             case HYBRID -> toHybridOptions(parameters);
-            case REGEX -> throw new IllegalArgumentException("正则策略不属于Docling原生分片，请先解析文档后执行二次切分");
+            case REGEX -> throw new IllegalArgumentException("正则策略需要先解析文档，再执行二次切分");
         };
     }
 

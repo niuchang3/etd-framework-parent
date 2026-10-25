@@ -93,7 +93,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
         try {
             return mapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Docling请求序列化失败", exception);
+            throw new IllegalArgumentException("文档解析请求序列化失败", exception);
         }
     }
 
@@ -143,7 +143,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
         String path = switch (strategy) {
             case HIERARCHICAL -> HIERARCHICAL_CHUNK_PATH;
             case HYBRID -> HYBRID_CHUNK_PATH;
-            case REGEX -> throw new IllegalArgumentException("Docling原生接口不支持正则分片");
+            case REGEX -> throw new IllegalArgumentException("原生解析接口不支持正则分片");
         };
         return async ? path + ASYNC_PATH_SUFFIX : path;
     }

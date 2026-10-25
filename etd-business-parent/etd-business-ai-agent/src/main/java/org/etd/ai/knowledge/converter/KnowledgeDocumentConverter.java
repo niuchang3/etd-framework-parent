@@ -15,9 +15,11 @@ public interface KnowledgeDocumentConverter {
     KnowledgeDocumentConverter INSTANCE = Mappers.getMapper(KnowledgeDocumentConverter.class);
     /** @param entity 资料记录 @return 不含分片回执及内部配置的列表摘要 */
     @Mapping(target = "writable", expression = "java(canManageDocument(entity))")
+    @Mapping(target = "chunkErrorMessage", source = "chunkErrorMessage", qualifiedByName = "safeChunkError")
     KnowledgeDocumentListVO toListVO(KnowledgeDocumentEntity entity);
     /** @param entity 资料记录 @return 脱敏资料详情 */
     @Mapping(target = "writable", expression = "java(canManageDocument(entity))")
+    @Mapping(target = "chunkErrorMessage", source = "chunkErrorMessage", qualifiedByName = "safeChunkError")
     KnowledgeDocumentVO toVO(KnowledgeDocumentEntity entity);
     /** @param dto 新上传请求 @return 仅包含允许输入字段的记录 */
     @BeanMapping(ignoreByDefault = true)
@@ -43,6 +45,15 @@ public interface KnowledgeDocumentConverter {
     @Mapping(target = "documentName", source = "documentName")
     @Mapping(target = "description", source = "description")
     KnowledgeDocumentEntity toEntity(KnowledgeDocumentSaveDTO dto);
+
+    /** @param message 服务端保存的业务错误摘要 @return 去除内部解析引擎名称的用户提示，保留时限及进度 */
+    @Named("safeChunkError")
+    static String toSafeChunkErrorMessage(String message) {
+        if (message == null) {
+            return null;
+        }
+        return message.replaceAll("(?i)docling(?:服务)?", "文档解析服务");
+    }
 
     /** @param entity 已授权读取的资料 @return 当前角色范围是否允许维护该资料 */
     default boolean canManageDocument(KnowledgeDocumentEntity entity) {

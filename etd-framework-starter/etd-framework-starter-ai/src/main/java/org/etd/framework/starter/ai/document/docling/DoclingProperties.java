@@ -45,11 +45,11 @@ public class DoclingProperties {
      * @throws IllegalArgumentException 地址、超时或大小配置无效
      */
     public void validate() {
-        Assert.notNull(baseUrl, "启用Docling时必须配置base-url");
+        Assert.notNull(baseUrl, "启用文档解析服务时必须配置base-url");
         Assert.isTrue((HTTP_SCHEME.equals(baseUrl.getScheme()) || HTTPS_SCHEME.equals(baseUrl.getScheme()))
                 && baseUrl.getHost() != null && baseUrl.getRawUserInfo() == null
                 && baseUrl.getRawQuery() == null && baseUrl.getRawFragment() == null,
-                "Docling必须使用无凭证、查询参数和片段的HTTP服务地址");
+                "文档解析服务必须使用无凭证、查询参数和片段的HTTP地址");
         requirePositive(connectTimeout, "连接超时");
         requirePositive(readTimeout, "请求超时");
         Assert.isTrue(maxFileBytes > 0 && maxFileBytes < Integer.MAX_VALUE, "文件大小限制无效");

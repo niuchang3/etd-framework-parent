@@ -30,7 +30,9 @@ public class BusinessModelConnectionResolver implements ModelConnectionResolver 
      */
     @Override
     public ModelConnectionConfiguration resolveAuthorized(String tenantId, String connectionId) {
-        var connection = connections.selectById(connectionId);
+        // 框架SPI使用字符串标识；业务主键为bigint，必须按Long绑定，避免PostgreSQL拒绝varchar比较。
+        Long id = Long.valueOf(connectionId);
+        var connection = connections.selectById(id);
         if (connection == null || !tenantId.equals(String.valueOf(connection.getTenantId()))
                 || !Objects.equals(connection.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
             throw new ApiRuntimeException("模型连接不存在或已停用");

@@ -1,13 +1,17 @@
 package org.etd.ai.knowledge.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
+import org.etd.ai.knowledge.mapper.KnowledgeChunkMapper;
 import org.etd.ai.knowledge.mapper.KnowledgeRecallMapper;
 import org.etd.ai.knowledge.model.KnowledgeRecallHit;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
@@ -22,6 +26,7 @@ public class KnowledgeRecallService {
     /** RRF常用平滑常数，按排名融合，避免直接相加不同量纲的全文与余弦分数。 */
     private static final int RRF_OFFSET = 60;
     private final KnowledgeRecallMapper mapper;
+    private final KnowledgeChunkMapper chunkMapper;
 
     /** @param base 已授权知识库 @param query 问题 @return 全文候选 */
     public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query) {
@@ -91,5 +96,43 @@ public class KnowledgeRecallService {
             }
         }
         return result;
+    }
+
+    /**
+     * 指针级滑动扩展：根据 (document_id, chunk_index) 逻辑指针动态平滑拼接前后相邻分片。
+     * @param hits 已通过权限核验并排序的候选分片
+     * @param windowSize 窗口大小，0或空表示不扩展，1表示前后各扩展1片
+     * @return 扩展后的分片列表副本
+     */
+    public List<KnowledgeRecallHit> expandContextWindow(List<KnowledgeRecallHit> hits, Integer windowSize) {
+        if (hits == null || hits.isEmpty() || windowSize == null || windowSize <= 0) {
+            return hits == null ? List.of() : hits;
+        }
+        List<KnowledgeRecallHit> expandedHits = new ArrayList<>(hits.size());
+        for (var hit : hits) {
+            if (hit.getDocumentId() == null || hit.getChunkIndex() == null) {
+                expandedHits.add(hit);
+                continue;
+            }
+            int minIdx = Math.max(0, hit.getChunkIndex() - windowSize);
+            int maxIdx = hit.getChunkIndex() + windowSize;
+            var query = new LambdaQueryWrapper<KnowledgeChunkEntity>()
+                    .eq(KnowledgeChunkEntity::getDocumentId, hit.getDocumentId())
+                    .ge(KnowledgeChunkEntity::getChunkIndex, minIdx)
+                    .le(KnowledgeChunkEntity::getChunkIndex, maxIdx)
+                    .orderByAsc(KnowledgeChunkEntity::getChunkIndex);
+            var neighbors = chunkMapper.selectList(query);
+            if (neighbors != null && !neighbors.isEmpty()) {
+                String mergedContent = neighbors.stream()
+                        .map(KnowledgeChunkEntity::getContent)
+                        .filter(content -> content != null && !content.isBlank())
+                        .collect(Collectors.joining("\n\n"));
+                if (!mergedContent.isBlank()) {
+                    hit.setContent(mergedContent);
+                }
+            }
+            expandedHits.add(hit);
+        }
+        return expandedHits;
     }
 }

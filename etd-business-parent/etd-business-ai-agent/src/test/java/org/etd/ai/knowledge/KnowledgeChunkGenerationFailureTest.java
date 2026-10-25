@@ -1,6 +1,13 @@
 package org.etd.ai.knowledge;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.http.HttpTimeoutException;
+import java.util.Locale;
+import org.etd.framework.starter.ai.document.exception.DocumentParseException;
+import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
+import org.etd.ai.knowledge.converter.KnowledgeDocumentConverter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -31,6 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
@@ -165,6 +173,69 @@ class KnowledgeChunkGenerationFailureTest {
         assertThat(result.getChunkCount()).isEqualTo(2);
         assertThat(result.getChunkParameters()).isEqualTo(parameters);
         verifyNoInteractions(chunks);
+    }
+
+    /** 连接被重置和HTTP等待超时应给出具体分类，同时禁止回显引擎名称及底层异常正文。 */
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void classifiesServiceTransportFailureWithoutExposingEngine(boolean timeout) throws Exception {
+        IOException transport = timeout ? new HttpTimeoutException("Docling endpoint detail")
+                : new SocketException("Connection reset");
+        var wrapped = new IOException("HTTP/1.1 header parser received no bytes", transport);
+        var failure = new DocumentParseException("Docling secret diagnostic", DocumentParseException.NO_HTTP_STATUS, wrapped);
+        var result = generateServiceFailure(failure);
+        String expected = timeout ? "请求超时" : "连接中断";
+        assertThat(result.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.FAILED);
+        assertThat(result.getChunkErrorMessage()).contains(expected, "已有分片已保留")
+                .doesNotContain("Docling", "secret", "header parser");
+        assertThat(result.getChunkCount()).isEqualTo(2);
+    }
+
+    /** 返回边界覆盖列表、详情和分片状态，保留业务诊断数字但不向用户显示内部引擎名称。 */
+    @ParameterizedTest
+    @ValueSource(strings = {"Docling解析超时，已等待90秒", "DOCLING连接中断，已等待90秒", "docling处理失败，已等待90秒", "请检查Docling服务，已等待90秒"})
+    void hidesEngineNameInAllDocumentResponses(String message) {
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var document = createDocument(parameters);
+        document.setChunkErrorMessage(message);
+        var list = KnowledgeDocumentConverter.INSTANCE.toListVO(document);
+        var detail = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        var state = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        var messages = List.of(list.getChunkErrorMessage(), detail.getChunkErrorMessage(), state.getChunkErrorMessage());
+        for (String displayed : messages) {
+            assertThat(displayed.toLowerCase(Locale.ROOT)).doesNotContain("docling");
+            assertThat(displayed).contains("90秒").doesNotContain("服务服务");
+        }
+        assertThat(document.getChunkErrorMessage()).isEqualTo(message);
+    }
+
+    /** 所有固定原因及动态超时提示均必须使用业务术语。 */
+    @Test
+    void hidesEngineNameInEveryDefinedFailureReason() {
+        for (Reason reason : Reason.values()) {
+            assertThat(reason.getMessage().toLowerCase(Locale.ROOT)).doesNotContain("docling");
+        }
+        var timeout = Duration.ofSeconds(90);
+        var wait = KnowledgeChunkGenerationException.waitTimeout(timeout);
+        assertThat(wait.getMessage().toLowerCase(Locale.ROOT)).doesNotContain("docling");
+    }
+
+    /** 复现轮询阶段连接中断，保留真实生成服务和业务失败落库流程。 */
+    private KnowledgeDocumentEntity generateServiceFailure(DocumentParseException failure) throws Exception {
+        var task = new DocumentParseTask(DoclingDocumentParser.ENGINE, "test-task", DocumentTaskStatus.RUNNING, null);
+        when(parser.submitChunk(any())).thenReturn(task);
+        when(parser.fetchStatus("test-task")).thenThrow(failure);
+        var parameters = parameters(DocumentChunkStrategy.HYBRID);
+        var document = createDocument(parameters);
+        var documents = mock(KnowledgeDocumentService.class);
+        when(documents.requireDocument(1L, true)).thenReturn(document);
+        var objects = mock(KnowledgeObjectService.class);
+        when(objects.openObject(document)).thenAnswer(call -> new ByteArrayInputStream(resource.getByteArray()));
+        var chunks = mock(KnowledgeChunkService.class);
+        var properties = new DoclingProperties();
+        var transactions = createTransactions();
+        var biz = new KnowledgeChunkGenerationBizService(documents, objects, chunks, generation, properties, transactions);
+        return biz.generateChunks(1L, 0L, parameters);
     }
 
     /** 两种接口的任务均已结束，但文档级结果仍可部分成功或失败。 */

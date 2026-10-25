@@ -6,6 +6,7 @@ import org.etd.ai.knowledge.converter.KnowledgeBaseConverter;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
+import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.model.constant.ModelType;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class KnowledgeBaseBizService {
     private final KnowledgeBaseService bases;
     private final KnowledgeFolderService folders;
     private final KnowledgeModelSettingsService models;
+    private final KnowledgeDocumentService documents;
     /** @param input 用户设置 @return 新知识库ID */
     @Transactional
     public Long createBase(KnowledgeBaseEntity input) {
@@ -33,8 +35,16 @@ public class KnowledgeBaseBizService {
             throw new ApiRuntimeException("知识库创建后不允许变更组织归属");
         }
         validateSettings(input);
+        boolean vectorChanged = hasVectorSettingsChanged(base, input);
         KnowledgeBaseConverter.INSTANCE.updateEntity(input, base);
+        if (base.getContextWindowSize() == null) {
+            base.setContextWindowSize(0);
+        }
         bases.modifyBase(base);
+        if (vectorChanged) {
+            boolean keyword = KnowledgeRetrievalPolicy.KEYWORD.equals(base.getRetrievalMode());
+            documents.invalidateVectorStatusByBase(id, keyword);
+        }
     }
     /** @param id 已授权的空知识库 */
     @Transactional
@@ -44,6 +54,15 @@ public class KnowledgeBaseBizService {
         bases.removeBase(id);
         folders.removeFolderList(id);
     }
+    /** 全文与向量模式切换、连接或维度变化均改变资料的向量可用性；向量与混合模式互切不失效。 */
+    private boolean hasVectorSettingsChanged(KnowledgeBaseEntity old, KnowledgeBaseEntity input) {
+        boolean wasKeyword = KnowledgeRetrievalPolicy.KEYWORD.equals(old.getRetrievalMode());
+        boolean isKeyword = KnowledgeRetrievalPolicy.KEYWORD.equals(input.getRetrievalMode());
+        return wasKeyword != isKeyword
+                || !Objects.equals(old.getEmbeddingConnectionId(), input.getEmbeddingConnectionId())
+                || !Objects.equals(old.getDimensions(), input.getDimensions());
+    }
+
     private void requireVersion(KnowledgeBaseEntity base, Long version) {
         if (!Objects.equals(base.getVersion(), version)) {
             throw new ApiRuntimeException("知识库已变化，请刷新后重试");
@@ -56,6 +75,9 @@ public class KnowledgeBaseBizService {
         models.validate(base.getEmbeddingConnectionId(), ModelType.EMBEDDING, base.getDimensions());
     }
     private void validateSettings(KnowledgeBaseEntity base) {
+        if (base.getContextWindowSize() == null) {
+            base.setContextWindowSize(0);
+        }
         if (base.getRerankThreshold() != null && !Double.isFinite(base.getRerankThreshold())) {
             throw new ApiRuntimeException("重排阈值必须为有限数值");
         }

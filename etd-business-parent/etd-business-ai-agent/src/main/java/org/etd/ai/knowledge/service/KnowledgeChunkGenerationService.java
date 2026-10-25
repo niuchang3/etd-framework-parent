@@ -34,7 +34,7 @@ public class KnowledgeChunkGenerationService {
     public List<DocumentChunk> generateChunkList(Resource resource, String filename, DocumentChunkParameters parameters) {
         var engine = registry.require(DoclingDocumentParser.ENGINE);
         if (!(engine instanceof AsynchronousDocumentParser parser) || !(engine instanceof DocumentChunker chunker)) {
-            throw new ApiRuntimeException("未启用Docling解析及分片服务");
+            throw new ApiRuntimeException("文档解析及分片服务未启用，请联系管理员");
         }
         var converter = DocumentChunkParameterConverter.INSTANCE;
         var options = converter.toParseOptions(parameters);
@@ -49,9 +49,7 @@ public class KnowledgeChunkGenerationService {
         awaitTask(parser, task, deadline, parameters.advanced().documentTimeout());
         var result = chunker.fetchChunkResult(task.taskId());
         requireCompleteDocuments(result, parameters.advanced().documentTimeout());
-        var overlap = new DocumentChunkOverlapProcessor();
-        var blocks = result.documents().getFirst().result().blocks();
-        return overlap.apply(result.chunks(), blocks, parameters);
+        return result.chunks();
     }
 
     private List<DocumentChunk> generateRegex(AsynchronousDocumentParser parser, DocumentParseRequest request,
@@ -61,9 +59,7 @@ public class KnowledgeChunkGenerationService {
         var result = parser.fetchResult(task.taskId());
         requireCompleteDocument(result, parameters.advanced().documentTimeout());
         var chunker = new DocumentRegexChunker();
-        var chunks = chunker.chunk(request.filename(), result, parameters);
-        var overlap = new DocumentChunkOverlapProcessor();
-        return overlap.apply(chunks, result.blocks(), parameters);
+        return chunker.chunk(request.filename(), result, parameters);
     }
 
     /** 单文件生成必须返回唯一结果，不能把结果数量异常伪装成解析超时。 */

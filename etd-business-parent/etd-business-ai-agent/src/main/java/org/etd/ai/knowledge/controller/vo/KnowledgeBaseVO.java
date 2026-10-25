@@ -45,6 +45,9 @@ public class KnowledgeBaseVO {
     /** 原始余弦相似度下限，空表示不过滤。 */
     private Double similarityThreshold;
 
+    /** 检索命中后的指针滑动上下文扩展窗口，0表示不扩展，1表示向前后各扩展1个相邻切片，上限为3。 */
+    private Integer contextWindowSize;
+
     /** 是否启用重排。 */
     private Boolean rerankEnabled;
 

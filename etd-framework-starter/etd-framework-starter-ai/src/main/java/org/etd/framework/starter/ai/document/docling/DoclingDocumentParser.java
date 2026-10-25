@@ -69,7 +69,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
      * @throws IllegalArgumentException 依赖或大小限制无效
      */
     public DoclingDocumentParser(DoclingTaskClient client, DoclingResultConverter converter, int maxFileBytes) {
-        Assert.notNull(client, "Docling客户端不能为空");
+        Assert.notNull(client, "文档解析客户端不能为空");
         Assert.notNull(converter, "解析结果转换器不能为空");
         Assert.isTrue(maxFileBytes > 0 && maxFileBytes < Integer.MAX_VALUE, "文件大小限制无效");
         this.client = client;

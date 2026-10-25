@@ -11,6 +11,7 @@ import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.ai.knowledge.service.KnowledgeVectorService;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,10 @@ public class KnowledgeDocumentBizService {
             chunks.modifyPublicByDocument(id, input.getIsPublic());
         }
         KnowledgeDocumentConverter.INSTANCE.updateEntity(input, document);
+        // 资料版本变化会取消在途向量确认；后续重试必须使用最新版本。
+        if (KnowledgeVectorStatus.PROCESSING.equals(document.getVectorStatus())) {
+            document.setVectorStatus(KnowledgeVectorStatus.STALE);
+        }
         documents.modifyDocument(document);
     }
 
@@ -79,6 +84,10 @@ public class KnowledgeDocumentBizService {
             }
         }
         document.setDataStatus(dataStatus);
+        // 资料版本变化会取消在途向量确认；后续重试必须使用最新版本。
+        if (KnowledgeVectorStatus.PROCESSING.equals(document.getVectorStatus())) {
+            document.setVectorStatus(KnowledgeVectorStatus.STALE);
+        }
         documents.modifyDocument(document);
     }
 

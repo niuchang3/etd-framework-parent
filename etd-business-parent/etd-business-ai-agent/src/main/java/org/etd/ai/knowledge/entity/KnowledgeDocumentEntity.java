@@ -111,6 +111,10 @@ public class KnowledgeDocumentEntity extends OrgScopedEntity {
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("T(org.etd.ai.knowledge.constant.KnowledgeChunkStatus).UNPROCESSED")
     private String chunkStatus;
+    /** 向量状态：pending、processing、ready、failed、stale、not_required；仅后端流转。 */
+    @TableField(fill = FieldFill.INSERT)
+    @TableFieldExtend("T(org.etd.ai.knowledge.constant.KnowledgeVectorStatus).PENDING")
+    private String vectorStatus;
     /** 已保存分片数量，生成失败时仍保留旧数量。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("0")

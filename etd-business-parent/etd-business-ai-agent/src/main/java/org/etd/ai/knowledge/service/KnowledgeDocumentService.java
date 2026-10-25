@@ -87,4 +87,16 @@ public class KnowledgeDocumentService {
             throw new ApiRuntimeException("资料已变化，请刷新后重试");
         }
     }
+    /**
+     * 知识库模型或维度变化后批量调整文档状态；调用方必须先锁定并校验知识库维护权限。
+     * @param baseId 已授权知识库
+     * @param keyword 是否切换为全文模式
+     */
+    public void invalidateVectorStatusByBase(Long baseId, boolean keyword) {
+        mapper.updateVectorStatusByBase(baseId, keyword);
+    }
+    /** @param id 已校验维护权限的资料 @param version 本次确认的processing版本，过期请求不再修改状态 */
+    public void markVectorFailure(Long id, Long version) {
+        mapper.updateVectorFailure(id, version);
+    }
 }

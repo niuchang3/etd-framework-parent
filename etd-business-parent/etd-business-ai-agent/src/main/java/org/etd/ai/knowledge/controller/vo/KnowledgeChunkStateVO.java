@@ -26,6 +26,8 @@ public class KnowledgeChunkStateVO {
     private Long version;
     /** 分片状态。 */
     private String chunkStatus;
+    /** 独立向量状态，取值对应ai_knowledge_vector_status字典，由后端维护。 */
+    private String vectorStatus;
     /** 已保存分片数量。 */
     private Integer chunkCount;
     /** 最近成功生成使用的参数，尚未生成时为空。 */
@@ -36,6 +38,6 @@ public class KnowledgeChunkStateVO {
     private Instant chunkConfirmedTime;
     /** 当前生成截止时间，超过此时间允许人工重新生成。 */
     private Instant chunkGenerationExpiresAt;
-    /** 分片正文Token计数使用的分词器，不等同于Docling原生生成预算所选分词器。 */
+    /** 分片正文Token计数使用的分词器，不等同于原生生成预算所选分词器。 */
     private String tokenCountTokenizer;
 }

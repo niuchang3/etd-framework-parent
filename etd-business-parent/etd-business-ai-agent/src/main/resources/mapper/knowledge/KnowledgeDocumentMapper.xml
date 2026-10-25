@@ -83,4 +83,31 @@
           and upload_status in ('initializing', 'uploading', 'failed')
           and upload_expires_at &lt;= current_timestamp
     </update>
+    <!-- 知识库配置行锁在前、资料行锁在后，与确认流程顺序一致；版本递增取消旧配置的在途请求。 -->
+    <update id="updateVectorStatusByBase">
+        update ai_knowledge_document
+        set vector_status =
+            <choose>
+                <when test="keyword">'not_required'</when>
+                <otherwise>
+                    case when chunk_status = 'confirmed' or vector_status in ('ready', 'processing', 'stale')
+                         then 'stale' else 'pending' end
+                </otherwise>
+            </choose>,
+            version = version + 1,
+            update_time = current_timestamp
+        where knowledge_base_id = #{baseId}
+          and del_flag = 0
+    </update>
+    <!-- 版本和状态双重匹配：失败回写不能覆盖人工编辑、配置失效或后续重试。 -->
+    <update id="updateVectorFailure">
+        update ai_knowledge_document
+        set vector_status = 'failed',
+            version = version + 1,
+            update_time = current_timestamp
+        where id = #{id}
+          and version = #{version}
+          and vector_status = 'processing'
+          and del_flag = 0
+    </update>
 </mapper>

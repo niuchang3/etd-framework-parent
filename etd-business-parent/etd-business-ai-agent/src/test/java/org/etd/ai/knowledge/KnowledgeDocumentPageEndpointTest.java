@@ -7,6 +7,7 @@ import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
@@ -46,6 +47,22 @@ class KnowledgeDocumentPageEndpointTest {
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);
+    }
+
+    /** 列表直接返回独立向量状态，前端无需根据分片状态或启停状态推断。 */
+    @Test
+    void shouldReturnVectorStatusInDocumentList() throws Exception {
+        var document = new KnowledgeDocumentEntity();
+        document.setId(1L);
+        document.setVectorStatus(KnowledgeVectorStatus.READY);
+        var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+        var records = List.of(document);
+        page.setRecords(records);
+        when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(page);
+        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
+        mvc.perform(request).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records[0].vectorStatus").value(KnowledgeVectorStatus.READY));
     }
 
     /** 重复键和逗号分隔两种传参形式均绑定为目录列表，原单目录参数同时保留。 */

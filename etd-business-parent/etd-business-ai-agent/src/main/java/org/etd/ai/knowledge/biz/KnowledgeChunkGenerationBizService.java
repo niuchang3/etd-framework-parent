@@ -2,6 +2,10 @@ package org.etd.ai.knowledge.biz;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import java.time.Instant;
+import java.net.SocketException;
+import java.net.http.HttpTimeoutException;
+import org.etd.framework.starter.ai.document.exception.DocumentParseException;
+import org.etd.ai.knowledge.exception.KnowledgeChunkGenerationException.Reason;
 import org.etd.framework.common.core.constants.BasicConstant;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +63,10 @@ public class KnowledgeChunkGenerationBizService {
         documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) { throw new ApiRuntimeException("资料已变化，请刷新后重试"); }
         if (!KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) { throw new ApiRuntimeException("请先完成原件上传"); }
+        // 重新生成会使正在执行的确认请求失去发布资格，避免留下永久processing状态。
+        if (KnowledgeVectorStatus.PROCESSING.equals(document.getVectorStatus())) {
+            document.setVectorStatus(KnowledgeVectorStatus.STALE);
+        }
         document.setChunkGenerationId(IdWorker.getId());
         document.setChunkGenerationExpiresAt(Instant.now().plus(parameters.advanced().documentTimeout())
                 .plus(KnowledgeChunkLimits.REQUEST_GRACE));
@@ -69,7 +77,7 @@ public class KnowledgeChunkGenerationBizService {
     }
 
     private ByteArrayResource readResource(KnowledgeDocumentEntity document) throws Exception {
-        if (document.getFileSize() > properties.getMaxFileBytes()) { throw new ApiRuntimeException("原件超过Docling单次解析大小限制"); }
+        if (document.getFileSize() > properties.getMaxFileBytes()) { throw new ApiRuntimeException("原件超过单次文档解析的大小限制"); }
         byte[] bytes;
         try (var input = objects.openObject(document)) { bytes = input.readNBytes(properties.getMaxFileBytes() + 1); }
         if (bytes.length == 0 || bytes.length > properties.getMaxFileBytes()) { throw new ApiRuntimeException("原件为空或超过解析大小限制"); }
@@ -96,6 +104,7 @@ public class KnowledgeChunkGenerationBizService {
         var document = requireCurrentGeneration(task);
         document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
         document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
+        document.setVectorStatus(KnowledgeVectorStatus.afterContentChange(document.getVectorStatus()));
         chunks.removeChunkList(document.getId());
         for (var record : records) {
             record.setProcessingVersion(document.getProcessingVersion());
@@ -118,7 +127,10 @@ public class KnowledgeChunkGenerationBizService {
         if (exception instanceof DocumentChunkException chunkException) {
             return chunkException.getReason().getMessage() + "；已有分片已保留";
         }
-        return "分片生成失败，请检查Docling服务、文件格式及参数后重试；已有分片已保留";
+        if (exception instanceof DocumentParseException parseException) {
+            return resolveServiceFailureReason(parseException).getMessage() + "；已有分片已保留";
+        }
+        return "分片生成失败，请检查文档格式、解析参数或联系管理员；已有分片已保留";
     }
 
     /** 日志使用明确分类，不从任意第三方异常消息中推断或暴露正文。 */
@@ -129,7 +141,25 @@ public class KnowledgeChunkGenerationBizService {
         if (exception instanceof DocumentChunkException chunkException) {
             return chunkException.getReason().getCode();
         }
+        if (exception instanceof DocumentParseException parseException) {
+            return resolveServiceFailureReason(parseException).getCode();
+        }
         return exception.getClass().getSimpleName();
+    }
+
+    /** 仅按异常类型区分连接中断与HTTP超时，不解析或回显可能含正文、地址和凭证的远端消息。 */
+    private Reason resolveServiceFailureReason(DocumentParseException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof HttpTimeoutException) {
+                return Reason.SERVICE_REQUEST_TIMEOUT;
+            }
+            if (cause instanceof SocketException) {
+                return Reason.SERVICE_CONNECTION_INTERRUPTED;
+            }
+            cause = cause.getCause();
+        }
+        return Reason.SERVICE_CALL_FAILED;
     }
 
     /** 只更新仍属于当前请求的失败；超时后重试的新结果不会被旧请求覆盖。 */
