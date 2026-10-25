@@ -16,7 +16,7 @@ values (2300234, current_timestamp, 1, current_timestamp, 1, 1, 0,
        (2300236, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200109, 'DRAFT', '待确认', 'draft', 30, true, true, '可预览、编辑和合并'),
        (2300237, current_timestamp, 1, current_timestamp, 1, 1, 0,
-        2200109, 'CONFIRMED', '已确认', 'confirmed', 40, true, true, '用户确认当前结果，不触发向量化'),
+        2200109, 'CONFIRMED', '已确认', 'confirmed', 40, true, true, '用户确认当前结果，按知识库检索模式完成全文索引或向量化'),
        (2300238, current_timestamp, 1, current_timestamp, 1, 1, 0,
         2200109, 'FAILED', '分片失败', 'failed', 50, true, true, '生成失败，保留已有分片和人工修改');
 

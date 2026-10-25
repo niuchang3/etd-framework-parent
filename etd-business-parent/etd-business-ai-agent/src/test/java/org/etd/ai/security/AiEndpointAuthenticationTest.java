@@ -30,6 +30,8 @@ import jakarta.servlet.Filter;
 import org.etd.ai.knowledge.controller.KnowledgeFolderController;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
 import org.etd.ai.knowledge.controller.KnowledgeBaseController;
+import org.etd.ai.knowledge.controller.KnowledgeRecallController;
+import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.biz.KnowledgeBaseBizService;
@@ -122,15 +124,24 @@ class AiEndpointAuthenticationTest {
         RequestContext.clean();
     }
 
-    /** 三个已删除入口不再注册路由，持有知识库读写权限也不可调用。 */
+    /** 未提供的手动全库索引及search入口不注册路由，召回使用独立入口。 */
     @Test
-    void shouldRemoveKnowledgeIndexAndRecallEndpoints() throws Exception {
+    void shouldKeepUnimplementedKnowledgeEndpointsUnregistered() throws Exception {
         var session = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
-        for (var action : List.of("index", "recall-test", "search")) {
+        for (var action : List.of("index", "search")) {
             var request = post("/v1/knowledge-bases/1/" + action).session(session)
                     .contentType(MediaType.APPLICATION_JSON).content("{}");
             mvc.perform(request).andExpect(status().isNotFound());
         }
+    }
+
+    /** 问题字段必须通过HTTP校验，不能以空白问题触发收费模型调用。 */
+    @Test
+    void shouldRejectBlankRecallQuery() throws Exception {
+        var session = createSession("ai:knowledge-base:read");
+        var request = post("/v1/knowledge-bases/1/recall-test").session(session)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"query\":\"   \"}");
+        mvc.perform(request).andExpect(status().isBadRequest());
     }
 
     /** 匿名业务请求仍被框架认证入口拒绝。 */
@@ -206,6 +217,9 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "POST", bases, settings, true);
         addKnowledgeEndpoint(result, "PUT", bases + "/1", settings, true);
         addKnowledgeEndpoint(result, "DELETE", bases + "/1", null, true);
+        String query = "{\"query\":\"安装指南\"}";
+        addKnowledgeEndpoint(result, "POST", bases + "/1/recall-test", query, false);
+        addKnowledgeEndpoint(result, "POST", bases + "/1/recall", query, false);
         String base = "/v1/knowledge-documents";
         String uploads = base + "/uploads";
         String hash = "0".repeat(64);
@@ -278,7 +292,7 @@ class AiEndpointAuthenticationTest {
     @Test
     void shouldLogAllKnowledgeEndpoints() {
         var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
-                KnowledgeFolderController.class, KnowledgeChunkController.class, KnowledgeBaseController.class);
+                KnowledgeFolderController.class, KnowledgeChunkController.class, KnowledgeBaseController.class, KnowledgeRecallController.class);
         for (Class<?> controller : controllers) {
             for (var method : controller.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
@@ -560,6 +574,7 @@ class AiEndpointAuthenticationTest {
                         KnowledgeDocumentController.class, "ai:knowledge-base",
                         KnowledgeUploadController.class, "ai:knowledge-base",
                         KnowledgeBaseController.class, "ai:knowledge-base",
+                        KnowledgeRecallController.class, "ai:knowledge-base",
                         KnowledgeChunkController.class, "ai:knowledge-base");
         for (var resource : resources.entrySet()) {
             var permission =
@@ -670,6 +685,15 @@ class AiEndpointAuthenticationTest {
             when(service.resumeUpload(1L, "0".repeat(64))).thenReturn(document);
             when(service.completeUpload(1L)).thenReturn(document);
             return service;
+        }
+
+        /** 召回POST接口必须按read授权，不能误用HTTP方法推断write。 */
+        @Bean
+        KnowledgeRecallController knowledgeRecallController() {
+            var biz = mock(KnowledgeRecallBizService.class);
+            when(biz.testRecall(any(), any())).thenReturn(List.of());
+            when(biz.recallList(any(), any())).thenReturn(List.of());
+            return new KnowledgeRecallController(biz);
         }
 
         /** 分片接口使用真实Controller和权限链，外部IO及持久化在此隔离。 */

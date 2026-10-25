@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeVectorMapper">
+    <!-- table只能由KnowledgeVectorService的维度白名单生成，其余值全部参数绑定。 -->
+    <insert id="insertVector">
+        insert into ${table} (id, content, metadata, vector, tenant_id)
+        values (#{id}, #{content}, jsonb_build_object(
+            'tenant_id', cast(#{document.tenantId} as bigint),
+            'knowledge_base_id', cast(#{document.knowledgeBaseId} as bigint),
+            'document_id', cast(#{document.id} as bigint),
+            'chunk_id', cast(#{chunkId} as bigint),
+            'model_connection_id', cast(#{connectionId} as bigint),
+            'index_version', cast(#{indexVersion} as bigint),
+            'processing_version', cast(#{document.processingVersion} as bigint)), cast(#{vector} as vector), default)
+    </insert>
+
+    <delete id="deleteByDocument">
+        delete from ${table}
+        where document_id = #{documentId}
+    </delete>
+</mapper>

@@ -125,7 +125,7 @@ public class KnowledgeChunkController {
         return ResultModel.success(result);
     }
 
-    /** @param id 资料ID @param dto 当前版本 @return 用户确认结果，不触发向量处理 */
+    /** @param id 资料ID @param dto 当前版本 @return 当前检索模式索引完成后的确认结果；模型失败时不确认 */
     @PostMapping("/confirm")
     @AutoLog("确认知识资料分片结果")
     public ResultModel<KnowledgeChunkStateVO> updateConfirm(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkVersionDTO dto) {

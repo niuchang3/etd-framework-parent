@@ -8,6 +8,7 @@ import org.etd.ai.knowledge.service.KnowledgeChunkService;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
+import org.etd.ai.knowledge.service.KnowledgeVectorService;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
-/** 撤除向量运行链路后，文档启用仍须检查上传和分片确认，不依赖向量索引。 */
+/** 文档启用仍须检查上传和分片确认，全文模式不依赖向量索引。 */
 class KnowledgeDocumentStatusTest {
     /** 确认内容可启用，未确认内容仍然被拒绝。 */
     @Test
@@ -25,7 +26,8 @@ class KnowledgeDocumentStatusTest {
         var folders = mock(KnowledgeFolderService.class);
         var objects = mock(KnowledgeObjectService.class);
         var chunks = mock(KnowledgeChunkService.class);
-        var biz = new KnowledgeDocumentBizService(documents, folders, objects, chunks);
+        var vectors = mock(KnowledgeVectorService.class);
+        var biz = new KnowledgeDocumentBizService(documents, folders, objects, chunks, vectors);
         var document = new KnowledgeDocumentEntity();
         document.setVersion(0L);
         document.setChunkStatus(KnowledgeChunkStatus.CONFIRMED);

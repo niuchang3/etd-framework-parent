@@ -9,6 +9,7 @@ import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
+import org.etd.ai.knowledge.service.KnowledgeVectorService;
 import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
@@ -25,6 +26,7 @@ public class KnowledgeDocumentBizService {
     private final KnowledgeFolderService folders;
     private final KnowledgeObjectService objects;
     private final KnowledgeChunkService chunks;
+    private final KnowledgeVectorService vectors;
 
     /** @param id 资料ID @param input 可编辑配置 @param version 当前版本 */
     @Transactional
@@ -58,6 +60,7 @@ public class KnowledgeDocumentBizService {
             log.error("知识资料原件删除失败，资料ID={}，异常类型={}", id, exception.getClass().getSimpleName());
             throw new ApiRuntimeException("原件清理失败，请重试删除");
         }
+        vectors.removeVectorList(id);
         chunks.removeChunkList(id);
         documents.removeDocument(id);
     }

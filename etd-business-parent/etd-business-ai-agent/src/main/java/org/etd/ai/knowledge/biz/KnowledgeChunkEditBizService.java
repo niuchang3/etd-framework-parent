@@ -1,6 +1,5 @@
 package org.etd.ai.knowledge.biz;
 
-import java.time.Instant;
 import org.etd.framework.common.core.constants.BasicConstant;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class KnowledgeChunkEditBizService {
     private final KnowledgeDocumentService documents;
     private final KnowledgeChunkService chunks;
+    private final KnowledgeChunkConfirmBizService confirmation;
     /** @param id 资料ID @param version 资料版本 @param edits 分片ID与新正文 @return 最新资料状态 */
     @Transactional
     public KnowledgeDocumentEntity modifyChunks(Long id, Long version, Map<Long, String> edits) {
@@ -112,15 +112,9 @@ public class KnowledgeChunkEditBizService {
         return document;
     }
 
-    /** @param id 资料ID @param version 当前版本 @return 已确认状态；不执行任何向量化 */
-    @Transactional
+    /** @param id 资料ID @param version 当前版本 @return 当前检索模式索引完成后的确认状态 */
     public KnowledgeDocumentEntity confirmChunks(Long id, Long version) {
-        var document = requireEditable(id, version);
-        if (document.getChunkCount() == null || document.getChunkCount() == 0) { throw new ApiRuntimeException("没有可确认的分片"); }
-        document.setChunkStatus(KnowledgeChunkStatus.CONFIRMED);
-        document.setChunkConfirmedTime(Instant.now());
-        documents.modifyDocument(document);
-        return document;
+        return confirmation.confirmChunks(id, version);
     }
 
     private KnowledgeDocumentEntity requireEditable(Long id, Long version) {

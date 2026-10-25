@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.knowledge.mapper.KnowledgeRecallMapper">
+    <resultMap id="hit" type="org.etd.ai.knowledge.model.KnowledgeRecallHit" autoMapping="true">
+        <id property="chunkId" column="chunk_id"/>
+        <result property="source" column="source"
+                typeHandler="org.etd.ai.knowledge.mapper.typehandler.KnowledgeChunkSourceTypeHandler"/>
+    </resultMap>
+
+    <sql id="fields">
+        c.id as chunk_id,
+        c.document_id,
+        d.document_name,
+        c.chunk_index,
+        c.content,
+        c.source,
+        d.processing_version
+    </sql>
+
+    <sql id="joins">
+        join ai_knowledge_document d on d.id = c.document_id and d.del_flag = 0
+        join ai_knowledge_base b on b.id = d.knowledge_base_id and b.del_flag = 0
+        <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.permissionJoin"/>
+    </sql>
+
+    <sql id="access">
+        c.del_flag = 0
+        and b.id = #{baseId}
+        and c.knowledge_base_id = b.id
+        and d.chunk_status = 'confirmed'
+        and d.upload_status = 'completed'
+        and (d.is_public = true or <include refid="org.etd.ai.knowledge.mapper.KnowledgeBaseMapper.managed"/>)
+        <if test="!test">
+            and d.data_status = 1
+        </if>
+    </sql>
+
+    <select id="selectKeywordList" resultMap="hit">
+        select <include refid="fields"/>,
+               ts_rank_cd(public.etd_knowledge_to_tsvector(c.content),
+                          public.etd_knowledge_to_tsquery(#{query})) as keyword_score
+        from ai_knowledge_chunk c
+        <include refid="joins"/>
+        where <include refid="access"/>
+          and public.etd_knowledge_to_tsvector(c.content) @@ public.etd_knowledge_to_tsquery(#{query})
+        order by keyword_score desc, c.id
+        limit #{size}
+    </select>
+
+    <!-- 按当前文档轮次而非分片最初生成轮次校验，人工编辑后重新确认仍能正常召回。 -->
+    <select id="selectVectorList" resultMap="hit">
+        select <include refid="fields"/>,
+               1 - (v.vector &lt;=&gt; cast(#{vector} as vector)) as vector_score
+        from ${table} v
+        join ai_knowledge_chunk c on c.id = v.chunk_id and c.document_id = v.document_id
+        <include refid="joins"/>
+        where <include refid="access"/>
+          and v.knowledge_base_id = b.id
+          and v.model_connection_id = #{connectionId}
+          and v.index_version = #{indexVersion}
+          and v.processing_version = d.processing_version
+        <if test="threshold != null">
+            and 1 - (v.vector &lt;=&gt; cast(#{vector} as vector)) &gt;= #{threshold}
+        </if>
+        order by v.vector &lt;=&gt; cast(#{vector} as vector)
+        limit #{size}
+    </select>
+
+    <select id="selectCurrentList" resultMap="hit">
+        select <include refid="fields"/>
+        from ai_knowledge_chunk c
+        <include refid="joins"/>
+        where <include refid="access"/>
+          and c.id in
+        <foreach collection="ids" item="id" open="(" separator=", " close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>
