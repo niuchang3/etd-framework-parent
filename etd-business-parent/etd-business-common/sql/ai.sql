@@ -1,5 +1,5 @@
 /*==============================================================*/
-/* SaaS 模型、知识库目录及资料上传的初始结构。           */
+/* SaaS 模型、知识库、资料上传及单Agent核心初始结构。              */
 /* 本脚本描述当前最终结构，由部署流程显式执行，不在应用启动时执行。 */
 /*==============================================================*/
 
@@ -590,4 +590,183 @@ comment on column ai_vector_1536.knowledge_base_id is '由metadata生成的知�
 comment on column ai_vector_1536.document_id is '所属文档ID，检索时实时校验文档启停及公开状态';
 comment on column ai_vector_1536.chunk_id is '分片ID，业务层保证关联完整性';
 comment on column ai_vector_1536.model_connection_id is '生成向量所用的租户模型连接ID';
+
+/*==============================================================*/
+/* 单Agent核心结构：定义、会话、消息、每轮执行。                  */
+/* 不创建物理外键；引用校验、数据权限和取消传播由业务层负责。     */
+/*==============================================================*/
+
+-- 单Agent定义：草稿与当前发布配置隔离，公开使用及维护权限复用现有数据权限。
+create table ai_agent
+(
+    id                         bigint not null primary key,
+    tenant_id                  bigint not null,
+    org_id                     bigint not null,
+    name                       varchar(100) not null,
+    description                varchar(1000),
+    avatar_path                varchar(1000),
+    is_public                  boolean not null default false,
+    data_status                integer not null default 1,
+    draft_config               jsonb not null,
+    published_config           jsonb,
+    published_time             timestamp(6) with time zone,
+    published_by               bigint,
+    version                    bigint not null default 0,
+    del_flag                   smallint not null default 0,
+    create_time                timestamp(6) with time zone not null default current_timestamp,
+    update_time                timestamp(6) with time zone not null default current_timestamp,
+    create_by                  bigint,
+    update_by                  bigint,
+    constraint ck_ai_agent_name check (btrim(name) <> ''),
+    constraint ck_ai_agent_status check (data_status in (0, 1)),
+    constraint ck_ai_agent_deleted check (del_flag in (0, 1)),
+    constraint ck_ai_agent_version check (version >= 0),
+    constraint ck_ai_agent_draft check (jsonb_typeof(draft_config) = 'object'),
+    constraint ck_ai_agent_published check (published_config is null or jsonb_typeof(published_config) = 'object')
+);
+comment on table ai_agent is '单Agent定义：草稿与当前发布配置隔离，公开使用及维护权限复用现有数据权限';
+comment on column ai_agent.id is '主键ID，由应用分配雪花ID';
+comment on column ai_agent.tenant_id is '所属租户，由可信请求上下文填充';
+comment on column ai_agent.org_id is '所属组织，用于现有组织数据权限过滤';
+comment on column ai_agent.name is 'Agent名称，不允许空白名称，不要求租户内唯一';
+comment on column ai_agent.description is 'Agent用途及能力简介';
+comment on column ai_agent.avatar_path is '头像资源路径';
+comment on column ai_agent.is_public is '是否租户内公开使用，不授予维护权限，也不扩大知识库数据权限';
+comment on column ai_agent.data_status is '启停状态：0禁用、1启用，修改后即时生效';
+comment on column ai_agent.draft_config is '草稿配置对象：modelConnectionId、systemPrompt、modelOptions、knowledgeBaseIds、historyMessageLimit、openingMessage、suggestedQuestions、citationEnabled；允许保存未完成配置';
+comment on column ai_agent.published_config is '当前完整发布配置对象，与草稿结构一致；发布时校验并复制，空表示未发布；不保存模型凭证或知识库检索参数副本';
+comment on column ai_agent.published_time is '最近发布时间点，未发布时为空';
+comment on column ai_agent.published_by is '最近发布用户ID';
+comment on column ai_agent.version is '乐观锁版本，更新必须携带当前值';
+comment on column ai_agent.del_flag is '逻辑删除：0未删除、1已删除';
+comment on column ai_agent.create_time is '创建时间点';
+comment on column ai_agent.update_time is '最后修改时间点，由应用在更新时维护';
+comment on column ai_agent.create_by is '创建用户ID，同时参与本人数据权限过滤';
+comment on column ai_agent.update_by is '最后修改用户ID';
+-- 分别覆盖组织范围、本人范围和租户内公开可用列表，不为JSON预建全量索引。
+create index idx_ai_agent_org on ai_agent (tenant_id, org_id, create_time desc, id desc) where del_flag = 0;
+create index idx_ai_agent_creator on ai_agent (tenant_id, create_by, create_time desc, id desc) where del_flag = 0;
+create index idx_ai_agent_public on ai_agent (tenant_id, create_time desc, id desc)
+    where is_public = true and data_status = 1 and published_config is not null and del_flag = 0;
+
+-- Agent会话：调试与正式聊天共用，会话内容归所有者个人，不随Agent公开。
+create table ai_agent_conversation
+(
+    id                         bigint not null primary key,
+    tenant_id                  bigint not null,
+    agent_id                   bigint not null,
+    user_id                    bigint not null,
+    title                      varchar(200) not null,
+    conversation_type          varchar(16) not null,
+    last_message_time          timestamp(6) with time zone,
+    del_flag                   smallint not null default 0,
+    create_time                timestamp(6) with time zone not null default current_timestamp,
+    update_time                timestamp(6) with time zone not null default current_timestamp,
+    constraint ck_ai_agent_conversation_title check (btrim(title) <> ''),
+    constraint ck_ai_agent_conversation_type check (conversation_type in ('debug', 'chat')),
+    constraint ck_ai_agent_conversation_deleted check (del_flag in (0, 1))
+);
+comment on table ai_agent_conversation is 'Agent会话：调试与正式聊天共用，会话内容归所有者个人，不随Agent公开';
+comment on column ai_agent_conversation.id is '主键ID，由应用分配雪花ID';
+comment on column ai_agent_conversation.tenant_id is '所属租户';
+comment on column ai_agent_conversation.agent_id is 'Agent ID，业务层保证关联及租户一致性';
+comment on column ai_agent_conversation.user_id is '会话所有者用户ID';
+comment on column ai_agent_conversation.title is '非空白会话标题';
+comment on column ai_agent_conversation.conversation_type is '会话类型：debug使用草稿、chat使用已发布配置；每轮开始固定本轮配置';
+comment on column ai_agent_conversation.last_message_time is '最近消息创建时间点，无消息时为空';
+comment on column ai_agent_conversation.del_flag is '逻辑删除：0未删除、1已删除；后续分批清理消息及运行记录';
+comment on column ai_agent_conversation.create_time is '会话创建时间点';
+comment on column ai_agent_conversation.update_time is '会话最后修改时间点，由应用维护';
+create index idx_ai_agent_conversation_user
+    on ai_agent_conversation (tenant_id, user_id, conversation_type, last_message_time desc nulls last, id desc)
+    where del_flag = 0;
+-- 清理需要包含已逻辑删除的会话，不使用部分索引。
+create index idx_ai_agent_conversation_agent on ai_agent_conversation (tenant_id, agent_id, id);
+
+-- Agent聊天消息：每轮一问一答，保留中断内容与知识引用，可独立于到期运行记录保留。
+create table ai_agent_message
+(
+    id                         bigint not null primary key,
+    tenant_id                  bigint not null,
+    conversation_id            bigint not null,
+    run_id                     bigint not null,
+    sequence_no                bigint not null,
+    role                       varchar(16) not null,
+    content                    text not null,
+    message_status             varchar(16) not null,
+    citations                  jsonb,
+    create_time                timestamp(6) with time zone not null default current_timestamp,
+    update_time                timestamp(6) with time zone not null default current_timestamp,
+    constraint ck_ai_agent_message_sequence check (sequence_no > 0),
+    constraint ck_ai_agent_message_role check (role in ('user', 'assistant')),
+    constraint ck_ai_agent_message_status check (message_status in ('generating', 'completed', 'interrupted', 'failed')),
+    constraint ck_ai_agent_message_citations check (citations is null or jsonb_typeof(citations) = 'array'),
+    constraint uk_ai_agent_message_sequence unique (tenant_id, conversation_id, sequence_no),
+    constraint uk_ai_agent_message_run_role unique (tenant_id, run_id, role)
+);
+comment on table ai_agent_message is 'Agent聊天消息：每轮一问一答，保留中断内容与知识引用，可独立于到期运行记录保留';
+comment on column ai_agent_message.id is '主键ID，由应用分配雪花ID';
+comment on column ai_agent_message.tenant_id is '所属租户';
+comment on column ai_agent_message.conversation_id is '所属会话ID，业务层保证关联及租户一致性';
+comment on column ai_agent_message.run_id is '本轮执行ID；运行记录清理后仍保留此标识，消息读取不依赖运行记录存在';
+comment on column ai_agent_message.sequence_no is '会话内递增正整数序号，由业务事务保证分配顺序';
+comment on column ai_agent_message.role is '消息角色：user用户、assistant助手；工具过程不存入本表';
+comment on column ai_agent_message.content is '消息正文，助手开始生成时允许空字符串；中断或失败时可保留已生成内容';
+comment on column ai_agent_message.message_status is '消息状态：generating生成中、completed完成、interrupted已中断、failed失败；用户消息为completed';
+comment on column ai_agent_message.citations is '引用数组：引用编号、知识库ID、资料ID、分片ID、资料名称及来源位置；不重复保存整段检索正文，访问原资料时重新校验权限';
+comment on column ai_agent_message.create_time is '消息创建时间点';
+comment on column ai_agent_message.update_time is '消息最后修改时间点，由应用维护';
+-- 两个唯一索引同时支持会话消息分页、会话清理及本轮消息定位，不重复建索引。
+
+-- Agent每轮执行：记录在线流式运行、取消状态及用量，不作为消息队列或历史配置快照。
+create table ai_agent_run
+(
+    id                         bigint not null primary key,
+    tenant_id                  bigint not null,
+    conversation_id            bigint not null,
+    request_id                 varchar(64) not null,
+    model_connection_id        bigint not null,
+    run_status                 varchar(24) not null,
+    started_time               timestamp(6) with time zone not null,
+    finished_time              timestamp(6) with time zone,
+    cancel_requested_time      timestamp(6) with time zone,
+    lease_until                timestamp(6) with time zone not null,
+    input_tokens               bigint,
+    output_tokens              bigint,
+    error_code                 varchar(64),
+    error_message              varchar(1000),
+    constraint ck_ai_agent_run_request check (btrim(request_id) <> ''),
+    constraint ck_ai_agent_run_status check (run_status in ('running', 'cancel_requested', 'succeeded', 'failed', 'cancelled')),
+    constraint ck_ai_agent_run_finished check (
+        (run_status in ('running', 'cancel_requested') and finished_time is null)
+        or (run_status in ('succeeded', 'failed', 'cancelled') and finished_time is not null)),
+    constraint ck_ai_agent_run_time check (finished_time is null or finished_time >= started_time),
+    constraint ck_ai_agent_run_cancel check (run_status <> 'cancel_requested' or cancel_requested_time is not null),
+    constraint ck_ai_agent_run_input_tokens check (input_tokens >= 0),
+    constraint ck_ai_agent_run_output_tokens check (output_tokens >= 0),
+    constraint uk_ai_agent_run_request unique (tenant_id, conversation_id, request_id)
+);
+comment on table ai_agent_run is 'Agent每轮执行：记录在线流式运行、取消状态及用量，不作为消息队列或历史配置快照';
+comment on column ai_agent_run.id is '主键ID，由应用分配雪花ID，同时作为停止生成接口的runId';
+comment on column ai_agent_run.tenant_id is '所属租户';
+comment on column ai_agent_run.conversation_id is '所属会话ID，业务层保证关联及租户一致性';
+comment on column ai_agent_run.request_id is '非空白请求幂等标识；去重范围为当前会话，去重有效期受运行记录保留期限限制';
+comment on column ai_agent_run.model_connection_id is '本轮选择的模型连接ID，不保存连接凭证';
+comment on column ai_agent_run.run_status is '执行状态：running运行中、cancel_requested请求取消、succeeded成功、failed失败、cancelled已取消';
+comment on column ai_agent_run.started_time is '本轮执行开始时间点';
+comment on column ai_agent_run.finished_time is '终态结束时间点，活跃执行时为空；与开始时间共同计算耗时';
+comment on column ai_agent_run.cancel_requested_time is '用户请求取消时间点，不代表任务已实际停止';
+comment on column ai_agent_run.lease_until is '执行租约到期时间点，运行引擎续租，用于识别失联任务，不表示自动重新执行';
+comment on column ai_agent_run.input_tokens is '本轮已知输入Token总量，非负，未知时为空';
+comment on column ai_agent_run.output_tokens is '本轮已知输出Token总量，非负，未知时为空';
+comment on column ai_agent_run.error_code is '稳定错误码，失败时由执行逻辑填写';
+comment on column ai_agent_run.error_message is '脱敏后的错误信息，禁止包含密钥等凭证';
+-- 取消请求与完成可能并发；取消中仍占用会话执行位置，直到进入终态。
+create unique index uk_ai_agent_run_active on ai_agent_run (tenant_id, conversation_id)
+    where run_status in ('running', 'cancel_requested');
+create index idx_ai_agent_run_lease on ai_agent_run (lease_until, id)
+    where run_status in ('running', 'cancel_requested');
+create index idx_ai_agent_run_finished on ai_agent_run (finished_time, id)
+    where run_status in ('succeeded', 'failed', 'cancelled');
+
 commit;
