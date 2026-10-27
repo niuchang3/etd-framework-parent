@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.etd.ai.model.mapper.ModelConnectionMapper">
+    <!-- 连接列表按租户创建时间索引扫描，模型关联命中主键；不读取服务地址和认证字段。 -->
+    <select id="selectAvailableChatPage" resultType="org.etd.ai.model.entity.ModelConnectionEntity">
+        select c.id,
+               c.tenant_id,
+               c.model_id,
+               m.model_name,
+               m.provider_code,
+               m.logo_path
+        from ai_model_connection c
+        join ai_model m on m.id = c.model_id
+        where c.del_flag = 0
+          and c.data_status = #{enabled}
+          and m.del_flag = 0
+          and m.data_status = #{enabled}
+          and m.model_type = #{modelType}
+        <if test="keyword != null and keyword != ''">
+            and m.model_name ilike concat('%', #{keyword}, '%')
+        </if>
+        order by c.create_time desc, c.id desc
+    </select>
+
     <sql id="connectionWithModel">
         select c.*, m.model_name, m.model_type, m.provider_code, m.logo_path
         from ai_model_connection c

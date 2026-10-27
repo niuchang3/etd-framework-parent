@@ -1,6 +1,8 @@
 package org.etd.ai;
 
 import org.etd.ai.model.controller.ModelController;
+import org.etd.ai.agent.controller.AgentController;
+import org.etd.ai.agent.controller.AgentOptionController;
 import org.etd.ai.model.controller.ModelSquareController;
 import org.etd.ai.model.biz.ModelSquareBizService;
 
@@ -27,6 +29,14 @@ import static org.junit.jupiter.api.Assertions.*;
         "logging.file=${java.io.tmpdir}/etd-ai-startup-test"
 })
 class AgentApplicationSmokeTest {
+    /** Agent管理入口必须在实际业务应用中完成装配。 */
+    @Autowired
+    private AgentController agents;
+
+    /** Agent选择项入口必须复用业务模型和知识库能力完成装配。 */
+    @Autowired
+    private AgentOptionController agentOptions;
+
     /** 实际装配的只读模型管理入口。 */
     @Autowired
     private ModelController models;
@@ -56,6 +66,8 @@ class AgentApplicationSmokeTest {
     @Test
     void shouldStartWithSharedCatalogAndTenantConnections() {
         assertNotNull(models);
+        assertNotNull(agents);
+        assertNotNull(agentOptions);
         assertNotNull(square);
         assertNotNull(squareBiz);
         var registeredPaths = new HashSet<String>();
@@ -71,6 +83,10 @@ class AgentApplicationSmokeTest {
                 "/v1/model-square/connections", "/v1/model-square/connections/{id}",
                 "/v1/model-square/connections/{id}/status");
         assertTrue(registeredPaths.containsAll(squarePaths));
+        var agentPaths = Set.of("/v1/agents", "/v1/agents/{id}", "/v1/agents/{id}/configuration",
+                "/v1/agents/{id}/publish", "/v1/agents/{id}/status",
+                "/v1/agents/options/models", "/v1/agents/options/knowledge-bases");
+        assertTrue(registeredPaths.containsAll(agentPaths));
         assertTrue(properties.getTenant().getIgnoreTables().contains("ai_model"));
         assertFalse(properties.getTenant().getIgnoreTables().contains("ai_model_connection"));
         assertTrue(properties.getDataPermission().getIgnoreTables().contains("ai_model"));

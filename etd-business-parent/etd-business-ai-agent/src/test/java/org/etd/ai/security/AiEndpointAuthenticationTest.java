@@ -45,6 +45,7 @@ import org.etd.ai.knowledge.biz.KnowledgeFolderBizService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.controller.KnowledgeUploadController;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
+import org.etd.ai.knowledge.biz.KnowledgeDocumentBatchDeleteBizService;
 import org.etd.ai.knowledge.biz.KnowledgeUploadBizService;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
@@ -52,6 +53,11 @@ import org.etd.ai.knowledge.config.KnowledgeUploadProperties;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import java.lang.reflect.Modifier;
 import org.etd.ai.model.biz.ModelBizService;
+import org.etd.ai.agent.biz.AgentBizService;
+import org.etd.ai.agent.controller.AgentController;
+import org.etd.ai.agent.controller.AgentOptionController;
+import org.etd.ai.agent.entity.AgentEntity;
+import org.etd.ai.agent.service.AgentService;
 import org.etd.ai.model.biz.ModelSquareBizService;
 import org.etd.ai.model.controller.ModelController;
 import org.etd.ai.model.controller.ModelSquareController;
@@ -234,6 +240,8 @@ class AiEndpointAuthenticationTest {
         addKnowledgeEndpoint(result, "POST", base + "/1/download-url", null, false);
         addKnowledgeEndpoint(result, "PUT", base + "/1", configuration, true);
         addKnowledgeEndpoint(result, "DELETE", base + "/1", null, true);
+        addKnowledgeEndpoint(result, "POST", base + "/batch-delete",
+                "{\"knowledgeBaseId\":1,\"documentIds\":[1,2]}", true);
         addKnowledgeEndpoint(result, "PUT", base + "/1/status", "{\"version\":0,\"dataStatus\":0}", true);
         addKnowledgeEndpoint(result, "POST", uploads, initialization, true);
         addKnowledgeEndpoint(result, "POST", uploads + "/1/parts/1/url", null, true);
@@ -562,6 +570,46 @@ class AiEndpointAuthenticationTest {
         mvc.perform(request).andExpect(status().isOk());
     }
 
+    /** Agent基本信息允许read，配置及选择项要求write，匿名请求仍由生产认证链拒绝。 */
+    @Test
+    void shouldProtectAgentConfigurationAndWriteEndpoints() throws Exception {
+        var anonymous = get("/v1/agents/1");
+        mvc.perform(anonymous).andExpect(status().isUnauthorized());
+        var reader = createSession("ai:agent:read");
+        var list = get("/v1/agents").session(reader);
+        mvc.perform(list).andExpect(status().isOk());
+        var detail = get("/v1/agents/1").session(reader);
+        mvc.perform(detail).andExpect(status().isOk());
+        var configuration = get("/v1/agents/1/configuration").session(reader);
+        mvc.perform(configuration).andExpect(status().isForbidden());
+        var options = get("/v1/agents/options/models").session(reader);
+        mvc.perform(options).andExpect(status().isForbidden());
+        var publish = post("/v1/agents/1/publish").session(reader)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0}");
+        mvc.perform(publish).andExpect(status().isForbidden());
+        var writer = createSession("ai:agent:read", "ai:agent:write");
+        var allowedConfiguration = get("/v1/agents/1/configuration").session(writer);
+        mvc.perform(allowedConfiguration).andExpect(status().isOk());
+        var allowedPublish = post("/v1/agents/1/publish").session(writer)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0}");
+        mvc.perform(allowedPublish).andExpect(status().isOk());
+        var biz = context.getBean(AgentBizService.class);
+        verify(biz).publishAgent(1L, 0L);
+    }
+
+    /** 只读身份即使拥有菜单write，也不能读取维护配置或执行删除。 */
+    @Test
+    void shouldRejectAgentMaintenanceForReadOnlyIdentity() throws Exception {
+        var session = createSession("ai:agent:read", "ai:agent:write");
+        RequestContext.getUser().setLocked(true);
+        var configuration = get("/v1/agents/1/configuration").session(session);
+        mvc.perform(configuration).andExpect(status().isForbidden());
+        var remove = delete("/v1/agents/1").param("version", "0").session(session);
+        mvc.perform(remove).andExpect(status().isForbidden());
+        var biz = context.getBean(AgentBizService.class);
+        verifyNoInteractions(biz);
+    }
+
     /** 首页所有聚合接口使用广场资源码，平台模型目录仍保持独立管理权限。 */
     @Test
     void shouldDeclareFrameworkPermissionOnAllAiControllers() {
@@ -574,7 +622,9 @@ class AiEndpointAuthenticationTest {
                         KnowledgeUploadController.class, "ai:knowledge-base",
                         KnowledgeBaseController.class, "ai:knowledge-base",
                         KnowledgeRecallController.class, "ai:knowledge-base",
-                        KnowledgeChunkController.class, "ai:knowledge-base");
+                        KnowledgeChunkController.class, "ai:knowledge-base",
+                        AgentController.class, "ai:agent",
+                        AgentOptionController.class, "ai:agent");
         for (var resource : resources.entrySet()) {
             var permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
@@ -599,6 +649,38 @@ class AiEndpointAuthenticationTest {
     @EnableMethodSecurity
     @EnableWebMvc
     static class AuthenticationConfiguration {
+        /** Agent查询替身，认证和方法授权仍使用生产实现。 */
+        @Bean
+        AgentService agentService() {
+            var service = mock(AgentService.class);
+            var page = new Page<AgentEntity>(1, 12);
+            when(service.fetchAgentPage(1, 12, null, null, null)).thenReturn(page);
+            var agent = new AgentEntity();
+            agent.setId(1L);
+            when(service.requireAgent(1L, false, false)).thenReturn(agent);
+            when(service.requireAgent(1L, true, false)).thenReturn(agent);
+            return service;
+        }
+
+        /** Agent写用例替身，用于确认授权成功才进入业务编排。 */
+        @Bean
+        AgentBizService agentBizService() {
+            return mock(AgentBizService.class);
+        }
+
+        /** 真实Agent控制器参与方法权限校验。 */
+        @Bean
+        AgentController agentController(AgentService agents, AgentBizService biz) {
+            return new AgentController(agents, biz);
+        }
+
+        /** 真实选择项入口验证GET显式write覆盖。 */
+        @Bean
+        AgentOptionController agentOptionController(ModelConnectionService connections) {
+            var bases = mock(KnowledgeBaseService.class);
+            return new AgentOptionController(connections, bases);
+        }
+
         /** 使用应用相同的健康白名单和authenticated兜底规则。 */
         @Bean
         SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json)
@@ -737,7 +819,8 @@ class AiEndpointAuthenticationTest {
         @Bean
         KnowledgeDocumentController knowledgeDocumentController(KnowledgeDocumentService documents,
                 KnowledgeDocumentBizService biz) {
-            return new KnowledgeDocumentController(documents, biz);
+            var batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
+            return new KnowledgeDocumentController(documents, biz, batchDeletion);
         }
 
         /** 装配真实上传控制器及默认技术参数。 */

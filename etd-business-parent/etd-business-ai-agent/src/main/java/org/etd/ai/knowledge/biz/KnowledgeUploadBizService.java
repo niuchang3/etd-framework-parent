@@ -57,6 +57,8 @@ public class KnowledgeUploadBizService {
         if (base.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("停用知识库不能上传文档");
         }
+        // 资料归属已授权的知识库组织，不取上传人的主组织或客户端指定值。
+        document.setOrgId(base.getOrgId());
         if (document.getIsPublic() == null) {
             document.setIsPublic(base.getIsPublic());
         }

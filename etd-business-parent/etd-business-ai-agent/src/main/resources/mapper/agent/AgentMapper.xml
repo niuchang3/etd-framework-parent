@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.agent.mapper.AgentMapper">
+    <resultMap id="agentRecord" type="org.etd.ai.agent.entity.AgentEntity" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="draftConfig" column="draft_config"
+                typeHandler="org.etd.ai.agent.mapper.typehandler.AgentConfigurationTypeHandler"/>
+        <result property="publishedConfig" column="published_config"
+                typeHandler="org.etd.ai.agent.mapper.typehandler.AgentConfigurationTypeHandler"/>
+    </resultMap>
+
+    <sql id="publicationState">
+        (a.published_config is not null) as published,
+        (a.draft_config is distinct from a.published_config) as unpublished_changes
+    </sql>
+
+    <!-- 列表不读取大段提示词和配置正文；公开读取也不会经VO暴露内部配置。 -->
+    <select id="selectReadablePage" resultType="org.etd.ai.agent.entity.AgentEntity">
+        select a.id,
+               a.tenant_id,
+               a.org_id,
+               a.name,
+               a.description,
+               a.avatar_path,
+               a.is_public,
+               a.data_status,
+               a.version,
+               a.create_by,
+               a.create_time,
+               a.update_time,
+               a.published_time,
+        <include refid="publicationState"/>
+        from ai_agent a
+        where a.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and a.name ilike concat('%', #{keyword}, '%')
+        </if>
+        <if test="dataStatus != null">
+            and a.data_status = #{dataStatus}
+        </if>
+        <if test="published != null">
+            <choose>
+                <when test="published">
+                    and a.published_config is not null
+                </when>
+                <otherwise>
+                    and a.published_config is null
+                </otherwise>
+            </choose>
+        </if>
+        order by a.create_time desc, a.id desc
+    </select>
+
+    <select id="selectAccessible" resultMap="agentRecord">
+        select a.*,
+        <include refid="publicationState"/>
+        from ai_agent a
+        where a.id = #{id}
+          and a.del_flag = 0
+        <if test="lock">
+            for update
+        </if>
+    </select>
+</mapper>

@@ -55,14 +55,15 @@ INSERT INTO sys_organization (
       (2094439206968496129, '2026-08-31 22:56:34.398000+08:00', 1, '2026-08-31 22:56:34.398000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'YYB', '运营部', 'DEPARTMENT', NULL, 7, true),
       (2094439089842556930, '2026-08-31 22:56:06.473000+08:00', 1, '2026-08-31 22:57:31.182000+08:00', 1, 1, 0, 1, 2094438638732578818, '/2094438638732578818/', 'RSB', '人事部', 'DEPARTMENT', NULL, 8, true);
 
--- 默认租户 AI 菜单授权，包含 AI 管理父菜单和知识库入口。
+-- 默认租户 AI 菜单授权，包含 AI 管理父菜单、知识库及Agent管理入口。
 insert into sys_tenant_menu_rel (id, create_time, create_by, update_time, update_by, data_status, del_flag,
                                  tenant_id, menu_id)
 values (1100101, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000101),
        (1100102, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000102),
        (1100106, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000106),
        (1100105, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000105),
-       (1100107, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000107);
+       (1100107, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000107),
+       (1100108, current_timestamp, 1, current_timestamp, 1, 1, 0, 1, 1000108);
 
 -- sys_tenant_menu_rel 初始化。
 insert into sys_tenant_menu_rel (id, create_time, create_by, update_time, update_by, data_status, tenant_id, menu_id)

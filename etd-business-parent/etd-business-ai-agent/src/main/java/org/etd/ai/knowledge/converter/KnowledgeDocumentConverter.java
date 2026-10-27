@@ -5,6 +5,9 @@ import org.etd.ai.knowledge.controller.dto.KnowledgeUploadInitDTO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentListVO;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
+import org.etd.ai.knowledge.model.KnowledgeDocumentDeleteResult;
+import org.etd.ai.knowledge.model.KnowledgeDocumentDeleteFailure;
+import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentDeleteVO;
 import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 
@@ -13,6 +16,10 @@ import org.mapstruct.factory.Mappers;
 public interface KnowledgeDocumentConverter {
     /** 编译期生成的无状态转换器。 */
     KnowledgeDocumentConverter INSTANCE = Mappers.getMapper(KnowledgeDocumentConverter.class);
+    /** @param result 批量删除业务结果 @return 页面成功项与失败项 */
+    KnowledgeDocumentDeleteVO toDeleteVO(KnowledgeDocumentDeleteResult result);
+    /** @param failure 单项业务失败 @return 页面失败项 */
+    KnowledgeDocumentDeleteVO.Failure toDeleteFailureVO(KnowledgeDocumentDeleteFailure failure);
     /** @param entity 资料记录 @return 不含分片回执及内部配置的列表摘要 */
     @Mapping(target = "writable", expression = "java(canManageDocument(entity))")
     @Mapping(target = "chunkErrorMessage", source = "chunkErrorMessage", qualifiedByName = "safeChunkError")

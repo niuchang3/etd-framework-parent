@@ -7,6 +7,9 @@ import jakarta.validation.Valid;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentStatusDTO;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
+import org.etd.ai.knowledge.biz.KnowledgeDocumentBatchDeleteBizService;
+import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentBatchDeleteDTO;
+import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentDeleteVO;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentSaveDTO;
 import org.etd.ai.knowledge.controller.dto.KnowledgeDocumentPageQuery;
 import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
@@ -28,6 +31,16 @@ import org.springframework.web.bind.annotation.*;
 public class KnowledgeDocumentController {
     private final KnowledgeDocumentService documents;
     private final KnowledgeDocumentBizService biz;
+    private final KnowledgeDocumentBatchDeleteBizService batchDeletion;
+
+    /** @param dto 当前知识库及明确选择的资料 @return 逐项成功与失败结果，部分失败不会撤销成功项 */
+    @AutoLog("批量删除知识资料")
+    @PostMapping("/batch-delete")
+    public ResultModel<KnowledgeDocumentDeleteVO> removeBatch(@Valid @RequestBody KnowledgeDocumentBatchDeleteDTO dto) {
+        var result = batchDeletion.removeDocumentList(dto.getKnowledgeBaseId(), dto.getDocumentIds());
+        var output = KnowledgeDocumentConverter.INSTANCE.toDeleteVO(result);
+        return ResultModel.success(output);
+    }
     /** @param query 分页及筛选条件，批量目录优先于单目录；子孙目录由前端收集
      * @return 角色范围及租户内共享的可读取资料 */
     @AutoLog("分页查询知识资料")

@@ -8,6 +8,7 @@ import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import org.etd.ai.knowledge.mapper.KnowledgeBaseMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
@@ -20,6 +21,12 @@ import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTab
 @RequiredArgsConstructor
 public class KnowledgeBaseService {
     private final KnowledgeBaseMapper mapper;
+    /** @param current 页码 @param size 页大小 @param keyword 名称关键字 @return Agent配置可选的启用且可读知识库 */
+    public IPage<KnowledgeBaseEntity> fetchAvailableBasePage(long current, long size, String keyword) {
+        var page = new Page<KnowledgeBaseEntity>(current, size);
+        return mapper.selectAvailablePage(page, keyword, BasicConstant.DataStatus.ENABLED_CODE);
+    }
+
     /** @param current 页码 @param size 页大小 @param keyword 名称关键字 @return 权限内卡片 */
     public IPage<KnowledgeBaseEntity> fetchBasePage(long current, long size, String keyword) {
         var page = new Page<KnowledgeBaseEntity>(current, size);

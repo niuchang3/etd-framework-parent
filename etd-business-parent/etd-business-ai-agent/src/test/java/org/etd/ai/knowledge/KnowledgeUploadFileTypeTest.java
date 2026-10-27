@@ -6,22 +6,31 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.converter.KnowledgeDocumentConverter;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
+import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.service.KnowledgeFolderService;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.framework.common.core.constants.BasicConstant;
+import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.user.UserDetails;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +38,12 @@ import static org.mockito.Mockito.when;
 class KnowledgeUploadFileTypeTest {
     private KnowledgeUploadBizService uploads;
     private KnowledgeDocumentService documents;
+
+    /** 释放组织继承测试使用的可信身份。 */
+    @AfterEach
+    void clearIdentity() {
+        RequestContext.clean();
+    }
 
     /** 使用真实事务模板执行上传编排，隔离数据库和对象存储IO。 */
     @BeforeEach
@@ -74,5 +89,34 @@ class KnowledgeUploadFileTypeTest {
         var list = KnowledgeDocumentConverter.INSTANCE.toListVO(result);
         assertEquals(expected, detail.getFileType());
         assertEquals(expected, list.getFileType());
+    }
+
+    /** 上传人无主组织或主组织不同，均按知识库组织通过真实新增权限校验。 */
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = 20L)
+    void shouldInheritKnowledgeBaseOrganization(Long primaryOrgId) {
+        var user = new UserDetails();
+        user.setId(100L);
+        user.setOrgId(primaryOrgId);
+        var types = Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode());
+        user.setPermissionTypes(types);
+        var scopeOrgIds = Set.of(10L);
+        user.setScopeOrgIds(scopeOrgIds);
+        RequestContext.setUser(user);
+        var mapper = mock(KnowledgeDocumentMapper.class);
+        var service = new KnowledgeDocumentService(mapper);
+        doAnswer(invocation -> service.createDocument(invocation.getArgument(0)))
+                .when(documents).createDocument(any());
+        var document = new KnowledgeDocumentEntity();
+        document.setKnowledgeBaseId(1L);
+        document.setFolderId(1L);
+        document.setOriginalFilename("资料.pdf");
+        document.setFileSize(10L);
+        // 即使内部调用传入其他组织，也必须以已授权知识库为准。
+        document.setOrgId(99L);
+        var result = uploads.createUpload(document);
+        assertEquals(10L, result.getOrgId());
+        verify(mapper).insert(document);
     }
 }

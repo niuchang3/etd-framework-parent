@@ -9,10 +9,12 @@ import lombok.RequiredArgsConstructor;
 
 import org.etd.ai.model.component.ModelCredentialCipher;
 import org.etd.ai.model.constant.ModelProtocol;
+import org.etd.ai.model.constant.ModelType;
 import org.etd.framework.starter.ai.model.constant.ModelClientProtocol;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.mapper.ModelConnectionMapper;
 import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,18 @@ public class ModelConnectionService {
 
     private final ModelConnectionMapper mapper;
     private final ModelCredentialCipher cipher;
+
+    /**
+     * 查询Agent编辑页面可选聊天连接，在数据库端同时过滤连接及模型启停状态。
+     * @param current 页码
+     * @param size 页大小
+     * @param keyword 可选模型名称关键字
+     * @return 不含地址及凭证的连接记录
+     */
+    public IPage<ModelConnectionEntity> fetchChatConnectionPage(long current, long size, String keyword) {
+        var page = new Page<ModelConnectionEntity>(current, size);
+        return mapper.selectAvailableChatPage(page, keyword, ModelType.CHAT, BasicConstant.DataStatus.ENABLED_CODE);
+    }
 
     /**
      * 分页查询连接，Controller仅输出脱敏VO。

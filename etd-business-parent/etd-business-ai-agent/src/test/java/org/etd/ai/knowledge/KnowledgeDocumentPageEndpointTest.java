@@ -3,6 +3,7 @@ package org.etd.ai.knowledge;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.etd.ai.knowledge.biz.KnowledgeDocumentBizService;
 import org.etd.ai.knowledge.controller.KnowledgeDocumentController;
+import org.etd.ai.knowledge.biz.KnowledgeDocumentBatchDeleteBizService;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.service.KnowledgeDocumentService;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
@@ -43,7 +44,8 @@ class KnowledgeDocumentPageEndpointTest {
     void setUp() {
         documents = mock(KnowledgeDocumentService.class);
         biz = mock(KnowledgeDocumentBizService.class);
-        var controller = new KnowledgeDocumentController(documents, biz);
+        var batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
+        var controller = new KnowledgeDocumentController(documents, biz, batchDeletion);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);

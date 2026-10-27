@@ -244,7 +244,10 @@ values (1000101, null, current_timestamp, 1, current_timestamp, 1, 1, 0,
         'ai:model', 'AppstoreOutlined', 'MENU', 10),
        (1000107, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
         '知识库', '/ai/knowledge-bases', '@/views/ai/knowledge-base/index.vue',
-        'ai:knowledge-base', 'FileTextOutlined', 'MENU', 40);
+        'ai:knowledge-base', 'FileTextOutlined', 'MENU', 40),
+       (1000108, 1000101, current_timestamp, 1, current_timestamp, 1, 1, 0,
+        'Agent管理', '/ai/agents', '@/views/ai/agent/index.vue',
+        'ai:agent', 'RobotOutlined', 'MENU', 50);
 
 -- sys_menus 初始化。
 insert into sys_menus (id, parent_id, create_time, create_by, update_time, update_by, data_status, menu_name,

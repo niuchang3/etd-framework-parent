@@ -8,7 +8,6 @@ import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.mapper.KnowledgeDocumentMapper;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.common.core.context.model.RequestContext;
 import org.springframework.stereotype.Service;
 import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
@@ -80,11 +79,14 @@ public class KnowledgeDocumentService {
         }
     }
 
-    /** @param entity 上传主记录 @return 新建资料ID；INSERT主动校验组织维护范围 */
+    /** @param entity 已继承知识库组织的上传主记录 @return 新建资料ID；INSERT主动校验组织维护范围 */
     public Long createDocument(KnowledgeDocumentEntity entity) {
         var scope = DataPermissionScope.current();
-        var user = RequestContext.getUser();
-        Long orgId = entity.getOrgId() != null ? entity.getOrgId() : user == null ? null : user.getOrgId();
+        Long orgId = entity.getOrgId();
+        // 组织由上传编排从知识库继承，缺失时禁止自动改用上传人的主组织。
+        if (orgId == null) {
+            throw new ApiRuntimeException("资料缺少知识库组织归属，无法上传");
+        }
         if (!scope.canManage(orgId, scope.userId())) {
             throw new ApiRuntimeException("无资料新增数据权限");
         }

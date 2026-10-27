@@ -16,6 +16,7 @@ import org.etd.framework.common.core.constants.BasicConstant;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import java.util.Objects;
 
 /** 资料配置、移动和删除用例，跨服务操作在事务中编排。 */
@@ -65,6 +66,27 @@ public class KnowledgeDocumentBizService {
     @Transactional
     public void removeDocument(Long id) {
         var document = documents.requireDocument(id, true);
+        removeDocumentResources(document);
+    }
+
+    /**
+     * 在独立事务中删除指定知识库的一份资料，供批量用例逐项调用。
+     * @param id 资料ID
+     * @param knowledgeBaseId 页面当前知识库ID，不允许跨库误删
+     * @throws ApiRuntimeException 资料不可维护、归属不符、处理中或清理失败
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void removeDocumentByBase(Long id, Long knowledgeBaseId) {
+        var document = documents.requireDocument(id, true);
+        if (!Objects.equals(document.getKnowledgeBaseId(), knowledgeBaseId)) {
+            throw new ApiRuntimeException("资料不属于当前知识库");
+        }
+        removeDocumentResources(document);
+    }
+
+    /** 单条与批量复用同一清理流程；对象存储不参与数据库事务，清理失败时保留资料记录以便重试。 */
+    private void removeDocumentResources(KnowledgeDocumentEntity document) {
+        Long id = document.getId();
         documents.requireChunkIdle(document);
         try {
             objects.abortUpload(document);

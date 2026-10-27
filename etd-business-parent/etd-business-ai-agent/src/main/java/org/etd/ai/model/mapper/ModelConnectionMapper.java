@@ -7,6 +7,10 @@ import org.etd.ai.model.entity.ModelConnectionEntity;
 
 /** 租户模型连接数据访问，模型展示字段通过SQL关联查询。 */
 public interface ModelConnectionMapper extends BaseMapper<ModelConnectionEntity> {
+    /** @param page 分页 @param keyword 名称关键字 @param modelType 聊天能力码 @param enabled 启用状态码 @return 当前可选连接，不含凭证 */
+    IPage<ModelConnectionEntity> selectAvailableChatPage(IPage<ModelConnectionEntity> page,
+            @Param("keyword") String keyword, @Param("modelType") String modelType, @Param("enabled") Integer enabled);
+
     /**
      * 关联目录分页查询连接，普通租户由框架拦截器隔离。
      * @param page 分页参数
