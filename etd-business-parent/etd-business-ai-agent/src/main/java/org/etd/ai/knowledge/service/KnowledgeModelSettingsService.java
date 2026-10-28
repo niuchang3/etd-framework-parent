@@ -20,15 +20,15 @@ public class KnowledgeModelSettingsService {
 
     /** @param connectionId 模型连接 @param type 所需能力类型 @param dimensions 可选向量维度 */
     public void validate(Long connectionId, String type, Integer dimensions) {
-        var connection = requireConnection(connectionId);
-        var model = requireModel(connection, type);
+        ModelConnectionEntity connection = requireConnection(connectionId);
+        ModelEntity model = requireModel(connection, type);
         if (dimensions != null && (model.getEmbedding() == null || !Arrays.asList(model.getEmbedding()).contains(dimensions))) {
             throw new ApiRuntimeException("所选维度不在模型支持范围内");
         }
     }
 
     private ModelConnectionEntity requireConnection(Long id) {
-        var connection = id == null ? null : connections.selectById(id);
+        ModelConnectionEntity connection = id == null ? null : connections.selectById(id);
         if (connection == null || !Objects.equals(connection.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
             throw new ApiRuntimeException("模型连接不存在或已停用");
         }
@@ -36,7 +36,7 @@ public class KnowledgeModelSettingsService {
     }
 
     private ModelEntity requireModel(ModelConnectionEntity connection, String type) {
-        var model = models.selectById(connection.getModelId());
+        ModelEntity model = models.selectById(connection.getModelId());
         if (model == null || !type.equals(model.getModelType())
                 || !Objects.equals(model.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
             throw new ApiRuntimeException("模型不存在、已停用或类型不匹配");

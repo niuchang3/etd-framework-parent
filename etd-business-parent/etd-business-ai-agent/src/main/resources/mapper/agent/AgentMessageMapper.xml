@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.agent.mapper.AgentMessageMapper">
+    <resultMap id="message" type="org.etd.ai.agent.entity.AgentMessageEntity" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="citations" column="citations"
+                typeHandler="org.etd.ai.agent.mapper.typehandler.AgentCitationTypeHandler"/>
+    </resultMap>
+
+    <insert id="insertMessage">
+        insert into ai_agent_message
+            (id, tenant_id, conversation_id, run_id, sequence_no, role, content, message_status)
+        values (#{e.id}, #{e.tenantId}, #{e.conversationId}, #{e.runId}, #{e.sequenceNo},
+                #{e.role}, #{e.content}, #{e.messageStatus})
+    </insert>
+
+    <select id="selectLastSequence" resultType="long">
+        select coalesce(max(sequence_no), 0)
+        from ai_agent_message
+        where conversation_id = #{conversationId}
+    </select>
+
+    <select id="selectMessageList" resultMap="message">
+        select id, tenant_id, conversation_id, run_id, sequence_no, role, content,
+               message_status, citations, create_time, update_time
+        from ai_agent_message
+        where conversation_id = #{conversationId}
+        <if test="beforeSequence != null">
+            and sequence_no &lt; #{beforeSequence}
+        </if>
+        order by sequence_no desc
+        limit #{size}
+    </select>
+
+    <select id="selectAssistant" resultMap="message">
+        select id, tenant_id, conversation_id, run_id, sequence_no, role, content,
+               message_status, citations, create_time, update_time
+        from ai_agent_message
+        where run_id = #{runId}
+          and role = 'assistant'
+    </select>
+
+    <update id="updateAssistant">
+        update ai_agent_message
+        set content = #{content},
+            message_status = #{status},
+            citations = #{citations,typeHandler=org.etd.ai.agent.mapper.typehandler.AgentCitationTypeHandler},
+            update_time = current_timestamp
+        where run_id = #{runId}
+          and role = 'assistant'
+          and message_status = 'generating'
+    </update>
+</mapper>

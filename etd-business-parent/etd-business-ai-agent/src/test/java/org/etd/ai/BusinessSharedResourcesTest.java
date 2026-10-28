@@ -11,6 +11,8 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
+import java.util.ArrayList;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,7 +38,7 @@ class BusinessSharedResourcesTest {
              GenericApplicationContext context = new GenericApplicationContext()) {
             context.setClassLoader(loader);
             String applicationLocation = resources.resolve("application.yml").toUri().toString();
-            var properties = new MapPropertySource("resource-test", Map.of(
+            MapPropertySource properties = new MapPropertySource("resource-test", Map.of(
                     "spring.config.location", applicationLocation,
                     "spring.profiles.active", "local",
                     "REDIS_HOST", "redis.resource-test.invalid",
@@ -44,7 +46,7 @@ class BusinessSharedResourcesTest {
                     "KAFKA_CONSUMER_GROUP_ID", "shared-resources-test",
                     "ETD_EVENT_WORKER_ID", "7"));
             context.getEnvironment().getPropertySources().addFirst(properties);
-            var initializer = new ConfigDataApplicationContextInitializer();
+            ConfigDataApplicationContextInitializer initializer = new ConfigDataApplicationContextInitializer();
             initializer.initialize(context);
             verifyEffectiveConfiguration(context, applicationName, event, druid);
             verifySharedResourceLocations(loader, resources);
@@ -54,7 +56,7 @@ class BusinessSharedResourcesTest {
     /** 确认占位符仍由运行环境解析，应用只加载自身显式导入的组件。 */
     private void verifyEffectiveConfiguration(GenericApplicationContext context, String applicationName,
                                                boolean event, boolean druid) {
-        var environment = context.getEnvironment();
+        ConfigurableEnvironment environment = context.getEnvironment();
         assertEquals(applicationName, environment.getProperty("spring.application.name"));
         assertEquals("redis.resource-test.invalid", environment.getProperty("spring.data.redis.host"));
         assertEquals(applicationName + ":", environment.getProperty("jetcache.remote.default.keyPrefix"));
@@ -73,7 +75,7 @@ class BusinessSharedResourcesTest {
 
     /** 共享 YAML 只由 common 提供，各应用不再有副本；SQL 仍通过测试 classpath 读取。 */
     private void verifySharedResourceLocations(ClassLoader loader, Path applicationResources) throws Exception {
-        var redisResources = Collections.list(loader.getResources("redis.yml"));
+        ArrayList<URL> redisResources = Collections.list(loader.getResources("redis.yml"));
         assertEquals(1, redisResources.size());
         assertTrue(redisResources.getFirst().toString().contains("etd-business-common"));
         assertFalse(applicationResources.resolve("redis.yml").toFile().exists());

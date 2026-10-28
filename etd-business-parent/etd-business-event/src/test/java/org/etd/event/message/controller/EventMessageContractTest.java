@@ -5,6 +5,7 @@ import org.etd.event.message.entity.EventMessageEntity;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,7 +34,7 @@ class EventMessageContractTest {
      */
     @Test
     void shouldDeclareMessageFailureColumnsInSchema() throws Exception {
-        try (var inputStream = getClass().getClassLoader()
+        try (InputStream inputStream = getClass().getClassLoader()
                 .getResourceAsStream("sql/event.sql")) {
             assertNotNull(inputStream);
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);

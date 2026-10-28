@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.etd.framework.common.core.context.RequestContextInitializer;
 import org.etd.framework.common.core.context.model.RequestContext;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import java.util.List;
 
@@ -15,7 +15,7 @@ import java.util.List;
  * @author Young
  * @date 2020/11/12
  */
-public abstract class EtdFrameworkHttpRequestInterceptor implements HandlerInterceptor {
+public abstract class EtdFrameworkHttpRequestInterceptor implements AsyncHandlerInterceptor {
 
     /**
      * 上下文初始化就绪后执行的业务逻辑钩子（如租户校验、权限拦截等）
@@ -65,6 +65,18 @@ public abstract class EtdFrameworkHttpRequestInterceptor implements HandlerInter
      */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        RequestContext.clean();
+    }
+
+    /**
+     * SSE等异步请求交出Servlet线程时立即清理；运行任务必须在进入异步前捕获独立快照。
+     * afterCompletion只在最终派发线程触发，不能代替这里对原请求线程的清理。
+     * @param request 当前请求
+     * @param response 当前响应
+     * @param handler 接口处理器
+     */
+    @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response, Object handler) {
         RequestContext.clean();
     }
 

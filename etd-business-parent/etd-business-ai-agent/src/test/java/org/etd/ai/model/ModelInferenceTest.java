@@ -27,10 +27,10 @@ class ModelInferenceTest {
     /** 模拟原生模型接口，保留真实请求组装与响应校验。 */
     @BeforeEach
     void prepare() {
-        var connections = mock(ModelConnectionMapper.class);
-        var clients = mock(ModelClientRegistry.class);
+        ModelConnectionMapper connections = mock(ModelConnectionMapper.class);
+        ModelClientRegistry clients = mock(ModelClientRegistry.class);
         model = mock(EmbeddingModel.class);
-        var connection = new ModelConnectionEntity();
+        ModelConnectionEntity connection = new ModelConnectionEntity();
         connection.setTenantId(900001L);
         when(connections.selectById(30L)).thenReturn(connection);
         when(clients.getEmbeddingModel("900001", "30")).thenReturn(model);
@@ -47,7 +47,7 @@ class ModelInferenceTest {
             List<Embedding> results = new ArrayList<>();
             for (int index = request.getInstructions().size() - 1; index >= 0; index--) {
                 float[] vector = {Float.parseFloat(request.getInstructions().get(index)) + 1, 1};
-                var embedding = new Embedding(vector, index);
+                Embedding embedding = new Embedding(vector, index);
                 results.add(embedding);
             }
             return new EmbeddingResponse(results);
@@ -56,7 +56,7 @@ class ModelInferenceTest {
         for (int index = 0; index < 17; index++) {
             texts.add(Integer.toString(index));
         }
-        var result = inference.createEmbeddingList(30L, 2, texts);
+        List<float[]> result = inference.createEmbeddingList(30L, 2, texts);
         assertThat(result).hasSize(17);
         for (int index = 0; index < result.size(); index++) {
             assertThat(result.get(index)[0]).isEqualTo(index + 1);
@@ -73,15 +73,15 @@ class ModelInferenceTest {
         float[] nonFinite = {Float.NaN, 1};
         List<float[]> invalid = List.of(wrongDimensions, zero, nonFinite);
         for (float[] vector : invalid) {
-            var embedding = new Embedding(vector, 0);
-            var results = List.of(embedding);
-            var response = new EmbeddingResponse(results);
+            Embedding embedding = new Embedding(vector, 0);
+            List<Embedding> results = List.of(embedding);
+            EmbeddingResponse response = new EmbeddingResponse(results);
             when(model.call(any(EmbeddingRequest.class))).thenReturn(response);
             assertThatThrownBy(() -> inference.createEmbeddingList(30L, 2, texts))
                     .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("向量生成失败");
         }
         List<Embedding> emptyResults = List.of();
-        var empty = new EmbeddingResponse(emptyResults);
+        EmbeddingResponse empty = new EmbeddingResponse(emptyResults);
         when(model.call(any(EmbeddingRequest.class))).thenReturn(empty);
         assertThatThrownBy(() -> inference.createEmbeddingList(30L, 2, texts)).hasMessageContaining("向量生成失败");
         when(model.call(any(EmbeddingRequest.class))).thenThrow(new IllegalStateException("sensitive-provider-body"));

@@ -17,6 +17,7 @@ import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.moderation.ModerationModel;
 import org.springframework.ai.model.Model;
 import org.springframework.util.Assert;
+import java.util.Iterator;
 
 /**
  * 模型访问入口：每次先授权，再通过有界本地Map复用原生SDK实例，不依赖JetCache或Caffeine。
@@ -85,14 +86,14 @@ public class ModelClientRegistry implements AutoCloseable {
 
     private <T> T getModel(String tenantId, String connectionId, ModelCapability capability, Class<T> type) {
         requireOpen();
-        var configuration = resolve(tenantId, connectionId, capability);
-        var key = new ModelClientKey(tenantId, connectionId, configuration.version(), capability);
-        var reservation = reserve(key);
+        ModelConnectionConfiguration configuration = resolve(tenantId, connectionId, capability);
+        ModelClientKey key = new ModelClientKey(tenantId, connectionId, configuration.version(), capability);
+        Reservation reservation = reserve(key);
         if (reservation.creator()) {
             initialize(key, reservation.cached(), configuration);
         }
         try {
-            var model = reservation.cached().model.join();
+            Model<?, ?> model = reservation.cached().model.join();
             return type.cast(model);
         } catch (CompletionException exception) {
             if (exception.getCause() instanceof RuntimeException cause) {
@@ -106,7 +107,7 @@ public class ModelClientRegistry implements AutoCloseable {
     private ModelConnectionConfiguration resolve(String tenantId, String connectionId, ModelCapability capability) {
         Assert.hasText(tenantId, "租户标识不能为空");
         Assert.hasText(connectionId, "连接标识不能为空");
-        var configuration = resolver.resolveAuthorized(tenantId, connectionId);
+        ModelConnectionConfiguration configuration = resolver.resolveAuthorized(tenantId, connectionId);
         Assert.notNull(configuration, "未取得已授权的模型连接配置");
         Assert.isTrue(tenantId.equals(configuration.tenantId()) && connectionId.equals(configuration.connectionId()),
                 "模型连接归属与请求不匹配");
@@ -120,15 +121,15 @@ public class ModelClientRegistry implements AutoCloseable {
         requireOpen();
         long now = ticker.getAsLong();
         removeExpired(now);
-        var existing = cache.get(key);
+        CachedModel existing = cache.get(key);
         if (existing != null) {
             existing.accessed = now;
             return new Reservation(existing, false);
         }
-        var created = new CachedModel(now);
+        CachedModel created = new CachedModel(now);
         cache.put(key, created);
         while (cache.size() > maximumSize) {
-            var iterator = cache.keySet().iterator();
+            Iterator<ModelClientKey> iterator = cache.keySet().iterator();
             iterator.next();
             iterator.remove();
         }
@@ -138,7 +139,7 @@ public class ModelClientRegistry implements AutoCloseable {
     /** 失效期间已移除的槽位不会被初始化完成回调重新放回Map。 */
     private void initialize(ModelClientKey key, CachedModel cached, ModelConnectionConfiguration configuration) {
         try {
-            var model = factory.create(configuration);
+            Model<?, ?> model = factory.create(configuration);
             cached.model.complete(model);
         } catch (RuntimeException | Error exception) {
             cached.model.completeExceptionally(exception);

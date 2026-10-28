@@ -15,6 +15,8 @@ import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.util.Assert;
 import org.etd.framework.starter.ai.document.exception.DocumentChunkException;
 import org.etd.framework.starter.ai.document.exception.DocumentChunkException.Reason;
+import java.util.regex.Matcher;
+import org.etd.framework.starter.ai.document.model.DocumentChunk;
 
 /** Docling结构化解析后的正则二次切分，保留块引用和页码，不执行向量化。 */
 public final class DocumentRegexChunker {
@@ -48,9 +50,9 @@ public final class DocumentRegexChunker {
 
     /** 识别可切分边界，受保护结构及Unicode代理对不得被截断。 */
     private List<Range> matchRanges(String text, List<Span> spans, DocumentChunkParameters parameters) {
-        var guarded = new GuardedText(text);
-        var pattern = Pattern.compile(parameters.basic().pattern());
-        var matcher = pattern.matcher(guarded);
+        GuardedText guarded = new GuardedText(text);
+        Pattern pattern = Pattern.compile(parameters.basic().pattern());
+        Matcher matcher = pattern.matcher(guarded);
         List<Range> ranges = new ArrayList<>();
         int start = 0;
         try {
@@ -87,7 +89,7 @@ public final class DocumentRegexChunker {
             String body = text + SEPARATOR;
             List<String> path = List.copyOf(headings);
             boolean protect = block.type() == DocumentBlockType.TABLE || block.type() == DocumentBlockType.CODE;
-            var span = new Span(offset, offset + body.length(), body, block, path, protect);
+            Span span = new Span(offset, offset + body.length(), body, block, path, protect);
             spans.add(span);
             offset += body.length();
         }
@@ -171,7 +173,7 @@ public final class DocumentRegexChunker {
     private void addRange(List<Range> ranges, int start, int end) {
         if (end > start) {
             Assert.isTrue(ranges.size() < DocumentOptionLimits.MAX_CHUNK_COUNT, "分片数量超过上限，请调整规则");
-            var range = new Range(start, end);
+            Range range = new Range(start, end);
             ranges.add(range);
         }
     }
@@ -248,7 +250,7 @@ public final class DocumentRegexChunker {
         }
         List<DocumentChunk> ordered = new ArrayList<>();
         for (DocumentChunk chunk : result) {
-            var item = new DocumentChunk(chunk.filename(), ordered.size(), chunk.text(), chunk.rawText(), chunk.tokenCount(),
+            DocumentChunk item = new DocumentChunk(chunk.filename(), ordered.size(), chunk.text(), chunk.rawText(), chunk.tokenCount(),
                     chunk.headings(), chunk.captions(), chunk.documentItemRefs(), chunk.pageNumbers(), chunk.metadata());
             ordered.add(item);
         }
@@ -263,9 +265,9 @@ public final class DocumentRegexChunker {
         pages.addAll(second.pageNumbers());
         Set<String> refs = new LinkedHashSet<>(first.documentItemRefs());
         refs.addAll(second.documentItemRefs());
-        var path = List.copyOf(headings);
-        var pageNumbers = List.copyOf(pages);
-        var references = List.copyOf(refs);
+        List<String> path = List.copyOf(headings);
+        List<Integer> pageNumbers = List.copyOf(pages);
+        List<String> references = List.copyOf(refs);
         List<String> captions = List.of();
         Map<String, Object> metadata = Map.of();
         return new DocumentChunk(first.filename(), first.index(), content, content, DocumentTokenCounter.count(content),
@@ -291,7 +293,7 @@ public final class DocumentRegexChunker {
             List<String> references = List.copyOf(refs);
             List<String> captions = List.of();
             Map<String, Object> metadata = Map.of();
-            var chunk = new DocumentChunk(filename, chunks.size(), content, content, DocumentTokenCounter.count(content),
+            DocumentChunk chunk = new DocumentChunk(filename, chunks.size(), content, content, DocumentTokenCounter.count(content),
                     path, captions, references, pageNumbers, metadata);
             chunks.add(chunk);
         }

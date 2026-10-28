@@ -15,6 +15,7 @@ import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 /** 文件直传入口；不接受客户端指定存储桶、对象键或MinIO会话ID。 */
 @RestController
@@ -30,7 +31,7 @@ public class KnowledgeUploadController {
     @AutoLog("查询知识资料上传策略")
     @GetMapping("/policy")
     public ResultModel<KnowledgeUploadPolicyVO> getPolicy() {
-        var result = new KnowledgeUploadPolicyVO(properties.getMaxFileBytes(), properties.getPartSizeBytes(),
+        KnowledgeUploadPolicyVO result = new KnowledgeUploadPolicyVO(properties.getMaxFileBytes(), properties.getPartSizeBytes(),
                 properties.getSessionSeconds(), properties.getUrlSeconds());
         return ResultModel.success(result);
     }
@@ -40,9 +41,9 @@ public class KnowledgeUploadController {
     @AutoLog("初始化知识资料分片上传")
     @PostMapping
     public ResultModel<KnowledgeDocumentVO> save(@Valid @RequestBody KnowledgeUploadInitDTO dto) {
-        var entity = KnowledgeDocumentConverter.INSTANCE.toEntity(dto);
-        var document = uploads.createUpload(entity);
-        var result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        KnowledgeDocumentEntity entity = KnowledgeDocumentConverter.INSTANCE.toEntity(dto);
+        KnowledgeDocumentEntity document = uploads.createUpload(entity);
+        KnowledgeDocumentVO result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
         return ResultModel.success(result);
     }
 
@@ -59,8 +60,8 @@ public class KnowledgeUploadController {
     @PutMapping("/{id}/parts/{number}")
     public ResultModel<KnowledgeDocumentVO> updatePart(@PathVariable Long id, @PathVariable @Min(1) int number,
             @Valid @RequestBody KnowledgePartConfirmDTO dto) {
-        var document = uploads.confirmPart(id, number, dto.getEtag());
-        var result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        KnowledgeDocumentEntity document = uploads.confirmPart(id, number, dto.getEtag());
+        KnowledgeDocumentVO result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
         return ResultModel.success(result);
     }
 
@@ -68,8 +69,8 @@ public class KnowledgeUploadController {
     @AutoLog("恢复知识资料断点上传")
     @PostMapping("/{id}/resume")
     public ResultModel<KnowledgeDocumentVO> updateResume(@PathVariable Long id, @Valid @RequestBody KnowledgeResumeDTO dto) {
-        var document = uploads.resumeUpload(id, dto.getFileSha256());
-        var result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        KnowledgeDocumentEntity document = uploads.resumeUpload(id, dto.getFileSha256());
+        KnowledgeDocumentVO result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
         return ResultModel.success(result);
     }
 
@@ -77,8 +78,8 @@ public class KnowledgeUploadController {
     @AutoLog("合并知识资料上传文件")
     @PostMapping("/{id}/complete")
     public ResultModel<KnowledgeDocumentVO> updateComplete(@PathVariable Long id) {
-        var document = uploads.completeUpload(id);
-        var result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        KnowledgeDocumentEntity document = uploads.completeUpload(id);
+        KnowledgeDocumentVO result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
         return ResultModel.success(result);
     }
 

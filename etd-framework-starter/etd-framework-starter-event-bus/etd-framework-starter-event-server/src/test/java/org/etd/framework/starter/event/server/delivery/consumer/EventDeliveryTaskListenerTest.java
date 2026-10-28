@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import org.mockito.InOrder;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,7 +42,7 @@ class EventDeliveryTaskListenerTest {
         new EventDeliveryTaskListener(deliveryCodec, messageSender, statusPublisher)
                 .consumeDeliveryTask(deliveryCodec.encodeTask(task), 2);
 
-        var ordered = inOrder(statusPublisher, messageSender);
+        InOrder ordered = inOrder(statusPublisher, messageSender);
         ordered.verify(statusPublisher).publishDeliveryStatus(argThat(status ->
                 status.state() == EventDeliveryState.PUBLISHING && status.attempt() == 2));
         ordered.verify(messageSender).send(eq(task.targetTopic()), argThat(message ->

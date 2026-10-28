@@ -55,8 +55,8 @@ public class ModelCredentialCipher {
             byte[] nonce = new byte[NONCE_BYTES];
             new SecureRandom().nextBytes(nonce);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            var secretKey = new SecretKeySpec(key, "AES");
-            var parameters = new GCMParameterSpec(TAG_BITS, nonce);
+            SecretKeySpec secretKey = new SecretKeySpec(key, "AES");
+            GCMParameterSpec parameters = new GCMParameterSpec(TAG_BITS, nonce);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameters);
             cipher.updateAAD((tenantId + ":" + connectionId).getBytes(StandardCharsets.UTF_8));
             return "v1."
@@ -88,8 +88,8 @@ public class ModelCredentialCipher {
             }
             byte[] key = Base64.getDecoder().decode(properties.getKey());
             byte[] nonce = Base64.getDecoder().decode(parts[1]);
-            var secretKey = new SecretKeySpec(key, "AES");
-            var parameters = new GCMParameterSpec(TAG_BITS, nonce);
+            SecretKeySpec secretKey = new SecretKeySpec(key, "AES");
+            GCMParameterSpec parameters = new GCMParameterSpec(TAG_BITS, nonce);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, secretKey, parameters);
             cipher.updateAAD((tenantId + ":" + connectionId).getBytes(StandardCharsets.UTF_8));

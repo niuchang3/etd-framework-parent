@@ -11,6 +11,7 @@ import org.etd.upms.menu.mapper.SystemMenusMapper;
 import org.springframework.stereotype.Service;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.List;
 
 /** 菜单权限读取能力，将有效资源授权展开为 Security 使用的具体操作权限。 */
 @Service
@@ -23,7 +24,7 @@ public class SystemMenuPermissionService {
     @IgnoreTenant
     @IgnoreDataPermission
     public Set<String> fetchAuthorityCodesByUser(Long userId, Long tenantId, boolean tenantAdmin, boolean platformAdmin) {
-        var grants = menusMapper.selectPermissionGrantListByUser(userId, tenantId, tenantAdmin, platformAdmin,
+        List<MenuPermissionGrant> grants = menusMapper.selectPermissionGrantListByUser(userId, tenantId, tenantAdmin, platformAdmin,
                 BasicConstant.DataStatus.ENABLED.getCode(), BasicConstant.AccessLevel.READ_ONLY.getCode(),
                 BasicConstant.AccessLevel.READ_WRITE.getCode(), MenuType.DIRECTORY.getCode());
         Set<String> authorities = new LinkedHashSet<>();

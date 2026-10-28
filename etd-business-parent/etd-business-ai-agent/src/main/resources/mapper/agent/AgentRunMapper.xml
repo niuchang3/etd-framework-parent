@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.agent.mapper.AgentRunMapper">
+    <!-- 开始与结束时间都由数据库产生，避免应用与数据库毫秒级时钟差导致时间约束失败。 -->
+    <insert id="insertRun">
+        insert into ai_agent_run
+            (id, tenant_id, conversation_id, request_id, model_connection_id, run_status, started_time, lease_until)
+        values (#{e.id}, #{e.tenantId}, #{e.conversationId}, #{e.requestId}, #{e.modelConnectionId},
+                #{e.runStatus}, current_timestamp, #{e.leaseUntil})
+    </insert>
+
+    <select id="selectRun" resultType="org.etd.ai.agent.entity.AgentRunEntity">
+        select *
+        from ai_agent_run
+        where id = #{id}
+    </select>
+
+    <select id="selectByRequest" resultType="org.etd.ai.agent.entity.AgentRunEntity">
+        select *
+        from ai_agent_run
+        where conversation_id = #{conversationId}
+          and request_id = #{requestId}
+    </select>
+
+    <select id="selectActive" resultType="org.etd.ai.agent.entity.AgentRunEntity">
+        select *
+        from ai_agent_run
+        where conversation_id = #{conversationId}
+          and run_status in ('running', 'cancel_requested')
+    </select>
+
+    <update id="requestCancel">
+        update ai_agent_run
+        set run_status = 'cancel_requested',
+            cancel_requested_time = current_timestamp
+        where id = #{id}
+          and run_status = 'running'
+    </update>
+
+    <update id="renewLease">
+        update ai_agent_run
+        set lease_until = #{leaseUntil}
+        where id = #{id}
+          and run_status = 'running'
+          and lease_until &gt; current_timestamp
+    </update>
+
+    <!-- PostgreSQL条件更新返回实际终态，取消与成功并发时由行锁串行决定。 -->
+    <select id="finishRun" resultType="string" affectData="true" flushCache="true">
+        update ai_agent_run
+        set run_status = case when run_status = 'cancel_requested' then 'cancelled' else #{e.runStatus} end,
+            finished_time = current_timestamp,
+            input_tokens = #{e.inputTokens},
+            output_tokens = #{e.outputTokens},
+            error_code = case when run_status = 'cancel_requested' then null else #{e.errorCode} end,
+            error_message = case when run_status = 'cancel_requested' then null else #{e.errorMessage} end
+        where id = #{e.id}
+          and run_status in ('running', 'cancel_requested')
+        returning run_status
+    </select>
+
+    <select id="selectExpiredList" resultType="org.etd.ai.agent.entity.AgentRunEntity">
+        select *
+        from ai_agent_run
+        where run_status in ('running', 'cancel_requested')
+          and lease_until &lt; current_timestamp
+        order by lease_until, id
+        limit 100
+        for update skip locked
+    </select>
+</mapper>

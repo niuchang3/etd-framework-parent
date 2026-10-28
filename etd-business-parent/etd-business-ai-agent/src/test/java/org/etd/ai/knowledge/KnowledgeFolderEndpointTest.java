@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -29,19 +30,19 @@ class KnowledgeFolderEndpointTest {
     void createController() {
         folders = mock(KnowledgeFolderService.class);
         biz = mock(KnowledgeFolderBizService.class);
-        var controller = new KnowledgeFolderController(folders, biz);
+        KnowledgeFolderController controller = new KnowledgeFolderController(folders, biz);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     /** 未选择部门时委托权限范围查询，选择后参数原样传给查询能力。 */
     @Test
     void shouldAllowOptionalOrganizationOnList() throws Exception {
-        var missing = get("/v1/knowledge-folders");
+        MockHttpServletRequestBuilder missing = get("/v1/knowledge-folders");
         mvc.perform(missing).andExpect(status().isBadRequest());
         verifyNoInteractions(folders);
         List<KnowledgeFolderEntity> empty = List.of();
         when(folders.fetchFolderList(777L, null)).thenReturn(empty);
-        var selected = get("/v1/knowledge-folders").param("knowledgeBaseId", "777");
+        MockHttpServletRequestBuilder selected = get("/v1/knowledge-folders").param("knowledgeBaseId", "777");
         mvc.perform(selected).andExpect(status().isOk());
         verify(folders).fetchFolderList(777L, null);
     }
@@ -52,9 +53,9 @@ class KnowledgeFolderEndpointTest {
         String body = """
                 {"knowledgeBaseId":"777","parentId":null,"folderName":"产品资料", "description":"说明","sortOrder":0}
                 """;
-        var request = post("/v1/knowledge-folders").contentType(MediaType.APPLICATION_JSON).content(body);
+        MockHttpServletRequestBuilder request = post("/v1/knowledge-folders").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isOk());
-        var entity = ArgumentCaptor.forClass(KnowledgeFolderEntity.class);
+        ArgumentCaptor<KnowledgeFolderEntity> entity = ArgumentCaptor.forClass(KnowledgeFolderEntity.class);
         verify(biz).createFolder(entity.capture());
         assertEquals(777L, entity.getValue().getKnowledgeBaseId());
         assertEquals("说明", entity.getValue().getDescription());

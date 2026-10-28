@@ -61,7 +61,7 @@ public abstract class AbstractJobProcessor<C> {
         if (CollectionUtils.isEmpty(successHandlers)) {
             return;
         }
-        for (var successHandler : successHandlers) {
+        for (SuccessHandler<C> successHandler : successHandlers) {
             try {
                 successHandler.successExecute(c);
             } catch (Exception e) {
@@ -86,7 +86,7 @@ public abstract class AbstractJobProcessor<C> {
         if (CollectionUtils.isEmpty(failureHandlers)) {
             return;
         }
-        for (var failureHandler : failureHandlers) {
+        for (FailureHandler<C> failureHandler : failureHandlers) {
             try {
                 failureHandler.failedExecute(c, exception);
             } catch (Exception e) {

@@ -23,20 +23,20 @@ class DocumentChunkOverlapProcessorTest {
     /** 默认0关闭，保留原生正文、元数据及原生Token统计，不偷偷改变已存在的生成行为。 */
     @Test
     void leavesDisabledChunksUntouched() {
-        var first = chunk(0, "original");
-        var input = List.of(first);
-        var parameters = parameters(0, null);
+        DocumentChunk first = chunk(0, "original");
+        List<DocumentChunk> input = List.of(first);
+        DocumentChunkParameters parameters = parameters(0, null);
         assertThat(processor.apply(input, List.of(), parameters)).isSameAs(input);
     }
 
     /** 第三片只能携带第二片核心正文，不得累积第一片已经借入的内容。 */
     @Test
     void usesOriginalPreviousChunkAndMergesOnlyItsSources() {
-        var chunks = List.of(chunk(0, "Alpha original"), chunk(1, "B"), chunk(2, "C"));
-        var blocks = List.of(block(0, "Alpha original", DocumentBlockType.TEXT),
+        List<DocumentChunk> chunks = List.of(chunk(0, "Alpha original"), chunk(1, "B"), chunk(2, "C"));
+        List<DocumentBlock> blocks = List.of(block(0, "Alpha original", DocumentBlockType.TEXT),
                 block(1, "B", DocumentBlockType.TEXT), block(2, "C", DocumentBlockType.TEXT));
-        var parameters = parameters(100, null);
-        var result = processor.apply(chunks, blocks, parameters);
+        DocumentChunkParameters parameters = parameters(100, null);
+        List<DocumentChunk> result = processor.apply(chunks, blocks, parameters);
         assertThat(result.getFirst()).isSameAs(chunks.getFirst());
         assertThat(result.get(1).rawText()).isEqualTo("Alpha original\n\nB");
         assertThat(result.get(2).rawText()).isEqualTo("B\n\nC");
@@ -50,19 +50,19 @@ class DocumentChunkOverlapProcessorTest {
     void respectsFinalTokenBudgetWithoutDamagingUnicodeOrCore() {
         String previous = "中文🙂English内容 ".repeat(1000);
         String core = "本片正文必须完整保留";
-        var chunks = List.of(chunk(0, previous), chunk(1, core));
-        var blocks = List.of(block(0, previous, DocumentBlockType.TEXT), block(1, core, DocumentBlockType.TEXT));
-        var parameters = parameters(8, null);
-        var result = processor.apply(chunks, blocks, parameters);
+        List<DocumentChunk> chunks = List.of(chunk(0, previous), chunk(1, core));
+        List<DocumentBlock> blocks = List.of(block(0, previous, DocumentBlockType.TEXT), block(1, core, DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(8, null);
+        List<DocumentChunk> result = processor.apply(chunks, blocks, parameters);
         String raw = result.get(1).rawText();
         String prefix = raw.substring(0, raw.length() - core.length() - 2);
         assertThat(DocumentTokenCounter.count(prefix)).isLessThanOrEqualTo(8);
         assertThat(raw).endsWith("\n\n" + core).doesNotContain("�");
         assertThat(Character.isLowSurrogate(prefix.charAt(0))).isFalse();
-        var limitedChunks = List.of(chunk(0, "Previous plain context."), chunk(1, core));
-        var limitedBlocks = List.of(block(0, "Previous plain context.", DocumentBlockType.TEXT), blocks.get(1));
-        var limited = parameters(8, 24);
-        var bounded = processor.apply(limitedChunks, limitedBlocks, limited);
+        List<DocumentChunk> limitedChunks = List.of(chunk(0, "Previous plain context."), chunk(1, core));
+        List<DocumentBlock> limitedBlocks = List.of(block(0, "Previous plain context.", DocumentBlockType.TEXT), blocks.get(1));
+        DocumentChunkParameters limited = parameters(8, 24);
+        List<DocumentChunk> bounded = processor.apply(limitedChunks, limitedBlocks, limited);
         assertThat(bounded).allSatisfy(item -> assertThat(DocumentTokenCounter.count(item.rawText())).isLessThanOrEqualTo(24));
         assertThat(bounded.get(1).rawText()).endsWith(core);
         assertThat(bounded.get(1).tokenCount()).isEqualTo(DocumentTokenCounter.count(bounded.get(1).rawText()));
@@ -71,17 +71,17 @@ class DocumentChunkOverlapProcessorTest {
     /** 最后一个普通文字块很短时只复制该块，不穿过前面的受保护结构。 */
     @Test
     void doesNotBorrowPartialCodeOrTable() {
-        var parameters = parameters(100, null);
-        for (var type : List.of(DocumentBlockType.CODE, DocumentBlockType.TABLE)) {
-            var input = List.of(chunk(0, "protected payload"), chunk(1, "body"));
-            var blocks = List.of(block(0, "protected payload", type), block(1, "body", DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(100, null);
+        for (DocumentBlockType type : List.of(DocumentBlockType.CODE, DocumentBlockType.TABLE)) {
+            List<DocumentChunk> input = List.of(chunk(0, "protected payload"), chunk(1, "body"));
+            List<DocumentBlock> blocks = List.of(block(0, "protected payload", type), block(1, "body", DocumentBlockType.TEXT));
             assertThat(processor.apply(input, blocks, parameters).get(1)).isSameAs(input.get(1));
         }
-        var base = chunk(1, "```protected payload```\n\nshort");
-        var protectedThenText = new DocumentChunk(base.filename(), base.index(), base.text(), base.rawText(),
+        DocumentChunk base = chunk(1, "```protected payload```\n\nshort");
+        DocumentChunk protectedThenText = new DocumentChunk(base.filename(), base.index(), base.text(), base.rawText(),
                 base.tokenCount(), base.headings(), base.captions(), List.of("#/texts/0", "#/texts/1"), base.pageNumbers(), base.metadata());
-        var chunks = List.of(protectedThenText, chunk(2, "body"));
-        var blocks = List.of(block(0, "protected payload", DocumentBlockType.CODE),
+        List<DocumentChunk> chunks = List.of(protectedThenText, chunk(2, "body"));
+        List<DocumentBlock> blocks = List.of(block(0, "protected payload", DocumentBlockType.CODE),
                 block(1, "short", DocumentBlockType.TEXT), block(2, "body", DocumentBlockType.TEXT));
         assertThat(processor.apply(chunks, blocks, parameters).get(1).rawText()).isEqualTo("short\n\nbody");
     }
@@ -96,11 +96,11 @@ class DocumentChunkOverlapProcessorTest {
             {"first second third fourth", "`second third`", "`second third`"},
             {"中文格式🙂尾部", "中文**格式**🙂尾部", "中文**格式**🙂尾部"}
         };
-        var parameters = parameters(100, null);
+        DocumentChunkParameters parameters = parameters(100, null);
         for (String[] example : examples) {
-            var input = List.of(chunk(0, example[1]), chunk(1, "body"));
-            var blocks = List.of(block(0, example[0], DocumentBlockType.TEXT), block(1, "body", DocumentBlockType.TEXT));
-            var result = processor.apply(input, blocks, parameters);
+            List<DocumentChunk> input = List.of(chunk(0, example[1]), chunk(1, "body"));
+            List<DocumentBlock> blocks = List.of(block(0, example[0], DocumentBlockType.TEXT), block(1, "body", DocumentBlockType.TEXT));
+            List<DocumentChunk> result = processor.apply(input, blocks, parameters);
             assertThat(result.get(1).rawText()).isEqualTo(example[2] + "\n\nbody");
             assertThat(result.getFirst().rawText()).isEqualTo(example[1]);
             assertThat(result.get(1).documentItemRefs()).containsExactly("#/texts/0", "#/texts/1");
@@ -110,12 +110,12 @@ class DocumentChunkOverlapProcessorTest {
     /** 对齐仍须能验证来源；不能因放宽Markdown表示差异复制其他块的正文。 */
     @Test
     void keepsUnknownAndProtectedFormattedSourcesExcluded() {
-        var parameters = parameters(100, null);
-        var input = List.of(chunk(0, "**actual content**"), chunk(1, "body"));
-        var unrelated = List.of(block(0, "different content", DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(100, null);
+        List<DocumentChunk> input = List.of(chunk(0, "**actual content**"), chunk(1, "body"));
+        List<DocumentBlock> unrelated = List.of(block(0, "different content", DocumentBlockType.TEXT));
         assertThat(processor.apply(input, unrelated, parameters).get(1)).isSameAs(input.get(1));
-        for (var type : List.of(DocumentBlockType.CODE, DocumentBlockType.TABLE, DocumentBlockType.PICTURE)) {
-            var blocks = List.of(block(0, "actual content", type));
+        for (DocumentBlockType type : List.of(DocumentBlockType.CODE, DocumentBlockType.TABLE, DocumentBlockType.PICTURE)) {
+            List<DocumentBlock> blocks = List.of(block(0, "actual content", type));
             assertThat(processor.apply(input, blocks, parameters).get(1)).isSameAs(input.get(1));
         }
     }
@@ -123,8 +123,8 @@ class DocumentChunkOverlapProcessorTest {
     /** 引擎核心正文已超过最终本地预算时不能截掉用户内容，给出明确可处理原因。 */
     @Test
     void rejectsOversizedCoreInsteadOfDroppingContent() {
-        var input = List.of(chunk(0, "word ".repeat(100)));
-        var parameters = parameters(8, 24);
+        List<DocumentChunk> input = List.of(chunk(0, "word ".repeat(100)));
+        DocumentChunkParameters parameters = parameters(8, 24);
         assertThatThrownBy(() -> processor.apply(input, List.of(), parameters))
                 .isInstanceOfSatisfying(DocumentChunkException.class, exception ->
                         assertThat(exception.getReason()).isEqualTo(Reason.OVERLAP_CORE_TOO_LARGE));
@@ -133,9 +133,9 @@ class DocumentChunkOverlapProcessorTest {
     /** 空核心不能被重叠上下文伪装成有效分片。 */
     @Test
     void rejectsEmptyCoreInsteadOfReplacingItWithContext() {
-        var input = List.of(chunk(0, "previous body"), chunk(1, " "));
-        var blocks = List.of(block(0, "previous body", DocumentBlockType.TEXT));
-        var parameters = parameters(8, null);
+        List<DocumentChunk> input = List.of(chunk(0, "previous body"), chunk(1, " "));
+        List<DocumentBlock> blocks = List.of(block(0, "previous body", DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(8, null);
         assertThatThrownBy(() -> processor.apply(input, blocks, parameters))
                 .isInstanceOfSatisfying(DocumentChunkException.class, exception ->
                         assertThat(exception.getReason()).isEqualTo(Reason.OVERLAP_CORE_MISSING));
@@ -144,11 +144,11 @@ class DocumentChunkOverlapProcessorTest {
     /** 找不到来源或顺序重启时不猜测上下文，避免跨文档泄露或复制错误结构。 */
     @Test
     void skipsUnknownSourceAndRestartedOrder() {
-        var input = List.of(chunk(0, "first"), chunk(1, "second"));
-        var parameters = parameters(10, null);
+        List<DocumentChunk> input = List.of(chunk(0, "first"), chunk(1, "second"));
+        DocumentChunkParameters parameters = parameters(10, null);
         assertThat(processor.apply(input, List.of(), parameters).get(1)).isSameAs(input.get(1));
-        var restarted = List.of(chunk(1, "first"), chunk(0, "second"));
-        var blocks = List.of(block(1, "first", DocumentBlockType.TEXT), block(0, "second", DocumentBlockType.TEXT));
+        List<DocumentChunk> restarted = List.of(chunk(1, "first"), chunk(0, "second"));
+        List<DocumentBlock> blocks = List.of(block(1, "first", DocumentBlockType.TEXT), block(0, "second", DocumentBlockType.TEXT));
         assertThat(processor.apply(restarted, blocks, parameters).get(1)).isSameAs(restarted.get(1));
     }
 
@@ -156,12 +156,12 @@ class DocumentChunkOverlapProcessorTest {
     @Test
     void borrowsAcrossConsecutiveOrdinaryBlocks() {
         String raw = "**Useful previous paragraph.**\n\nNext heading";
-        var previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1"));
-        var input = List.of(previous, chunk(2, "body"));
-        var blocks = List.of(block(0, "Useful previous paragraph.", DocumentBlockType.TEXT),
+        DocumentChunk previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1"));
+        List<DocumentChunk> input = List.of(previous, chunk(2, "body"));
+        List<DocumentBlock> blocks = List.of(block(0, "Useful previous paragraph.", DocumentBlockType.TEXT),
                 block(1, "Next heading", DocumentBlockType.TEXT));
-        var parameters = parameters(100, null);
-        var result = processor.apply(input, blocks, parameters).get(1);
+        DocumentChunkParameters parameters = parameters(100, null);
+        DocumentChunk result = processor.apply(input, blocks, parameters).get(1);
         assertThat(result.rawText()).isEqualTo(raw + "\n\nbody");
         assertThat(result.documentItemRefs()).containsExactly("#/texts/0", "#/texts/1", "#/texts/2");
         assertThat(result.pageNumbers()).containsExactly(1, 2, 3);
@@ -171,12 +171,12 @@ class DocumentChunkOverlapProcessorTest {
     @Test
     void excludesSourcesOutsideSelectedSuffix() {
         String raw = "earlier paragraph with many words and details\n\nshort heading";
-        var previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1"));
-        var input = List.of(previous, chunk(2, "body"));
-        var blocks = List.of(block(0, "earlier paragraph with many words and details", DocumentBlockType.TEXT),
+        DocumentChunk previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1"));
+        List<DocumentChunk> input = List.of(previous, chunk(2, "body"));
+        List<DocumentBlock> blocks = List.of(block(0, "earlier paragraph with many words and details", DocumentBlockType.TEXT),
                 block(1, "short heading", DocumentBlockType.TEXT));
-        var parameters = parameters(4, null);
-        var result = processor.apply(input, blocks, parameters).get(1);
+        DocumentChunkParameters parameters = parameters(4, null);
+        DocumentChunk result = processor.apply(input, blocks, parameters).get(1);
         assertThat(result.rawText()).isEqualTo("short heading\n\nbody");
         assertThat(result.documentItemRefs()).containsExactly("#/texts/1", "#/texts/2");
         assertThat(result.pageNumbers()).containsExactly(2, 3);
@@ -189,7 +189,7 @@ class DocumentChunkOverlapProcessorTest {
             String suffix = "完整尾句。";
             String raw = "这是需要略去的很长前文".repeat(10) + delimiter + suffix;
             int budget = DocumentTokenCounter.count(suffix) + 6;
-            var result = overlapText(raw, budget);
+            String result = overlapText(raw, budget);
             assertThat(result).isEqualTo(suffix + "\n\nbody");
         }
     }
@@ -230,22 +230,22 @@ class DocumentChunkOverlapProcessorTest {
     /** 无法定位的中间来源与图片都必须阻止回溯，不能跳过去复制更早的普通文本。 */
     @Test
     void stopsAtUnknownOrProtectedIntermediateBlock() {
-        for (var type : List.of(DocumentBlockType.TABLE, DocumentBlockType.CODE, DocumentBlockType.PICTURE)) {
+        for (DocumentBlockType type : List.of(DocumentBlockType.TABLE, DocumentBlockType.CODE, DocumentBlockType.PICTURE)) {
             String raw = "earlier text\n\nprotected\n\nlast text";
-            var previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1", "#/texts/2"));
-            var input = List.of(previous, chunk(3, "body"));
-            var blocks = List.of(block(0, "earlier text", DocumentBlockType.TEXT),
+            DocumentChunk previous = chunkWithRefs(raw, List.of("#/texts/0", "#/texts/1", "#/texts/2"));
+            List<DocumentChunk> input = List.of(previous, chunk(3, "body"));
+            List<DocumentBlock> blocks = List.of(block(0, "earlier text", DocumentBlockType.TEXT),
                     block(1, "protected", type), block(2, "last text", DocumentBlockType.TEXT));
-            var parameters = parameters(100, null);
-            var result = processor.apply(input, blocks, parameters).get(1);
+            DocumentChunkParameters parameters = parameters(100, null);
+            DocumentChunk result = processor.apply(input, blocks, parameters).get(1);
             assertThat(result.rawText()).isEqualTo("last text\n\nbody");
             assertThat(result.documentItemRefs()).containsExactly("#/texts/2", "#/texts/3");
         }
-        var previous = chunkWithRefs("earlier text\n\nunknown\n\nlast text",
+        DocumentChunk previous = chunkWithRefs("earlier text\n\nunknown\n\nlast text",
                 List.of("#/texts/0", "#/texts/missing", "#/texts/2"));
-        var input = List.of(previous, chunk(3, "body"));
-        var blocks = List.of(block(0, "earlier text", DocumentBlockType.TEXT), block(2, "last text", DocumentBlockType.TEXT));
-        var parameters = parameters(100, null);
+        List<DocumentChunk> input = List.of(previous, chunk(3, "body"));
+        List<DocumentBlock> blocks = List.of(block(0, "earlier text", DocumentBlockType.TEXT), block(2, "last text", DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(100, null);
         assertThat(processor.apply(input, blocks, parameters).get(1).rawText()).isEqualTo("last text\n\nbody");
     }
 
@@ -260,39 +260,39 @@ class DocumentChunkOverlapProcessorTest {
     }
 
     private String overlapText(String raw, int budget) {
-        var input = List.of(chunk(0, raw), chunk(1, "body"));
-        var blocks = List.of(block(0, raw, DocumentBlockType.TEXT), block(1, "body", DocumentBlockType.TEXT));
-        var parameters = parameters(budget, null);
+        List<DocumentChunk> input = List.of(chunk(0, raw), chunk(1, "body"));
+        List<DocumentBlock> blocks = List.of(block(0, raw, DocumentBlockType.TEXT), block(1, "body", DocumentBlockType.TEXT));
+        DocumentChunkParameters parameters = parameters(budget, null);
         return processor.apply(input, blocks, parameters).get(1).rawText();
     }
 
     private DocumentChunk chunkWithRefs(String raw, List<String> refs) {
-        var original = chunk(0, raw);
+        DocumentChunk original = chunk(0, raw);
         return new DocumentChunk(original.filename(), original.index(), raw, raw, original.tokenCount(),
                 original.headings(), original.captions(), refs, original.pageNumbers(), original.metadata());
     }
 
     private DocumentChunkParameters parameters(int overlap, Integer max) {
-        var basic = DocumentChunkParameters.Basic.builder().strategy(max == null ? DocumentChunkStrategy.HIERARCHICAL
+        DocumentChunkParameters.Basic basic = DocumentChunkParameters.Basic.builder().strategy(max == null ? DocumentChunkStrategy.HIERARCHICAL
                 : DocumentChunkStrategy.HYBRID).maxTokens(max).overlapTokens(overlap).build();
-        var normal = DocumentChunkParameters.Normal.builder().build();
-        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(Duration.ofSeconds(90)).build();
+        DocumentChunkParameters.Normal normal = DocumentChunkParameters.Normal.builder().build();
+        DocumentChunkParameters.Advanced advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(Duration.ofSeconds(90)).build();
         return new DocumentChunkParameters(basic, normal, advanced);
     }
 
     private DocumentChunk chunk(int index, String content) {
-        var refs = List.of("#/texts/" + index);
-        var pages = List.of(index + 1);
-        var headings = List.of("Heading " + index);
-        var captions = List.<String>of();
-        var metadata = Map.<String, Object>of();
+        List<String> refs = List.of("#/texts/" + index);
+        List<Integer> pages = List.of(index + 1);
+        List<String> headings = List.of("Heading " + index);
+        List<String> captions = List.<String>of();
+        Map<String, Object> metadata = Map.<String, Object>of();
         return new DocumentChunk("sample.md", index, content, content, DocumentTokenCounter.count(content),
                 headings, captions, refs, pages, metadata);
     }
 
     private DocumentBlock block(int index, String text, DocumentBlockType type) {
-        var location = new DocumentSourceLocation(index + 1, null, null, null, null, null, null);
-        var locations = List.of(location);
+        DocumentSourceLocation location = new DocumentSourceLocation(index + 1, null, null, null, null, null, null);
+        List<DocumentSourceLocation> locations = List.of(location);
         return new DocumentBlock("#/texts/" + index, null, type, text, null, locations, null);
     }
 }

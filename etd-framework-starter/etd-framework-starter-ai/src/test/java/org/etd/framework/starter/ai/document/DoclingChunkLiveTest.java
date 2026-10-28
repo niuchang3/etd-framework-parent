@@ -21,6 +21,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mapstruct.factory.Mappers;
 import org.springframework.core.io.ByteArrayResource;
+import org.etd.framework.starter.ai.document.model.DocumentChunkResult;
+import org.etd.framework.starter.ai.document.model.DocumentParseOptions;
+import org.etd.framework.starter.ai.document.model.DocumentParseTask;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,9 +38,9 @@ class DoclingChunkLiveTest {
     @ParameterizedTest
     @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void parsesAndChunksRealMarkdown(DocumentChunkStrategy strategy) {
-        var parser = createParser();
-        var request = createRequest(strategy);
-        var result = parser.chunk(request);
+        DoclingDocumentParser parser = createParser();
+        DocumentChunkRequest request = createRequest(strategy);
+        DocumentChunkResult result = parser.chunk(request);
         assertThat(result.chunks()).isNotEmpty();
         assertThat(result.documents()).hasSize(1);
         assertThat(result.documents().getFirst().result().status()).isEqualTo(DocumentParseStatus.SUCCESS);
@@ -52,9 +55,9 @@ class DoclingChunkLiveTest {
     @ParameterizedTest
     @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void submitsAndFetchesRealChunkTask(DocumentChunkStrategy strategy) throws InterruptedException {
-        var parser = createParser();
-        var request = createRequest(strategy);
-        var task = parser.submitChunk(request);
+        DoclingDocumentParser parser = createParser();
+        DocumentChunkRequest request = createRequest(strategy);
+        DocumentParseTask task = parser.submitChunk(request);
         Instant deadline = Instant.now().plusSeconds(30);
         while (task.status() != DocumentTaskStatus.COMPLETED && task.status() != DocumentTaskStatus.FAILED
                 && Instant.now().isBefore(deadline)) {
@@ -62,7 +65,7 @@ class DoclingChunkLiveTest {
             task = parser.fetchStatus(task.taskId());
         }
         assertThat(task.status()).isEqualTo(DocumentTaskStatus.COMPLETED);
-        var result = parser.fetchChunkResult(task.taskId());
+        DocumentChunkResult result = parser.fetchChunkResult(task.taskId());
         assertThat(result.chunks()).isNotEmpty();
         assertThat(result.documents()).hasSize(1);
         assertThat(result.documents().getFirst().result().status()).isEqualTo(DocumentParseStatus.SUCCESS);
@@ -72,21 +75,21 @@ class DoclingChunkLiveTest {
         String body = "# Framework guide\n\n## Document ingestion\n\n"
                 + "Document ingestion preserves headings and source context for retrieval. ".repeat(30);
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        var resource = new ByteArrayResource(bytes);
-        var basicBuilder = DocumentChunkParameters.Basic.builder().strategy(strategy)
+        ByteArrayResource resource = new ByteArrayResource(bytes);
+        DocumentChunkParameters.Basic.BasicBuilder basicBuilder = DocumentChunkParameters.Basic.builder().strategy(strategy)
                 .tableStructure(true).useMarkdownTables(true);
         if (strategy == DocumentChunkStrategy.HYBRID) {
             basicBuilder.maxTokens(MAX_TOKENS).mergePeers(true);
         }
-        var basic = basicBuilder.build();
-        var normal = DocumentChunkParameters.Normal.builder().useMarkdownImages(true).imagePlaceholder("[图片]").build();
+        DocumentChunkParameters.Basic basic = basicBuilder.build();
+        DocumentChunkParameters.Normal normal = DocumentChunkParameters.Normal.builder().useMarkdownImages(true).imagePlaceholder("[图片]").build();
         Duration timeout = Duration.ofSeconds(90);
-        var advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout)
+        DocumentChunkParameters.Advanced advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout)
                 .mdCompactTables(true).mdPageBreakPlaceholder("").build();
-        var parameters = new DocumentChunkParameters(basic, normal, advanced);
-        var converter = DocumentChunkParameterConverter.INSTANCE;
-        var parseOptions = converter.toParseOptions(parameters);
-        var document = new DocumentParseRequest(resource, "chunk-test.md", parseOptions);
+        DocumentChunkParameters parameters = new DocumentChunkParameters(basic, normal, advanced);
+        DocumentChunkParameterConverter converter = DocumentChunkParameterConverter.INSTANCE;
+        DocumentParseOptions parseOptions = converter.toParseOptions(parameters);
+        DocumentParseRequest document = new DocumentParseRequest(resource, "chunk-test.md", parseOptions);
         DocumentChunkOptions options = converter.toNativeChunkOptions(parameters);
         return new DocumentChunkRequest(document, options, true);
     }
@@ -95,11 +98,11 @@ class DoclingChunkLiveTest {
         URI baseUrl = URI.create(System.getenv("ETD_TEST_DOCLING_BASE_URL"));
         Duration timeout = Duration.ofSeconds(120);
         Duration connectTimeout = Duration.ofSeconds(5);
-        var httpBuilder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
-        var client = DoclingTaskClient.builder().baseUrl(baseUrl).connectTimeout(connectTimeout)
+        HttpClient.Builder httpBuilder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
+        DoclingTaskClient client = DoclingTaskClient.builder().baseUrl(baseUrl).connectTimeout(connectTimeout)
                 .apiKey(System.getenv("ETD_TEST_DOCLING_API_KEY")).readTimeout(timeout)
                 .httpClientBuilder(httpBuilder).build();
-        var converter = Mappers.getMapper(DoclingResultConverter.class);
+        DoclingResultConverter converter = Mappers.getMapper(DoclingResultConverter.class);
         return new DoclingDocumentParser(client, converter, MAX_FILE_BYTES);
     }
 }

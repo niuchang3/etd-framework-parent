@@ -19,6 +19,11 @@ import org.etd.framework.common.core.model.ResultModel;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import org.etd.ai.knowledge.controller.vo.KnowledgeChunkStateVO;
+import org.etd.ai.knowledge.controller.vo.KnowledgeChunkVO;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 /** 分片工作页入口，生成、预览、修改、合并、拆分、删除及确认均为用户显式操作。 */
 @RestController
@@ -36,8 +41,8 @@ public class KnowledgeChunkController {
     @GetMapping("/state")
     @AutoLog("查询知识资料分片工作页状态")
     public ResultModel<KnowledgeChunkStateVO> getState(@PathVariable Long id) {
-        var document = documents.requireDocument(id, false);
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, false);
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -45,8 +50,8 @@ public class KnowledgeChunkController {
     @PostMapping("/generate")
     @AutoLog("生成知识资料分片草稿")
     public ResultModel<KnowledgeChunkStateVO> saveGenerate(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkGenerateDTO dto) {
-        var document = generation.generateChunks(id, dto.getVersion(), dto.getParameters());
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = generation.generateChunks(id, dto.getVersion(), dto.getParameters());
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -56,12 +61,12 @@ public class KnowledgeChunkController {
     public ResultModel<IPage<KnowledgeChunkVO>> page(@PathVariable Long id,
             @RequestParam(defaultValue = "1") @Min(1) long current,
             @RequestParam(defaultValue = "20") @Min(1) @Max(KnowledgeChunkLimits.MAX_EDIT_BATCH) long size) {
-        var document = documents.requireDocument(id, false);
-        var page = chunks.fetchChunkPage(id, current, size);
-        for (var chunk : page.getRecords()) {
+        KnowledgeDocumentEntity document = documents.requireDocument(id, false);
+        IPage<KnowledgeChunkEntity> page = chunks.fetchChunkPage(id, current, size);
+        for (KnowledgeChunkEntity chunk : page.getRecords()) {
             chunk.setWritable(document.getWritable());
         }
-        var result = page.convert(KnowledgeChunkConverter.INSTANCE::toVO);
+        IPage<KnowledgeChunkVO> result = page.convert(KnowledgeChunkConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -69,10 +74,10 @@ public class KnowledgeChunkController {
     @GetMapping("/{chunkId}")
     @AutoLog("查询知识资料分片详情")
     public ResultModel<KnowledgeChunkVO> get(@PathVariable Long id, @PathVariable Long chunkId) {
-        var document = documents.requireDocument(id, false);
-        var chunk = chunks.requireChunk(id, chunkId);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, false);
+        KnowledgeChunkEntity chunk = chunks.requireChunk(id, chunkId);
         chunk.setWritable(document.getWritable());
-        var result = KnowledgeChunkConverter.INSTANCE.toVO(chunk);
+        KnowledgeChunkVO result = KnowledgeChunkConverter.INSTANCE.toVO(chunk);
         return ResultModel.success(result);
     }
 
@@ -80,9 +85,9 @@ public class KnowledgeChunkController {
     @PutMapping
     @AutoLog("保存知识资料分片修改")
     public ResultModel<KnowledgeChunkStateVO> update(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkSaveDTO dto) {
-        var values = KnowledgeChunkConverter.INSTANCE.toEditValues(dto.getChunks());
-        var document = editing.modifyChunks(id, dto.getVersion(), values);
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        Map<Long, String> values = KnowledgeChunkConverter.INSTANCE.toEditValues(dto.getChunks());
+        KnowledgeDocumentEntity document = editing.modifyChunks(id, dto.getVersion(), values);
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -90,8 +95,8 @@ public class KnowledgeChunkController {
     @PostMapping("/merge")
     @AutoLog("合并知识资料相邻分片")
     public ResultModel<KnowledgeChunkStateVO> updateMerge(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkMergeDTO dto) {
-        var document = editing.mergeChunks(id, dto.getVersion(), dto.getChunkIds());
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = editing.mergeChunks(id, dto.getVersion(), dto.getChunkIds());
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -105,8 +110,8 @@ public class KnowledgeChunkController {
     @AutoLog("拆分知识资料分片")
     public ResultModel<KnowledgeChunkStateVO> updateSplit(@PathVariable Long id, @PathVariable Long chunkId,
             @Valid @RequestBody KnowledgeChunkSplitDTO dto) {
-        var document = editing.splitChunk(id, chunkId, dto.getVersion(), dto.getFirstContent(), dto.getSecondContent());
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = editing.splitChunk(id, chunkId, dto.getVersion(), dto.getFirstContent(), dto.getSecondContent());
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -120,8 +125,8 @@ public class KnowledgeChunkController {
     @AutoLog("删除知识资料分片")
     public ResultModel<KnowledgeChunkStateVO> remove(@PathVariable Long id, @PathVariable Long chunkId,
             @RequestParam @Min(0) Long version) {
-        var document = editing.removeChunk(id, chunkId, version);
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = editing.removeChunk(id, chunkId, version);
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 
@@ -129,8 +134,8 @@ public class KnowledgeChunkController {
     @PostMapping("/confirm")
     @AutoLog("确认知识资料分片结果")
     public ResultModel<KnowledgeChunkStateVO> updateConfirm(@PathVariable Long id, @Valid @RequestBody KnowledgeChunkVersionDTO dto) {
-        var document = editing.confirmChunks(id, dto.getVersion());
-        var result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
+        KnowledgeDocumentEntity document = editing.confirmChunks(id, dto.getVersion());
+        KnowledgeChunkStateVO result = KnowledgeChunkConverter.INSTANCE.toStateVO(document);
         return ResultModel.success(result);
     }
 }

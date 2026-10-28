@@ -21,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Set;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,10 +35,10 @@ class PublicReadDataPermissionTest {
     void setUp() {
         RequestContext.clean();
         DataPermissionContextHolder.clear();
-        var properties = new EtdMyBatisPlusProperties();
+        EtdMyBatisPlusProperties properties = new EtdMyBatisPlusProperties();
         properties.getDataPermission().setEnabled(true);
         interceptor = new EtdDataPermissionInterceptor(new EtdDataPermissionHandler(properties.getDataPermission()));
-        var user = new UserDetails();
+        UserDetails user = new UserDetails();
         user.setId(100L);
         user.setPermissionTypes(Set.of(BasicConstant.PermissionType.SELF.getCode(),
                 BasicConstant.PermissionType.ORGANIZATION.getCode()));
@@ -181,7 +182,7 @@ class PublicReadDataPermissionTest {
     void shouldPreserveTenantIsolation() throws Exception {
         useRule("documents");
         RequestContext.setTenantCode(7L);
-        var tenant = new TenantLineInnerInterceptor(new EtdTenantLineHandler("tenant_id"));
+        TenantLineInnerInterceptor tenant = new TenantLineInnerInterceptor(new EtdTenantLineHandler("tenant_id"));
         String sql = select(tenant.parserSingle("select * from docs d", "example.Mapper.select"));
         assertTrue(sql.contains("d.tenant_id = 7 AND ("), sql);
         assertTrue(sql.contains("d.is_public = true"), sql);
@@ -190,7 +191,7 @@ class PublicReadDataPermissionTest {
     /** 通过真实Spring切面传播查询规则，执行结束后必须恢复外层上下文。 */
     @Test
     void shouldApplyRulesThroughSpringAspect() {
-        var factory = new AspectJProxyFactory(new QueryService(interceptor));
+        AspectJProxyFactory factory = new AspectJProxyFactory(new QueryService(interceptor));
         factory.addAspect(new DataPermissionAspect());
         QueryService proxy = factory.getProxy();
         assertTrue(proxy.fetchDocuments().contains("d.is_public = true"));
@@ -202,9 +203,9 @@ class PublicReadDataPermissionTest {
     /** 生产自动配置必须实际注册支持公开读取的新拦截器。 */
     @Test
     void shouldRegisterPublicReadInterceptor() {
-        var properties = new EtdMyBatisPlusProperties();
+        EtdMyBatisPlusProperties properties = new EtdMyBatisPlusProperties();
         properties.getDataPermission().setEnabled(true);
-        var chain = new MybatisConfig(properties).mybatisPlusInterceptor();
+        MybatisPlusInterceptor chain = new MybatisConfig(properties).mybatisPlusInterceptor();
         assertTrue(chain.getInterceptors().stream().anyMatch(EtdDataPermissionInterceptor.class::isInstance));
     }
 

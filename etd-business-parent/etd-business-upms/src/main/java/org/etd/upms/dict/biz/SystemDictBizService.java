@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.etd.upms.dict.controller.vo.SystemDictTypeVO;
 
 @Service
 public class SystemDictBizService {
@@ -34,8 +35,8 @@ public class SystemDictBizService {
     public Map<String, List<SystemDictDataVO>> mapEnabledDataByTypeCodes(Collection<String> typeCodes) {
         LinkedHashSet<String> distinctTypeCodes = new LinkedHashSet<>(typeCodes);
         Map<String, List<SystemDictDataVO>> result = initializeResult(distinctTypeCodes);
-        var types = dictTypeService.selectEnabledByCodes(distinctTypeCodes);
-        var typeIds = types.stream().map(type -> type.getId()).toList();
+        List<SystemDictTypeVO> types = dictTypeService.selectEnabledByCodes(distinctTypeCodes);
+        List<Long> typeIds = types.stream().map(type -> type.getId()).toList();
         Map<Long, List<SystemDictDataVO>> dataByTypeId = dictDataService.selectEnabledByTypeIds(typeIds)
                 .stream().collect(Collectors.groupingBy(SystemDictDataVO::getDictTypeId));
         types.forEach(type -> result.put(type.getTypeCode(),

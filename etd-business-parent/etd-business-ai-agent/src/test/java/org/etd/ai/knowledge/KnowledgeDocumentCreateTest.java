@@ -35,8 +35,8 @@ class KnowledgeDocumentCreateTest {
     @Test
     void shouldRejectMissingOrganizationWithAllDataPermission() {
         setIdentity(BasicConstant.PermissionType.ALL.getCode(), null);
-        var document = new KnowledgeDocumentEntity();
-        var exception = assertThrows(ApiRuntimeException.class, () -> service.createDocument(document));
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
+        ApiRuntimeException exception = assertThrows(ApiRuntimeException.class, () -> service.createDocument(document));
         assertEquals("资料缺少知识库组织归属，无法上传", exception.getMessage());
         verifyNoInteractions(mapper);
     }
@@ -45,7 +45,7 @@ class KnowledgeDocumentCreateTest {
     @Test
     void shouldRejectMissingOrganizationWithSelfPermission() {
         setIdentity(BasicConstant.PermissionType.SELF.getCode(), null);
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         assertThrows(ApiRuntimeException.class, () -> service.createDocument(document));
         verifyNoInteractions(mapper);
     }
@@ -54,7 +54,7 @@ class KnowledgeDocumentCreateTest {
     @Test
     void shouldRejectMissingOrganizationEvenWithPrimaryOrganization() {
         setIdentity(BasicConstant.PermissionType.SELF.getCode(), 10L);
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         assertThrows(ApiRuntimeException.class, () -> service.createDocument(document));
         verifyNoInteractions(mapper);
     }
@@ -63,7 +63,7 @@ class KnowledgeDocumentCreateTest {
     @Test
     void shouldAllowExplicitOrganization() {
         setIdentity(BasicConstant.PermissionType.ALL.getCode(), null);
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setOrgId(10L);
         service.createDocument(document);
         verify(mapper).insert(document);
@@ -71,10 +71,10 @@ class KnowledgeDocumentCreateTest {
 
     /** 创建具有指定数据范围和可选主组织的可信身份。 */
     private void setIdentity(String permissionType, Long orgId) {
-        var user = new UserDetails();
+        UserDetails user = new UserDetails();
         user.setId(100L);
         user.setOrgId(orgId);
-        var types = Set.of(permissionType);
+        Set<String> types = Set.of(permissionType);
         user.setPermissionTypes(types);
         RequestContext.setUser(user);
     }

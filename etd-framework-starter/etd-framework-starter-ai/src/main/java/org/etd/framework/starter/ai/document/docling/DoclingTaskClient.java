@@ -67,7 +67,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
      */
     public TaskStatusPollResponse submit(ConvertDocumentRequest request, DocumentParseAdvancedOptions advanced) {
         JsonNode payload = createPayload(request, advanced, null);
-        var context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
+        RequestContext<JsonNode, TaskStatusPollResponse> context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
                 .uri(SUBMIT_PATH).request(payload).responseType(TaskStatusPollResponse.class).build();
         return executePost(context);
     }
@@ -103,7 +103,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
      * @return 单份文档结果
      */
     public InBodyConvertDocumentResponse fetchInlineResult(String taskId) {
-        var context = RequestContext.<Object, InBodyConvertDocumentResponse>builder()
+        RequestContext<Object, InBodyConvertDocumentResponse> context = RequestContext.<Object, InBodyConvertDocumentResponse>builder()
                 .uri(RESULT_PATH + taskId).responseType(InBodyConvertDocumentResponse.class).build();
         return executeGet(context);
     }
@@ -118,7 +118,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
             DocumentChunkOptions options) {
         String path = chunkPath(options.strategy(), false);
         JsonNode payload = createPayload(request, advanced, options);
-        var context = RequestContext.<JsonNode, ChunkDocumentResponse>builder()
+        RequestContext<JsonNode, ChunkDocumentResponse> context = RequestContext.<JsonNode, ChunkDocumentResponse>builder()
                 .uri(path).request(payload).responseType(ChunkDocumentResponse.class).build();
         return executePost(context);
     }
@@ -133,7 +133,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
             DocumentChunkOptions options) {
         String path = chunkPath(options.strategy(), true);
         JsonNode payload = createPayload(request, advanced, options);
-        var context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
+        RequestContext<JsonNode, TaskStatusPollResponse> context = RequestContext.<JsonNode, TaskStatusPollResponse>builder()
                 .uri(path).request(payload).responseType(TaskStatusPollResponse.class).build();
         return executePost(context);
     }
@@ -181,7 +181,7 @@ public final class DoclingTaskClient extends DoclingServeClient {
      * @return 单文档分块结果，响应类型不符时明确失败
      */
     public ChunkDocumentResponse fetchInlineChunkResult(String taskId) {
-        var context = RequestContext.<Object, ChunkDocumentResponse>builder()
+        RequestContext<Object, ChunkDocumentResponse> context = RequestContext.<Object, ChunkDocumentResponse>builder()
                 .uri(RESULT_PATH + taskId).responseType(ChunkDocumentResponse.class).build();
         return executeGet(context);
     }

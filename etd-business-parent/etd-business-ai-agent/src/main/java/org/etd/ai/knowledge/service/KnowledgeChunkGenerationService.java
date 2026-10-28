@@ -18,6 +18,16 @@ import org.etd.framework.starter.ai.document.model.*;
 import org.etd.framework.starter.ai.document.parser.*;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import java.util.regex.Matcher;
+import org.etd.framework.starter.ai.document.model.DocumentChunkOptions;
+import org.etd.framework.starter.ai.document.model.DocumentChunkRequest;
+import org.etd.framework.starter.ai.document.model.DocumentChunkResult;
+import org.etd.framework.starter.ai.document.model.DocumentParseOptions;
+import org.etd.framework.starter.ai.document.model.DocumentParseRequest;
+import org.etd.framework.starter.ai.document.model.DocumentParseResult;
+import org.etd.framework.starter.ai.document.model.DocumentParseTask;
+import org.etd.framework.starter.ai.document.parser.DocumentParser;
+import org.etd.framework.starter.ai.document.parser.DocumentRegexChunker;
 
 /** 单次手动请求中的Docling解析和分片能力，不创建后台任务编排或向量链路。 */
 @Service
@@ -32,33 +42,33 @@ public class KnowledgeChunkGenerationService {
     private final DocumentParserRegistry registry;
     /** @param resource 已授权原件 @param filename 原始文件名 @param parameters 三级参数 @return 完整成功的分片草稿 */
     public List<DocumentChunk> generateChunkList(Resource resource, String filename, DocumentChunkParameters parameters) {
-        var engine = registry.require(DoclingDocumentParser.ENGINE);
+        DocumentParser engine = registry.require(DoclingDocumentParser.ENGINE);
         if (!(engine instanceof AsynchronousDocumentParser parser) || !(engine instanceof DocumentChunker chunker)) {
             throw new ApiRuntimeException("文档解析及分片服务未启用，请联系管理员");
         }
-        var converter = DocumentChunkParameterConverter.INSTANCE;
-        var options = converter.toParseOptions(parameters);
-        var document = new DocumentParseRequest(resource, filename, options);
+        DocumentChunkParameterConverter converter = DocumentChunkParameterConverter.INSTANCE;
+        DocumentParseOptions options = converter.toParseOptions(parameters);
+        DocumentParseRequest document = new DocumentParseRequest(resource, filename, options);
         Instant deadline = Instant.now().plus(options.documentTimeout()).plus(KnowledgeChunkLimits.REQUEST_GRACE);
         if (parameters.basic().strategy() == DocumentChunkStrategy.REGEX) {
             return generateRegex(parser, document, parameters, deadline);
         }
-        var chunkOptions = converter.toNativeChunkOptions(parameters);
-        var request = new DocumentChunkRequest(document, chunkOptions, true);
-        var task = chunker.submitChunk(request);
+        DocumentChunkOptions chunkOptions = converter.toNativeChunkOptions(parameters);
+        DocumentChunkRequest request = new DocumentChunkRequest(document, chunkOptions, true);
+        DocumentParseTask task = chunker.submitChunk(request);
         awaitTask(parser, task, deadline, parameters.advanced().documentTimeout());
-        var result = chunker.fetchChunkResult(task.taskId());
+        DocumentChunkResult result = chunker.fetchChunkResult(task.taskId());
         requireCompleteDocuments(result, parameters.advanced().documentTimeout());
         return result.chunks();
     }
 
     private List<DocumentChunk> generateRegex(AsynchronousDocumentParser parser, DocumentParseRequest request,
             DocumentChunkParameters parameters, Instant deadline) {
-        var task = parser.submit(request);
+        DocumentParseTask task = parser.submit(request);
         awaitTask(parser, task, deadline, parameters.advanced().documentTimeout());
-        var result = parser.fetchResult(task.taskId());
+        DocumentParseResult result = parser.fetchResult(task.taskId());
         requireCompleteDocument(result, parameters.advanced().documentTimeout());
-        var chunker = new DocumentRegexChunker();
+        DocumentRegexChunker chunker = new DocumentRegexChunker();
         return chunker.chunk(request.filename(), result, parameters);
     }
 
@@ -91,7 +101,7 @@ public class KnowledgeChunkGenerationService {
             if (DOCUMENT_TIMEOUT_WARNING.equals(warning)) {
                 timedOut = true;
             }
-            var progress = TIMEOUT_PROGRESS.matcher(warning);
+            Matcher progress = TIMEOUT_PROGRESS.matcher(warning);
             if (progress.matches()) {
                 int completed = Integer.parseInt(progress.group(1));
                 int total = Integer.parseInt(progress.group(2));
@@ -109,7 +119,7 @@ public class KnowledgeChunkGenerationService {
 
     /** 外部IO不占用数据库事务；线程被中断时及时退出并恢复中断标志。 */
     private void awaitTask(AsynchronousDocumentParser parser, DocumentParseTask initial, Instant deadline, Duration timeout) {
-        var task = initial;
+        DocumentParseTask task = initial;
         while (task.status() != DocumentTaskStatus.COMPLETED && task.status() != DocumentTaskStatus.FAILED) {
             if (Instant.now().isAfter(deadline)) {
                 Duration budget = timeout.plus(KnowledgeChunkLimits.REQUEST_GRACE);

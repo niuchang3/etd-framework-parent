@@ -35,7 +35,7 @@ public record DocumentChunk(
         captions = List.copyOf(captions);
         documentItemRefs = List.copyOf(documentItemRefs);
         pageNumbers = List.copyOf(pageNumbers);
-        var metadataCopy = new LinkedHashMap<>(metadata);
+        LinkedHashMap<String, Object> metadataCopy = new LinkedHashMap<>(metadata);
         metadata = Collections.unmodifiableMap(metadataCopy);
     }
 

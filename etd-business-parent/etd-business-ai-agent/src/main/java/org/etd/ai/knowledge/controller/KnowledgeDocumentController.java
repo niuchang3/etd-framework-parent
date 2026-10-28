@@ -21,6 +21,8 @@ import org.etd.framework.common.core.constants.PermissionAction;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
+import org.etd.ai.knowledge.model.KnowledgeDocumentDeleteResult;
 
 /** 知识资料列表、配置与原件管理入口。 */
 @RestController
@@ -37,8 +39,8 @@ public class KnowledgeDocumentController {
     @AutoLog("批量删除知识资料")
     @PostMapping("/batch-delete")
     public ResultModel<KnowledgeDocumentDeleteVO> removeBatch(@Valid @RequestBody KnowledgeDocumentBatchDeleteDTO dto) {
-        var result = batchDeletion.removeDocumentList(dto.getKnowledgeBaseId(), dto.getDocumentIds());
-        var output = KnowledgeDocumentConverter.INSTANCE.toDeleteVO(result);
+        KnowledgeDocumentDeleteResult result = batchDeletion.removeDocumentList(dto.getKnowledgeBaseId(), dto.getDocumentIds());
+        KnowledgeDocumentDeleteVO output = KnowledgeDocumentConverter.INSTANCE.toDeleteVO(result);
         return ResultModel.success(output);
     }
     /** @param query 分页及筛选条件，批量目录优先于单目录；子孙目录由前端收集
@@ -46,24 +48,24 @@ public class KnowledgeDocumentController {
     @AutoLog("分页查询知识资料")
     @GetMapping
     public ResultModel<IPage<KnowledgeDocumentListVO>> page(@Valid @ModelAttribute KnowledgeDocumentPageQuery query) {
-        var page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
+        IPage<KnowledgeDocumentEntity> page = documents.fetchDocumentPage(query.getCurrent(), query.getSize(), query.getFolderId(),
                 query.getFolderIds(), query.getKeyword(), query.getUploadStatus(), query.getChunkStatus(), query.getKnowledgeBaseId(), query.getDataStatus());
-        var result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
+        IPage<KnowledgeDocumentListVO> result = page.convert(KnowledgeDocumentConverter.INSTANCE::toListVO);
         return ResultModel.success(result);
     }
     /** @param id 资料ID @return 资料及上传进度详情 */
     @AutoLog("查询知识资料详情")
     @GetMapping("/{id}")
     public ResultModel<KnowledgeDocumentVO> get(@PathVariable Long id) {
-        var document = documents.requireDocument(id, false);
-        var result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, false);
+        KnowledgeDocumentVO result = KnowledgeDocumentConverter.INSTANCE.toVO(document);
         return ResultModel.success(result);
     }
     /** @param id 资料ID @param dto 可编辑配置；目录移动不改变资料归属部门 @return 修改结果 */
     @AutoLog("更新知识资料配置")
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id, @Valid @RequestBody KnowledgeDocumentSaveDTO dto) {
-        var input = KnowledgeDocumentConverter.INSTANCE.toEntity(dto);
+        KnowledgeDocumentEntity input = KnowledgeDocumentConverter.INSTANCE.toEntity(dto);
         biz.modifyDocument(id, input, dto.getVersion());
         return ResultModel.success(true);
     }

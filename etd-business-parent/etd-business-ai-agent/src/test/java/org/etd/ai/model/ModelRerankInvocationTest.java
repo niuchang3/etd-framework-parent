@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.ai.document.Document;
+import com.alibaba.cloud.ai.document.DocumentWithScore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -42,11 +43,11 @@ class ModelRerankInvocationTest {
     /** 本地HTTP服务捕获实际出站请求，测试不调用真实服务商。 */
     @BeforeEach
     void prepare() throws IOException {
-        var address = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         server = HttpServer.create(address, 0);
         server.createContext("/api/v1/services/rerank/text-rerank/text-rerank", this::respond);
         server.start();
-        var properties = new ModelClientProperties();
+        ModelClientProperties properties = new ModelClientProperties();
         transport = new ModelClientTransport(properties);
     }
 
@@ -61,10 +62,10 @@ class ModelRerankInvocationTest {
     @ParameterizedTest
     @ValueSource(strings = {"qwen3.7-text-rerank", "qwen3-rerank"})
     void preservesConfiguredModelWhenSettingRuntimeOptions(String modelCode) {
-        var inference = createInference(modelCode);
-        var document = Document.builder().id("101").text("测试候选正文").build();
-        var documents = List.of(document);
-        var result = inference.createRerankList(30L, "测试问题", documents);
+        ModelInferenceService inference = createInference(modelCode);
+        Document document = Document.builder().id("101").text("测试候选正文").build();
+        List<Document> documents = List.of(document);
+        List<DocumentWithScore> result = inference.createRerankList(30L, "测试问题", documents);
         assertThat(requestBody.path("model").asText()).isEqualTo(modelCode);
         assertThat(requestBody.path("parameters").path("top_n").asInt()).isEqualTo(1);
         assertThat(requestBody.path("parameters").path("return_documents").asBoolean()).isFalse();
@@ -74,15 +75,15 @@ class ModelRerankInvocationTest {
 
     /** SDK默认模型来自已授权连接，只有数据库Mapper和Registry查找在此替换。 */
     private ModelInferenceService createInference(String modelCode) {
-        var endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/api/v1");
-        var configuration = new ModelConnectionConfiguration("900001", "30", 1, true,
+        URI endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/api/v1");
+        ModelConnectionConfiguration configuration = new ModelConnectionConfiguration("900001", "30", 1, true,
                 ModelClientProtocol.DASHSCOPE, ModelCapability.RERANK, modelCode, endpoint, () -> null);
-        var provider = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
-        var nativeModel = (RerankModel) provider.create(configuration);
-        var clients = mock(ModelClientRegistry.class);
+        DashScopeModelClientProvider provider = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
+        RerankModel nativeModel = (RerankModel) provider.create(configuration);
+        ModelClientRegistry clients = mock(ModelClientRegistry.class);
         when(clients.getRerankModel("900001", "30")).thenReturn(nativeModel);
-        var connections = mock(ModelConnectionMapper.class);
-        var connection = new ModelConnectionEntity();
+        ModelConnectionMapper connections = mock(ModelConnectionMapper.class);
+        ModelConnectionEntity connection = new ModelConnectionEntity();
         connection.setTenantId(900001L);
         when(connections.selectById(30L)).thenReturn(connection);
         return new ModelInferenceService(connections, clients);

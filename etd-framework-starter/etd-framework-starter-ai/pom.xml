@@ -26,6 +26,11 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 复用框架请求上下文，在模型调用及流式异步边界保持租户、身份和追踪信息。 -->
+        <dependency>
+            <groupId>org.etd.framework</groupId>
+            <artifactId>etd-framework-common-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>

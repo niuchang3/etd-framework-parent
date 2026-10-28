@@ -10,6 +10,11 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.time.Instant;
 import java.util.List;
+import java.sql.Connection;
+import java.sql.Statement;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -18,29 +23,29 @@ class KnowledgeDocumentMapperTest {
     /** 过期扫描只返回到期上传，映射后的回执元素仍为UploadPart。 */
     @Test
     void shouldMapExpiredUploadsWithExplicitResultMap() throws Exception {
-        var dataSource = new JdbcDataSource();
+        JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:document-mapper-" + System.nanoTime() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         populateUploadRows(dataSource);
-        var factory = new MybatisSqlSessionFactoryBean();
+        MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
         factory.setDataSource(dataSource);
-        var configuration = new MybatisConfiguration();
+        MybatisConfiguration configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(configuration);
-        var resource = new ClassPathResource("mapper/knowledge/KnowledgeDocumentMapper.xml");
-        var baseResource = new ClassPathResource("mapper/knowledge/KnowledgeBaseMapper.xml");
+        ClassPathResource resource = new ClassPathResource("mapper/knowledge/KnowledgeDocumentMapper.xml");
+        ClassPathResource baseResource = new ClassPathResource("mapper/knowledge/KnowledgeBaseMapper.xml");
         factory.setMapperLocations(baseResource, resource);
-        var sessionFactory = factory.getObject();
-        try (var session = sessionFactory.openSession()) {
-            var mapper = session.getMapper(KnowledgeDocumentMapper.class);
-            var result = mapper.selectExpiredUploadList();
+        SqlSessionFactory sessionFactory = factory.getObject();
+        try (SqlSession session = sessionFactory.openSession()) {
+            KnowledgeDocumentMapper mapper = session.getMapper(KnowledgeDocumentMapper.class);
+            List<KnowledgeDocumentEntity> result = mapper.selectExpiredUploadList();
             assertEquals(1, result.size());
-            var document = result.getFirst();
+            KnowledgeDocumentEntity document = result.getFirst();
             assertEquals(1L, document.getId());
             assertEquals("资料.PDF", document.getOriginalFilename());
             assertEquals("pdf", document.getFileType());
             assertEquals(Instant.parse("2020-01-01T00:00:00Z"), document.getUploadExpiresAt());
-            var part = new UploadPart(1, "test-etag", 10L);
-            var expectedParts = List.of(part);
+            UploadPart part = new UploadPart(1, "test-etag", 10L);
+            List<UploadPart> expectedParts = List.of(part);
             assertEquals(expectedParts, document.getUploadParts());
         }
     }
@@ -61,7 +66,7 @@ class KnowledgeDocumentMapperTest {
                     (2, '已完成.pdf', 'pdf', 0, 'completed', timestamp with time zone '2020-01-01 00:00:00+00', '[]'),
                     (3, '未到期.pdf', 'pdf', 0, 'uploading', current_timestamp + interval '1' day, '[]')
                 """;
-        try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
             statement.execute(ddl);
             statement.execute(insert);
         }

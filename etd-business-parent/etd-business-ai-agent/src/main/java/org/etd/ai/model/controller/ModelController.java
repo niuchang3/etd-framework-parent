@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.etd.ai.model.entity.ModelEntity;
 
 /** 平台模型管理入口；管理员增删改查，租户仅浏览已启用模型。 */
 @RestController
@@ -59,8 +60,8 @@ public class ModelController {
             @RequestParam(required = false)
             @Min(BasicConstant.DataStatus.DISABLED_CODE)
             @Max(BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus) {
-        var page = service.fetchPage(current, size, providerCode, modelType, dataStatus);
-        var result = page.convert(ModelConverter.INSTANCE::toVO);
+        IPage<ModelEntity> page = service.fetchPage(current, size, providerCode, modelType, dataStatus);
+        IPage<ModelVO> result = page.convert(ModelConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -72,8 +73,8 @@ public class ModelController {
     @AutoLog("获取平台模型详情")
     @GetMapping("/{id}")
     public ResultModel<ModelVO> get(@PathVariable Long id) {
-        var model = service.fetchModel(id);
-        var result = ModelConverter.INSTANCE.toVO(model);
+        ModelEntity model = service.fetchModel(id);
+        ModelVO result = ModelConverter.INSTANCE.toVO(model);
         return ResultModel.success(result);
     }
 
@@ -85,8 +86,8 @@ public class ModelController {
     @AutoLog("新增平台模型")
     @PostMapping
     public ResultModel<Long> save(@Valid @RequestBody ModelSaveDTO dto) {
-        var entity = ModelConverter.INSTANCE.toEntity(dto);
-        var id = service.createModel(entity);
+        ModelEntity entity = ModelConverter.INSTANCE.toEntity(dto);
+        Long id = service.createModel(entity);
         return ResultModel.success(id);
     }
 
@@ -100,7 +101,7 @@ public class ModelController {
     @PutMapping("/{id}")
     public ResultModel<Boolean> update(@PathVariable Long id,
             @Validated(UpdateRequest.class) @RequestBody ModelSaveDTO dto) {
-        var entity = ModelConverter.INSTANCE.toEntity(dto);
+        ModelEntity entity = ModelConverter.INSTANCE.toEntity(dto);
         entity.setId(id);
         biz.modifyModel(entity);
         return ResultModel.success(true);

@@ -78,7 +78,7 @@ public enum DoclingFileFormat {
     }
 
     private static Set<String> collectExtensions() {
-        var extensions = new HashSet<String>();
+        HashSet<String> extensions = new HashSet<String>();
         for (DoclingFileFormat format : values()) {
             extensions.add(format.code);
         }

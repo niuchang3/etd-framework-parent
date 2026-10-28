@@ -15,11 +15,11 @@ public class EmbeddingDimensionsTypeHandler extends ArrayTypeHandler {
      */
     @Override
     protected Integer[] extractArray(Array array) throws SQLException {
-        var values = (Object[]) super.extractArray(array);
+        Object[] values = (Object[]) super.extractArray(array);
         if (values == null) {
             return null;
         }
-        var dimensions = new Integer[values.length];
+        Integer[] dimensions = new Integer[values.length];
         for (int i = 0; i < values.length; i++) {
             dimensions[i] = values[i] == null ? null : ((Number) values[i]).intValue();
         }

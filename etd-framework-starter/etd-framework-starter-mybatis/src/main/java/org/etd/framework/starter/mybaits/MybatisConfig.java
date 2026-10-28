@@ -65,18 +65,18 @@ public class MybatisConfig {
 
         // 与组织数据权限独立执行，确保公开读取、忽略组织权限时仍排除已删除资料。
         if (Boolean.TRUE.equals(properties.getLogicDelete().getEnabled())) {
-            var logicDeleteInterceptor = new EtdLogicDeleteInterceptor();
+            EtdLogicDeleteInterceptor logicDeleteInterceptor = new EtdLogicDeleteInterceptor();
             interceptor.addInnerInterceptor(logicDeleteInterceptor);
         }
 
         // 仅对显式声明@Version的实体生效；缺少版本时拒绝更新，禁止静默跳过并发保护。
-        var optimisticLocker = new OptimisticLockerInnerInterceptor();
-        var missingVersionException = new IllegalArgumentException("更新实体必须提供version");
+        OptimisticLockerInnerInterceptor optimisticLocker = new OptimisticLockerInnerInterceptor();
+        IllegalArgumentException missingVersionException = new IllegalArgumentException("更新实体必须提供version");
         optimisticLocker.setException(missingVersionException);
         interceptor.addInnerInterceptor(optimisticLocker);
-        var paginationInterceptor = new PaginationInnerInterceptor();
+        PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor();
         interceptor.addInnerInterceptor(paginationInterceptor);
-        var blockAttackInterceptor = new BlockAttackInnerInterceptor();
+        BlockAttackInnerInterceptor blockAttackInterceptor = new BlockAttackInnerInterceptor();
         interceptor.addInnerInterceptor(blockAttackInterceptor);
 
         return interceptor;

@@ -680,6 +680,9 @@ comment on column ai_agent_conversation.update_time is '会话最后修改时间
 create index idx_ai_agent_conversation_user
     on ai_agent_conversation (tenant_id, user_id, conversation_type, last_message_time desc nulls last, id desc)
     where del_flag = 0;
+-- 聊天列表按个人会话ID游标翻页，匹配实际WHERE及ORDER BY，避免对活跃时间索引额外排序。
+create index idx_ai_agent_conversation_cursor on ai_agent_conversation (tenant_id, user_id, id desc)
+    where del_flag = 0;
 -- 清理需要包含已逻辑删除的会话，不使用部分索引。
 create index idx_ai_agent_conversation_agent on ai_agent_conversation (tenant_id, agent_id, id);
 

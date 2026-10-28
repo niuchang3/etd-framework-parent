@@ -2,6 +2,8 @@ package org.etd.ai.model.biz;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
+import java.util.Objects;
+import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.ai.model.entity.ModelEntity;
 import org.etd.ai.model.mapper.result.ModelSquareModel;
@@ -94,8 +96,20 @@ public class ModelSquareBizService {
     @Transactional
     public void modifyConnection(ModelConnectionEntity entity, String apiKey, Long version) {
         models.lockModel(entity.getModelId());
-        models.requireModel(entity.getModelId());
+        ModelEntity model = models.requireModel(entity.getModelId());
+        if (ModelType.EMBEDDING.equals(model.getModelType())) {
+            requireStableEmbeddingEndpoint(entity);
+        }
         connections.modifyConnection(entity, apiKey, version);
+    }
+
+    /** Embedding连接ID作为向量空间身份，不能原地改变技术入口而继续匹配旧向量；凭证轮换不受影响。 */
+    private void requireStableEmbeddingEndpoint(ModelConnectionEntity entity) {
+        ModelConnectionEntity old = connections.requireConnection(entity.getId(), true);
+        if (!Objects.equals(old.getBaseUrl(), entity.getBaseUrl())
+                || !Objects.equals(old.getProtocol(), entity.getProtocol())) {
+            throw new ApiRuntimeException("向量模型连接不允许修改地址或协议，请重新创建连接并重建知识库索引");
+        }
     }
 
     /**
@@ -107,8 +121,8 @@ public class ModelSquareBizService {
      */
     @Transactional
     public void modifyConnectionStatus(Long id, Integer dataStatus, Long version) {
-        var connection = connections.requireConnection(id, false);
-        var modelId = connection.getModelId();
+        ModelConnectionEntity connection = connections.requireConnection(id, false);
+        Long modelId = connection.getModelId();
         // 与新增、修改接入保持先锁模型再锁连接的顺序，不改变框架租户及管理员访问边界。
         models.lockModel(modelId);
         if (dataStatus == BasicConstant.DataStatus.ENABLED_CODE) {

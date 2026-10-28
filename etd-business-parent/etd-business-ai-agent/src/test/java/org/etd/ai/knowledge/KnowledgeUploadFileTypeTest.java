@@ -26,6 +26,8 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Set;
+import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentListVO;
+import org.etd.ai.knowledge.controller.vo.KnowledgeDocumentVO;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,18 +50,18 @@ class KnowledgeUploadFileTypeTest {
     /** 使用真实事务模板执行上传编排，隔离数据库和对象存储IO。 */
     @BeforeEach
     void setUp() throws Exception {
-        var folders = mock(KnowledgeFolderService.class);
+        KnowledgeFolderService folders = mock(KnowledgeFolderService.class);
         documents = mock(KnowledgeDocumentService.class);
-        var objects = mock(KnowledgeObjectService.class);
-        var manager = mock(PlatformTransactionManager.class);
-        var status = new SimpleTransactionStatus();
+        KnowledgeObjectService objects = mock(KnowledgeObjectService.class);
+        PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
+        SimpleTransactionStatus status = new SimpleTransactionStatus();
         when(manager.getTransaction(any())).thenReturn(status);
-        var transactions = new TransactionTemplate(manager);
-        var properties = new KnowledgeUploadProperties();
-        var folder = new KnowledgeFolderEntity();
+        TransactionTemplate transactions = new TransactionTemplate(manager);
+        KnowledgeUploadProperties properties = new KnowledgeUploadProperties();
+        KnowledgeFolderEntity folder = new KnowledgeFolderEntity();
         folder.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
-        var bases = mock(KnowledgeBaseService.class);
-        var base = new KnowledgeBaseEntity();
+        KnowledgeBaseService bases = mock(KnowledgeBaseService.class);
+        KnowledgeBaseEntity base = new KnowledgeBaseEntity();
         base.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
         base.setOrgId(10L);
         base.setIsPublic(false);
@@ -74,19 +76,19 @@ class KnowledgeUploadFileTypeTest {
     @CsvSource({"说明.PDF,pdf", "报告.DocX,docx", "表格.XLSX,xlsx", "归档.tar.gz,gz",
             "README,unknown", "文件.,unknown", ".env,unknown"})
     void shouldGenerateFileTypeFromOriginalFilename(String filename, String expected) {
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setFolderId(1L);
         document.setKnowledgeBaseId(1L);
         document.setOriginalFilename(filename);
         document.setFileSize(10L);
         document.setContentType("application/octet-stream");
         document.setFileType("untrusted");
-        var result = uploads.createUpload(document);
+        KnowledgeDocumentEntity result = uploads.createUpload(document);
         assertEquals(expected, result.getFileType());
         assertEquals(KnowledgePolicy.UPLOADING, result.getUploadStatus());
         verify(documents).createDocument(document);
-        var detail = KnowledgeDocumentConverter.INSTANCE.toVO(result);
-        var list = KnowledgeDocumentConverter.INSTANCE.toListVO(result);
+        KnowledgeDocumentVO detail = KnowledgeDocumentConverter.INSTANCE.toVO(result);
+        KnowledgeDocumentListVO list = KnowledgeDocumentConverter.INSTANCE.toListVO(result);
         assertEquals(expected, detail.getFileType());
         assertEquals(expected, list.getFileType());
     }
@@ -96,26 +98,26 @@ class KnowledgeUploadFileTypeTest {
     @NullSource
     @ValueSource(longs = 20L)
     void shouldInheritKnowledgeBaseOrganization(Long primaryOrgId) {
-        var user = new UserDetails();
+        UserDetails user = new UserDetails();
         user.setId(100L);
         user.setOrgId(primaryOrgId);
-        var types = Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode());
+        Set<String> types = Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode());
         user.setPermissionTypes(types);
-        var scopeOrgIds = Set.of(10L);
+        Set<Long> scopeOrgIds = Set.of(10L);
         user.setScopeOrgIds(scopeOrgIds);
         RequestContext.setUser(user);
-        var mapper = mock(KnowledgeDocumentMapper.class);
-        var service = new KnowledgeDocumentService(mapper);
+        KnowledgeDocumentMapper mapper = mock(KnowledgeDocumentMapper.class);
+        KnowledgeDocumentService service = new KnowledgeDocumentService(mapper);
         doAnswer(invocation -> service.createDocument(invocation.getArgument(0)))
                 .when(documents).createDocument(any());
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setKnowledgeBaseId(1L);
         document.setFolderId(1L);
         document.setOriginalFilename("资料.pdf");
         document.setFileSize(10L);
         // 即使内部调用传入其他组织，也必须以已授权知识库为准。
         document.setOrgId(99L);
-        var result = uploads.createUpload(document);
+        KnowledgeDocumentEntity result = uploads.createUpload(document);
         assertEquals(10L, result.getOrgId());
         verify(mapper).insert(document);
     }

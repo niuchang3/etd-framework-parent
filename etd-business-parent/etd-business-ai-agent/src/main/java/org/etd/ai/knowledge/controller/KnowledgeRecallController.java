@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.etd.ai.knowledge.model.KnowledgeRecallHit;
 
 /** 知识库召回测试入口，仅查询权限内已确认资料，允许资料尚未启用。 */
 @RestController
@@ -33,8 +34,8 @@ public class KnowledgeRecallController {
     @AutoLog("测试知识库召回效果")
     public ResultModel<List<KnowledgeRecallHitVO>> getTestRecall(@PathVariable Long id,
             @Valid @RequestBody KnowledgeRecallDTO dto) {
-        var hits = biz.testRecall(id, dto.getQuery());
-        var result = KnowledgeRecallConverter.INSTANCE.toVOList(hits);
+        List<KnowledgeRecallHit> hits = biz.testRecall(id, dto.getQuery());
+        List<KnowledgeRecallHitVO> result = KnowledgeRecallConverter.INSTANCE.toVOList(hits);
         return ResultModel.success(result);
     }
 

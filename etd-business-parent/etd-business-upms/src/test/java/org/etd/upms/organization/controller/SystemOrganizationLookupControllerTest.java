@@ -27,6 +27,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.util.List;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -70,7 +72,7 @@ class SystemOrganizationLookupControllerTest {
         organization.setOrgName("研发部");
         when(service.selectById(1L)).thenReturn(organization);
         MockHttpSession session = createAuthenticatedSession();
-        var request = get("/v1/organization/lookup/1").session(session);
+        MockHttpServletRequestBuilder request = get("/v1/organization/lookup/1").session(session);
 
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -81,7 +83,7 @@ class SystemOrganizationLookupControllerTest {
     /** 回显接口不加入匿名白名单，未登录请求不能进入查询服务。 */
     @Test
     void shouldRejectAnonymousLookup() throws Exception {
-        var request = get("/v1/organization/lookup/1");
+        MockHttpServletRequestBuilder request = get("/v1/organization/lookup/1");
         mvc.perform(request).andExpect(status().isUnauthorized());
         verifyNoInteractions(context.getBean(SystemOrganizationService.class));
     }
@@ -90,15 +92,15 @@ class SystemOrganizationLookupControllerTest {
     @Test
     void shouldKeepManagementDetailProtected() throws Exception {
         MockHttpSession session = createAuthenticatedSession();
-        var request = get("/v1/organization/1").session(session);
+        MockHttpServletRequestBuilder request = get("/v1/organization/1").session(session);
         mvc.perform(request).andExpect(status().isForbidden());
         verifyNoInteractions(context.getBean(SystemOrganizationService.class));
     }
 
     /** 构造没有菜单授权的普通登录会话。 */
     private MockHttpSession createAuthenticatedSession() {
-        var authentication = UsernamePasswordAuthenticationToken.authenticated("test-user", null, List.of());
-        var securityContext = SecurityContextHolder.createEmptyContext();
+        UsernamePasswordAuthenticationToken authentication = UsernamePasswordAuthenticationToken.authenticated("test-user", null, List.of());
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);

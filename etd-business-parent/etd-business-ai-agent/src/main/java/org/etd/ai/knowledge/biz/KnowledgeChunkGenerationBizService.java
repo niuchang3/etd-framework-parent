@@ -26,6 +26,9 @@ import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.io.InputStream;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 /** 手动生成分片：先记录状态，外部解析成功后在短事务中原子替换旧结果。 */
 @Slf4j
@@ -41,11 +44,11 @@ public class KnowledgeChunkGenerationBizService {
 
     /** @param id 资料ID @param version 当前资料版本 @param parameters 三级参数 @return 最新状态，失败时保留旧结果并返回failed */
     public KnowledgeDocumentEntity generateChunks(Long id, Long version, DocumentChunkParameters parameters) {
-        var task = transactions.execute(status -> beginGeneration(id, version, parameters));
+        KnowledgeDocumentEntity task = transactions.execute(status -> beginGeneration(id, version, parameters));
         try {
-            var resource = readResource(task);
-            var result = generation.generateChunkList(resource, task.getOriginalFilename(), parameters);
-            var records = createChunkList(task, result);
+            ByteArrayResource resource = readResource(task);
+            List<DocumentChunk> result = generation.generateChunkList(resource, task.getOriginalFilename(), parameters);
+            List<KnowledgeChunkEntity> records = createChunkList(task, result);
             return transactions.execute(status -> finishGeneration(task, parameters, records));
         } catch (Exception exception) {
             String failureMessage = resolveFailureMessage(exception);
@@ -59,7 +62,7 @@ public class KnowledgeChunkGenerationBizService {
     }
 
     private KnowledgeDocumentEntity beginGeneration(Long id, Long version, DocumentChunkParameters parameters) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) { throw new ApiRuntimeException("资料已变化，请刷新后重试"); }
         if (!KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) { throw new ApiRuntimeException("请先完成原件上传"); }
@@ -81,7 +84,7 @@ public class KnowledgeChunkGenerationBizService {
             throw KnowledgeChunkGenerationException.fileTooLarge(properties.getMaxFileBytes());
         }
         byte[] bytes;
-        try (var input = objects.openObject(document)) { bytes = input.readNBytes(properties.getMaxFileBytes() + 1); }
+        try (InputStream input = objects.openObject(document)) { bytes = input.readNBytes(properties.getMaxFileBytes() + 1); }
         if (bytes.length == 0) {
             throw new KnowledgeChunkGenerationException(Reason.EMPTY_FILE);
         }
@@ -99,7 +102,7 @@ public class KnowledgeChunkGenerationBizService {
             if (content == null || content.isBlank() || content.length() > KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS) {
                 throw new ApiRuntimeException("分片正文为空或超过长度限制，请调整参数");
             }
-            var record = KnowledgeChunkConverter.INSTANCE.toEntity(document, chunk);
+            KnowledgeChunkEntity record = KnowledgeChunkConverter.INSTANCE.toEntity(document, chunk);
             record.setTokenCount(DocumentTokenCounter.count(content));
             records.add(record);
         }
@@ -108,12 +111,12 @@ public class KnowledgeChunkGenerationBizService {
 
     private KnowledgeDocumentEntity finishGeneration(KnowledgeDocumentEntity task, DocumentChunkParameters parameters,
             List<KnowledgeChunkEntity> records) {
-        var document = requireCurrentGeneration(task);
+        KnowledgeDocumentEntity document = requireCurrentGeneration(task);
         document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
         document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
         document.setVectorStatus(KnowledgeVectorStatus.afterContentChange(document.getVectorStatus()));
         chunks.removeChunkList(document.getId());
-        for (var record : records) {
+        for (KnowledgeChunkEntity record : records) {
             record.setProcessingVersion(document.getProcessingVersion());
         }
         chunks.createChunkList(records);
@@ -171,7 +174,7 @@ public class KnowledgeChunkGenerationBizService {
 
     /** 只更新仍属于当前请求的失败；超时后重试的新结果不会被旧请求覆盖。 */
     private KnowledgeDocumentEntity failGeneration(KnowledgeDocumentEntity task, String failureMessage) {
-        var document = documents.requireDocument(task.getId(), true);
+        KnowledgeDocumentEntity document = documents.requireDocument(task.getId(), true);
         if (!Objects.equals(document.getChunkGenerationId(), task.getChunkGenerationId())) {
             throw new ApiRuntimeException("本次生成请求已失效，当前分片未被替换，请刷新查看");
         }
@@ -183,7 +186,7 @@ public class KnowledgeChunkGenerationBizService {
     }
 
     private KnowledgeDocumentEntity requireCurrentGeneration(KnowledgeDocumentEntity task) {
-        var document = documents.requireDocument(task.getId(), true);
+        KnowledgeDocumentEntity document = documents.requireDocument(task.getId(), true);
         if (!Objects.equals(document.getChunkGenerationId(), task.getChunkGenerationId())
                 || document.getChunkGenerationExpiresAt() == null || Instant.now().isAfter(document.getChunkGenerationExpiresAt())) {
             throw new ApiRuntimeException("生成请求已过期，不能覆盖当前分片");

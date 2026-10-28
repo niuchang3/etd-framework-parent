@@ -23,6 +23,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 
 /** 知识库文档管理内部分类接口，返回平铺节点供前端构建树。 */
 @RestController
@@ -50,8 +51,8 @@ public class KnowledgeFolderController {
                     @Min(BasicConstant.DataStatus.DISABLED_CODE)
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
-        var folders = service.fetchFolderList(knowledgeBaseId, dataStatus);
-        var result = folders.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
+        List<KnowledgeFolderEntity> folders = service.fetchFolderList(knowledgeBaseId, dataStatus);
+        List<KnowledgeFolderVO> result = folders.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
         return ResultModel.success(result);
     }
 
@@ -66,7 +67,7 @@ public class KnowledgeFolderController {
     @PostMapping
     public ResultModel<Long> save(
             @Valid @RequestBody KnowledgeFolderSaveDTO dto) {
-        var entity = KnowledgeFolderConverter.INSTANCE.toEntity(dto);
+        KnowledgeFolderEntity entity = KnowledgeFolderConverter.INSTANCE.toEntity(dto);
         Long id = biz.createFolder(entity);
         return ResultModel.success(id);
     }
@@ -84,7 +85,7 @@ public class KnowledgeFolderController {
     public ResultModel<Boolean> update(
             @PathVariable Long id,
             @Validated(UpdateRequest.class) @RequestBody KnowledgeFolderSaveDTO dto) {
-        var e = KnowledgeFolderConverter.INSTANCE.toEntity(dto);
+        KnowledgeFolderEntity e = KnowledgeFolderConverter.INSTANCE.toEntity(dto);
         e.setId(id);
         biz.modifyFolder(e, dto.getVersion());
         return ResultModel.success(true);

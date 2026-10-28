@@ -11,6 +11,7 @@ import org.etd.framework.starter.ai.model.constant.ModelClientProtocol;
 import org.etd.ai.model.constant.ModelProtocol;
 import org.etd.ai.model.constant.ModelType;
 import org.junit.jupiter.api.Test;
+import org.etd.framework.starter.ai.model.config.ModelConnectionConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,23 +22,23 @@ class ModelConnectionResolutionTest {
     /** 模型目录和租户连接任一更新都产生不同缓存版本，无认证连接不触发解密。 */
     @Test
     void resolvesBothVersionsAndChecksTenantOwnership() {
-        var connections = mock(ModelConnectionMapper.class);
-        var models = mock(ModelMapper.class);
-        var cipher = mock(ModelCredentialCipher.class);
-        var resolver = new BusinessModelConnectionResolver(connections, models, cipher);
-        var connection = createConnection();
-        var model = createModel();
+        ModelConnectionMapper connections = mock(ModelConnectionMapper.class);
+        ModelMapper models = mock(ModelMapper.class);
+        ModelCredentialCipher cipher = mock(ModelCredentialCipher.class);
+        BusinessModelConnectionResolver resolver = new BusinessModelConnectionResolver(connections, models, cipher);
+        ModelConnectionEntity connection = createConnection();
+        ModelEntity model = createModel();
         when(connections.selectById(30L)).thenReturn(connection);
         when(models.selectById(20L)).thenReturn(model);
-        var original = resolver.resolveAuthorized("900001", "30");
+        ModelConnectionConfiguration original = resolver.resolveAuthorized("900001", "30");
         assertThat(original.resolveApiKey()).isNull();
         verify(connections).selectById(30L);
         verifyNoInteractions(cipher);
         model.setVersion(1L);
-        var changedModel = resolver.resolveAuthorized("900001", "30");
+        ModelConnectionConfiguration changedModel = resolver.resolveAuthorized("900001", "30");
         assertThat(changedModel.version()).isNotEqualTo(original.version());
         connection.setVersion(1L);
-        var changedConnection = resolver.resolveAuthorized("900001", "30");
+        ModelConnectionConfiguration changedConnection = resolver.resolveAuthorized("900001", "30");
         assertThat(changedConnection.version()).isNotEqualTo(changedModel.version());
         assertThatThrownBy(() -> resolver.resolveAuthorized("900002", "30")).hasMessageContaining("不存在或已停用");
         model.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
@@ -46,7 +47,7 @@ class ModelConnectionResolutionTest {
 
     /** 连接实体只携带测试地址，无凭证模式可验证完整解析而无需密钥。 */
     private ModelConnectionEntity createConnection() {
-        var connection = new ModelConnectionEntity();
+        ModelConnectionEntity connection = new ModelConnectionEntity();
         connection.setId(30L);
         connection.setModelId(20L);
         connection.setTenantId(900001L);
@@ -60,7 +61,7 @@ class ModelConnectionResolutionTest {
 
     /** 只构造解析所需目录属性，能力代码复用现有定义。 */
     private ModelEntity createModel() {
-        var model = new ModelEntity();
+        ModelEntity model = new ModelEntity();
         model.setVersion(0L);
         model.setModelCode("test-embedding");
         model.setModelType(ModelType.EMBEDDING);

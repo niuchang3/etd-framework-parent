@@ -35,6 +35,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.etd.ai.model.entity.ModelEntity;
+import org.etd.ai.model.mapper.result.ModelSquareModel;
 
 /** 首页模型广场聚合入口，模型查询及接入管理统一使用广场菜单的read/write权限。 */
 @RestController
@@ -64,8 +67,8 @@ public class ModelSquareController {
             @RequestParam(required = false) @Pattern(regexp = ModelType.PATTERN) String modelType,
             @RequestParam(required = false) @Size(max = 100) String keyword,
             @RequestParam(required = false) Boolean connected) {
-        var page = biz.fetchModelPage(current, size, providerCode, modelType, keyword, connected);
-        var result = page.convert(ModelSquareConverter.INSTANCE::toModelVO);
+        IPage<ModelSquareModel> page = biz.fetchModelPage(current, size, providerCode, modelType, keyword, connected);
+        IPage<ModelSquareModelVO> result = page.convert(ModelSquareConverter.INSTANCE::toModelVO);
         return ResultModel.success(result);
     }
 
@@ -78,8 +81,8 @@ public class ModelSquareController {
     @AutoLog("查询模型广场模型详情")
     @GetMapping("/models/{id}")
     public ResultModel<ModelVO> getModel(@PathVariable @Positive Long id) {
-        var model = biz.fetchModel(id);
-        var result = ModelConverter.INSTANCE.toVO(model);
+        ModelEntity model = biz.fetchModel(id);
+        ModelVO result = ModelConverter.INSTANCE.toVO(model);
         return ResultModel.success(result);
     }
 
@@ -101,8 +104,8 @@ public class ModelSquareController {
             @RequestParam(required = false) @Min(BasicConstant.DataStatus.DISABLED_CODE)
             @Max(BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus,
             @RequestParam(required = false) @Size(max = 64) String providerCode) {
-        var page = biz.fetchConnectionPage(current, size, modelId, dataStatus, providerCode);
-        var result = page.convert(ModelConnectionConverter.INSTANCE::toVO);
+        IPage<ModelConnectionEntity> page = biz.fetchConnectionPage(current, size, modelId, dataStatus, providerCode);
+        IPage<ModelConnectionVO> result = page.convert(ModelConnectionConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -115,8 +118,8 @@ public class ModelSquareController {
     @AutoLog("查询模型广场连接详情")
     @GetMapping("/connections/{id}")
     public ResultModel<ModelConnectionVO> getConnection(@PathVariable @Positive Long id) {
-        var connection = biz.fetchConnection(id);
-        var result = ModelConnectionConverter.INSTANCE.toVO(connection);
+        ModelConnectionEntity connection = biz.fetchConnection(id);
+        ModelConnectionVO result = ModelConnectionConverter.INSTANCE.toVO(connection);
         return ResultModel.success(result);
     }
 
@@ -129,8 +132,8 @@ public class ModelSquareController {
     @AutoLog("接入模型广场模型")
     @PostMapping("/connections")
     public ResultModel<Long> saveConnection(@Valid @RequestBody ModelConnectionSaveDTO dto) {
-        var connection = ModelConnectionConverter.INSTANCE.toEntity(dto);
-        var id = biz.createConnection(connection, dto.getApiKey());
+        ModelConnectionEntity connection = ModelConnectionConverter.INSTANCE.toEntity(dto);
+        Long id = biz.createConnection(connection, dto.getApiKey());
         return ResultModel.success(id);
     }
 
@@ -145,7 +148,7 @@ public class ModelSquareController {
     @PutMapping("/connections/{id}")
     public ResultModel<Boolean> updateConnection(@PathVariable @Positive Long id,
             @Validated(UpdateRequest.class) @RequestBody ModelConnectionSaveDTO dto) {
-        var connection = ModelConnectionConverter.INSTANCE.toEntity(dto);
+        ModelConnectionEntity connection = ModelConnectionConverter.INSTANCE.toEntity(dto);
         connection.setId(id);
         biz.modifyConnection(connection, dto.getApiKey(), dto.getVersion());
         return ResultModel.success(true);

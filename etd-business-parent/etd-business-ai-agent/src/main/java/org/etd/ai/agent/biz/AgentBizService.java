@@ -18,6 +18,13 @@ import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.validation.ConstraintViolation;
+import java.util.List;
+import java.util.Set;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
+import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.etd.ai.model.entity.ModelEntity;
+import org.etd.framework.common.core.user.UserDetails;
 
 /** Agent创建、草稿更新、发布、启停和删除编排，不直接访问Mapper或接收Controller DTO。 */
 @Service
@@ -42,7 +49,7 @@ public class AgentBizService {
     /** @param id Agent ID @param input 完整草稿 @param version 页面版本 @return 更新后的记录 @throws ApiRuntimeException 无权限、归属变化或版本冲突 */
     @Transactional
     public AgentEntity modifyAgent(Long id, AgentEntity input, Long version) {
-        var agent = requireVersion(id, version);
+        AgentEntity agent = requireVersion(id, version);
         if (!Objects.equals(agent.getOrgId(), input.getOrgId())) {
             throw new ApiRuntimeException("Agent创建后不允许变更组织归属");
         }
@@ -56,13 +63,13 @@ public class AgentBizService {
     /** @param id Agent ID @param version 页面版本 @return 发布后的记录 @throws ApiRuntimeException 草稿不完整、引用不可用或版本冲突 */
     @Transactional
     public AgentEntity publishAgent(Long id, Long version) {
-        var agent = requireVersion(id, version);
+        AgentEntity agent = requireVersion(id, version);
         validateConfiguration(agent.getDraftConfig(), agent.getTenantId(), true);
-        var user = RequestContext.getUser();
+        UserDetails user = RequestContext.getUser();
         if (user == null || user.getId() == null) {
             throw new ApiRuntimeException("发布Agent需要有效登录身份");
         }
-        var snapshot = AgentConverter.INSTANCE.copyConfiguration(agent.getDraftConfig());
+        AgentConfiguration snapshot = AgentConverter.INSTANCE.copyConfiguration(agent.getDraftConfig());
         agent.setPublishedConfig(snapshot);
         agent.setPublishedTime(Instant.now());
         agent.setPublishedBy(user.getId());
@@ -77,7 +84,7 @@ public class AgentBizService {
                 && !Objects.equals(dataStatus, BasicConstant.DataStatus.DISABLED_CODE)) {
             throw new ApiRuntimeException("不支持的Agent启停状态");
         }
-        var agent = requireVersion(id, version);
+        AgentEntity agent = requireVersion(id, version);
         agent.setDataStatus(dataStatus);
         agents.modifyAgent(agent);
         return agent;
@@ -92,7 +99,7 @@ public class AgentBizService {
 
     /** 在同一事务内先锁定记录，再比较页面版本，防止发布或删除更新后的草稿。 */
     private AgentEntity requireVersion(Long id, Long version) {
-        var agent = agents.requireAgent(id, true, true);
+        AgentEntity agent = agents.requireAgent(id, true, true);
         if (version == null || !Objects.equals(agent.getVersion(), version)) {
             throw new ApiRuntimeException("Agent已变化，请刷新后重试");
         }
@@ -104,7 +111,7 @@ public class AgentBizService {
         if (configuration == null) {
             throw new ApiRuntimeException("请填写Agent草稿配置");
         }
-        var violations = validator.validate(configuration);
+        Set<ConstraintViolation<AgentConfiguration>> violations = validator.validate(configuration);
         if (!violations.isEmpty()) {
             throw new ApiRuntimeException("Agent配置字段不符合约束，请检查参数范围和文本长度");
         }
@@ -121,12 +128,12 @@ public class AgentBizService {
         if (connectionId == null) {
             return;
         }
-        var connection = connections.requireConnection(connectionId, false);
+        ModelConnectionEntity connection = connections.requireConnection(connectionId, false);
         if (!Objects.equals(connection.getTenantId(), tenantId)
                 || !Objects.equals(connection.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
             throw new ApiRuntimeException("模型连接不属于Agent租户或已停用");
         }
-        var model = models.requireModel(connection.getModelId());
+        ModelEntity model = models.requireModel(connection.getModelId());
         if (!ModelType.CHAT.equals(model.getModelType())) {
             throw new ApiRuntimeException("Agent只能选择聊天模型连接");
         }
@@ -134,16 +141,16 @@ public class AgentBizService {
 
     /** 逐项进行独立引用授权校验，不拼接知识库展示数据；绑定不替代运行时用户权限检查。 */
     private void validateKnowledgeBaseList(AgentConfiguration configuration, Long tenantId) {
-        var ids = configuration.getKnowledgeBaseIds();
+        List<Long> ids = configuration.getKnowledgeBaseIds();
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        var uniqueIds = new HashSet<>(ids);
+        HashSet<Long> uniqueIds = new HashSet<>(ids);
         if (uniqueIds.size() != ids.size()) {
             throw new ApiRuntimeException("知识库绑定不能重复");
         }
         for (Long id : ids) {
-            var base = knowledgeBases.requireBase(id, false, false);
+            KnowledgeBaseEntity base = knowledgeBases.requireBase(id, false, false);
             if (!Objects.equals(base.getTenantId(), tenantId)
                     || !Objects.equals(base.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
                 throw new ApiRuntimeException("知识库不属于Agent租户或已停用");

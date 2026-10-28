@@ -119,7 +119,7 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
         if (publicRead && rule != null && StringUtils.hasText(rule.publicColumn())) {
             // 公开列必须为布尔类型，NULL不会被认作公开。
             Column publicField = buildColumn(table, rule.publicColumn());
-            var publicValue = new BooleanValue(true);
+            BooleanValue publicValue = new BooleanValue(true);
             Expression published = new EqualsTo(publicField, publicValue);
             permission = appendOr(published, permission);
         }
@@ -136,7 +136,7 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
         Expression permission = null;
         if (scope.self() && scope.userId() != null) {
             Column userField = buildColumn(table, userColumn);
-            var userId = new LongValue(scope.userId());
+            LongValue userId = new LongValue(scope.userId());
             permission = new EqualsTo(userField, userId);
         }
         if (!scope.orgIds().isEmpty()) {
@@ -187,11 +187,11 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
 
     private Expression buildOrganizationExpression(Column orgColumn, Set<Long> scopeOrgIds) {
         if (scopeOrgIds.size() == 1) {
-            var organizationId = new LongValue(scopeOrgIds.iterator().next());
+            LongValue organizationId = new LongValue(scopeOrgIds.iterator().next());
             return new EqualsTo(orgColumn, organizationId);
         }
         List<Expression> expressions = scopeOrgIds.stream().map(LongValue::new).collect(Collectors.toList());
-        var organizationIds = new ParenthesedExpressionList<>(expressions);
+        ParenthesedExpressionList<Expression> organizationIds = new ParenthesedExpressionList<>(expressions);
         return new InExpression(orgColumn, organizationIds);
     }
 
@@ -223,7 +223,7 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      */
     private Column buildColumn(Table table, String columnName) {
         String qualifier = table.getAlias() == null ? table.getName() : table.getAlias().getName();
-        var qualifiedTable = new Table(qualifier);
+        Table qualifiedTable = new Table(qualifier);
         return new Column(qualifiedTable, columnName);
     }
 
@@ -251,8 +251,8 @@ public class EtdDataPermissionHandler implements MultiDataPermissionHandler {
      * 当权限范围内无任何可用 ID 时，生成 1 = 0 恒假表达式阻断数据访问
      */
     private Expression buildAlwaysFalseExpression() {
-        var one = new LongValue(1);
-        var zero = new LongValue(0);
+        LongValue one = new LongValue(1);
+        LongValue zero = new LongValue(0);
         return new EqualsTo(one, zero);
     }
 }

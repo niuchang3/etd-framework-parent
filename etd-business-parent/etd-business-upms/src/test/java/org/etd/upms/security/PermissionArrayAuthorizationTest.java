@@ -31,6 +31,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.util.List;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -79,14 +81,14 @@ class PermissionArrayAuthorizationTest {
     void shouldAuthorizeByResourceArray(String endpoint, String authority, int expectedStatus) throws Exception {
         UserDetails user = new UserDetails();
         MockHttpSession session = createSession(authority, user);
-        var request = get("/test-permission/" + endpoint).session(session);
+        MockHttpServletRequestBuilder request = get("/test-permission/" + endpoint).session(session);
         mvc.perform(request).andExpect(status().is(expectedStatus));
     }
 
     /** 数组权限不改变认证要求。 */
     @Test
     void shouldRejectAnonymousRequest() throws Exception {
-        var request = get("/test-permission/class");
+        MockHttpServletRequestBuilder request = get("/test-permission/class");
         mvc.perform(request).andExpect(status().isUnauthorized());
     }
 
@@ -96,12 +98,12 @@ class PermissionArrayAuthorizationTest {
         UserDetails user = new UserDetails();
         user.setPlatformAdmin(true);
         MockHttpSession session = createSession("test:other:read", user);
-        var read = get("/test-permission/class").session(session);
+        MockHttpServletRequestBuilder read = get("/test-permission/class").session(session);
         mvc.perform(read).andExpect(status().isOk());
-        var write = get("/test-permission/write").session(session);
+        MockHttpServletRequestBuilder write = get("/test-permission/write").session(session);
         mvc.perform(write).andExpect(status().isOk());
         user.setLocked(true);
-        var lockedWrite = get("/test-permission/write").session(session);
+        MockHttpServletRequestBuilder lockedWrite = get("/test-permission/write").session(session);
         mvc.perform(lockedWrite).andExpect(status().isForbidden());
     }
 
@@ -111,7 +113,7 @@ class PermissionArrayAuthorizationTest {
     void shouldRejectInvalidConfiguration(String endpoint) {
         UserDetails user = new UserDetails();
         MockHttpSession session = createSession("test:user:read", user);
-        var request = get("/test-permission/" + endpoint).session(session);
+        MockHttpServletRequestBuilder request = get("/test-permission/" + endpoint).session(session);
         Exception exception = assertThrows(Exception.class, () -> mvc.perform(request));
         Throwable cause = exception;
         while (cause.getCause() != null) {
@@ -124,9 +126,9 @@ class PermissionArrayAuthorizationTest {
     private MockHttpSession createSession(String authority, UserDetails user) {
         SimpleGrantedAuthority grantedAuthority = new SimpleGrantedAuthority(authority);
         List<SimpleGrantedAuthority> authorities = List.of(grantedAuthority);
-        var authentication = UsernamePasswordAuthenticationToken.authenticated("test-user", null, authorities);
+        UsernamePasswordAuthenticationToken authentication = UsernamePasswordAuthenticationToken.authenticated("test-user", null, authorities);
         authentication.setDetails(user);
-        var securityContext = SecurityContextHolder.createEmptyContext();
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);

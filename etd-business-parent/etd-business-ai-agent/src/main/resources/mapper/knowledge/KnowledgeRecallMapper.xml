@@ -22,12 +22,21 @@
         join ai_knowledge_base b on b.id = d.knowledge_base_id and b.del_flag = 0
     </sql>
 
+    <!-- 正式问答和管理测试共用查询结构，正式资格必须覆盖候选、复核和相邻正文。 -->
+    <sql id="formalAccess">
+        <if test="formal">
+            and b.data_status = 1
+            and d.data_status = 1
+        </if>
+    </sql>
+
     <sql id="access">
         c.del_flag = 0
         and b.id = #{baseId}
         and c.knowledge_base_id = b.id
         and d.chunk_status = 'confirmed'
         and d.upload_status = 'completed'
+        <include refid="formalAccess"/>
     </sql>
 
     <select id="selectKeywordList" resultMap="hit">
@@ -82,6 +91,7 @@
           and c.del_flag = 0
           and d.chunk_status = 'confirmed'
           and d.upload_status = 'completed'
+        <include refid="formalAccess"/>
           and d.processing_version = #{processingVersion}
           and c.chunk_index between #{minIndex} and #{maxIndex}
         order by c.chunk_index

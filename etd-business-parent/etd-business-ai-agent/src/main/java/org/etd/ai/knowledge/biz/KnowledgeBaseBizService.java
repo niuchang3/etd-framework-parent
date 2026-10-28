@@ -29,7 +29,7 @@ public class KnowledgeBaseBizService {
     /** @param id 知识库 @param input 可编辑设置 @param version 当前版本 */
     @Transactional
     public void modifyBase(Long id, KnowledgeBaseEntity input, Long version) {
-        var base = bases.requireBase(id, true, true);
+        KnowledgeBaseEntity base = bases.requireBase(id, true, true);
         requireVersion(base, version);
         if (!Objects.equals(base.getOrgId(), input.getOrgId())) {
             throw new ApiRuntimeException("知识库创建后不允许变更组织归属");

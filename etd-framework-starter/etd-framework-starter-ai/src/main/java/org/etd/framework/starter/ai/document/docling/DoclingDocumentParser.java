@@ -44,6 +44,9 @@ import org.etd.framework.starter.ai.document.model.DocumentParserCapabilities;
 import org.etd.framework.starter.ai.document.parser.AsynchronousDocumentParser;
 import org.springframework.util.Assert;
 import org.springframework.http.HttpStatus;
+import ai.docling.serve.api.chunk.request.options.HierarchicalChunkerOptions;
+import ai.docling.serve.api.chunk.request.options.HybridChunkerOptions;
+import java.io.InputStream;
 
 /** Docling 单文档异步适配，不持久化任务、不自动轮询、不携带租户或业务实体。 */
 public final class DoclingDocumentParser implements AsynchronousDocumentParser, DocumentChunker {
@@ -84,7 +87,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     @Override
     public DocumentParserCapabilities capabilities() {
-        var extensions = DoclingFileFormat.supportedExtensions();
+        Set<String> extensions = DoclingFileFormat.supportedExtensions();
         return new DocumentParserCapabilities(extensions, true, true, true, CHUNK_STRATEGIES);
     }
 
@@ -101,7 +104,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
     @Override
     public DocumentParseTask fetchStatus(String taskId) {
         validateTaskId(taskId);
-        var request = TaskStatusPollRequest.builder().taskId(taskId).build();
+        TaskStatusPollRequest request = TaskStatusPollRequest.builder().taskId(taskId).build();
         Supplier<TaskStatusPollResponse> operation = () -> client.pollTaskStatus(request);
         TaskStatusPollResponse response = invoke(operation);
         return requireTask(response, taskId);
@@ -157,7 +160,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     private HierarchicalChunkDocumentRequest createHierarchicalRequest(DocumentChunkRequest request,
             ConvertDocumentRequest conversion, HierarchicalDocumentChunkOptions options) {
-        var sdkOptions = chunkConverter.toSdk(options);
+        HierarchicalChunkerOptions sdkOptions = chunkConverter.toSdk(options);
         // SDK 的父子 Builder 使用递归泛型，显式保留具体类型，避免链式调用丢失类型信息。
         HierarchicalChunkDocumentRequest.Builder<?, ?> builder = HierarchicalChunkDocumentRequest.builder();
         builder.sources(conversion.getSources());
@@ -170,7 +173,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     private HybridChunkDocumentRequest createHybridRequest(DocumentChunkRequest request,
             ConvertDocumentRequest conversion, HybridDocumentChunkOptions options) {
-        var sdkOptions = chunkConverter.toSdk(options);
+        HybridChunkerOptions sdkOptions = chunkConverter.toSdk(options);
         // 不依赖父类方法返回值继续调用子类方法，保持编辑器与 javac 的类型解析一致。
         HybridChunkDocumentRequest.Builder<?, ?> builder = HybridChunkDocumentRequest.builder();
         builder.sources(conversion.getSources());
@@ -239,9 +242,9 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     private ConvertDocumentRequest createRequest(DocumentParseRequest request) {
         String encoded = readFile(request);
-        var source = FileSource.builder().filename(request.filename()).base64String(encoded).build();
+        FileSource source = FileSource.builder().filename(request.filename()).base64String(encoded).build();
         ConvertDocumentOptions options = createOptions(request.options());
-        var target = InBodyTarget.builder().build();
+        InBodyTarget target = InBodyTarget.builder().build();
         // 转换请求同样继承递归泛型 Builder，逐项赋值以保留具体构建器类型。
         ConvertDocumentRequest.Builder<?, ?> builder = ConvertDocumentRequest.builder();
         builder.source(source);
@@ -252,7 +255,7 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
 
     private String readFile(DocumentParseRequest request) {
         // SDK 使用 Base64 JSON；读取上限以实际字节为准，不信任外部声明的文件长度。
-        try (var input = request.resource().getInputStream()) {
+        try (InputStream input = request.resource().getInputStream()) {
             byte[] bytes = input.readNBytes(maxFileBytes + 1);
             Assert.isTrue(bytes.length > 0, "文档文件不能为空");
             Assert.isTrue(bytes.length <= maxFileBytes, "文档超过配置的大小限制");
@@ -263,12 +266,12 @@ public final class DoclingDocumentParser implements AsynchronousDocumentParser, 
     }
 
     private ConvertDocumentOptions createOptions(DocumentParseOptions options) {
-        var builder = ConvertDocumentOptions.builder().doOcr(options.ocr()).forceOcr(options.forceOcr())
+        ConvertDocumentOptions.Builder builder = ConvertDocumentOptions.builder().doOcr(options.ocr()).forceOcr(options.forceOcr())
                 .ocrLang(options.ocrLanguages()).doTableStructure(options.tableStructure())
                 .documentTimeout(options.documentTimeout()).toFormat(OutputFormat.MARKDOWN)
                 .toFormat(OutputFormat.JSON).imageExportMode(ImageRefMode.PLACEHOLDER).includeImages(false);
         if (options.firstPage() != null) {
-            var range = List.of(options.firstPage(), options.lastPage());
+            List<Integer> range = List.of(options.firstPage(), options.lastPage());
             builder.pageRange(range);
         }
         return builder.build();

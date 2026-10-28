@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.io.Serializable;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -34,26 +36,26 @@ class KnowledgeDocumentBatchDeleteEndpointTest {
     /** 保留控制器和转换器，仅隔离数据库及对象存储。 */
     @BeforeEach
     void initialize() {
-        var documents = mock(KnowledgeDocumentService.class);
-        var single = mock(KnowledgeDocumentBizService.class);
+        KnowledgeDocumentService documents = mock(KnowledgeDocumentService.class);
+        KnowledgeDocumentBizService single = mock(KnowledgeDocumentBizService.class);
         batch = mock(KnowledgeDocumentBatchDeleteBizService.class);
-        var controller = new KnowledgeDocumentController(documents, single, batch);
+        KnowledgeDocumentController controller = new KnowledgeDocumentController(documents, single, batch);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     /** 明确返回部分成功结果，前端不能只根据业务成功码判断全部删除成功。 */
     @Test
     void shouldReturnPartialFailureDetails() throws Exception {
-        var ids = List.of(1L, 2L);
-        var failure = new KnowledgeDocumentDeleteFailure(2L, "资料正在生成分片，请稍后操作");
-        var successIds = List.of(1L);
-        var failures = List.of(failure);
-        var result = new KnowledgeDocumentDeleteResult(successIds, failures);
+        List<Long> ids = List.of(1L, 2L);
+        KnowledgeDocumentDeleteFailure failure = new KnowledgeDocumentDeleteFailure(2L, "资料正在生成分片，请稍后操作");
+        List<Long> successIds = List.of(1L);
+        List<KnowledgeDocumentDeleteFailure> failures = List.of(failure);
+        KnowledgeDocumentDeleteResult result = new KnowledgeDocumentDeleteResult(successIds, failures);
         when(batch.removeDocumentList(10L, ids)).thenReturn(result);
         String body = """
                 {"knowledgeBaseId":"10","documentIds":["1","2"]}
                 """;
-        var request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON)
+        MockHttpServletRequestBuilder request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON)
                 .content(body);
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.successIds[0]").value(1))
@@ -77,19 +79,19 @@ class KnowledgeDocumentBatchDeleteEndpointTest {
         String missingBase = """
                 {"documentIds":[1]}
                 """;
-        var payloads = List.of(empty, nullElement, zero, missingBase);
+        List<String> payloads = List.of(empty, nullElement, zero, missingBase);
         for (String body : payloads) {
-            var request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON).content(body);
+            MockHttpServletRequestBuilder request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON).content(body);
             mvc.perform(request).andExpect(status().isBadRequest());
         }
-        var ids = new ArrayList<Long>();
+        ArrayList<Long> ids = new ArrayList<Long>();
         for (long id = 1; id <= 101; id++) {
             ids.add(id);
         }
-        var input = Map.of("knowledgeBaseId", 10L, "documentIds", ids);
-        var json = JsonMapper.builder().build();
+        Map<String, Serializable> input = Map.of("knowledgeBaseId", 10L, "documentIds", ids);
+        JsonMapper json = JsonMapper.builder().build();
         String body = json.writeValueAsString(input);
-        var request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON).content(body);
+        MockHttpServletRequestBuilder request = post("/v1/knowledge-documents/batch-delete").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(batch);
     }

@@ -25,18 +25,18 @@ public class KnowledgeRecallService {
     private static final int RRF_OFFSET = 60;
     private final KnowledgeRecallMapper mapper;
 
-    /** @param base 已授权知识库 @param query 问题 @return 全文候选 */
-    public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query) {
-        return mapper.selectKeywordList(base.getId(), query, base.getKeywordRecallSize());
+    /** @param base 已授权知识库 @param query 问题 @param formal 是否仅允许正式启用资料 @return 全文候选 */
+    public List<KnowledgeRecallHit> fetchKeywordList(KnowledgeBaseEntity base, String query, boolean formal) {
+        return mapper.selectKeywordList(base.getId(), query, base.getKeywordRecallSize(), formal);
     }
 
-    /** @param base 已授权且已建立向量空间的知识库 @param vector 问题向量
+    /** @param base 已授权且已建立向量空间的知识库 @param vector 问题向量 @param formal 是否仅允许正式启用资料
      * @return 当前代次且内容轮次有效的向量候选 */
-    public List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, float[] vector) {
+    public List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, float[] vector, boolean formal) {
         String table = KnowledgeVectorService.resolveTable(base.getActiveDimensions());
         String value = KnowledgeVectorService.formatVector(vector);
         return mapper.selectVectorList(base.getId(), table, value, base.getActiveConnectionId(),
-                base.getActiveIndexVersion(), base.getSimilarityThreshold(), base.getVectorRecallSize());
+                base.getActiveIndexVersion(), base.getSimilarityThreshold(), base.getVectorRecallSize(), formal);
     }
 
     /** @param keyword 全文候选 @param vector 向量候选 @param hybrid 是否混合排名 @return 去重后的有序候选 */
@@ -45,7 +45,7 @@ public class KnowledgeRecallService {
         Map<Long, KnowledgeRecallHit> merged = new LinkedHashMap<>();
         appendCandidateList(merged, keyword, hybrid, true);
         appendCandidateList(merged, vector, hybrid, false);
-        var result = new ArrayList<>(merged.values());
+        ArrayList<KnowledgeRecallHit> result = new ArrayList<>(merged.values());
         result.sort(Comparator.comparing(KnowledgeRecallHit::getScore).reversed()
                 .thenComparing(KnowledgeRecallHit::getChunkId));
         return result;
@@ -55,8 +55,8 @@ public class KnowledgeRecallService {
     private void appendCandidateList(Map<Long, KnowledgeRecallHit> merged, List<KnowledgeRecallHit> source,
             boolean hybrid, boolean keyword) {
         for (int index = 0; index < source.size(); index++) {
-            var hit = source.get(index);
-            var target = merged.get(hit.getChunkId());
+            KnowledgeRecallHit hit = source.get(index);
+            KnowledgeRecallHit target = merged.get(hit.getChunkId());
             double score = hybrid ? 1.0 / (RRF_OFFSET + index + 1)
                     : keyword ? hit.getKeywordScore() : hit.getVectorScore();
             if (target == null) {
@@ -70,22 +70,22 @@ public class KnowledgeRecallService {
     }
 
     /**
-     * @param baseId 当前知识库 @param candidates 模型调用前的候选
+     * @param baseId 当前知识库 @param candidates 模型调用前的候选 @param formal 是否仅允许正式启用资料
      * @return 外部调用后仍有权限且内容轮次、正文未变化的候选，保持排序
      */
-    public List<KnowledgeRecallHit> retainCurrentList(Long baseId, List<KnowledgeRecallHit> candidates) {
+    public List<KnowledgeRecallHit> retainCurrentList(Long baseId, List<KnowledgeRecallHit> candidates, boolean formal) {
         if (candidates.isEmpty()) {
             return candidates;
         }
-        var ids = candidates.stream().map(KnowledgeRecallHit::getChunkId).toList();
-        var current = mapper.selectCurrentList(baseId, ids);
+        List<Long> ids = candidates.stream().map(KnowledgeRecallHit::getChunkId).toList();
+        List<KnowledgeRecallHit> current = mapper.selectCurrentList(baseId, ids, formal);
         Map<Long, KnowledgeRecallHit> readable = new LinkedHashMap<>();
-        for (var hit : current) {
+        for (KnowledgeRecallHit hit : current) {
             readable.put(hit.getChunkId(), hit);
         }
         List<KnowledgeRecallHit> result = new ArrayList<>();
-        for (var hit : candidates) {
-            var latest = readable.get(hit.getChunkId());
+        for (KnowledgeRecallHit hit : candidates) {
+            KnowledgeRecallHit latest = readable.get(hit.getChunkId());
             if (latest != null && Objects.equals(hit.getProcessingVersion(), latest.getProcessingVersion())
                     && Objects.equals(hit.getContent(), latest.getContent())) {
                 hit.setDocumentName(latest.getDocumentName());
@@ -98,15 +98,16 @@ public class KnowledgeRecallService {
     /**
      * 指针级滑动扩展：根据 (document_id, chunk_index) 逻辑指针动态平滑拼接前后相邻分片。
      * @param hits 已通过权限核验并排序的候选分片
+     * @param formal 是否仅允许正式启用资料
      * @param windowSize 窗口大小，0或空表示不扩展，1表示前后各扩展1片
      * @return 扩展后的分片列表副本
      */
-    public List<KnowledgeRecallHit> expandContextWindow(List<KnowledgeRecallHit> hits, Integer windowSize) {
+    public List<KnowledgeRecallHit> expandContextWindow(List<KnowledgeRecallHit> hits, Integer windowSize, boolean formal) {
         if (hits == null || hits.isEmpty() || windowSize == null || windowSize <= 0) {
             return hits == null ? List.of() : hits;
         }
         List<KnowledgeRecallHit> expandedHits = new ArrayList<>(hits.size());
-        for (var hit : hits) {
+        for (KnowledgeRecallHit hit : hits) {
             if (hit.getDocumentId() == null || hit.getChunkIndex() == null) {
                 expandedHits.add(hit);
                 continue;
@@ -114,7 +115,7 @@ public class KnowledgeRecallService {
             int minIdx = Math.max(0, hit.getChunkIndex() - windowSize);
             int maxIdx = hit.getChunkIndex() + windowSize;
             // 扩展时重新关联资料并执行同一框架权限规则，同时拒绝已变化的正文轮次。
-            var neighbors = mapper.selectContextList(hit.getDocumentId(), hit.getProcessingVersion(), minIdx, maxIdx);
+            List<KnowledgeRecallHit> neighbors = mapper.selectContextList(hit.getDocumentId(), hit.getProcessingVersion(), minIdx, maxIdx, formal);
             if (neighbors.isEmpty()) {
                 continue;
             }
@@ -127,7 +128,7 @@ public class KnowledgeRecallService {
     /** 只拼接本次SQL重新授权的相邻正文，不拼入旧候选快照中的文本。 */
     private String mergeContextContent(List<KnowledgeRecallHit> neighbors) {
         StringBuilder content = new StringBuilder();
-        for (var neighbor : neighbors) {
+        for (KnowledgeRecallHit neighbor : neighbors) {
             if (neighbor.getContent() != null && !neighbor.getContent().isBlank()) {
                 if (!content.isEmpty()) {
                     content.append("\n\n");

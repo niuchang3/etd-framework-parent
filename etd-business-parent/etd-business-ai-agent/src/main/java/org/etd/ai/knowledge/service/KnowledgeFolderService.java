@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import java.util.List;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 /** 知识库内部分类能力，不具有独立组织数据权限。 */
 // 分类无独立组织字段，查询通过关联知识库交由框架授权。
 @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base"))
@@ -20,16 +21,16 @@ public class KnowledgeFolderService {
     /** @param knowledgeBaseId 知识库 @param dataStatus 可选目录状态 @return 可见目录与必要祖先 */
     @DataPermission(tables = @DataPermissionTable(table = "ai_knowledge_base", publicColumn = KnowledgePolicy.PUBLIC_COLUMN))
     public List<KnowledgeFolderEntity> fetchFolderList(Long knowledgeBaseId, Integer dataStatus) {
-        var records = mapper.selectFolderList(knowledgeBaseId, dataStatus);
-        var scope = DataPermissionScope.current();
-        for (var folder : records) {
+        List<KnowledgeFolderEntity> records = mapper.selectFolderList(knowledgeBaseId, dataStatus);
+        DataPermissionScope scope = DataPermissionScope.current();
+        for (KnowledgeFolderEntity folder : records) {
             folder.setWritable(scope.canManage(folder.getPermissionOrgId(), folder.getPermissionCreateBy()));
         }
         return records;
     }
     /** @param id 分类ID @return 继承知识库维护资格的分类 */
     public KnowledgeFolderEntity requireWritable(Long id) {
-        var entity = mapper.selectWritable(id);
+        KnowledgeFolderEntity entity = mapper.selectWritable(id);
         if (entity == null) {
             throw new ApiRuntimeException("分类不存在或无知识库维护权限");
         }
@@ -44,7 +45,7 @@ public class KnowledgeFolderService {
     }
     /** @param id 分类 @param knowledgeBaseId 预期归属 @return 已授权分类 */
     public KnowledgeFolderEntity requireFolderByBase(Long id, Long knowledgeBaseId) {
-        var entity = requireWritable(id);
+        KnowledgeFolderEntity entity = requireWritable(id);
         if (!entity.getKnowledgeBaseId().equals(knowledgeBaseId)) {
             throw new ApiRuntimeException("分类不属于当前知识库");
         }
@@ -69,7 +70,7 @@ public class KnowledgeFolderService {
     }
     /** @param knowledgeBaseId 已校验维护权限且无文档的知识库，清理其分类。 */
     public void removeFolderList(Long knowledgeBaseId) {
-        var query = Wrappers.<KnowledgeFolderEntity>lambdaQuery()
+        LambdaQueryWrapper<KnowledgeFolderEntity> query = Wrappers.<KnowledgeFolderEntity>lambdaQuery()
                 .eq(KnowledgeFolderEntity::getKnowledgeBaseId, knowledgeBaseId);
         mapper.delete(query);
     }

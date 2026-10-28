@@ -38,7 +38,7 @@ public class EtdLogicDeleteInterceptor extends DataPermissionInterceptor {
         if (InterceptorIgnoreHelper.willIgnoreOthersByKey(statement.getId(), IGNORE_KEY)) {
             return;
         }
-        var sql = PluginUtils.mpBoundSql(boundSql);
+        PluginUtils.MPBoundSql sql = PluginUtils.mpBoundSql(boundSql);
         sql.sql(parserSingle(sql.sql(), statement.getId()));
     }
 

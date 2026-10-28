@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -84,7 +85,7 @@ class EventShardingYamlConfigurationTest {
 
     /** 只替换测试数据库连接与 schema，保留正式 YAML 的数据源名称和分片规则。 */
     private byte[] createTestYaml() throws Exception {
-        try (var inputStream = getClass().getClassLoader().getResourceAsStream("sharding-event-local.yaml")) {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("sharding-event-local.yaml")) {
             assertNotNull(inputStream);
             String yaml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8)
                     .replace("driverClassName: org.postgresql.Driver", "driverClassName: org.h2.Driver")

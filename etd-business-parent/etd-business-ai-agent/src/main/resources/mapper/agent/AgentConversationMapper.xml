@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.etd.ai.agent.mapper.AgentConversationMapper">
+    <insert id="insertConversation">
+        insert into ai_agent_conversation (id, tenant_id, agent_id, user_id, title, conversation_type)
+        values (#{e.id}, #{e.tenantId}, #{e.agentId}, #{e.userId}, #{e.title}, #{e.conversationType})
+    </insert>
+
+    <select id="selectOwned" resultType="org.etd.ai.agent.entity.AgentConversationEntity">
+        select id, tenant_id, agent_id, user_id, title, conversation_type,
+               last_message_time, create_time, update_time
+        from ai_agent_conversation
+        where id = #{id}
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
+          and del_flag = 0
+        <if test="lock">
+            for update
+        </if>
+    </select>
+
+    <select id="selectOwnedList" resultType="org.etd.ai.agent.entity.AgentConversationEntity">
+        select id, tenant_id, agent_id, user_id, title, conversation_type,
+               last_message_time, create_time, update_time
+        from ai_agent_conversation
+        where del_flag = 0
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
+        <if test="agentId != null">
+            and agent_id = #{agentId}
+        </if>
+        <if test="beforeId != null">
+            and id &lt; #{beforeId}
+        </if>
+        order by id desc
+        limit #{size}
+    </select>
+
+    <update id="updateLastMessageTime">
+        update ai_agent_conversation
+        set last_message_time = current_timestamp,
+            update_time = current_timestamp
+        where id = #{id}
+          and del_flag = 0
+    </update>
+</mapper>

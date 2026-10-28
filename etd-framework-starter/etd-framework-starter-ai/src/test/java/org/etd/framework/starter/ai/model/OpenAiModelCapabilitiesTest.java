@@ -38,6 +38,14 @@ import org.springframework.ai.openai.OpenAiAudioTranscriptionOptions;
 import org.springframework.ai.openai.OpenAiImageOptions;
 import org.springframework.ai.openai.OpenAiModerationOptions;
 import org.springframework.core.io.ByteArrayResource;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.io.OutputStream;
+import org.springframework.ai.audio.transcription.TranscriptionModel;
+import org.springframework.ai.audio.tts.TextToSpeechModel;
+import org.springframework.ai.audio.tts.TextToSpeechResponse;
+import org.springframework.ai.image.ImageModel;
+import org.springframework.ai.moderation.Moderation;
+import org.springframework.ai.moderation.ModerationModel;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -54,12 +62,12 @@ class OpenAiModelCapabilitiesTest {
     /** 模拟JSON、multipart上传和二进制音频端点；创建客户端本身不得触发请求。 */
     @BeforeEach
     void initialize() throws IOException {
-        var address = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         server = HttpServer.create(address, 0);
         server.createContext("/", this::respond);
         server.start();
         transport = new ModelClientTransport(properties);
-        var provider = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
+        OpenAiModelClientProvider provider = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
         List<ModelClientProvider> providers = List.of(provider);
         factory = new ModelClientFactory(providers);
         responseStatus = 200;
@@ -75,13 +83,13 @@ class OpenAiModelCapabilitiesTest {
     @ParameterizedTest
     @ValueSource(strings = {"/v1", "/proxy/openai/v1/", "/gateway/api"})
     void shouldCallNewCapabilitiesWithConfiguredApiRoot(String apiRoot) throws Exception {
-        var authorized = new AtomicInteger();
+        AtomicInteger authorized = new AtomicInteger();
         ModelConnectionResolver resolver = (tenant, id) -> {
             authorized.incrementAndGet();
-            var capability = ModelCapability.valueOf(id);
+            ModelCapability capability = ModelCapability.valueOf(id);
             return configuration(tenant, capability, apiRoot, "test-" + id);
         };
-        try (var registry = new ModelClientRegistry(factory, resolver, properties)) {
+        try (ModelClientRegistry registry = new ModelClientRegistry(factory, resolver, properties)) {
             callImage(registry);
             callTranscription(registry);
             callSpeech(registry);
@@ -96,53 +104,53 @@ class OpenAiModelCapabilitiesTest {
     }
 
     private void callImage(ModelClientRegistry registry) {
-        var model = registry.getImageModel("tenant", ModelCapability.IMAGE.name());
+        ImageModel model = registry.getImageModel("tenant", ModelCapability.IMAGE.name());
         assertThat(requests).isEmpty();
         assertThat(registry.getImageModel("tenant", ModelCapability.IMAGE.name())).isSameAs(model);
-        var prompt = new ImagePrompt("测试图片");
+        ImagePrompt prompt = new ImagePrompt("测试图片");
         assertThat(model.call(prompt).getResult().getOutput().getUrl()).isEqualTo("https://example.invalid/image.png");
     }
 
     private void callTranscription(ModelClientRegistry registry) {
-        var model = registry.getTranscriptionModel("tenant", ModelCapability.SPEECH_TO_TEXT.name());
+        TranscriptionModel model = registry.getTranscriptionModel("tenant", ModelCapability.SPEECH_TO_TEXT.name());
         assertThat(registry.getTranscriptionModel("tenant", ModelCapability.SPEECH_TO_TEXT.name())).isSameAs(model);
-        var audio = audioResource();
-        var prompt = new AudioTranscriptionPrompt(audio);
+        ByteArrayResource audio = audioResource();
+        AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audio);
         assertThat(model.call(prompt).getResult().getOutput()).isEqualTo("测试转录");
     }
 
     private void callSpeech(ModelClientRegistry registry) {
-        var model = registry.getTextToSpeechModel("tenant", ModelCapability.TEXT_TO_SPEECH.name());
+        TextToSpeechModel model = registry.getTextToSpeechModel("tenant", ModelCapability.TEXT_TO_SPEECH.name());
         assertThat(registry.getTextToSpeechModel("tenant", ModelCapability.TEXT_TO_SPEECH.name())).isSameAs(model);
-        var prompt = new TextToSpeechPrompt("测试合成");
+        TextToSpeechPrompt prompt = new TextToSpeechPrompt("测试合成");
         assertThat(model.call(prompt).getResult().getOutput()).isEqualTo(audioBytes());
-        var streamed = model.stream(prompt).collectList().block(Duration.ofSeconds(5));
+        List<TextToSpeechResponse> streamed = model.stream(prompt).collectList().block(Duration.ofSeconds(5));
         assertThat(streamed).isNotEmpty();
         int byteCount = 0;
-        for (var part : streamed) {
+        for (TextToSpeechResponse part : streamed) {
             byteCount += part.getResult().getOutput().length;
         }
         assertThat(byteCount).isEqualTo(audioBytes().length);
     }
 
     private void callModeration(ModelClientRegistry registry) {
-        var model = registry.getModerationModel("tenant", ModelCapability.MODERATION.name());
+        ModerationModel model = registry.getModerationModel("tenant", ModelCapability.MODERATION.name());
         assertThat(registry.getModerationModel("tenant", ModelCapability.MODERATION.name())).isSameAs(model);
-        var prompt = new ModerationPrompt("测试审核");
-        var output = model.call(prompt).getResult().getOutput();
+        ModerationPrompt prompt = new ModerationPrompt("测试审核");
+        Moderation output = model.call(prompt).getResult().getOutput();
         assertThat(output.getResults()).hasSize(1);
         assertThat(output.getResults().getFirst().isFlagged()).isFalse();
     }
 
     private void assertRequestModelsAndAuth() throws Exception {
-        for (var request : requests) {
+        for (Request request : requests) {
             assertThat(request.method()).isEqualTo("POST");
             if (request.path().endsWith("/audio/transcriptions")) {
                 assertThat(request.authorization()).isEqualTo("Bearer test-SPEECH_TO_TEXT");
                 assertThat(request.contentType()).startsWith("multipart/form-data;");
                 assertThat(request.body()).contains("filename=\"sample.wav\"", "test-SPEECH_TO_TEXT", "json");
             } else {
-                var body = json.readTree(request.body());
+                JsonNode body = json.readTree(request.body());
                 assertThat(request.authorization()).isEqualTo("Bearer " + body.get("model").asText());
             }
         }
@@ -152,14 +160,14 @@ class OpenAiModelCapabilitiesTest {
     @Test
     void shouldKeepRequestOptionsIsolatedWithoutAuthentication() throws Exception {
         ModelConnectionResolver resolver = (tenant, id) -> configuration(tenant, ModelCapability.valueOf(id), "/v1", null);
-        try (var registry = new ModelClientRegistry(factory, resolver, properties)) {
+        try (ModelClientRegistry registry = new ModelClientRegistry(factory, resolver, properties)) {
             callImageWithOptions(registry);
             callSpeechWithOptions(registry);
             callTranscriptionWithOptions(registry);
-            var moderation = registry.getModerationModel("tenant", "MODERATION");
-            var moderationOptions = OpenAiModerationOptions.builder().model("override-moderation").build();
-            var moderationPrompt = new ModerationPrompt("审核", moderationOptions);
-            var defaultModeration = new ModerationPrompt("默认审核");
+            ModerationModel moderation = registry.getModerationModel("tenant", "MODERATION");
+            OpenAiModerationOptions moderationOptions = OpenAiModerationOptions.builder().model("override-moderation").build();
+            ModerationPrompt moderationPrompt = new ModerationPrompt("审核", moderationOptions);
+            ModerationPrompt defaultModeration = new ModerationPrompt("默认审核");
             moderation.call(moderationPrompt);
             moderation.call(defaultModeration);
             assertThat(requests).allSatisfy(request -> assertThat(request.authorization()).isNull());
@@ -168,29 +176,29 @@ class OpenAiModelCapabilitiesTest {
     }
 
     private void callImageWithOptions(ModelClientRegistry registry) {
-        var image = registry.getImageModel("tenant", "IMAGE");
-        var options = OpenAiImageOptions.builder().model("override-image").width(1024).height(1024).build();
-        var prompt = new ImagePrompt("图片", options);
-        var defaultPrompt = new ImagePrompt("默认图片");
+        ImageModel image = registry.getImageModel("tenant", "IMAGE");
+        OpenAiImageOptions options = OpenAiImageOptions.builder().model("override-image").width(1024).height(1024).build();
+        ImagePrompt prompt = new ImagePrompt("图片", options);
+        ImagePrompt defaultPrompt = new ImagePrompt("默认图片");
         image.call(prompt);
         image.call(defaultPrompt);
     }
 
     private void callSpeechWithOptions(ModelClientRegistry registry) {
-        var speech = registry.getTextToSpeechModel("tenant", "TEXT_TO_SPEECH");
-        var options = OpenAiAudioSpeechOptions.builder().model("override-speech").voice("nova").build();
-        var prompt = new TextToSpeechPrompt("音频", options);
-        var defaultPrompt = new TextToSpeechPrompt("默认音频");
+        TextToSpeechModel speech = registry.getTextToSpeechModel("tenant", "TEXT_TO_SPEECH");
+        OpenAiAudioSpeechOptions options = OpenAiAudioSpeechOptions.builder().model("override-speech").voice("nova").build();
+        TextToSpeechPrompt prompt = new TextToSpeechPrompt("音频", options);
+        TextToSpeechPrompt defaultPrompt = new TextToSpeechPrompt("默认音频");
         speech.call(prompt);
         speech.call(defaultPrompt);
     }
 
     private void callTranscriptionWithOptions(ModelClientRegistry registry) {
-        var transcription = registry.getTranscriptionModel("tenant", "SPEECH_TO_TEXT");
-        var options = OpenAiAudioTranscriptionOptions.builder().model("override-transcription").language("zh").build();
-        var audio = audioResource();
-        var prompt = new AudioTranscriptionPrompt(audio, options);
-        var defaultPrompt = new AudioTranscriptionPrompt(audio);
+        TranscriptionModel transcription = registry.getTranscriptionModel("tenant", "SPEECH_TO_TEXT");
+        OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder().model("override-transcription").language("zh").build();
+        ByteArrayResource audio = audioResource();
+        AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audio, options);
+        AudioTranscriptionPrompt defaultPrompt = new AudioTranscriptionPrompt(audio);
         transcription.call(prompt);
         transcription.call(defaultPrompt);
     }
@@ -210,10 +218,10 @@ class OpenAiModelCapabilitiesTest {
     /** 协议能力必须明确白名单，新增枚举不能让其他协议错误进入向量分支。 */
     @Test
     void shouldRejectUnsupportedProtocolCapabilitiesBeforeResolvingCredentials() {
-        var openai = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
-        var dashscope = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
-        var ollama = new OllamaModelClientProvider(transport, ObservationRegistry.NOOP);
-        for (var capability : ModelCapability.values()) {
+        OpenAiModelClientProvider openai = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
+        DashScopeModelClientProvider dashscope = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
+        OllamaModelClientProvider ollama = new OllamaModelClientProvider(transport, ObservationRegistry.NOOP);
+        for (ModelCapability capability : ModelCapability.values()) {
             assertThat(openai.supports(ModelClientProtocol.OPENAI_COMPATIBLE, capability))
                     .isEqualTo(capability != ModelCapability.RERANK);
             assertThat(dashscope.supports(ModelClientProtocol.DASHSCOPE, capability))
@@ -222,8 +230,8 @@ class OpenAiModelCapabilitiesTest {
             assertThat(ollama.supports(ModelClientProtocol.OLLAMA, capability))
                     .isEqualTo(capability == ModelCapability.CHAT || capability == ModelCapability.EMBEDDING);
         }
-        var root = URI.create("https://example.invalid/v1");
-        var unsupported = new ModelConnectionConfiguration("tenant", "connection", 1, true, ModelClientProtocol.OLLAMA,
+        URI root = URI.create("https://example.invalid/v1");
+        ModelConnectionConfiguration unsupported = new ModelConnectionConfiguration("tenant", "connection", 1, true, ModelClientProtocol.OLLAMA,
                 ModelCapability.IMAGE, "test", root, () -> { throw new AssertionError("不支持的组合不得读取凭证"); });
         assertThatThrownBy(() -> factory.create(unsupported)).hasMessageContaining("没有支持");
         assertThatThrownBy(() -> ollama.create(unsupported)).hasMessageContaining("不支持");
@@ -237,9 +245,9 @@ class OpenAiModelCapabilitiesTest {
     @ValueSource(strings = {"IMAGE", "SPEECH_TO_TEXT", "TEXT_TO_SPEECH", "MODERATION"})
     void shouldNotRetryFailedCalls(String capabilityName) {
         responseStatus = 500;
-        var capability = ModelCapability.valueOf(capabilityName);
+        ModelCapability capability = ModelCapability.valueOf(capabilityName);
         ModelConnectionResolver resolver = (tenant, id) -> configuration(tenant, capability, "/v1", null);
-        try (var registry = new ModelClientRegistry(factory, resolver, properties)) {
+        try (ModelClientRegistry registry = new ModelClientRegistry(factory, resolver, properties)) {
             assertThatThrownBy(() -> callCapability(registry, capability)).isInstanceOf(RuntimeException.class);
             assertThat(requests).hasSize(1);
         }
@@ -248,20 +256,20 @@ class OpenAiModelCapabilitiesTest {
     private void callCapability(ModelClientRegistry registry, ModelCapability capability) {
         switch (capability) {
             case IMAGE -> {
-                var prompt = new ImagePrompt("测试");
+                ImagePrompt prompt = new ImagePrompt("测试");
                 registry.getImageModel("tenant", "IMAGE").call(prompt);
             }
             case SPEECH_TO_TEXT -> {
-                var audio = audioResource();
-                var prompt = new AudioTranscriptionPrompt(audio);
+                ByteArrayResource audio = audioResource();
+                AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audio);
                 registry.getTranscriptionModel("tenant", "SPEECH_TO_TEXT").call(prompt);
             }
             case TEXT_TO_SPEECH -> {
-                var prompt = new TextToSpeechPrompt("测试");
+                TextToSpeechPrompt prompt = new TextToSpeechPrompt("测试");
                 registry.getTextToSpeechModel("tenant", "TEXT_TO_SPEECH").call(prompt);
             }
             case MODERATION -> {
-                var prompt = new ModerationPrompt("测试");
+                ModerationPrompt prompt = new ModerationPrompt("测试");
                 registry.getModerationModel("tenant", "MODERATION").call(prompt);
             }
             default -> throw new IllegalArgumentException("非本次测试能力");
@@ -269,13 +277,13 @@ class OpenAiModelCapabilitiesTest {
     }
 
     private ModelConnectionConfiguration configuration(String tenant, ModelCapability capability, String apiRoot, String key) {
-        var uri = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + apiRoot);
+        URI uri = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + apiRoot);
         return new ModelConnectionConfiguration(tenant, capability.name(), 1, true, ModelClientProtocol.OPENAI_COMPATIBLE,
                 capability, "test-" + capability.name(), uri, () -> key);
     }
 
     private ByteArrayResource audioResource() {
-        var bytes = audioBytes();
+        byte[] bytes = audioBytes();
         return new ByteArrayResource(bytes) {
             @Override
             public String getFilename() { return "sample.wav"; }
@@ -287,7 +295,7 @@ class OpenAiModelCapabilitiesTest {
     private void respond(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        var request = new Request(exchange.getRequestMethod(), path, exchange.getRequestHeaders().getFirst("Authorization"),
+        Request request = new Request(exchange.getRequestMethod(), path, exchange.getRequestHeaders().getFirst("Authorization"),
                 exchange.getRequestHeaders().getFirst("Content-Type"), body);
         requests.add(request);
         byte[] response;
@@ -301,7 +309,7 @@ class OpenAiModelCapabilitiesTest {
         String contentType = path.endsWith("/audio/speech") && responseStatus == 200 ? "audio/mpeg" : "application/json";
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(responseStatus, response.length);
-        try (var output = exchange.getResponseBody()) { output.write(response); }
+        try (OutputStream output = exchange.getResponseBody()) { output.write(response); }
     }
 
     private String responseBody(String path) {

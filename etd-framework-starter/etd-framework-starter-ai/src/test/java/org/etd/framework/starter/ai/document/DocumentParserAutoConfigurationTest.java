@@ -30,8 +30,8 @@ class DocumentParserAutoConfigurationTest {
                 "etd.ai.document.docling.base-url=http://127.0.0.1:1")
                 .run(context -> {
                     assertThat(context).hasNotFailed().hasSingleBean(DoclingDocumentParser.class);
-                    var parser = context.getBean(DoclingDocumentParser.class);
-                    var registry = context.getBean(DocumentParserRegistry.class);
+                    DoclingDocumentParser parser = context.getBean(DoclingDocumentParser.class);
+                    DocumentParserRegistry registry = context.getBean(DocumentParserRegistry.class);
                     assertThat(registry.require(DoclingDocumentParser.ENGINE)).isSameAs(parser);
                 });
     }
@@ -48,7 +48,7 @@ class DocumentParserAutoConfigurationTest {
 
     @Test
     void explicitParserReplacesDefaultWithoutRequiringConnectionProperties() {
-        var parser = mock(DoclingDocumentParser.class);
+        DoclingDocumentParser parser = mock(DoclingDocumentParser.class);
         when(parser.engine()).thenReturn(DoclingDocumentParser.ENGINE);
         runner.withBean(DoclingDocumentParser.class, () -> parser)
                 .withPropertyValues("etd.ai.document.docling.enabled=true")

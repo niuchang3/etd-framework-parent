@@ -14,6 +14,7 @@ import org.etd.framework.starter.ai.document.model.DocumentBlock;
 import org.etd.framework.starter.ai.document.model.DocumentChunk;
 import org.etd.framework.starter.ai.document.model.DocumentChunkParameters;
 import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
+import org.etd.framework.starter.ai.document.model.DocumentSourceLocation;
 
 /** 自动生成结果的重叠处理：只读取原始前片，保留正文和来源，不参与人工编辑流程。 */
 @Slf4j
@@ -34,13 +35,13 @@ public final class DocumentChunkOverlapProcessor {
         if (requested == 0 || chunks.isEmpty()) {
             return chunks;
         }
-        var sourceById = indexBlocksById(blocks);
+        Map<String, DocumentBlock> sourceById = indexBlocksById(blocks);
         List<DocumentChunk> result = new ArrayList<>();
         int applied = 0;
         for (int index = 0; index < chunks.size(); index++) {
-            var current = chunks.get(index);
-            var previous = index == 0 ? null : chunks.get(index - 1);
-            var overlapped = applyToChunk(current, previous, sourceById, parameters);
+            DocumentChunk current = chunks.get(index);
+            DocumentChunk previous = index == 0 ? null : chunks.get(index - 1);
+            DocumentChunk overlapped = applyToChunk(current, previous, sourceById, parameters);
             if (overlapped != current) {
                 applied++;
             }
@@ -62,7 +63,7 @@ public final class DocumentChunkOverlapProcessor {
             throw new DocumentChunkException(Reason.OVERLAP_CORE_TOO_LARGE);
         }
         int budget = resolveOverlapBudget(parameters.basic().overlapTokens(), limit, coreTokens);
-        var tail = budget == 0 ? null : resolveSourceTail(previous, current, sourceById, budget);
+        SourceTail tail = budget == 0 ? null : resolveSourceTail(previous, current, sourceById, budget);
         String prefix = tail == null ? "" : selectPrefix(tail.text(), current.rawText(), budget, limit);
         return prefix.isEmpty() ? current : prependOverlap(current, previous, tail, prefix);
     }
@@ -89,15 +90,15 @@ public final class DocumentChunkOverlapProcessor {
         String remaining = raw;
         List<SourceSpan> spans = new ArrayList<>();
         int start = raw.length();
-        var refs = previous.documentItemRefs();
+        List<String> refs = previous.documentItemRefs();
         for (int index = refs.size() - 1; index >= 0 && !remaining.isEmpty(); index--) {
-            var block = sourceById.get(refs.get(index));
+            DocumentBlock block = sourceById.get(refs.get(index));
             String matched = resolveBlockTail(remaining, block);
             if (matched == null) {
                 break;
             }
             start = remaining.length() - matched.length();
-            var span = new SourceSpan(block, remaining.length());
+            SourceSpan span = new SourceSpan(block, remaining.length());
             spans.addFirst(span);
             // 候选已覆盖Token窗口后无需继续扫描更早的来源，避免大文档反复对齐无关正文。
             if (DocumentTokenCounter.count(raw.substring(start)) >= budget) {
@@ -126,7 +127,7 @@ public final class DocumentChunkOverlapProcessor {
 
     /** Markdown加粗、内联标记和换行空格只用于对齐；返回的始终是原始正文，不改写格式或内容。 */
     private String resolveFormattedTail(String raw, String source) {
-        var normalizedRaw = normalizeForAlignment(raw);
+        AlignedText normalizedRaw = normalizeForAlignment(raw);
         String normalizedSource = normalizeForAlignment(source).value();
         if (normalizedSource.isEmpty() || normalizedRaw.value().isEmpty()) {
             return null;
@@ -152,7 +153,7 @@ public final class DocumentChunkOverlapProcessor {
 
     /** 忽略Docling序列化新增的内联标记和空白，并保存每个UTF-16字符在原文中的位置。 */
     private AlignedText normalizeForAlignment(String text) {
-        var value = new StringBuilder(text.length());
+        StringBuilder value = new StringBuilder(text.length());
         int[] offsets = new int[text.length()];
         for (int index = 0; index < text.length(); index++) {
             char character = text.charAt(index);
@@ -312,27 +313,27 @@ public final class DocumentChunkOverlapProcessor {
     private DocumentChunk prependOverlap(DocumentChunk current, DocumentChunk previous, SourceTail tail, String prefix) {
         String raw = prefix + SEPARATOR + current.rawText();
         String text = prefix + SEPARATOR + (current.text() == null ? current.rawText() : current.text());
-        var headings = mergeValues(previous.headings(), current.headings());
+        List<String> headings = mergeValues(previous.headings(), current.headings());
         int prefixStart = tail.start() + tail.text().length() - prefix.length();
         List<String> sourceRefs = new ArrayList<>();
         List<Integer> sourcePages = new ArrayList<>();
-        for (var span : tail.spans()) {
+        for (SourceSpan span : tail.spans()) {
             if (span.end() <= prefixStart) {
                 continue;
             }
             sourceRefs.add(span.block().id());
-            for (var location : span.block().locations()) {
+            for (DocumentSourceLocation location : span.block().locations()) {
                 sourcePages.add(location.page());
             }
         }
-        var refs = mergeValues(sourceRefs, current.documentItemRefs());
-        var pages = mergeValues(sourcePages, current.pageNumbers());
+        List<String> refs = mergeValues(sourceRefs, current.documentItemRefs());
+        List<Integer> pages = mergeValues(sourcePages, current.pageNumbers());
         return new DocumentChunk(current.filename(), current.index(), text, raw, DocumentTokenCounter.count(raw),
                 headings, current.captions(), refs, pages, current.metadata());
     }
 
     private <T> List<T> mergeValues(List<T> first, List<T> second) {
-        var values = new LinkedHashSet<>(first);
+        LinkedHashSet<T> values = new LinkedHashSet<>(first);
         values.addAll(second);
         return List.copyOf(values);
     }

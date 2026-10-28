@@ -86,6 +86,9 @@ public final class HeaderConstant {
      */
     public static final String CONTENT_DISPOSITION = "Content-Disposition";
 
+    /** Nginx代理响应缓冲开关，SSE使用no以即时传递增量。 */
+    public static final String X_ACCEL_BUFFERING = "X-Accel-Buffering";
+
     /**
      * RabbitMQ 延迟队列消息头
      */

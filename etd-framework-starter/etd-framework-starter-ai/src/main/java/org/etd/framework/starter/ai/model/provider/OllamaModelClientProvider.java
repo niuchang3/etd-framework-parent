@@ -15,6 +15,9 @@ import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.ollama.management.ModelManagementOptions;
 import org.springframework.ai.ollama.management.PullModelStrategy;
 import org.springframework.util.StringUtils;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /** Ollama原生SDK适配；禁止初始化时拉取模型，服务端须已部署所选模型。 */
 public class OllamaModelClientProvider implements ModelClientProvider {
@@ -40,23 +43,23 @@ public class OllamaModelClientProvider implements ModelClientProvider {
             throw new IllegalArgumentException("Ollama适配器不支持该模型能力");
         }
         String secret = configuration.resolveApiKey();
-        var rest = transport.restClientBuilder();
-        var web = transport.webClientBuilder();
+        RestClient.Builder rest = transport.restClientBuilder();
+        WebClient.Builder web = transport.webClientBuilder();
         if (StringUtils.hasText(secret)) {
             rest.defaultHeaders(headers -> headers.setBearerAuth(secret));
             web.defaultHeaders(headers -> headers.setBearerAuth(secret));
         }
-        var api = OllamaApi.builder().baseUrl(configuration.baseUrl().toString())
+        OllamaApi api = OllamaApi.builder().baseUrl(configuration.baseUrl().toString())
                 .restClientBuilder(rest).webClientBuilder(web).build();
-        var management = ModelManagementOptions.builder().pullModelStrategy(PullModelStrategy.NEVER).build();
+        ModelManagementOptions management = ModelManagementOptions.builder().pullModelStrategy(PullModelStrategy.NEVER).build();
         Model<?, ?> model;
         if (configuration.capability() == ModelCapability.CHAT) {
-            var options = OllamaChatOptions.builder().model(configuration.model()).build();
-            var retry = transport.retryTemplate();
+            OllamaChatOptions options = OllamaChatOptions.builder().model(configuration.model()).build();
+            RetryTemplate retry = transport.retryTemplate();
             model = OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).modelManagementOptions(management)
                     .retryTemplate(retry).observationRegistry(observations).build();
         } else {
-            var options = OllamaEmbeddingOptions.builder().model(configuration.model()).truncate(false).build();
+            OllamaEmbeddingOptions options = OllamaEmbeddingOptions.builder().model(configuration.model()).truncate(false).build();
             model = OllamaEmbeddingModel.builder().ollamaApi(api).defaultOptions(options)
                     .modelManagementOptions(management).observationRegistry(observations).build();
         }

@@ -32,6 +32,8 @@ import org.springframework.ai.openai.api.OpenAiModerationApi;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilder;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * 使用OpenAI原生SDK创建聊天、向量、图像、音频和审核客户端，不猜测独立重排协议。
@@ -84,72 +86,72 @@ public class OpenAiModelClientProvider implements ModelClientProvider {
     }
 
     private OpenAiApi createApi(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var rest = transport.restClientBuilder();
-        var web = transport.webClientBuilder();
+        RestClient.Builder rest = transport.restClientBuilder();
+        WebClient.Builder web = transport.webClientBuilder();
         return OpenAiApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
                 .completionsPath(CHAT_PATH).embeddingsPath(EMBEDDING_PATH)
                 .restClientBuilder(rest).webClientBuilder(web).build();
     }
 
     private OpenAiChatModel createChat(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var api = createApi(configuration, apiKey);
-        var retry = transport.retryTemplate();
-        var options = OpenAiChatOptions.builder().model(configuration.model()).build();
+        OpenAiApi api = createApi(configuration, apiKey);
+        RetryTemplate retry = transport.retryTemplate();
+        OpenAiChatOptions options = OpenAiChatOptions.builder().model(configuration.model()).build();
         return OpenAiChatModel.builder().openAiApi(api).defaultOptions(options)
                 .retryTemplate(retry).observationRegistry(observations).build();
     }
 
     private OpenAiEmbeddingModel createEmbedding(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var api = createApi(configuration, apiKey);
-        var retry = transport.retryTemplate();
-        var options = OpenAiEmbeddingOptions.builder().model(configuration.model()).build();
+        OpenAiApi api = createApi(configuration, apiKey);
+        RetryTemplate retry = transport.retryTemplate();
+        OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder().model(configuration.model()).build();
         return new OpenAiEmbeddingModel(api, MetadataMode.EMBED, options, retry, observations);
     }
 
     private OpenAiImageModel createImage(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var rest = transport.restClientBuilder();
-        var api = OpenAiImageApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
+        RestClient.Builder rest = transport.restClientBuilder();
+        OpenAiImageApi api = OpenAiImageApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
                 .imagesPath(IMAGE_PATH).restClientBuilder(rest).build();
-        var options = OpenAiImageOptions.builder().model(configuration.model()).build();
-        var retry = transport.retryTemplate();
+        OpenAiImageOptions options = OpenAiImageOptions.builder().model(configuration.model()).build();
+        RetryTemplate retry = transport.retryTemplate();
         return new OpenAiImageModel(api, options, retry, observations);
     }
 
     /** 沿用SDK的alloy音色与MP3格式；单次请求可覆盖，不保存单次合成内容。 */
     private OpenAiAudioSpeechModel createSpeech(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var api = createAudioApi(configuration, apiKey);
-        var options = OpenAiAudioSpeechOptions.builder().model(configuration.model())
+        OpenAiAudioApi api = createAudioApi(configuration, apiKey);
+        OpenAiAudioSpeechOptions options = OpenAiAudioSpeechOptions.builder().model(configuration.model())
                 .voice(OpenAiAudioApi.SpeechRequest.Voice.ALLOY)
                 .responseFormat(OpenAiAudioApi.SpeechRequest.AudioResponseFormat.MP3).build();
-        var retry = transport.retryTemplate();
+        RetryTemplate retry = transport.retryTemplate();
         return new OpenAiAudioSpeechModel(api, options, retry);
     }
 
     private OpenAiAudioTranscriptionModel createTranscription(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var api = createAudioApi(configuration, apiKey);
+        OpenAiAudioApi api = createAudioApi(configuration, apiKey);
         // SDK根据响应格式选择反序列化类型，默认显式使用JSON，避免空格式导致调用失败。
-        var options = OpenAiAudioTranscriptionOptions.builder().model(configuration.model())
+        OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder().model(configuration.model())
                 .responseFormat(OpenAiAudioApi.TranscriptResponseFormat.JSON).build();
-        var retry = transport.retryTemplate();
+        RetryTemplate retry = transport.retryTemplate();
         return new OpenAiAudioTranscriptionModel(api, options, retry);
     }
 
     private OpenAiAudioApi createAudioApi(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var uris = new ApiRootUriBuilderFactory(configuration.baseUrl().toString());
-        var rest = transport.restClientBuilder().uriBuilderFactory(uris);
-        var web = transport.webClientBuilder().uriBuilderFactory(uris);
+        ApiRootUriBuilderFactory uris = new ApiRootUriBuilderFactory(configuration.baseUrl().toString());
+        RestClient.Builder rest = transport.restClientBuilder().uriBuilderFactory(uris);
+        WebClient.Builder web = transport.webClientBuilder().uriBuilderFactory(uris);
         return OpenAiAudioApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
                 .restClientBuilder(rest).webClientBuilder(web).build();
     }
 
     private OpenAiModerationModel createModeration(ModelConnectionConfiguration configuration, ApiKey apiKey) {
-        var uris = new ApiRootUriBuilderFactory(configuration.baseUrl().toString());
-        var rest = transport.restClientBuilder().uriBuilderFactory(uris);
-        var api = OpenAiModerationApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
+        ApiRootUriBuilderFactory uris = new ApiRootUriBuilderFactory(configuration.baseUrl().toString());
+        RestClient.Builder rest = transport.restClientBuilder().uriBuilderFactory(uris);
+        OpenAiModerationApi api = OpenAiModerationApi.builder().baseUrl(configuration.baseUrl().toString()).apiKey(apiKey)
                 .restClientBuilder(rest).build();
-        var retry = transport.retryTemplate();
-        var options = OpenAiModerationOptions.builder().model(configuration.model()).build();
-        var model = new ConnectionModerationModel(api, retry);
+        RetryTemplate retry = transport.retryTemplate();
+        OpenAiModerationOptions options = OpenAiModerationOptions.builder().model(configuration.model()).build();
+        ConnectionModerationModel model = new ConnectionModerationModel(api, retry);
         // 仅在尚未发布到缓存前设置默认项，业务调用期间不得修改共享模型配置。
         return model.withDefaultOptions(options);
     }
@@ -164,7 +166,7 @@ public class OpenAiModelClientProvider implements ModelClientProvider {
         @Override
         public ModerationResponse call(ModerationPrompt prompt) {
             if (prompt.getOptions() == null || prompt.getOptions().getModel() == null) {
-                var defaultPrompt = new ModerationPrompt(prompt.getInstructions(), null);
+                ModerationPrompt defaultPrompt = new ModerationPrompt(prompt.getInstructions(), null);
                 return super.call(defaultPrompt);
             }
             return super.call(prompt);

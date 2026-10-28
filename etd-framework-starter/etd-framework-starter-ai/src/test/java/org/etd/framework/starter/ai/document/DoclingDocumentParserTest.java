@@ -42,6 +42,14 @@ import org.etd.framework.starter.ai.document.model.HybridDocumentChunkOptions;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mapstruct.factory.Mappers;
 import org.springframework.core.io.ByteArrayResource;
+import java.io.OutputStream;
+import org.etd.framework.starter.ai.document.model.DocumentBlock;
+import org.etd.framework.starter.ai.document.model.DocumentChunk;
+import org.etd.framework.starter.ai.document.model.DocumentChunkResult;
+import org.etd.framework.starter.ai.document.model.DocumentParseResult;
+import org.etd.framework.starter.ai.document.model.DocumentParseTask;
+import org.etd.framework.starter.ai.document.model.DocumentSourceLocation;
+import org.etd.framework.starter.ai.document.model.DocumentTableCell;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -61,7 +69,7 @@ class DoclingDocumentParserTest {
 
     @BeforeEach
     void startServer() throws IOException {
-        var address = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         server = HttpServer.create(address, 0);
         server.createContext("/", this::respond);
         server.start();
@@ -78,8 +86,8 @@ class DoclingDocumentParserTest {
         responseBody = """
                 {"task_id":"task-1","task_status":"pending","task_position":2}
                 """;
-        var request = request("sample.pdf");
-        var task = parser.submit(request);
+        DocumentParseRequest request = request("sample.pdf");
+        DocumentParseTask task = parser.submit(request);
         assertThat(task.engine()).isEqualTo(DoclingDocumentParser.ENGINE);
         assertThat(task.status()).isEqualTo(DocumentTaskStatus.PENDING);
         assertThat(task.queuePosition()).isEqualTo(2);
@@ -96,7 +104,7 @@ class DoclingDocumentParserTest {
     @Test
     void fetchStatusIsOneRequestAndPreservesFailure() {
         responseBody = "{\"task_id\":\"task-1\",\"task_status\":\"failure\"}";
-        var task = parser.fetchStatus("task-1");
+        DocumentParseTask task = parser.fetchStatus("task-1");
         assertThat(task.status()).isEqualTo(DocumentTaskStatus.FAILED);
         assertThat(paths).containsExactly("/v1/status/poll/task-1?wait=0");
     }
@@ -104,22 +112,22 @@ class DoclingDocumentParserTest {
     @Test
     void resultPreservesPartialSuccessReadingOrderTablesAndCoordinates() {
         responseBody = resultResponse("partial_success");
-        var result = parser.fetchResult("task-1");
+        DocumentParseResult result = parser.fetchResult("task-1");
         assertThat(result.status()).isEqualTo(DocumentParseStatus.PARTIAL_SUCCESS);
         assertThat(result.markdown()).isEqualTo("# 标题");
         assertThat(result.warnings()).containsExactly("部分页面无法识别");
         assertThat(result.blocks()).extracting(block -> block.id())
                 .containsExactly("#/texts/1", "#/tables/0", "#/texts/0");
-        var heading = result.blocks().getFirst();
+        DocumentBlock heading = result.blocks().getFirst();
         assertThat(heading.type()).isEqualTo(DocumentBlockType.HEADING);
         assertThat(heading.headingLevel()).isEqualTo(2);
-        var position = heading.locations().getFirst();
+        DocumentSourceLocation position = heading.locations().getFirst();
         assertThat(position.page()).isEqualTo(1);
         assertThat(position.top()).isEqualTo(20);
         assertThat(position.bottom()).isEqualTo(40);
         assertThat(position.pageHeight()).isEqualTo(800);
         assertThat(result.blocks().get(1).tableData().rowCount()).isEqualTo(1);
-        var cell = result.blocks().get(1).tableData().cells().getFirst();
+        DocumentTableCell cell = result.blocks().get(1).tableData().cells().getFirst();
         assertThat(cell.text()).isEqualTo("单元格");
         assertThat(cell.firstColumn()).isEqualTo(0);
         assertThat(cell.endColumn()).isEqualTo(2);
@@ -131,7 +139,7 @@ class DoclingDocumentParserTest {
     @Test
     void failureWithoutDocumentRemainsAnExplicitResult() {
         responseBody = "{\"status\":\"failure\",\"errors\":[]}";
-        var result = parser.fetchResult("task-1");
+        DocumentParseResult result = parser.fetchResult("task-1");
         assertThat(result.status()).isEqualTo(DocumentParseStatus.FAILURE);
         assertThat(result.blocks()).isEmpty();
     }
@@ -166,10 +174,10 @@ class DoclingDocumentParserTest {
 
     @Test
     void validatesFileSizeFormatAndTaskIdBeforeNetworkCall() {
-        var largeRequest = request("sample.pdf");
-        var smallParser = createParser(2);
+        DocumentParseRequest largeRequest = request("sample.pdf");
+        DoclingDocumentParser smallParser = createParser(2);
         assertThatThrownBy(() -> smallParser.submit(largeRequest)).isInstanceOf(IllegalArgumentException.class);
-        var unsupportedRequest = request("sample.exe");
+        DocumentParseRequest unsupportedRequest = request("sample.exe");
         assertThatThrownBy(() -> parser.submit(unsupportedRequest)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> parser.fetchStatus("../other")).isInstanceOf(IllegalArgumentException.class);
         assertThat(paths).isEmpty();
@@ -180,7 +188,7 @@ class DoclingDocumentParserTest {
         responseDelayMillis = 300;
         responseBody = "{\"task_id\":\"task-1\",\"task_status\":\"pending\"}";
         Duration timeout = Duration.ofMillis(50);
-        var shortTimeoutParser = createParser(1024, timeout);
+        DoclingDocumentParser shortTimeoutParser = createParser(1024, timeout);
         assertThatThrownBy(() -> shortTimeoutParser.fetchStatus("task-1"))
                 .isInstanceOf(DocumentParseException.class);
     }
@@ -190,7 +198,7 @@ class DoclingDocumentParserTest {
         responseStatus = 307;
         redirect = "/unexpected-target";
         responseBody = "redirect";
-        var request = request("sample.pdf");
+        DocumentParseRequest request = request("sample.pdf");
         assertThatThrownBy(() -> parser.submit(request)).isInstanceOf(DocumentParseException.class);
         assertThat(paths).containsExactly("/v1/convert/source/async");
     }
@@ -208,12 +216,12 @@ class DoclingDocumentParserTest {
     void synchronousChunkingPreservesOptionsAndContext(DocumentChunkStrategy strategy) throws Exception {
         responseBody = chunkResponse(true);
         DocumentChunkRequest request = chunkRequest(strategy, true);
-        var result = parser.chunk(request);
+        DocumentChunkResult result = parser.chunk(request);
         String expectedPath = "/v1/chunk/" + strategy.getCode() + "/source";
         assertThat(paths).containsExactly(expectedPath);
         assertThat(requestBody.path("include_converted_doc").asBoolean()).isTrue();
         assertThat(requestBody.path("convert_options").path("do_ocr").asBoolean()).isTrue();
-        var options = requestBody.path("chunking_options");
+        JsonNode options = requestBody.path("chunking_options");
         assertThat(options.path("chunker").asText()).isEqualTo(strategy.getCode());
         assertThat(options.path("use_markdown_tables").asBoolean()).isTrue();
         assertThat(options.path("include_raw_text").asBoolean()).isTrue();
@@ -222,7 +230,7 @@ class DoclingDocumentParserTest {
             assertThat(options.path("tokenizer").asText()).isEqualTo("test-tokenizer");
             assertThat(options.path("merge_peers").asBoolean()).isFalse();
         }
-        var chunk = result.chunks().getFirst();
+        DocumentChunk chunk = result.chunks().getFirst();
         assertThat(chunk.index()).isZero();
         assertThat(chunk.text()).isEqualTo("标题\n正文");
         assertThat(chunk.rawText()).isEqualTo("正文");
@@ -232,7 +240,7 @@ class DoclingDocumentParserTest {
         assertThat(chunk.documentItemRefs()).containsExactly("#/texts/0");
         assertThat(chunk.pageNumbers()).containsExactly(1);
         assertThat(chunk.metadata()).containsEntry("custom", "retained");
-        var original = result.documents().getFirst().result();
+        DocumentParseResult original = result.documents().getFirst().result();
         assertThat(original.status()).isEqualTo(DocumentParseStatus.PARTIAL_SUCCESS);
         assertThat(original.blocks()).hasSize(3);
         assertThat(original.warnings()).containsExactly("部分页面无法识别");
@@ -243,15 +251,15 @@ class DoclingDocumentParserTest {
     @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void asynchronousChunkSubmissionDoesNotPollAndUsesChunkResult(DocumentChunkStrategy strategy) throws Exception {
         responseBody = "{\"task_id\":\"chunk-1\",\"task_type\":\"chunk\",\"task_status\":\"pending\"}";
-        var request = chunkRequest(strategy, false);
-        var task = parser.submitChunk(request);
+        DocumentChunkRequest request = chunkRequest(strategy, false);
+        DocumentParseTask task = parser.submitChunk(request);
         assertThat(task.status()).isEqualTo(DocumentTaskStatus.PENDING);
         String submitPath = "/v1/chunk/" + strategy.getCode() + "/source/async";
         assertThat(paths).containsExactly(submitPath);
         responseBody = "{\"task_id\":\"chunk-1\",\"task_type\":\"chunk\",\"task_status\":\"success\"}";
         assertThat(parser.fetchStatus("chunk-1").status()).isEqualTo(DocumentTaskStatus.COMPLETED);
         responseBody = chunkResponse(false);
-        var result = parser.fetchChunkResult("chunk-1");
+        DocumentChunkResult result = parser.fetchChunkResult("chunk-1");
         assertThat(result.chunks()).hasSize(1);
         assertThat(result.documents()).isEmpty();
         assertThat(paths).containsExactly(submitPath, "/v1/status/poll/chunk-1?wait=0", "/v1/result/chunk-1");
@@ -260,11 +268,11 @@ class DoclingDocumentParserTest {
     @Test
     void preservesServiceDefaultsForOptionalHybridSettings() throws Exception {
         responseBody = chunkResponse(false);
-        var options = new HybridDocumentChunkOptions(false, false, null, null, null, null, null);
-        var document = request("sample.pdf");
-        var request = new DocumentChunkRequest(document, options, false);
+        HybridDocumentChunkOptions options = new HybridDocumentChunkOptions(false, false, null, null, null, null, null);
+        DocumentParseRequest document = request("sample.pdf");
+        DocumentChunkRequest request = new DocumentChunkRequest(document, options, false);
         parser.chunk(request);
-        var payload = requestBody.path("chunking_options");
+        JsonNode payload = requestBody.path("chunking_options");
         assertThat(payload.has("max_tokens")).isFalse();
         assertThat(payload.has("tokenizer")).isFalse();
         assertThat(payload.has("merge_peers")).isFalse();
@@ -290,7 +298,7 @@ class DoclingDocumentParserTest {
                 {"chunks":[],"documents":[{"status":"failure","errors":[{"error_message":"failed"}]}],
                  "processing_time":1}
                 """;
-        var result = parser.fetchChunkResult("task-1");
+        DocumentChunkResult result = parser.fetchChunkResult("task-1");
         assertThat(result.chunks()).isEmpty();
         assertThat(result.documents().getFirst().result().status()).isEqualTo(DocumentParseStatus.FAILURE);
         assertThat(result.documents().getFirst().result().warnings()).containsExactly("failed");
@@ -309,7 +317,7 @@ class DoclingDocumentParserTest {
     void chunkSubmissionDoesNotRetryRemoteFailure() {
         responseStatus = 503;
         responseBody = "upstream-private-error";
-        var request = chunkRequest(DocumentChunkStrategy.HYBRID, false);
+        DocumentChunkRequest request = chunkRequest(DocumentChunkStrategy.HYBRID, false);
         assertThatThrownBy(() -> parser.submitChunk(request))
                 .isInstanceOfSatisfying(DocumentParseException.class, exception -> {
                     assertThat(exception.getHttpStatus()).isEqualTo(503);
@@ -322,18 +330,18 @@ class DoclingDocumentParserTest {
     @ParameterizedTest
     @EnumSource(value = DocumentChunkStrategy.class, names = {"HIERARCHICAL", "HYBRID"})
     void forwardsAdvancedOptionsForBothChunkStrategies(DocumentChunkStrategy strategy) throws Exception {
-        var advanced = createAdvancedOptions();
-        var original = request("sample.pdf");
-        var options = original.options();
-        var parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
+        DocumentParseAdvancedOptions advanced = createAdvancedOptions();
+        DocumentParseRequest original = request("sample.pdf");
+        DocumentParseOptions options = original.options();
+        DocumentParseOptions parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
                 1, 2, options.documentTimeout(), advanced);
-        var document = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
+        DocumentParseRequest document = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
         DocumentChunkOptions chunk = switch (strategy) {
             case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, true, "");
             case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, true, "");
             case REGEX -> throw new IllegalArgumentException("该测试仅验证Docling原生策略");
         };
-        var request = new DocumentChunkRequest(document, chunk, true);
+        DocumentChunkRequest request = new DocumentChunkRequest(document, chunk, true);
         responseBody = chunkResponse(true);
         parser.chunk(request);
         verifyAdvancedPayload();
@@ -343,7 +351,7 @@ class DoclingDocumentParserTest {
     }
 
     private DocumentParseAdvancedOptions createAdvancedOptions() {
-        var hierarchy = DocumentHeadingHierarchyOptions.builder().useBookmarks(false)
+        DocumentHeadingHierarchyOptions hierarchy = DocumentHeadingHierarchyOptions.builder().useBookmarks(false)
                 .maxLevel(4).styleSizeTolerance(0.1).bookmarkMatchThreshold(0.9).build();
         Map<String, Object> layout = Map.of("kind", "docling_layout_default");
         return DocumentParseAdvancedOptions.builder().ocrPreset("easyocr")
@@ -361,7 +369,7 @@ class DoclingDocumentParserTest {
     }
 
     private void verifyAdvancedPayload() {
-        var options = requestBody.path("convert_options");
+        JsonNode options = requestBody.path("convert_options");
         assertThat(options.path("ocr_preset").asText()).isEqualTo("easyocr");
         assertThat(options.path("pdf_backend").asText()).isEqualTo("_docling_parse");
         assertThat(options.path("pipeline").asText()).isEqualTo("standard");
@@ -382,12 +390,12 @@ class DoclingDocumentParserTest {
     /** 普通异步解析与分块共用高级选项，字段写入各自正确的原生节点。 */
     @Test
     void forwardsAdvancedOptionsForOrdinaryConversion() {
-        var advanced = DocumentParseAdvancedOptions.builder().mdCompactTables(true).build();
-        var original = request("sample.pdf");
-        var options = original.options();
-        var parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
+        DocumentParseAdvancedOptions advanced = DocumentParseAdvancedOptions.builder().mdCompactTables(true).build();
+        DocumentParseRequest original = request("sample.pdf");
+        DocumentParseOptions options = original.options();
+        DocumentParseOptions parseOptions = new DocumentParseOptions(true, false, options.ocrLanguages(), true,
                 1, 2, options.documentTimeout(), advanced);
-        var request = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
+        DocumentParseRequest request = new DocumentParseRequest(original.resource(), original.filename(), parseOptions);
         responseBody = "{\"task_id\":\"advanced-conversion\",\"task_status\":\"pending\"}";
         parser.submit(request);
         assertThat(requestBody.path("options").path("md_compact_tables").asBoolean()).isTrue();
@@ -398,15 +406,15 @@ class DoclingDocumentParserTest {
     /** 不支持PDF流水线的格式不能静默忽略高级选项。 */
     @Test
     void rejectsPdfAdvancedOptionsForMarkdown() {
-        var advanced = DocumentParseAdvancedOptions.builder().ocrPreset("easyocr").build();
-        var languages = List.<String>of();
-        var timeout = Duration.ofSeconds(60);
+        DocumentParseAdvancedOptions advanced = DocumentParseAdvancedOptions.builder().ocrPreset("easyocr").build();
+        List<String> languages = List.<String>of();
+        Duration timeout = Duration.ofSeconds(60);
         assertThatThrownBy(() -> new DocumentParseOptions(false, false, languages, false,
                 null, null, timeout, advanced)).isInstanceOf(IllegalArgumentException.class);
-        var pdfOptions = DocumentParseAdvancedOptions.builder().pdfBackend(DocumentPdfBackend.DOCLING_PARSE).build();
-        var options = new DocumentParseOptions(false, false, languages, false, null, null, timeout, pdfOptions);
-        var original = request("sample.md");
-        var request = new DocumentParseRequest(original.resource(), original.filename(), options);
+        DocumentParseAdvancedOptions pdfOptions = DocumentParseAdvancedOptions.builder().pdfBackend(DocumentPdfBackend.DOCLING_PARSE).build();
+        DocumentParseOptions options = new DocumentParseOptions(false, false, languages, false, null, null, timeout, pdfOptions);
+        DocumentParseRequest original = request("sample.md");
+        DocumentParseRequest request = new DocumentParseRequest(original.resource(), original.filename(), options);
         assertThatThrownBy(() -> parser.submit(request)).isInstanceOf(IllegalArgumentException.class);
         assertThat(paths).isEmpty();
     }
@@ -420,7 +428,7 @@ class DoclingDocumentParserTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().doPdfHeadingHierarchy(true)
                 .pipeline(DocumentProcessingPipeline.NATIVE).build()).isInstanceOf(IllegalArgumentException.class);
-        var hierarchy = DocumentHeadingHierarchyOptions.builder().maxLevel(4).build();
+        DocumentHeadingHierarchyOptions hierarchy = DocumentHeadingHierarchyOptions.builder().maxLevel(4).build();
         assertThatThrownBy(() -> DocumentParseAdvancedOptions.builder().pdfHeadingHierarchyOptions(hierarchy).build())
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DocumentHeadingHierarchyOptions.builder().maxLevel(101).build())
@@ -428,7 +436,7 @@ class DoclingDocumentParserTest {
     }
 
     private DocumentChunkRequest chunkRequest(DocumentChunkStrategy strategy, boolean includeDocument) {
-        var document = request("sample.pdf");
+        DocumentParseRequest document = request("sample.pdf");
         DocumentChunkOptions options = switch (strategy) {
             case HIERARCHICAL -> new HierarchicalDocumentChunkOptions(true, true, null, null);
             case HYBRID -> new HybridDocumentChunkOptions(true, true, 128, "test-tokenizer", false, null, null);
@@ -463,8 +471,8 @@ class DoclingDocumentParserTest {
 
     private DoclingDocumentParser createParser(int maxFileBytes, Duration timeout) {
         URI base = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
-        var http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
-        var client = DoclingTaskClient.builder().baseUrl(base).apiKey("test-only-key")
+        HttpClient.Builder http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
+        DoclingTaskClient client = DoclingTaskClient.builder().baseUrl(base).apiKey("test-only-key")
                 .connectTimeout(timeout).readTimeout(timeout)
                 .httpClientBuilder(http).build();
         DoclingResultConverter converter = Mappers.getMapper(DoclingResultConverter.class);
@@ -472,10 +480,10 @@ class DoclingDocumentParserTest {
     }
 
     private DocumentParseRequest request(String filename) {
-        var resource = new ByteArrayResource("test document".getBytes(StandardCharsets.UTF_8));
-        var languages = List.of("zh", "en");
+        ByteArrayResource resource = new ByteArrayResource("test document".getBytes(StandardCharsets.UTF_8));
+        List<String> languages = List.of("zh", "en");
         Duration timeout = Duration.ofSeconds(120);
-        var options = new DocumentParseOptions(true, false, languages, true, 1, 2, timeout, null);
+        DocumentParseOptions options = new DocumentParseOptions(true, false, languages, true, 1, 2, timeout, null);
         return new DocumentParseRequest(resource, filename, options);
     }
 
@@ -499,7 +507,7 @@ class DoclingDocumentParserTest {
         }
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.sendResponseHeaders(responseStatus, body.length);
-        try (var output = exchange.getResponseBody()) {
+        try (OutputStream output = exchange.getResponseBody()) {
             output.write(body);
         }
     }

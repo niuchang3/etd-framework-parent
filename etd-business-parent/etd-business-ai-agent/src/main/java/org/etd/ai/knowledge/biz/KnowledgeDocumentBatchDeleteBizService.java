@@ -27,19 +27,19 @@ public class KnowledgeDocumentBatchDeleteBizService {
      */
     public KnowledgeDocumentDeleteResult removeDocumentList(Long knowledgeBaseId, List<Long> documentIds) {
         validateSelection(knowledgeBaseId, documentIds);
-        var successIds = new ArrayList<Long>();
-        var failures = new ArrayList<KnowledgeDocumentDeleteFailure>();
+        ArrayList<Long> successIds = new ArrayList<Long>();
+        ArrayList<KnowledgeDocumentDeleteFailure> failures = new ArrayList<KnowledgeDocumentDeleteFailure>();
         for (Long id : documentIds) {
             try {
                 // 必须经单条用例的Spring代理进入REQUIRES_NEW，不能自调用绕过事务。
                 documents.removeDocumentByBase(id, knowledgeBaseId);
                 successIds.add(id);
             } catch (ApiRuntimeException exception) {
-                var failure = new KnowledgeDocumentDeleteFailure(id, exception.getMessage());
+                KnowledgeDocumentDeleteFailure failure = new KnowledgeDocumentDeleteFailure(id, exception.getMessage());
                 failures.add(failure);
             } catch (RuntimeException exception) {
                 log.error("批量删除知识资料失败，资料ID={}，异常类型={}", id, exception.getClass().getSimpleName());
-                var failure = new KnowledgeDocumentDeleteFailure(id, "删除失败，请刷新后重试");
+                KnowledgeDocumentDeleteFailure failure = new KnowledgeDocumentDeleteFailure(id, "删除失败，请刷新后重试");
                 failures.add(failure);
             }
         }
@@ -57,7 +57,7 @@ public class KnowledgeDocumentBatchDeleteBizService {
                 throw new ApiRuntimeException("资料ID必须为正整数");
             }
         }
-        var uniqueIds = new HashSet<>(ids);
+        HashSet<Long> uniqueIds = new HashSet<>(ids);
         if (uniqueIds.size() != ids.size()) {
             throw new ApiRuntimeException("批量删除的资料不能重复");
         }

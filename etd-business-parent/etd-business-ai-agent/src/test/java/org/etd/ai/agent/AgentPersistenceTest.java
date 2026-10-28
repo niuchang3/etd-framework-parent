@@ -45,6 +45,11 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
+import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -76,15 +81,15 @@ class AgentPersistenceTest {
     /** 拒绝在已有业务表的数据库执行初始化，并加载完整生产脚本。 */
     @BeforeAll
     void initialize() throws Exception {
-        var source = new DriverManagerDataSource();
+        DriverManagerDataSource source = new DriverManagerDataSource();
         source.setUrl(System.getenv("AI_AGENT_TEST_JDBC_URL"));
         source.setUsername(System.getenv("AI_AGENT_TEST_DB_USER"));
         source.setPassword(System.getenv("AI_AGENT_TEST_DB_PASSWORD"));
         jdbc = new JdbcTemplate(source);
         Long tableCount = jdbc.queryForObject("select count(*) from pg_tables where schemaname = 'public'", Long.class);
         assertThat(tableCount).isZero();
-        var resource = new ClassPathResource("sql/ai.sql");
-        var populator = new ResourceDatabasePopulator(resource);
+        ClassPathResource resource = new ClassPathResource("sql/ai.sql");
+        ResourceDatabasePopulator populator = new ResourceDatabasePopulator(resource);
         populator.execute(source);
         sessions = createSessionFactory(source);
         validators = Validation.buildDefaultValidatorFactory();
@@ -92,34 +97,34 @@ class AgentPersistenceTest {
 
     /** 工厂使用生产插件，避免仅靠模拟Mapper掩盖JSONB映射或权限SQL错误。 */
     private SqlSessionFactory createSessionFactory(DriverManagerDataSource source) throws Exception {
-        var bean = new MybatisSqlSessionFactoryBean();
+        MybatisSqlSessionFactoryBean bean = new MybatisSqlSessionFactoryBean();
         bean.setDataSource(source);
-        var configuration = new MybatisConfiguration();
+        MybatisConfiguration configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         bean.setConfiguration(configuration);
-        var resolver = new PathMatchingResourcePatternResolver();
-        var resources = resolver.getResources("classpath*:mapper/**/*.xml");
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        Resource[] resources = resolver.getResources("classpath*:mapper/**/*.xml");
         bean.setMapperLocations(resources);
-        var global = new GlobalConfig();
-        var fill = new DefaultDataFillHandler();
+        GlobalConfig global = new GlobalConfig();
+        DefaultDataFillHandler fill = new DefaultDataFillHandler();
         fill.setApplicationContext(application);
         global.setMetaObjectHandler(fill);
         bean.setGlobalConfig(global);
-        var properties = createProperties();
-        var framework = new MybatisConfig(properties);
-        var interceptor = framework.mybatisPlusInterceptor();
+        EtdMyBatisPlusProperties properties = createProperties();
+        MybatisConfig framework = new MybatisConfig(properties);
+        MybatisPlusInterceptor interceptor = framework.mybatisPlusInterceptor();
         bean.setPlugins(interceptor);
         return bean.getObject();
     }
 
     /** 与业务配置一致：全局模型不按租户隔离，租户连接不按组织隔离。 */
     private EtdMyBatisPlusProperties createProperties() {
-        var properties = new EtdMyBatisPlusProperties();
+        EtdMyBatisPlusProperties properties = new EtdMyBatisPlusProperties();
         properties.getTenant().setEnabled(true);
-        var globalTables = List.of("ai_model");
+        List<String> globalTables = List.of("ai_model");
         properties.getTenant().setIgnoreTables(globalTables);
         properties.getDataPermission().setEnabled(true);
-        var unscopedTables = List.of("ai_model", "ai_model_connection");
+        List<String> unscopedTables = List.of("ai_model", "ai_model_connection");
         properties.getDataPermission().setIgnoreTables(unscopedTables);
         properties.getLogicDelete().setEnabled(true);
         return properties;
@@ -133,16 +138,16 @@ class AgentPersistenceTest {
         prepareKnowledgeBases();
         populateIdentity();
         session = sessions.openSession(false);
-        var mapper = session.getMapper(AgentMapper.class);
-        var service = new AgentService(mapper);
+        AgentMapper mapper = session.getMapper(AgentMapper.class);
+        AgentService service = new AgentService(mapper);
         agents = permissionProxy(service);
-        var connectionMapper = session.getMapper(ModelConnectionMapper.class);
-        var cipher = mock(ModelCredentialCipher.class);
+        ModelConnectionMapper connectionMapper = session.getMapper(ModelConnectionMapper.class);
+        ModelCredentialCipher cipher = mock(ModelCredentialCipher.class);
         connections = new ModelConnectionService(connectionMapper, cipher);
-        var modelMapper = session.getMapper(ModelMapper.class);
-        var models = new ModelService(modelMapper);
-        var baseMapper = session.getMapper(KnowledgeBaseMapper.class);
-        var baseService = new KnowledgeBaseService(baseMapper);
+        ModelMapper modelMapper = session.getMapper(ModelMapper.class);
+        ModelService models = new ModelService(modelMapper);
+        KnowledgeBaseMapper baseMapper = session.getMapper(KnowledgeBaseMapper.class);
+        KnowledgeBaseService baseService = new KnowledgeBaseService(baseMapper);
         bases = permissionProxy(baseService);
         biz = new AgentBizService(agents, connections, models, bases, validators.getValidator());
     }
@@ -176,12 +181,12 @@ class AgentPersistenceTest {
 
     /** 普通用户仅有本组织范围，不使用管理员绕过权限测试。 */
     private void populateIdentity() {
-        var user = new UserDetails();
+        UserDetails user = new UserDetails();
         user.setId(100L);
         user.setOrgId(10L);
-        var types = Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode());
+        Set<String> types = Set.of(BasicConstant.PermissionType.ORGANIZATION.getCode());
         user.setPermissionTypes(types);
-        var orgIds = Set.of(10L);
+        Set<Long> orgIds = Set.of(10L);
         user.setScopeOrgIds(orgIds);
         RequestContext.setTenantCode(1L);
         RequestContext.setUser(user);
@@ -190,22 +195,22 @@ class AgentPersistenceTest {
     /** 验证创建、发布、草稿隔离、清空字段、版本冲突、启停和逻辑删除的完整管理链路。 */
     @Test
     void shouldManageDraftAndPublishedSnapshotWithVersions() {
-        var input = createInput();
+        AgentEntity input = createInput();
         input.setDescription("待清空简介");
         input.setAvatarPath("/test-avatar.png");
-        var created = biz.createAgent(input);
+        AgentEntity created = biz.createAgent(input);
         Long id = created.getId();
         assertThat(created.getVersion()).isZero();
         assertThat(created.getDataStatus()).isEqualTo(BasicConstant.DataStatus.ENABLED_CODE);
-        var published = biz.publishAgent(id, 0L);
+        AgentEntity published = biz.publishAgent(id, 0L);
         assertThat(published.getVersion()).isEqualTo(1);
         session.clearCache();
-        var loaded = agents.requireAgent(id, true, false);
+        AgentEntity loaded = agents.requireAgent(id, true, false);
         assertThat(loaded.getDraftConfig()).isEqualTo(loaded.getPublishedConfig()).isNotSameAs(loaded.getPublishedConfig());
         assertThat(loaded.getUnpublishedChanges()).isFalse();
         assertDraftIsolation(id);
         assertThatThrownBy(() -> biz.publishAgent(id, 1L)).isInstanceOf(ApiRuntimeException.class);
-        var disabled = biz.modifyAgentStatus(id, BasicConstant.DataStatus.DISABLED_CODE, 2L);
+        AgentEntity disabled = biz.modifyAgentStatus(id, BasicConstant.DataStatus.DISABLED_CODE, 2L);
         assertThat(disabled.getVersion()).isEqualTo(3);
         assertThatThrownBy(() -> biz.removeAgent(id, 2L)).isInstanceOf(ApiRuntimeException.class);
         biz.removeAgent(id, 3L);
@@ -214,11 +219,11 @@ class AgentPersistenceTest {
 
     /** 草稿替换和可空字段清理不会覆盖已经发布的配置。 */
     private void assertDraftIsolation(Long id) {
-        var changed = createInput();
+        AgentEntity changed = createInput();
         changed.getDraftConfig().setSystemPrompt("新的草稿指令");
         biz.modifyAgent(id, changed, 1L);
         session.clearCache();
-        var updated = agents.requireAgent(id, true, false);
+        AgentEntity updated = agents.requireAgent(id, true, false);
         assertThat(updated.getDescription()).isNull();
         assertThat(updated.getAvatarPath()).isNull();
         assertThat(updated.getDraftConfig().getSystemPrompt()).isEqualTo("新的草稿指令");
@@ -229,27 +234,27 @@ class AgentPersistenceTest {
     /** 空草稿可保存但不能发布；类型、权限、租户、启停、重复绑定和非法参数都会阻止发布或保存。 */
     @Test
     void shouldValidateSelectedReferencesAndPublicationCompleteness() {
-        var empty = createInput();
-        var configuration = new AgentConfiguration();
+        AgentEntity empty = createInput();
+        AgentConfiguration configuration = new AgentConfiguration();
         empty.setDraftConfig(configuration);
-        var created = biz.createAgent(empty);
+        AgentEntity created = biz.createAgent(empty);
         assertThatThrownBy(() -> biz.publishAgent(created.getId(), 0L)).isInstanceOf(ApiRuntimeException.class);
         for (long connectionId : List.of(101L, 102L, 103L)) {
-            var invalid = createInput();
+            AgentEntity invalid = createInput();
             invalid.getDraftConfig().setModelConnectionId(connectionId);
             assertThatThrownBy(() -> biz.createAgent(invalid)).isInstanceOf(ApiRuntimeException.class);
         }
         for (long baseId : List.of(202L, 203L, 204L)) {
-            var invalid = createInput();
-            var ids = List.of(baseId);
+            AgentEntity invalid = createInput();
+            List<Long> ids = List.of(baseId);
             invalid.getDraftConfig().setKnowledgeBaseIds(ids);
             assertThatThrownBy(() -> biz.createAgent(invalid)).isInstanceOf(ApiRuntimeException.class);
         }
-        var duplicate = createInput();
-        var repeatedIds = List.of(200L, 200L);
+        AgentEntity duplicate = createInput();
+        List<Long> repeatedIds = List.of(200L, 200L);
         duplicate.getDraftConfig().setKnowledgeBaseIds(repeatedIds);
         assertThatThrownBy(() -> biz.createAgent(duplicate)).isInstanceOf(ApiRuntimeException.class);
-        var invalidOptions = createInput();
+        AgentEntity invalidOptions = createInput();
         invalidOptions.getDraftConfig().getModelOptions().setTemperature(Double.NaN);
         assertThatThrownBy(() -> biz.createAgent(invalidOptions)).isInstanceOf(ApiRuntimeException.class);
     }
@@ -264,19 +269,19 @@ class AgentPersistenceTest {
                        (3, 1, 20, 200, '公开', true, '{}'),
                        (4, 2, 10, 100, '其他租户', true, '{}');
                 """);
-        var page = agents.fetchAgentPage(1, 20, null, null, null);
+        IPage<AgentEntity> page = agents.fetchAgentPage(1, 20, null, null, null);
         assertThat(page.getRecords()).extracting(AgentEntity::getId).containsExactlyInAnyOrder(1L, 3L);
         assertThat(agents.requireAgent(3L, false, false).getWritable()).isFalse();
         assertThatThrownBy(() -> agents.requireAgent(3L, true, false)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> agents.requireAgent(2L, false, false)).isInstanceOf(ApiRuntimeException.class);
         assertThatThrownBy(() -> agents.requireAgent(4L, false, false)).isInstanceOf(ApiRuntimeException.class);
-        var input = createInput();
+        AgentEntity input = createInput();
         input.setOrgId(20L);
         assertThatThrownBy(() -> biz.createAgent(input)).isInstanceOf(ApiRuntimeException.class);
         RequestContext.getUser().setPlatformAdmin(true);
         session.clearCache();
         assertThat(agents.requireAgent(4L, true, false).getTenantId()).isEqualTo(2L);
-        var crossTenant = createInput();
+        AgentEntity crossTenant = createInput();
         crossTenant.getDraftConfig().setModelConnectionId(102L);
         assertThatThrownBy(() -> biz.createAgent(crossTenant)).isInstanceOf(ApiRuntimeException.class);
     }
@@ -284,31 +289,31 @@ class AgentPersistenceTest {
     /** 选择接口SQL在分页前过滤停用模型、非聊天模型及无权限知识库。 */
     @Test
     void shouldFilterOptionsInDatabase() {
-        var modelPage = connections.fetchChatConnectionPage(1, 20, null);
+        IPage<ModelConnectionEntity> modelPage = connections.fetchChatConnectionPage(1, 20, null);
         assertThat(modelPage.getTotal()).isEqualTo(1);
         assertThat(modelPage.getRecords()).extracting(value -> value.getId()).containsExactly(100L);
         assertThat(modelPage.getRecords().getFirst().getBaseUrl()).isNull();
-        var basePage = bases.fetchAvailableBasePage(1, 20, null);
+        IPage<KnowledgeBaseEntity> basePage = bases.fetchAvailableBasePage(1, 20, null);
         assertThat(basePage.getTotal()).isEqualTo(2);
         assertThat(basePage.getRecords()).extracting(value -> value.getId()).containsExactlyInAnyOrder(200L, 201L);
-        var selected = bases.fetchAvailableBasePage(1, 1, "公开");
+        IPage<KnowledgeBaseEntity> selected = bases.fetchAvailableBasePage(1, 1, "公开");
         assertThat(selected.getTotal()).isEqualTo(1);
         assertThat(selected.getRecords().getFirst().getId()).isEqualTo(201L);
     }
 
     /** 构造完整可运行草稿，集合可变以验证发布副本隔离。 */
     private AgentEntity createInput() {
-        var input = new AgentEntity();
+        AgentEntity input = new AgentEntity();
         input.setOrgId(10L);
         input.setName(" 知识助手 ");
         input.setIsPublic(false);
-        var configuration = new AgentConfiguration();
+        AgentConfiguration configuration = new AgentConfiguration();
         configuration.setModelConnectionId(100L);
         configuration.setSystemPrompt("回答知识问题");
-        var ids = new ArrayList<Long>();
+        ArrayList<Long> ids = new ArrayList<Long>();
         ids.add(200L);
         configuration.setKnowledgeBaseIds(ids);
-        var options = new AgentModelOptions();
+        AgentModelOptions options = new AgentModelOptions();
         options.setTemperature(0.5);
         configuration.setModelOptions(options);
         input.setDraftConfig(configuration);
@@ -317,8 +322,8 @@ class AgentPersistenceTest {
 
     /** 与生产一致地进入数据权限切面，不直接模拟授权结果。 */
     private <T> T permissionProxy(T service) {
-        var proxy = new AspectJProxyFactory(service);
-        var aspect = new DataPermissionAspect();
+        AspectJProxyFactory proxy = new AspectJProxyFactory(service);
+        DataPermissionAspect aspect = new DataPermissionAspect();
         proxy.addAspect(aspect);
         return proxy.getProxy();
     }

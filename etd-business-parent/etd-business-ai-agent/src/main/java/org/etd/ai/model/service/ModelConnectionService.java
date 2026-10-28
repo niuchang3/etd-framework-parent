@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 /** 租户模型连接能力，不发起探测或模型调用。 */
 @Service
@@ -40,7 +41,7 @@ public class ModelConnectionService {
      * @return 不含地址及凭证的连接记录
      */
     public IPage<ModelConnectionEntity> fetchChatConnectionPage(long current, long size, String keyword) {
-        var page = new Page<ModelConnectionEntity>(current, size);
+        Page<ModelConnectionEntity> page = new Page<ModelConnectionEntity>(current, size);
         return mapper.selectAvailableChatPage(page, keyword, ModelType.CHAT, BasicConstant.DataStatus.ENABLED_CODE);
     }
 
@@ -57,7 +58,7 @@ public class ModelConnectionService {
      */
     public IPage<ModelConnectionEntity> fetchPage(
             long current, long size, Long modelId, Integer dataStatus, String providerCode) {
-        var page = new Page<ModelConnectionEntity>(current, size);
+        Page<ModelConnectionEntity> page = new Page<ModelConnectionEntity>(current, size);
         return mapper.selectConnectionPage(page, modelId, dataStatus, providerCode);
     }
 
@@ -70,11 +71,11 @@ public class ModelConnectionService {
      * @throws ApiRuntimeException 业务约束或可信上下文校验不满足时
      */
     public ModelConnectionEntity requireConnection(Long id, boolean lock) {
-        var q = Wrappers.<ModelConnectionEntity>lambdaQuery().eq(ModelConnectionEntity::getId, id);
+        LambdaQueryWrapper<ModelConnectionEntity> q = Wrappers.<ModelConnectionEntity>lambdaQuery().eq(ModelConnectionEntity::getId, id);
         if (lock) {
             q.last("FOR UPDATE");
         }
-        var e = mapper.selectOne(q);
+        ModelConnectionEntity e = mapper.selectOne(q);
         if (e == null) {
             throw new ApiRuntimeException("模型连接不存在");
         }
@@ -105,7 +106,7 @@ public class ModelConnectionService {
 
     /** 校验新连接所属租户的模型绑定唯一性；显式租户条件用于定位唯一键，不限制管理员的查询权限。 */
     private void requireUnboundModel(Long modelId) {
-        var query = Wrappers.<ModelConnectionEntity>lambdaQuery()
+        LambdaQueryWrapper<ModelConnectionEntity> query = Wrappers.<ModelConnectionEntity>lambdaQuery()
                 .eq(ModelConnectionEntity::getTenantId, RequestContext.getTenantCode())
                 .eq(ModelConnectionEntity::getModelId, modelId);
         // 停用仍占用绑定；逻辑删除记录由MyBatis-Plus自动排除。
@@ -124,7 +125,7 @@ public class ModelConnectionService {
      */
     @Transactional
     public void modifyConnection(ModelConnectionEntity e, String apiKey, Long version) {
-        var old = requireConnection(e.getId(), true);
+        ModelConnectionEntity old = requireConnection(e.getId(), true);
         if (!old.getModelId().equals(e.getModelId())) {
             throw new ApiRuntimeException("连接器不能切换模型，请重新创建连接");
         }
@@ -145,7 +146,7 @@ public class ModelConnectionService {
      */
     @Transactional
     public void modifyConnectionStatus(Long id, Integer dataStatus, Long version) {
-        var connection = requireConnection(id, true);
+        ModelConnectionEntity connection = requireConnection(id, true);
         connection.setDataStatus(dataStatus);
         connection.setVersion(version);
         if (mapper.updateById(connection) != 1) {
@@ -171,7 +172,7 @@ public class ModelConnectionService {
      * @return 未删除的连接数量
      */
     public long countConnectionByModel(Long modelId) {
-        var query = Wrappers.<ModelConnectionEntity>lambdaQuery()
+        LambdaQueryWrapper<ModelConnectionEntity> query = Wrappers.<ModelConnectionEntity>lambdaQuery()
                 .eq(ModelConnectionEntity::getModelId, modelId);
         return mapper.selectCount(query);
     }
@@ -215,7 +216,7 @@ public class ModelConnectionService {
      * @throws ApiRuntimeException 连接不存在
      */
     public ModelConnectionEntity fetchConnection(Long id) {
-        var connection = mapper.selectConnectionDetail(id);
+        ModelConnectionEntity connection = mapper.selectConnectionDetail(id);
         if (connection == null) {
             throw new ApiRuntimeException("模型连接不存在");
         }

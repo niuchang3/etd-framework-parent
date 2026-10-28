@@ -21,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Map;
+import org.apache.ibatis.mapping.BoundSql;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,7 +33,7 @@ class EtdLogicDeleteInterceptorTest {
     /** 注册实际@TableLogic与无逻辑删除字段的两种实体。 */
     @BeforeAll
     static void registerEntities() {
-        var builder = new MapperBuilderAssistant(new MybatisConfiguration(), "logic-delete-test");
+        MapperBuilderAssistant builder = new MapperBuilderAssistant(new MybatisConfiguration(), "logic-delete-test");
         builder.setCurrentNamespace("test.LogicMapper");
         TableInfoHelper.initTableInfo(builder, LiveEntity.class);
         TableInfoHelper.initTableInfo(builder, PlainEntity.class);
@@ -118,7 +119,7 @@ class EtdLogicDeleteInterceptorTest {
     /** 应用必须显式开启，避免本次扩展改变其他业务模块的自定义查询。 */
     @Test
     void shouldRequireApplicationOptIn() {
-        var properties = new EtdMyBatisPlusProperties();
+        EtdMyBatisPlusProperties properties = new EtdMyBatisPlusProperties();
         assertFalse(new MybatisConfig(properties).mybatisPlusInterceptor().getInterceptors()
                 .stream().anyMatch(EtdLogicDeleteInterceptor.class::isInstance));
         properties.getLogicDelete().setEnabled(true);
@@ -128,11 +129,11 @@ class EtdLogicDeleteInterceptorTest {
 
     /** 调用真实beforeQuery，验证忽略开关及BoundSql回写，而非仅测试解析器入口。 */
     private String rewriteQuery() {
-        var configuration = new MybatisConfiguration();
-        var source = new StaticSqlSource(configuration, "select * from logic_doc d");
-        var statement = new MappedStatement.Builder(configuration, "test.Mapper.select", source,
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        StaticSqlSource source = new StaticSqlSource(configuration, "select * from logic_doc d");
+        MappedStatement statement = new MappedStatement.Builder(configuration, "test.Mapper.select", source,
                 SqlCommandType.SELECT).build();
-        var boundSql = statement.getBoundSql(null);
+        BoundSql boundSql = statement.getBoundSql(null);
         interceptor.beforeQuery(null, statement, null, RowBounds.DEFAULT, null, boundSql);
         return boundSql.getSql();
     }

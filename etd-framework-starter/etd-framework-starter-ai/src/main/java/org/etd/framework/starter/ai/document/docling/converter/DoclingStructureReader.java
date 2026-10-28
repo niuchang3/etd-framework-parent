@@ -67,7 +67,7 @@ public final class DoclingStructureReader {
      */
     public DoclingContent read(DoclingDocument source) {
         if (source == null) {
-            var empty = List.<DocumentBlock>of();
+            List<DocumentBlock> empty = List.<DocumentBlock>of();
             return new DoclingContent(null, empty);
         }
         JsonNode document = mapper.valueToTree(source);
@@ -80,9 +80,9 @@ public final class DoclingStructureReader {
     }
 
     private List<DocumentBlock> readBody(JsonNode document, JsonNode body) {
-        var pending = new ArrayDeque<String>();
-        var visited = new HashSet<String>();
-        var result = new ArrayList<DocumentBlock>();
+        ArrayDeque<String> pending = new ArrayDeque<String>();
+        HashSet<String> visited = new HashSet<String>();
+        ArrayList<DocumentBlock> result = new ArrayList<DocumentBlock>();
         enqueueChildren(body, pending);
         while (!pending.isEmpty()) {
             String reference = pending.pop();
@@ -127,14 +127,14 @@ public final class DoclingStructureReader {
     }
 
     private DocumentTable readTable(JsonNode data) {
-        var cells = new ArrayList<DocumentTableCell>();
+        ArrayList<DocumentTableCell> cells = new ArrayList<DocumentTableCell>();
         for (JsonNode cell : data.path(CELLS)) {
             String text = cell.path(TEXT).asText(null);
             Integer firstRow = integer(cell.path(FIRST_ROW)), endRow = integer(cell.path(END_ROW));
             Integer firstColumn = integer(cell.path(FIRST_COLUMN)), endColumn = integer(cell.path(END_COLUMN));
             boolean columnHeader = cell.path(COLUMN_HEADER).asBoolean();
             boolean rowHeader = cell.path(ROW_HEADER).asBoolean();
-            var parsed = new DocumentTableCell(text, firstRow, endRow, firstColumn, endColumn, columnHeader, rowHeader);
+            DocumentTableCell parsed = new DocumentTableCell(text, firstRow, endRow, firstColumn, endColumn, columnHeader, rowHeader);
             cells.add(parsed);
         }
         Integer rows = integer(data.path(ROWS)), columns = integer(data.path(COLUMNS));
@@ -161,7 +161,7 @@ public final class DoclingStructureReader {
     }
 
     private List<DocumentSourceLocation> readLocations(JsonNode document, JsonNode provenance) {
-        var result = new ArrayList<DocumentSourceLocation>();
+        ArrayList<DocumentSourceLocation> result = new ArrayList<DocumentSourceLocation>();
         for (JsonNode location : provenance) {
             int page = location.path(PAGE).asInt();
             if (page < DocumentSourceLocation.FIRST_PAGE_NUMBER) {

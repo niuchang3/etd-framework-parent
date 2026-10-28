@@ -25,7 +25,7 @@ public class ModelBizService {
     @Transactional
     public void modifyModel(ModelEntity entity) {
         models.requirePlatformAdmin();
-        var old = models.lockModel(entity.getId());
+        ModelEntity old = models.lockModel(entity.getId());
         if (connections.countConnectionByModel(entity.getId()) > 0 && hasChangedBinding(entity, old)) {
             throw new ApiRuntimeException("模型已被连接器使用，不能修改服务商、调用代码或类型");
         }

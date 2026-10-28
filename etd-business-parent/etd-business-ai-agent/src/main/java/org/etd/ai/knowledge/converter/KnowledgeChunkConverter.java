@@ -66,7 +66,7 @@ public interface KnowledgeChunkConverter {
     KnowledgeChunkStateVO toStateVO(KnowledgeDocumentEntity entity);
     /** @param entity 已授权分片 @return 当前角色范围是否允许维护该分片 */
     default boolean canManageChunk(KnowledgeChunkEntity entity) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         return scope.canManage(entity.getOrgId(), entity.getCreateBy());
     }
     /** @param inputs 通过字段校验的编辑列表 @return 去重后的编辑值，重复ID明确拒绝 */

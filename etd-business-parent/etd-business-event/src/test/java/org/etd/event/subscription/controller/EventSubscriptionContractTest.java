@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,7 +38,7 @@ class EventSubscriptionContractTest {
      */
     @Test
     void shouldExcludeRemovedColumnsFromSchema() throws Exception {
-        try (var inputStream = getClass().getClassLoader().getResourceAsStream("sql/event.sql")) {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("sql/event.sql")) {
             assertNotNull(inputStream);
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             assertFalse(schema.contains("subscription_code"));

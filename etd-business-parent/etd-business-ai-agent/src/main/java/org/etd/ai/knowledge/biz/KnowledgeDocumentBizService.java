@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import java.util.Objects;
+import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
 
 /** 资料配置、移动和删除用例，跨服务操作在事务中编排。 */
 @Slf4j
@@ -34,7 +35,7 @@ public class KnowledgeDocumentBizService {
     @Transactional
     public void modifyDocument(Long id, KnowledgeDocumentEntity input, Long version) {
         folders.lockStructure();
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("资料已变化，请刷新后重试");
@@ -56,7 +57,7 @@ public class KnowledgeDocumentBizService {
 
     /** 目标目录仍按知识库授权，移动不能把资料放入无权维护或已停用的目录。 */
     private void requireTargetFolder(Long folderId, Long baseId) {
-        var folder = folders.requireFolderByBase(folderId, baseId);
+        KnowledgeFolderEntity folder = folders.requireFolderByBase(folderId, baseId);
         if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
             throw new ApiRuntimeException("不能移入停用目录");
         }
@@ -65,7 +66,7 @@ public class KnowledgeDocumentBizService {
     /** @param id 资料ID；清理失败保留资料记录，允许用户重试删除 */
     @Transactional
     public void removeDocument(Long id) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         removeDocumentResources(document);
     }
 
@@ -77,7 +78,7 @@ public class KnowledgeDocumentBizService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void removeDocumentByBase(Long id, Long knowledgeBaseId) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         if (!Objects.equals(document.getKnowledgeBaseId(), knowledgeBaseId)) {
             throw new ApiRuntimeException("资料不属于当前知识库");
         }
@@ -103,7 +104,7 @@ public class KnowledgeDocumentBizService {
     /** @param id 文档 @param version 当前版本 @param dataStatus 文档启停，启用前须完成上传并确认分片 */
     @Transactional
     public void modifyDocumentStatus(Long id, Long version, Integer dataStatus) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("文档已变化，请刷新后重试");
         }
@@ -123,7 +124,7 @@ public class KnowledgeDocumentBizService {
 
     /** @param id 已上传资料ID @return 受鉴权保护的临时下载地址 */
     public String createDownloadUrl(Long id) {
-        var document = documents.requireDocument(id, false);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, false);
         if (!KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
             throw new ApiRuntimeException("文件尚未上传完成");
         }

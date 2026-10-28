@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -70,20 +71,20 @@ class AgentApplicationSmokeTest {
         assertNotNull(agentOptions);
         assertNotNull(square);
         assertNotNull(squareBiz);
-        var registeredPaths = new HashSet<String>();
+        HashSet<String> registeredPaths = new HashSet<String>();
         assertNotNull(mapper);
-        for (var mapping : mappings.getHandlerMethods().keySet()) {
-            for (var path : mapping.getPatternValues()) {
+        for (RequestMappingInfo mapping : mappings.getHandlerMethods().keySet()) {
+            for (String path : mapping.getPatternValues()) {
                 registeredPaths.add(path);
                 assertFalse(path.startsWith("/v1/model-configs"));
                 assertFalse(path.startsWith("/v1/model-connections"));
             }
         }
-        var squarePaths = Set.of("/v1/model-square/models", "/v1/model-square/models/{id}",
+        Set<String> squarePaths = Set.of("/v1/model-square/models", "/v1/model-square/models/{id}",
                 "/v1/model-square/connections", "/v1/model-square/connections/{id}",
                 "/v1/model-square/connections/{id}/status");
         assertTrue(registeredPaths.containsAll(squarePaths));
-        var agentPaths = Set.of("/v1/agents", "/v1/agents/{id}", "/v1/agents/{id}/configuration",
+        Set<String> agentPaths = Set.of("/v1/agents", "/v1/agents/{id}", "/v1/agents/{id}/configuration",
                 "/v1/agents/{id}/publish", "/v1/agents/{id}/status",
                 "/v1/agents/options/models", "/v1/agents/options/knowledge-bases");
         assertTrue(registeredPaths.containsAll(agentPaths));

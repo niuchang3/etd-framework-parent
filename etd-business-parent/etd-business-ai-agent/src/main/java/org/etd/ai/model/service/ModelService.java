@@ -16,6 +16,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.etd.framework.common.core.user.UserDetails;
 
 /** 全局模型管理能力；平台管理员维护，普通租户仅查看已启用模型。 */
 @Service
@@ -34,8 +37,8 @@ public class ModelService {
      */
     public IPage<ModelEntity> fetchPage(
             long current, long size, String providerCode, String modelType, Integer dataStatus) {
-        var page = new Page<ModelEntity>(current, size);
-        var query = Wrappers.<ModelEntity>lambdaQuery()
+        Page<ModelEntity> page = new Page<ModelEntity>(current, size);
+        LambdaQueryWrapper<ModelEntity> query = Wrappers.<ModelEntity>lambdaQuery()
                 // 全局目录不经过租户过滤，租户可见状态必须在能力服务中显式限定。
                 .eq(!isPlatformAdmin(), ModelEntity::getDataStatus, BasicConstant.DataStatus.ENABLED_CODE)
                 .eq(dataStatus != null, ModelEntity::getDataStatus, dataStatus)
@@ -52,9 +55,9 @@ public class ModelService {
      * @throws ApiRuntimeException 模型不存在或已停用
      */
     public ModelEntity requireModel(Long id) {
-        var query = Wrappers.<ModelEntity>lambdaQuery().eq(ModelEntity::getId, id)
+        LambdaQueryWrapper<ModelEntity> query = Wrappers.<ModelEntity>lambdaQuery().eq(ModelEntity::getId, id)
                 .eq(ModelEntity::getDataStatus, BasicConstant.DataStatus.ENABLED_CODE);
-        var model = mapper.selectOne(query);
+        ModelEntity model = mapper.selectOne(query);
         if (model == null) {
             throw new ApiRuntimeException("模型不存在或已停用");
         }
@@ -105,7 +108,7 @@ public class ModelService {
     public void modifyModel(ModelEntity entity) {
         requirePlatformAdmin();
         validateSupportedDimensions(entity);
-        var update = Wrappers.<ModelEntity>lambdaUpdate().eq(ModelEntity::getId, entity.getId())
+        LambdaUpdateWrapper<ModelEntity> update = Wrappers.<ModelEntity>lambdaUpdate().eq(ModelEntity::getId, entity.getId())
                 .set(entity.getLogoPath() == null, ModelEntity::getLogoPath, null)
                 .set(entity.getDescription() == null, ModelEntity::getDescription, null)
                 .set(entity.getApiKeyUrl() == null, ModelEntity::getApiKeyUrl, null)
@@ -134,7 +137,7 @@ public class ModelService {
      * @throws AccessDeniedException 用户不是平台管理员或身份处于只读状态
      */
     public void requirePlatformAdmin() {
-        var user = RequestContext.getUser();
+        UserDetails user = RequestContext.getUser();
         if (user == null || !user.isPlatformAdmin() || user.isReadOnly()) {
             throw new AccessDeniedException("仅平台管理员可以维护模型管理");
         }
@@ -142,17 +145,17 @@ public class ModelService {
 
     /** 根据可信身份决定是否允许读取停用目录，不使用请求参数声明管理员。 */
     private boolean isPlatformAdmin() {
-        var user = RequestContext.getUser();
+        UserDetails user = RequestContext.getUser();
         return user != null && user.isPlatformAdmin();
     }
 
     /** 在调用方事务中按需加行锁，不绕过逻辑删除。 */
     private ModelEntity requireExistingModel(Long id, boolean lock) {
-        var query = Wrappers.<ModelEntity>lambdaQuery().eq(ModelEntity::getId, id);
+        LambdaQueryWrapper<ModelEntity> query = Wrappers.<ModelEntity>lambdaQuery().eq(ModelEntity::getId, id);
         if (lock) {
             query.last("for update");
         }
-        var model = mapper.selectOne(query);
+        ModelEntity model = mapper.selectOne(query);
         if (model == null) {
             throw new ApiRuntimeException("模型不存在");
         }
@@ -161,7 +164,7 @@ public class ModelService {
 
     /** 登记模型的能力集合，不把知识库实际选用维度或系统存储限制写成模型的固定输出。 */
     private void validateSupportedDimensions(ModelEntity entity) {
-        var dimensions = entity.getEmbedding();
+        Integer[] dimensions = entity.getEmbedding();
         if (!ModelType.EMBEDDING.equals(entity.getModelType())) {
             if (dimensions != null) {
                 throw new ApiRuntimeException("非向量模型不能设置支持维度集合");
@@ -171,8 +174,8 @@ public class ModelService {
         if (dimensions == null || dimensions.length == 0) {
             throw new ApiRuntimeException("向量模型必须填写支持维度集合");
         }
-        var unique = new HashSet<Integer>();
-        for (var dimension : dimensions) {
+        HashSet<Integer> unique = new HashSet<Integer>();
+        for (Integer dimension : dimensions) {
             if (dimension == null || dimension <= 0 || !unique.add(dimension)) {
                 throw new ApiRuntimeException("支持维度必须是不重复的正整数");
             }

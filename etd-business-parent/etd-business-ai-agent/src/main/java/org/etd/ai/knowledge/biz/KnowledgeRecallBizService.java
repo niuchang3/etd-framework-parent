@@ -18,6 +18,7 @@ import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.service.ModelInferenceService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.ai.document.Document;
+import org.etd.framework.common.core.constants.BasicConstant;
 import org.springframework.stereotype.Service;
 
 /** 知识库管理页召回测试用例，允许检索尚未启用的已确认资料。 */
@@ -37,30 +38,50 @@ public class KnowledgeRecallBizService {
      * @throws ApiRuntimeException 问题无效、无读取权限、配置变化或模型不可用
      */
     public List<KnowledgeRecallHit> testRecall(Long id, String query) {
+        Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
+        return recallBase(id, query, false, vectors);
+    }
+
+    /** @param ids Agent绑定的知识库 @param query 用户问题 @return 各库独立排序的正式候选 @throws ApiRuntimeException 库停用、无权访问或索引失效 */
+    public List<List<KnowledgeRecallHit>> recallEnabledList(List<Long> ids, String query) {
+        Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
+        List<List<KnowledgeRecallHit>> groups = new ArrayList<>();
+        for (Long id : ids) {
+            groups.add(recallBase(id, query, true, vectors));
+        }
+        return groups;
+    }
+
+    /** 每轮缓存仅复用相同模型连接及维度的问题向量，不跨请求缓存身份或查询内容。 */
+    private List<KnowledgeRecallHit> recallBase(Long id, String query, boolean formal,
+            Map<EmbeddingSpace, float[]> vectors) {
         if (query == null || query.isBlank() || query.length() > KnowledgeRetrievalPolicy.MAX_QUERY_CHARACTERS) {
             throw new ApiRuntimeException("检索问题不能为空且不能超过2000个字符");
         }
-        var base = bases.requireBase(id, false, false);
+        KnowledgeBaseEntity base = bases.requireBase(id, false, false);
+        requireEnabled(base, formal);
         String text = query.trim();
-        var keyword = KnowledgeRetrievalPolicy.VECTOR.equals(base.getRetrievalMode())
-                ? List.<KnowledgeRecallHit>of() : recall.fetchKeywordList(base, text);
-        var vector = fetchVectorList(base, text);
+        List<KnowledgeRecallHit> keyword = KnowledgeRetrievalPolicy.VECTOR.equals(base.getRetrievalMode())
+                ? List.<KnowledgeRecallHit>of() : recall.fetchKeywordList(base, text, formal);
+        List<KnowledgeRecallHit> vector = fetchVectorList(base, text, formal, vectors);
         boolean hybrid = KnowledgeRetrievalPolicy.HYBRID.equals(base.getRetrievalMode());
-        var candidates = recall.mergeCandidateList(keyword, vector, hybrid);
+        List<KnowledgeRecallHit> candidates = recall.mergeCandidateList(keyword, vector, hybrid);
         if (Boolean.TRUE.equals(base.getRerankEnabled()) && !candidates.isEmpty()) {
             candidates = rerankCandidateList(base, text, candidates);
         }
-        var latest = bases.requireBase(id, false, false);
+        KnowledgeBaseEntity latest = bases.requireBase(id, false, false);
+        requireEnabled(latest, formal);
         if (!Objects.equals(base.getVersion(), latest.getVersion())) {
             throw new ApiRuntimeException("知识库配置已变化，请重新检索");
         }
-        var current = recall.retainCurrentList(id, candidates);
-        var selected = current.subList(0, Math.min(base.getTopK(), current.size()));
-        var expanded = recall.expandContextWindow(selected, base.getContextWindowSize());
+        List<KnowledgeRecallHit> current = recall.retainCurrentList(id, candidates, formal);
+        List<KnowledgeRecallHit> selected = current.subList(0, Math.min(base.getTopK(), current.size()));
+        List<KnowledgeRecallHit> expanded = recall.expandContextWindow(selected, base.getContextWindowSize(), formal);
         return List.copyOf(expanded);
     }
 
-    private List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, String query) {
+    private List<KnowledgeRecallHit> fetchVectorList(KnowledgeBaseEntity base, String query, boolean formal,
+            Map<EmbeddingSpace, float[]> cache) {
         if (KnowledgeRetrievalPolicy.KEYWORD.equals(base.getRetrievalMode())) {
             return List.of();
         }
@@ -70,9 +91,25 @@ public class KnowledgeRecallBizService {
             throw new ApiRuntimeException("当前向量配置尚未建立索引，请先确认资料分片");
         }
         settings.validate(base.getActiveConnectionId(), ModelType.EMBEDDING, base.getActiveDimensions());
-        var questions = List.of(query);
-        var vectors = inference.createEmbeddingList(base.getActiveConnectionId(), base.getActiveDimensions(), questions);
-        return recall.fetchVectorList(base, vectors.getFirst());
+        EmbeddingSpace space = new EmbeddingSpace(base.getActiveConnectionId(), base.getActiveDimensions());
+        float[] vector = cache.get(space);
+        if (vector == null) {
+            List<String> questions = List.of(query);
+            List<float[]> generated = inference.createEmbeddingList(space.connectionId(), space.dimensions(), questions);
+            vector = generated.getFirst();
+            cache.put(space, vector);
+        }
+        return recall.fetchVectorList(base, vector, formal);
+    }
+
+    private void requireEnabled(KnowledgeBaseEntity base, boolean formal) {
+        if (formal && !Objects.equals(base.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
+            throw new ApiRuntimeException("知识库已停用，不能用于正式问答");
+        }
+    }
+
+    /** 查询向量的空间身份；同维度不同连接不能复用。 */
+    private record EmbeddingSpace(Long connectionId, Integer dimensions) {
     }
 
     /** SDK结果通过稳定ID匹配，禁止使用服务商返回正文替代数据库权威正文。 */
@@ -81,13 +118,13 @@ public class KnowledgeRecallBizService {
         settings.validate(base.getRerankConnectionId(), ModelType.RERANK, null);
         Map<String, KnowledgeRecallHit> byId = new HashMap<>();
         List<Document> documents = new ArrayList<>();
-        for (var candidate : candidates) {
+        for (KnowledgeRecallHit candidate : candidates) {
             String key = candidate.getChunkId().toString();
-            var document = Document.builder().id(key).text(candidate.getContent()).build();
+            Document document = Document.builder().id(key).text(candidate.getContent()).build();
             byId.put(key, candidate);
             documents.add(document);
         }
-        var results = inference.createRerankList(base.getRerankConnectionId(), query, documents);
+        List<DocumentWithScore> results = inference.createRerankList(base.getRerankConnectionId(), query, documents);
         return selectRerankedList(base, results, byId);
     }
 
@@ -95,8 +132,8 @@ public class KnowledgeRecallBizService {
     private List<KnowledgeRecallHit> selectRerankedList(KnowledgeBaseEntity base,
             List<DocumentWithScore> results, Map<String, KnowledgeRecallHit> byId) {
         List<KnowledgeRecallHit> reranked = new ArrayList<>();
-        for (var result : results) {
-            var hit = result.getOutput() == null ? null : byId.remove(result.getOutput().getId());
+        for (DocumentWithScore result : results) {
+            KnowledgeRecallHit hit = result.getOutput() == null ? null : byId.remove(result.getOutput().getId());
             Double score = result.getScore();
             if (hit == null || score == null || !Double.isFinite(score)) {
                 throw new ApiRuntimeException("重排响应无效，请检查模型服务");

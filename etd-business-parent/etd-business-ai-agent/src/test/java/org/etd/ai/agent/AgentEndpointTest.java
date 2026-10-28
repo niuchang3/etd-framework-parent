@@ -21,6 +21,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.lang.reflect.Method;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -56,15 +58,15 @@ class AgentEndpointTest {
         biz = mock(AgentBizService.class);
         connections = mock(ModelConnectionService.class);
         knowledgeBases = mock(KnowledgeBaseService.class);
-        var controller = new AgentController(agents, biz);
-        var options = new AgentOptionController(connections, knowledgeBases);
+        AgentController controller = new AgentController(agents, biz);
+        AgentOptionController options = new AgentOptionController(connections, knowledgeBases);
         mvc = MockMvcBuilders.standaloneSetup(controller, options).build();
     }
 
     /** 页面可先创建空草稿；客户端提交的租户、状态、版本和发布配置不会进入待保存实体。 */
     @Test
     void shouldCreateIncompleteDraftWithoutAcceptingTrustedFields() throws Exception {
-        var saved = new AgentEntity();
+        AgentEntity saved = new AgentEntity();
         saved.setId(9L);
         saved.setVersion(0L);
         when(biz.createAgent(any())).thenReturn(saved);
@@ -72,11 +74,11 @@ class AgentEndpointTest {
                 {"orgId":"10","name":"知识助手","isPublic":false,"draftConfig":{},
                  "tenantId":999,"dataStatus":0,"version":99,"publishedConfig":{"systemPrompt":"越权发布"}}
                 """;
-        var request = post("/v1/agents").contentType(MediaType.APPLICATION_JSON).content(body);
+        MockHttpServletRequestBuilder request = post("/v1/agents").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isOk());
-        var captured = ArgumentCaptor.forClass(AgentEntity.class);
+        ArgumentCaptor<AgentEntity> captured = ArgumentCaptor.forClass(AgentEntity.class);
         verify(biz).createAgent(captured.capture());
-        var input = captured.getValue();
+        AgentEntity input = captured.getValue();
         assertEquals(10L, input.getOrgId());
         assertNull(input.getTenantId());
         assertNull(input.getDataStatus());
@@ -90,15 +92,15 @@ class AgentEndpointTest {
         String missing = """
                 {"orgId":10,"name":"助手","isPublic":false,"draftConfig":{}}
                 """;
-        var update = put("/v1/agents/1").contentType(MediaType.APPLICATION_JSON).content(missing);
+        MockHttpServletRequestBuilder update = put("/v1/agents/1").contentType(MediaType.APPLICATION_JSON).content(missing);
         mvc.perform(update).andExpect(status().isBadRequest());
-        var publish = post("/v1/agents/1/publish").contentType(MediaType.APPLICATION_JSON).content("{}");
+        MockHttpServletRequestBuilder publish = post("/v1/agents/1/publish").contentType(MediaType.APPLICATION_JSON).content("{}");
         mvc.perform(publish).andExpect(status().isBadRequest());
         String invalid = """
                 {"orgId":10,"name":"助手","isPublic":false,
                  "draftConfig":{"modelOptions":{"temperature":3},"knowledgeBaseIds":[null]}}
                 """;
-        var create = post("/v1/agents").contentType(MediaType.APPLICATION_JSON).content(invalid);
+        MockHttpServletRequestBuilder create = post("/v1/agents").contentType(MediaType.APPLICATION_JSON).content(invalid);
         mvc.perform(create).andExpect(status().isBadRequest());
         verifyNoInteractions(biz);
     }
@@ -106,14 +108,14 @@ class AgentEndpointTest {
     /** 公开基本详情即使底层记录有配置，也不能序列化到响应。 */
     @Test
     void shouldKeepInternalConfigurationOutOfBasicDetail() throws Exception {
-        var entity = new AgentEntity();
+        AgentEntity entity = new AgentEntity();
         entity.setId(1L);
-        var config = new AgentConfiguration();
+        AgentConfiguration config = new AgentConfiguration();
         config.setSystemPrompt("内部指令");
         entity.setDraftConfig(config);
         entity.setPublishedConfig(config);
         when(agents.requireAgent(1L, false, false)).thenReturn(entity);
-        var request = get("/v1/agents/1");
+        MockHttpServletRequestBuilder request = get("/v1/agents/1");
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.draftConfig").doesNotExist())
                 .andExpect(jsonPath("$.data.publishedConfig").doesNotExist());
@@ -122,10 +124,10 @@ class AgentEndpointTest {
     /** 编辑配置必须显式要求菜单写权限；所有HTTP入口都声明中文操作日志。 */
     @Test
     void shouldDeclareWritePermissionForConfigurationAndLogsForEveryEndpoint() throws Exception {
-        var method = AgentController.class.getMethod("getConfiguration", Long.class);
+        Method method = AgentController.class.getMethod("getConfiguration", Long.class);
         assertEquals(PermissionAction.WRITE, method.getAnnotation(Permission.class).action());
-        for (var controller : List.of(AgentController.class, AgentOptionController.class)) {
-            for (var endpoint : controller.getDeclaredMethods()) {
+        for (Class<? extends Object> controller : List.of(AgentController.class, AgentOptionController.class)) {
+            for (Method endpoint : controller.getDeclaredMethods()) {
                 assertNotNull(endpoint.getAnnotation(AutoLog.class));
             }
         }
@@ -134,23 +136,23 @@ class AgentEndpointTest {
     /** 选择接口只返回选择所需字段，不泄露模型连接地址、凭证或知识索引设置。 */
     @Test
     void shouldReturnMinimalOptions() throws Exception {
-        var connection = new ModelConnectionEntity();
+        ModelConnectionEntity connection = new ModelConnectionEntity();
         connection.setId(1L);
         connection.setModelName("聊天模型");
         connection.setBaseUrl("https://example.invalid");
         connection.setApiKeyCiphertext("not-a-real-secret");
-        var modelPage = new Page<ModelConnectionEntity>();
-        var records = List.of(connection);
+        Page<ModelConnectionEntity> modelPage = new Page<ModelConnectionEntity>();
+        List<ModelConnectionEntity> records = List.of(connection);
         modelPage.setRecords(records);
         when(connections.fetchChatConnectionPage(1, 20, null)).thenReturn(modelPage);
-        var models = get("/v1/agents/options/models");
+        MockHttpServletRequestBuilder models = get("/v1/agents/options/models");
         mvc.perform(models).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records[0].modelName").value("聊天模型"))
                 .andExpect(jsonPath("$.data.records[0].baseUrl").doesNotExist())
                 .andExpect(jsonPath("$.data.records[0].apiKeyCiphertext").doesNotExist());
-        var basePage = new Page<KnowledgeBaseEntity>();
+        Page<KnowledgeBaseEntity> basePage = new Page<KnowledgeBaseEntity>();
         when(knowledgeBases.fetchAvailableBasePage(1, 20, null)).thenReturn(basePage);
-        var bases = get("/v1/agents/options/knowledge-bases");
+        MockHttpServletRequestBuilder bases = get("/v1/agents/options/knowledge-bases");
         mvc.perform(bases).andExpect(status().isOk());
     }
 }

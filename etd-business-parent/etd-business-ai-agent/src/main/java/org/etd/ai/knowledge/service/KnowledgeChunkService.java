@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import java.util.List;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 /** 分片持久化能力；事务、资料权限及整份结果的版本由Biz层统一控制。 */
 // 读取由框架合并本资源公开标记与角色范围；UPDATE、DELETE始终使用严格角色范围。
@@ -23,22 +25,22 @@ public class KnowledgeChunkService {
     private final KnowledgeChunkMapper mapper;
     /** @param documentId 已授权资料ID @param current 页码 @param size 单页数量 @return 按原文顺序排列的分片 */
     public IPage<KnowledgeChunkEntity> fetchChunkPage(Long documentId, long current, long size) {
-        var query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
+        LambdaQueryWrapper<KnowledgeChunkEntity> query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
                 .orderByAsc(KnowledgeChunkEntity::getChunkIndex);
-        var page = new Page<KnowledgeChunkEntity>(current, size);
+        Page<KnowledgeChunkEntity> page = new Page<KnowledgeChunkEntity>(current, size);
         return mapper.selectPage(page, query);
     }
     /** @param documentId 已授权资料ID @return 当前全部分片，顺序稳定 */
     public List<KnowledgeChunkEntity> fetchChunkList(Long documentId) {
-        var query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
+        LambdaQueryWrapper<KnowledgeChunkEntity> query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
                 .orderByAsc(KnowledgeChunkEntity::getChunkIndex);
         return mapper.selectList(query);
     }
     /** @param documentId 已授权资料ID @param id 分片ID @return 本资料内的分片，不允许跨资料访问 */
     public KnowledgeChunkEntity requireChunk(Long documentId, Long id) {
-        var query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
+        LambdaQueryWrapper<KnowledgeChunkEntity> query = Wrappers.<KnowledgeChunkEntity>lambdaQuery().eq(KnowledgeChunkEntity::getDocumentId, documentId)
                 .eq(KnowledgeChunkEntity::getId, id);
-        var entity = mapper.selectOne(query);
+        KnowledgeChunkEntity entity = mapper.selectOne(query);
         if (entity == null) { throw new ApiRuntimeException("分片不存在或不属于当前资料"); }
         return entity;
     }
@@ -65,12 +67,12 @@ public class KnowledgeChunkService {
      * @param chunkIndex 原分片顺序，新分片将插入其后
      */
     public void moveFollowingChunkList(Long documentId, Integer chunkIndex) {
-        var query = Wrappers.<KnowledgeChunkEntity>lambdaQuery()
+        LambdaQueryWrapper<KnowledgeChunkEntity> query = Wrappers.<KnowledgeChunkEntity>lambdaQuery()
                 .select(KnowledgeChunkEntity::getId, KnowledgeChunkEntity::getChunkIndex)
                 .eq(KnowledgeChunkEntity::getDocumentId, documentId)
                 .gt(KnowledgeChunkEntity::getChunkIndex, chunkIndex)
                 .orderByDesc(KnowledgeChunkEntity::getChunkIndex);
-        var following = mapper.selectList(query);
+        List<KnowledgeChunkEntity> following = mapper.selectList(query);
         // 降序逐条移动，先释放后一位置，避免触发(document_id, chunk_index)即时唯一约束。
         for (KnowledgeChunkEntity chunk : following) {
             chunk.setChunkIndex(Math.incrementExact(chunk.getChunkIndex()));
@@ -80,9 +82,9 @@ public class KnowledgeChunkService {
 
     /** @param documentId 已校验维护权限的资料ID @param isPublic 新共享标记；与资料更新处于同一事务 */
     public void modifyPublicByDocument(Long documentId, Boolean isPublic) {
-        var changes = new KnowledgeChunkEntity();
+        KnowledgeChunkEntity changes = new KnowledgeChunkEntity();
         changes.setIsPublic(isPublic);
-        var update = Wrappers.<KnowledgeChunkEntity>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeChunkEntity> update = Wrappers.<KnowledgeChunkEntity>lambdaUpdate()
                 .eq(KnowledgeChunkEntity::getDocumentId, documentId);
         mapper.update(changes, update);
     }

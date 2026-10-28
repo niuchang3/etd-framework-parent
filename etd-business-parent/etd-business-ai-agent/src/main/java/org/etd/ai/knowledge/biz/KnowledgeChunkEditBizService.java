@@ -13,6 +13,10 @@ import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.Map;
+import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
+import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 
 /** 分片人工编辑、相邻合并、拆分、删除和确认；以资料行锁和版本串行化整份结果的修改。 */
 @Service
@@ -24,9 +28,9 @@ public class KnowledgeChunkEditBizService {
     /** @param id 资料ID @param version 资料版本 @param edits 分片ID与新正文 @return 最新资料状态 */
     @Transactional
     public KnowledgeDocumentEntity modifyChunks(Long id, Long version, Map<Long, String> edits) {
-        var document = requireEditable(id, version);
-        for (var entry : edits.entrySet()) {
-            var chunk = chunks.requireChunk(id, entry.getKey());
+        KnowledgeDocumentEntity document = requireEditable(id, version);
+        for (Map.Entry<Long, String> entry : edits.entrySet()) {
+            KnowledgeChunkEntity chunk = chunks.requireChunk(id, entry.getKey());
             chunk.setContent(entry.getValue());
             chunk.setTokenCount(DocumentTokenCounter.count(entry.getValue()));
             chunks.modifyChunk(chunk);
@@ -38,12 +42,12 @@ public class KnowledgeChunkEditBizService {
     /** @param id 资料ID @param version 资料版本 @param ids 按当前原文顺序排列的相邻分片ID @return 合并后的最新资料状态 */
     @Transactional
     public KnowledgeDocumentEntity mergeChunks(Long id, Long version, List<Long> ids) {
-        var document = requireEditable(id, version);
-        var records = chunks.fetchChunkList(id);
+        KnowledgeDocumentEntity document = requireEditable(id, version);
+        List<KnowledgeChunkEntity> records = chunks.fetchChunkList(id);
         List<KnowledgeChunkEntity> selected = requireAdjacent(records, ids);
         String content = mergeContent(selected);
-        var source = mergeSource(selected);
-        var first = selected.getFirst();
+        KnowledgeChunkSource source = mergeSource(selected);
+        KnowledgeChunkEntity first = selected.getFirst();
         first.setContent(content);
         first.setTokenCount(DocumentTokenCounter.count(content));
         first.setSource(source);
@@ -67,20 +71,20 @@ public class KnowledgeChunkEditBizService {
     @Transactional
     public KnowledgeDocumentEntity splitChunk(Long id, Long chunkId, Long version,
             String firstContent, String secondContent) {
-        var document = requireEditable(id, version);
+        KnowledgeDocumentEntity document = requireEditable(id, version);
         requireSplitContent(firstContent);
         requireSplitContent(secondContent);
         if (document.getChunkCount() >= KnowledgeChunkLimits.MAX_CHUNKS) {
             throw new ApiRuntimeException("分片数量已达上限，不能继续拆分");
         }
-        var original = chunks.requireChunk(id, chunkId);
-        var second = KnowledgeChunkConverter.INSTANCE.toSplitEntity(original, secondContent);
+        KnowledgeChunkEntity original = chunks.requireChunk(id, chunkId);
+        KnowledgeChunkEntity second = KnowledgeChunkConverter.INSTANCE.toSplitEntity(original, secondContent);
         second.setChunkIndex(Math.incrementExact(original.getChunkIndex()));
         chunks.moveFollowingChunkList(id, original.getChunkIndex());
         original.setContent(firstContent);
         original.setTokenCount(DocumentTokenCounter.count(firstContent));
         chunks.modifyChunk(original);
-        var newChunks = List.of(second);
+        List<KnowledgeChunkEntity> newChunks = List.of(second);
         chunks.createChunkList(newChunks);
         document.setChunkCount(document.getChunkCount() + 1);
         markDraft(document);
@@ -104,8 +108,8 @@ public class KnowledgeChunkEditBizService {
      */
     @Transactional
     public KnowledgeDocumentEntity removeChunk(Long id, Long chunkId, Long version) {
-        var document = requireEditable(id, version);
-        var chunk = chunks.requireChunk(id, chunkId);
+        KnowledgeDocumentEntity document = requireEditable(id, version);
+        KnowledgeChunkEntity chunk = chunks.requireChunk(id, chunkId);
         chunks.removeChunk(chunk.getId());
         document.setChunkCount(document.getChunkCount() - 1);
         markDraft(document);
@@ -118,7 +122,7 @@ public class KnowledgeChunkEditBizService {
     }
 
     private KnowledgeDocumentEntity requireEditable(Long id, Long version) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) { throw new ApiRuntimeException("分片已变化，请刷新后重试"); }
         if (document.getChunkCount() == null || document.getChunkCount() == 0) { throw new ApiRuntimeException("请先生成分片"); }
@@ -135,7 +139,7 @@ public class KnowledgeChunkEditBizService {
         if (first < 0 || first + ids.size() > all.size()) { throw new ApiRuntimeException("分片不属于当前资料"); }
         List<KnowledgeChunkEntity> selected = new ArrayList<>();
         for (int index = 0; index < ids.size(); index++) {
-            var chunk = all.get(first + index);
+            KnowledgeChunkEntity chunk = all.get(first + index);
             if (!chunk.getId().equals(ids.get(index))) { throw new ApiRuntimeException("只能按原文顺序合并相邻分片"); }
             selected.add(chunk);
         }
@@ -161,9 +165,9 @@ public class KnowledgeChunkEditBizService {
             pages.addAll(chunk.getSource().pageNumbers());
             refs.addAll(chunk.getSource().documentItemRefs());
         }
-        var path = List.copyOf(headings);
-        var pageNumbers = List.copyOf(pages);
-        var references = List.copyOf(refs);
+        List<String> path = List.copyOf(headings);
+        List<Integer> pageNumbers = List.copyOf(pages);
+        List<String> references = List.copyOf(refs);
         return new KnowledgeChunkSource(path, pageNumbers, references);
     }
 

@@ -20,7 +20,7 @@ public class ModelClientFactory {
         Assert.isTrue(configuration.enabled(), "模型连接已停用");
         ModelClientProvider selected = selectProvider(configuration);
         try {
-            var instance = selected.create(configuration);
+            Model<?, ?> instance = selected.create(configuration);
             Assert.notNull(instance, "模型适配器未返回实例");
             Assert.isTrue(configuration.capability().getModelType().isInstance(instance), "模型实例与配置能力不匹配");
             return instance;
@@ -32,7 +32,7 @@ public class ModelClientFactory {
 
     private ModelClientProvider selectProvider(ModelConnectionConfiguration configuration) {
         ModelClientProvider selected = null;
-        for (var provider : providers) {
+        for (ModelClientProvider provider : providers) {
             if (provider.supports(configuration.protocol(), configuration.capability())) {
                 Assert.state(selected == null, "模型协议与能力匹配了多个适配器");
                 selected = provider;

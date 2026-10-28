@@ -18,6 +18,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.etd.ai.knowledge.model.KnowledgeDocumentDeleteResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,25 +36,25 @@ class KnowledgeDocumentBatchDeleteTest {
     /** 多项失败不会阻断后续项，数据库失败仅回滚当前资料，权限和归属校验先于原件清理。 */
     @Test
     void shouldCommitSuccessfulItemsAndRollbackOnlyFailedDocument() throws Exception {
-        var source = new DriverManagerDataSource("jdbc:h2:mem:batch-delete;DB_CLOSE_DELAY=-1", "sa", "");
-        var jdbc = new JdbcTemplate(source);
+        DriverManagerDataSource source = new DriverManagerDataSource("jdbc:h2:mem:batch-delete;DB_CLOSE_DELAY=-1", "sa", "");
+        JdbcTemplate jdbc = new JdbcTemplate(source);
         jdbc.execute("create table deletion_probe (document_id bigint primary key)");
         jdbc.execute("insert into deletion_probe values (1), (2), (3), (4), (5), (6), (7)");
-        var documents = mock(KnowledgeDocumentService.class);
-        var objects = mock(KnowledgeObjectService.class);
-        var folders = mock(KnowledgeFolderService.class);
-        var chunks = mock(KnowledgeChunkService.class);
-        var vectors = mock(KnowledgeVectorService.class);
-        var records = prepareDocuments(documents);
+        KnowledgeDocumentService documents = mock(KnowledgeDocumentService.class);
+        KnowledgeObjectService objects = mock(KnowledgeObjectService.class);
+        KnowledgeFolderService folders = mock(KnowledgeFolderService.class);
+        KnowledgeChunkService chunks = mock(KnowledgeChunkService.class);
+        KnowledgeVectorService vectors = mock(KnowledgeVectorService.class);
+        List<KnowledgeDocumentEntity> records = prepareDocuments(documents);
         prepareFailures(documents, objects, records, jdbc);
-        var single = new KnowledgeDocumentBizService(documents, folders, objects, chunks, vectors);
-        var target = transactionalProxy(single, source);
-        var batch = new KnowledgeDocumentBatchDeleteBizService(target);
-        var ids = List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L);
-        var result = batch.removeDocumentList(10L, ids);
+        KnowledgeDocumentBizService single = new KnowledgeDocumentBizService(documents, folders, objects, chunks, vectors);
+        KnowledgeDocumentBizService target = transactionalProxy(single, source);
+        KnowledgeDocumentBatchDeleteBizService batch = new KnowledgeDocumentBatchDeleteBizService(target);
+        List<Long> ids = List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L);
+        KnowledgeDocumentDeleteResult result = batch.removeDocumentList(10L, ids);
         assertThat(result.successIds()).containsExactly(1L, 6L);
         assertThat(result.failures()).extracting(value -> value.id()).containsExactly(2L, 3L, 4L, 5L, 7L);
-        var remaining = jdbc.queryForList("select document_id from deletion_probe order by document_id", Long.class);
+        List<Long> remaining = jdbc.queryForList("select document_id from deletion_probe order by document_id", Long.class);
         assertThat(remaining).containsExactly(2L, 3L, 4L, 5L, 7L);
         assertThat(result.failures().getLast().message()).isEqualTo("原件清理失败，请重试删除");
         verify(objects, never()).removeObject(records.get(2));
@@ -65,18 +66,18 @@ class KnowledgeDocumentBatchDeleteTest {
 
     /** 资料维护失败和繁忙状态都不能进入存储清理，跨库选择亦被拒绝。 */
     private List<KnowledgeDocumentEntity> prepareDocuments(KnowledgeDocumentService documents) {
-        var records = new ArrayList<KnowledgeDocumentEntity>();
+        ArrayList<KnowledgeDocumentEntity> records = new ArrayList<KnowledgeDocumentEntity>();
         for (long id = 1; id <= 7; id++) {
-            var document = new KnowledgeDocumentEntity();
+            KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
             document.setId(id);
             document.setKnowledgeBaseId(id == 5 ? 20L : 10L);
             records.add(document);
             when(documents.requireDocument(id, true)).thenReturn(document);
         }
-        var denied = new ApiRuntimeException("资料不存在或无操作权限");
+        ApiRuntimeException denied = new ApiRuntimeException("资料不存在或无操作权限");
         when(documents.requireDocument(4L, true)).thenThrow(denied);
-        var busy = records.get(2);
-        var exception = new ApiRuntimeException("资料正在生成分片，请稍后操作");
+        KnowledgeDocumentEntity busy = records.get(2);
+        ApiRuntimeException exception = new ApiRuntimeException("资料正在生成分片，请稍后操作");
         doThrow(exception).when(documents).requireChunkIdle(busy);
         return records;
     }
@@ -92,17 +93,17 @@ class KnowledgeDocumentBatchDeleteTest {
             }
             return null;
         }).when(documents).removeDocument(anyLong());
-        var storageFailure = new IllegalStateException("internal-storage-detail");
+        IllegalStateException storageFailure = new IllegalStateException("internal-storage-detail");
         doThrow(storageFailure).when(objects).removeObject(records.get(6));
     }
 
     /** 生产方法上的REQUIRES_NEW由真实事务拦截器执行，不使用自调用模拟事务。 */
     private KnowledgeDocumentBizService transactionalProxy(KnowledgeDocumentBizService single,
             DriverManagerDataSource source) {
-        var manager = new DataSourceTransactionManager(source);
-        var attributes = new AnnotationTransactionAttributeSource();
-        var interceptor = new TransactionInterceptor(manager, attributes);
-        var factory = new ProxyFactory(single);
+        DataSourceTransactionManager manager = new DataSourceTransactionManager(source);
+        AnnotationTransactionAttributeSource attributes = new AnnotationTransactionAttributeSource();
+        TransactionInterceptor interceptor = new TransactionInterceptor(manager, attributes);
+        ProxyFactory factory = new ProxyFactory(single);
         factory.setProxyTargetClass(true);
         factory.addAdvice(interceptor);
         return (KnowledgeDocumentBizService) factory.getProxy();
@@ -111,13 +112,13 @@ class KnowledgeDocumentBatchDeleteTest {
     /** 重复、空选择和超限批次应在执行任何资料删除前失败。 */
     @Test
     void shouldRejectInvalidSelectionBeforeAnyDeletion() {
-        var single = mock(KnowledgeDocumentBizService.class);
-        var batch = new KnowledgeDocumentBatchDeleteBizService(single);
-        var duplicate = List.of(1L, 1L);
+        KnowledgeDocumentBizService single = mock(KnowledgeDocumentBizService.class);
+        KnowledgeDocumentBatchDeleteBizService batch = new KnowledgeDocumentBatchDeleteBizService(single);
+        List<Long> duplicate = List.of(1L, 1L);
         assertThatThrownBy(() -> batch.removeDocumentList(10L, duplicate)).isInstanceOf(ApiRuntimeException.class);
         List<Long> empty = List.of();
         assertThatThrownBy(() -> batch.removeDocumentList(10L, empty)).isInstanceOf(ApiRuntimeException.class);
-        var oversized = new ArrayList<Long>();
+        ArrayList<Long> oversized = new ArrayList<Long>();
         for (long id = 1; id <= 101; id++) {
             oversized.add(id);
         }
@@ -128,12 +129,12 @@ class KnowledgeDocumentBatchDeleteTest {
     /** 非业务异常不向客户端泄露内部信息，后续项继续执行。 */
     @Test
     void shouldSanitizeUnexpectedFailureAndContinue() {
-        var single = mock(KnowledgeDocumentBizService.class);
-        var failure = new IllegalStateException("internal-db-detail");
+        KnowledgeDocumentBizService single = mock(KnowledgeDocumentBizService.class);
+        IllegalStateException failure = new IllegalStateException("internal-db-detail");
         doThrow(failure).when(single).removeDocumentByBase(1L, 10L);
-        var batch = new KnowledgeDocumentBatchDeleteBizService(single);
-        var ids = List.of(1L, 2L);
-        var result = batch.removeDocumentList(10L, ids);
+        KnowledgeDocumentBatchDeleteBizService batch = new KnowledgeDocumentBatchDeleteBizService(single);
+        List<Long> ids = List.of(1L, 2L);
+        KnowledgeDocumentDeleteResult result = batch.removeDocumentList(10L, ids);
         assertThat(result.successIds()).containsExactly(2L);
         assertThat(result.failures().getFirst().message()).isEqualTo("删除失败，请刷新后重试");
     }

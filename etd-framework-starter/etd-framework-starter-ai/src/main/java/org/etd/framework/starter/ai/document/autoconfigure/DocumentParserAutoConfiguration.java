@@ -42,8 +42,8 @@ public class DocumentParserAutoConfiguration {
             havingValue = ENABLED_VALUE)
     DoclingDocumentParser doclingDocumentParser(DoclingProperties properties) {
         properties.validate();
-        var httpBuilder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
-        var client = DoclingTaskClient.builder().baseUrl(properties.getBaseUrl())
+        HttpClient.Builder httpBuilder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER);
+        DoclingTaskClient client = DoclingTaskClient.builder().baseUrl(properties.getBaseUrl())
                 .apiKey(properties.getApiKey()).connectTimeout(properties.getConnectTimeout())
                 .readTimeout(properties.getReadTimeout()).httpClientBuilder(httpBuilder)
                 .logRequests(false).logResponses(false).build();

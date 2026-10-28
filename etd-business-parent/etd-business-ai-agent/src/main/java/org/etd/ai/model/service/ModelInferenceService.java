@@ -15,6 +15,10 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingOptions;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.stereotype.Service;
+import com.alibaba.cloud.ai.model.RerankModel;
+import org.etd.ai.model.entity.ModelConnectionEntity;
+import org.springframework.ai.embedding.Embedding;
+import org.springframework.ai.embedding.EmbeddingResponse;
 
 /** 业务模型推理边界，复用框架SDK并统一阻止服务商错误正文进入业务响应。 */
 @Slf4j
@@ -37,12 +41,12 @@ public class ModelInferenceService {
         try {
             String tenantId = requireTenantId(connectionId);
             String key = connectionId.toString();
-            var model = clients.getEmbeddingModel(tenantId, key);
-            var options = EmbeddingOptions.builder().dimensions(dimensions).build();
+            EmbeddingModel model = clients.getEmbeddingModel(tenantId, key);
+            EmbeddingOptions options = EmbeddingOptions.builder().dimensions(dimensions).build();
             List<float[]> vectors = new ArrayList<>();
             for (int start = 0; start < texts.size(); start += EMBEDDING_BATCH_SIZE) {
-                var batch = texts.subList(start, Math.min(start + EMBEDDING_BATCH_SIZE, texts.size()));
-                var result = createEmbeddingBatch(model, batch, options, dimensions);
+                List<String> batch = texts.subList(start, Math.min(start + EMBEDDING_BATCH_SIZE, texts.size()));
+                List<float[]> result = createEmbeddingBatch(model, batch, options, dimensions);
                 vectors.addAll(result);
             }
             return vectors;
@@ -55,10 +59,10 @@ public class ModelInferenceService {
     /** 服务商可乱序返回批次，严格按index恢复输入顺序并拒绝缺项及重复项。 */
     private List<float[]> createEmbeddingBatch(EmbeddingModel model, List<String> batch,
             EmbeddingOptions options, int dimensions) {
-        var request = new EmbeddingRequest(batch, options);
-        var response = model.call(request);
-        var ordered = new float[batch.size()][];
-        for (var result : response.getResults()) {
+        EmbeddingRequest request = new EmbeddingRequest(batch, options);
+        EmbeddingResponse response = model.call(request);
+        float[][] ordered = new float[batch.size()][];
+        for (Embedding result : response.getResults()) {
             int index = result.getIndex();
             if (index < 0 || index >= ordered.length || ordered[index] != null) {
                 throw new IllegalStateException("向量响应序号无效");
@@ -84,11 +88,11 @@ public class ModelInferenceService {
         try {
             String tenantId = requireTenantId(connectionId);
             String key = connectionId.toString();
-            var model = clients.getRerankModel(tenantId, key);
+            RerankModel model = clients.getRerankModel(tenantId, key);
             // SDK请求选项自带默认模型，必须显式清空，才能沿用连接配置；数量只覆盖本次候选上限。
-            var options = DashScopeRerankOptions.builder().model(null)
+            DashScopeRerankOptions options = DashScopeRerankOptions.builder().model(null)
                     .topN(documents.size()).returnDocuments(false).build();
-            var request = new RerankRequest(query, documents, options);
+            RerankRequest request = new RerankRequest(query, documents, options);
             return model.call(request).getResults();
         } catch (RuntimeException exception) {
             log.warn("模型重排调用失败，连接ID={}，异常类型={}", connectionId, exception.getClass().getSimpleName());
@@ -98,7 +102,7 @@ public class ModelInferenceService {
 
     /** 从持久化连接取得真实租户；平台管理员跨租户操作也不能使用当前会话租户解密。 */
     private String requireTenantId(Long id) {
-        var connection = connections.selectById(id);
+        ModelConnectionEntity connection = connections.selectById(id);
         if (connection == null) {
             throw new ApiRuntimeException("模型连接不存在");
         }

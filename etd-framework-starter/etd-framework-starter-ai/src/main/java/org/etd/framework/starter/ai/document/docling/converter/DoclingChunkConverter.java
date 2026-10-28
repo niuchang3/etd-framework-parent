@@ -17,6 +17,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 import org.mapstruct.factory.Mappers;
+import ai.docling.core.DoclingDocument;
+import ai.docling.serve.api.chunk.response.ExportDocumentResponse;
 
 /** 原生分块选项及结果的 MapStruct 转换；业务不接触 Docling SDK 对象。 */
 @Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR)
@@ -51,12 +53,12 @@ public abstract class DoclingChunkConverter {
             throw new DocumentParseException("分块结果包含空文档", DocumentParseException.NO_HTTP_STATUS, null);
         }
         DocumentParseStatus status = resultConverter.toParseStatus(document.getStatus());
-        var source = document.getContent();
+        ExportDocumentResponse source = document.getContent();
         boolean hasContent = status == DocumentParseStatus.SUCCESS || status == DocumentParseStatus.PARTIAL_SUCCESS;
         if (hasContent && (source == null || source.getJsonContent() == null)) {
             throw new DocumentParseException("分块结果缺少请求的原文结构", DocumentParseException.NO_HTTP_STATUS, null);
         }
-        var original = source == null ? null : source.getJsonContent();
+        DoclingDocument original = source == null ? null : source.getJsonContent();
         DoclingContent content = structureReader.read(original);
         DocumentParseResult result = resultConverter.toResult(document, content);
         String filename = source == null ? null : source.getFilename();

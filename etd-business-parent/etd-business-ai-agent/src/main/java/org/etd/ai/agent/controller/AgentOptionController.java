@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
+import org.etd.ai.model.entity.ModelConnectionEntity;
 
 /** Agent编辑页面的模型与知识库选择入口，无需额外授予模型管理或知识库维护菜单。 */
 @RestController
@@ -38,8 +40,8 @@ public class AgentOptionController {
             @RequestParam(defaultValue = "1") @Min(1) long current,
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) long size,
             @RequestParam(required = false) @Size(max = 100) String keyword) {
-        var page = connections.fetchChatConnectionPage(current, size, keyword);
-        var result = page.convert(AgentConverter.INSTANCE::toModelOptionVO);
+        IPage<ModelConnectionEntity> page = connections.fetchChatConnectionPage(current, size, keyword);
+        IPage<AgentModelOptionVO> result = page.convert(AgentConverter.INSTANCE::toModelOptionVO);
         return ResultModel.success(result);
     }
 
@@ -50,8 +52,8 @@ public class AgentOptionController {
             @RequestParam(defaultValue = "1") @Min(1) long current,
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) long size,
             @RequestParam(required = false) @Size(max = 100) String keyword) {
-        var page = knowledgeBases.fetchAvailableBasePage(current, size, keyword);
-        var result = page.convert(AgentConverter.INSTANCE::toKnowledgeOptionVO);
+        IPage<KnowledgeBaseEntity> page = knowledgeBases.fetchAvailableBasePage(current, size, keyword);
+        IPage<AgentKnowledgeOptionVO> result = page.convert(AgentConverter.INSTANCE::toKnowledgeOptionVO);
         return ResultModel.success(result);
     }
 }

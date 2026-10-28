@@ -48,16 +48,16 @@ class ModelClientAutoConfigurationTest {
     /** 获取模型时才创建SDK，管理器本身保持Spring单例。 */
     @Test
     void shouldReuseLazyClientsAfterResolverIsProvided() {
-        var uri = URI.create("https://example.invalid/v1");
-        var decrypted = new AtomicInteger();
-        var configuration = new ModelConnectionConfiguration("tenant", "1", 0, true, ModelClientProtocol.OPENAI_COMPATIBLE,
+        URI uri = URI.create("https://example.invalid/v1");
+        AtomicInteger decrypted = new AtomicInteger();
+        ModelConnectionConfiguration configuration = new ModelConnectionConfiguration("tenant", "1", 0, true, ModelClientProtocol.OPENAI_COMPATIBLE,
                 ModelCapability.CHAT, "test-model", uri, () -> { decrypted.incrementAndGet(); return null; });
         ModelConnectionResolver resolver = (tenant, id) -> configuration;
         runner.withBean(ModelConnectionResolver.class, () -> resolver).run(context -> {
-            var registry = context.getBean(ModelClientRegistry.class);
+            ModelClientRegistry registry = context.getBean(ModelClientRegistry.class);
             assertThat(context.getBean(ModelClientRegistry.class)).isSameAs(registry);
-            var first = registry.getChatModel("tenant", "1");
-            var second = registry.getChatModel("tenant", "1");
+            ChatModel first = registry.getChatModel("tenant", "1");
+            ChatModel second = registry.getChatModel("tenant", "1");
             assertThat(first).isSameAs(second);
             assertThat(decrypted).hasValue(1);
         });

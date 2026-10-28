@@ -44,8 +44,8 @@ public final class KnowledgeChunkGenerationException extends RuntimeException {
 
     /** @param maxBytes 后端配置的原件大小上限，单位字节 @return 可展示的解析大小限制，明确使用MiB */
     public static KnowledgeChunkGenerationException fileTooLarge(long maxBytes) {
-        var bytes = BigDecimal.valueOf(maxBytes);
-        var bytesPerMiB = BigDecimal.valueOf(1024L * 1024L);
+        BigDecimal bytes = BigDecimal.valueOf(maxBytes);
+        BigDecimal bytesPerMiB = BigDecimal.valueOf(1024L * 1024L);
         String limit = bytes.divide(bytesPerMiB, 2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
         String message = "原件超过单次文档解析的" + limit + " MiB上限；请拆分文件或联系管理员调整解析大小限制";
         return new KnowledgeChunkGenerationException(Reason.FILE_TOO_LARGE, message);
@@ -53,8 +53,8 @@ public final class KnowledgeChunkGenerationException extends RuntimeException {
 
     /** 避免整秒被输出为90.0，同时保留用户配置的亚秒精度。 */
     private static String formatSeconds(Duration duration) {
-        var seconds = BigDecimal.valueOf(duration.getSeconds());
-        var fraction = BigDecimal.valueOf(duration.getNano(), 9);
+        BigDecimal seconds = BigDecimal.valueOf(duration.getSeconds());
+        BigDecimal fraction = BigDecimal.valueOf(duration.getNano(), 9);
         return seconds.add(fraction).stripTrailingZeros().toPlainString();
     }
 

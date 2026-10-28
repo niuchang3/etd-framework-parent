@@ -35,10 +35,10 @@ public class KnowledgeDocumentService {
      * @return 数据权限内资料分页 */
     public IPage<KnowledgeDocumentEntity> fetchDocumentPage(long current, long size, Long folderId,
             List<Long> folderIds, String keyword, String uploadStatus, String chunkStatus, Long knowledgeBaseId, Integer dataStatus) {
-        var page = new Page<KnowledgeDocumentEntity>(current, size);
-        var result = mapper.selectReadablePage(page, knowledgeBaseId, folderId, folderIds, keyword,
+        Page<KnowledgeDocumentEntity> page = new Page<KnowledgeDocumentEntity>(current, size);
+        IPage<KnowledgeDocumentEntity> result = mapper.selectReadablePage(page, knowledgeBaseId, folderId, folderIds, keyword,
                 uploadStatus, chunkStatus, dataStatus);
-        for (var document : result.getRecords()) {
+        for (KnowledgeDocumentEntity document : result.getRecords()) {
             populateWritable(document);
         }
         return result;
@@ -47,7 +47,7 @@ public class KnowledgeDocumentService {
     /** @param id 资料ID @param lock 是否在当前事务加行锁 @return 可读取资料；lock为true时同时要求严格维护范围
      * @throws ApiRuntimeException 无权限或资料不存在 */
     public KnowledgeDocumentEntity requireDocument(Long id, boolean lock) {
-        var entity = mapper.selectAccessible(id, lock);
+        KnowledgeDocumentEntity entity = mapper.selectAccessible(id, lock);
         if (entity != null) {
             populateWritable(entity);
         }
@@ -59,7 +59,7 @@ public class KnowledgeDocumentService {
 
     /** 资料维护资格由框架统一范围计算，与知识库创建人无关。 */
     private void populateWritable(KnowledgeDocumentEntity document) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         document.setWritable(scope.canManage(document.getOrgId(), document.getCreateBy()));
     }
 
@@ -81,7 +81,7 @@ public class KnowledgeDocumentService {
 
     /** @param entity 已继承知识库组织的上传主记录 @return 新建资料ID；INSERT主动校验组织维护范围 */
     public Long createDocument(KnowledgeDocumentEntity entity) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         Long orgId = entity.getOrgId();
         // 组织由上传编排从知识库继承，缺失时禁止自动改用上传人的主组织。
         if (orgId == null) {

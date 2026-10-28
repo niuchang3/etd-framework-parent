@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.etd.ai.agent.entity.AgentEntity;
 
 /** Agent列表和编辑页面入口，所有写入通过Biz编排，公开基本详情不包含运行配置。 */
 @RestController
@@ -55,8 +56,8 @@ public class AgentController {
             @RequestParam(required = false) @Min(BasicConstant.DataStatus.DISABLED_CODE)
             @Max(BasicConstant.DataStatus.ENABLED_CODE) Integer dataStatus,
             @RequestParam(required = false) Boolean published) {
-        var page = agents.fetchAgentPage(current, size, keyword, dataStatus, published);
-        var result = page.convert(AgentConverter.INSTANCE::toVO);
+        IPage<AgentEntity> page = agents.fetchAgentPage(current, size, keyword, dataStatus, published);
+        IPage<AgentVO> result = page.convert(AgentConverter.INSTANCE::toVO);
         return ResultModel.success(result);
     }
 
@@ -64,8 +65,8 @@ public class AgentController {
     @GetMapping("/{id}")
     @AutoLog("查询Agent基本详情")
     public ResultModel<AgentVO> get(@PathVariable @Positive Long id) {
-        var agent = agents.requireAgent(id, false, false);
-        var result = AgentConverter.INSTANCE.toVO(agent);
+        AgentEntity agent = agents.requireAgent(id, false, false);
+        AgentVO result = AgentConverter.INSTANCE.toVO(agent);
         return ResultModel.success(result);
     }
 
@@ -74,8 +75,8 @@ public class AgentController {
     @Permission(action = PermissionAction.WRITE)
     @AutoLog("查询Agent编辑配置")
     public ResultModel<AgentConfigurationVO> getConfiguration(@PathVariable @Positive Long id) {
-        var agent = agents.requireAgent(id, true, false);
-        var result = AgentConverter.INSTANCE.toConfigurationVO(agent);
+        AgentEntity agent = agents.requireAgent(id, true, false);
+        AgentConfigurationVO result = AgentConverter.INSTANCE.toConfigurationVO(agent);
         return ResultModel.success(result);
     }
 
@@ -83,9 +84,9 @@ public class AgentController {
     @PostMapping
     @AutoLog("创建Agent")
     public ResultModel<AgentWriteVO> save(@Valid @RequestBody AgentSaveDTO dto) {
-        var input = AgentConverter.INSTANCE.toEntity(dto);
-        var agent = biz.createAgent(input);
-        var result = AgentConverter.INSTANCE.toWriteVO(agent);
+        AgentEntity input = AgentConverter.INSTANCE.toEntity(dto);
+        AgentEntity agent = biz.createAgent(input);
+        AgentWriteVO result = AgentConverter.INSTANCE.toWriteVO(agent);
         return ResultModel.success(result);
     }
 
@@ -94,9 +95,9 @@ public class AgentController {
     @AutoLog("修改Agent草稿")
     public ResultModel<AgentWriteVO> update(@PathVariable @Positive Long id,
             @Validated(UpdateRequest.class) @RequestBody AgentSaveDTO dto) {
-        var input = AgentConverter.INSTANCE.toEntity(dto);
-        var agent = biz.modifyAgent(id, input, dto.getVersion());
-        var result = AgentConverter.INSTANCE.toWriteVO(agent);
+        AgentEntity input = AgentConverter.INSTANCE.toEntity(dto);
+        AgentEntity agent = biz.modifyAgent(id, input, dto.getVersion());
+        AgentWriteVO result = AgentConverter.INSTANCE.toWriteVO(agent);
         return ResultModel.success(result);
     }
 
@@ -105,8 +106,8 @@ public class AgentController {
     @AutoLog("发布Agent")
     public ResultModel<AgentWriteVO> publish(@PathVariable @Positive Long id,
             @Valid @RequestBody AgentVersionDTO dto) {
-        var agent = biz.publishAgent(id, dto.getVersion());
-        var result = AgentConverter.INSTANCE.toWriteVO(agent);
+        AgentEntity agent = biz.publishAgent(id, dto.getVersion());
+        AgentWriteVO result = AgentConverter.INSTANCE.toWriteVO(agent);
         return ResultModel.success(result);
     }
 
@@ -115,8 +116,8 @@ public class AgentController {
     @AutoLog("修改Agent启停状态")
     public ResultModel<AgentWriteVO> updateStatus(@PathVariable @Positive Long id,
             @Valid @RequestBody AgentStatusDTO dto) {
-        var agent = biz.modifyAgentStatus(id, dto.getDataStatus(), dto.getVersion());
-        var result = AgentConverter.INSTANCE.toWriteVO(agent);
+        AgentEntity agent = biz.modifyAgentStatus(id, dto.getDataStatus(), dto.getVersion());
+        AgentWriteVO result = AgentConverter.INSTANCE.toWriteVO(agent);
         return ResultModel.success(result);
     }
 

@@ -13,6 +13,7 @@ import org.etd.framework.starter.mybaits.permission.model.DataPermissionScope;
 import org.springframework.stereotype.Service;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 /** 知识库基础读写能力；共享读取与维护权限严格分离。 */
 // 读取由框架合并本资源公开标记与角色范围；UPDATE、DELETE始终使用严格角色范围。
 @DataPermission(tables = {@DataPermissionTable(table = "ai_knowledge_base", publicColumn = KnowledgePolicy.PUBLIC_COLUMN),
@@ -23,22 +24,22 @@ public class KnowledgeBaseService {
     private final KnowledgeBaseMapper mapper;
     /** @param current 页码 @param size 页大小 @param keyword 名称关键字 @return Agent配置可选的启用且可读知识库 */
     public IPage<KnowledgeBaseEntity> fetchAvailableBasePage(long current, long size, String keyword) {
-        var page = new Page<KnowledgeBaseEntity>(current, size);
+        Page<KnowledgeBaseEntity> page = new Page<KnowledgeBaseEntity>(current, size);
         return mapper.selectAvailablePage(page, keyword, BasicConstant.DataStatus.ENABLED_CODE);
     }
 
     /** @param current 页码 @param size 页大小 @param keyword 名称关键字 @return 权限内卡片 */
     public IPage<KnowledgeBaseEntity> fetchBasePage(long current, long size, String keyword) {
-        var page = new Page<KnowledgeBaseEntity>(current, size);
-        var result = mapper.selectReadablePage(page, keyword);
-        for (var base : result.getRecords()) {
+        Page<KnowledgeBaseEntity> page = new Page<KnowledgeBaseEntity>(current, size);
+        IPage<KnowledgeBaseEntity> result = mapper.selectReadablePage(page, keyword);
+        for (KnowledgeBaseEntity base : result.getRecords()) {
             populateWritable(base);
         }
         return result;
     }
     /** @param id 知识库 @param write 是否要求维护资格 @param lock 是否行锁 @return 可访问记录 */
     public KnowledgeBaseEntity requireBase(Long id, boolean write, boolean lock) {
-        var base = mapper.selectAccessible(id, lock);
+        KnowledgeBaseEntity base = mapper.selectAccessible(id, lock);
         if (base != null) {
             populateWritable(base);
         }
@@ -56,7 +57,7 @@ public class KnowledgeBaseService {
     @DataPermission(enable = false)
     public KnowledgeBaseEntity requireIndexBase(KnowledgeDocumentEntity document) {
         requireDocumentManagement(document);
-        var base = mapper.selectAccessible(document.getKnowledgeBaseId(), true);
+        KnowledgeBaseEntity base = mapper.selectAccessible(document.getKnowledgeBaseId(), true);
         if (base == null) {
             throw new ApiRuntimeException("知识库不存在");
         }
@@ -77,7 +78,7 @@ public class KnowledgeBaseService {
             throw new ApiRuntimeException("资料不属于当前知识库");
         }
         long nextVersion = Math.incrementExact(base.getVersion());
-        var update = Wrappers.<KnowledgeBaseEntity>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeBaseEntity> update = Wrappers.<KnowledgeBaseEntity>lambdaUpdate()
                 .eq(KnowledgeBaseEntity::getId, base.getId())
                 .eq(KnowledgeBaseEntity::getVersion, base.getVersion())
                 .set(KnowledgeBaseEntity::getActiveIndexVersion, base.getActiveIndexVersion())
@@ -92,7 +93,7 @@ public class KnowledgeBaseService {
 
     /** 索引内部操作使用资料自身的框架范围，公开读取不构成维护授权。 */
     private void requireDocumentManagement(KnowledgeDocumentEntity document) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         if (!scope.canManage(document.getOrgId(), document.getCreateBy())) {
             throw new ApiRuntimeException("无资料维护权限");
         }
@@ -100,12 +101,12 @@ public class KnowledgeBaseService {
 
     /** 页面维护能力复用框架范围计算，公开可读不会授予写入资格。 */
     private void populateWritable(KnowledgeBaseEntity base) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         base.setWritable(scope.canManage(base.getOrgId(), base.getCreateBy()));
     }
     /** @param entity 已校验配置 @return 新建知识库ID */
     public Long createBase(KnowledgeBaseEntity entity) {
-        var scope = DataPermissionScope.current();
+        DataPermissionScope scope = DataPermissionScope.current();
         if (!scope.canManage(entity.getOrgId(), scope.userId())) {
             throw new ApiRuntimeException("无知识库新增数据权限");
         }

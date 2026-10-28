@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Set;
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -121,9 +122,9 @@ class GlobalExceptionHandlerTest {
     /** 安全异常继续传播给Security过滤器，不能被合并后的处理器转换成普通业务失败。 */
     @Test
     void shouldPropagateSecurityErrors() {
-        var handler = new GlobalExceptionHandler();
-        var denied = new AccessDeniedException("denied");
-        var invalid = new BadCredentialsException("invalid");
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        AccessDeniedException denied = new AccessDeniedException("denied");
+        BadCredentialsException invalid = new BadCredentialsException("invalid");
         assertThatThrownBy(() -> handler.propagateSecurityException(denied)).isSameAs(denied);
         assertThatThrownBy(() -> handler.propagateSecurityException(invalid)).isSameAs(invalid);
     }
@@ -137,10 +138,10 @@ class GlobalExceptionHandlerTest {
         /** 构造包含被拒绝原值和自定义敏感消息的Body校验异常。 */
         @GetMapping("/validation")
         public void rejectBody() throws Exception {
-            var result = new BeanPropertyBindingResult(new JsonRequest(0), "request");
+            BeanPropertyBindingResult result = new BeanPropertyBindingResult(new JsonRequest(0), "request");
             result.addError(new FieldError("request", "apiKey", SECRET, false,
                     null, null, SECRET));
-            var method = ProbeController.class.getMethod("acceptJson", JsonRequest.class);
+            Method method = ProbeController.class.getMethod("acceptJson", JsonRequest.class);
             throw new MethodArgumentNotValidException(new MethodParameter(method, 0), result);
         }
 

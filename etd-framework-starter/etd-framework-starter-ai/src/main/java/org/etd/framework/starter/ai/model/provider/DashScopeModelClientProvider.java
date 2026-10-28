@@ -23,6 +23,11 @@ import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.retry.RetryUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /** 复用Spring AI Alibaba原生聊天、向量与重排SDK，不重新实现HTTP协议。 */
 public class DashScopeModelClientProvider implements ModelClientProvider {
@@ -54,21 +59,21 @@ public class DashScopeModelClientProvider implements ModelClientProvider {
         if (!supports(configuration.protocol(), configuration.capability())) {
             throw new IllegalArgumentException("DashScope适配器不支持该模型能力");
         }
-        var api = createApi(configuration);
-        var retry = transport.retryTemplate();
+        DashScopeApi api = createApi(configuration);
+        RetryTemplate retry = transport.retryTemplate();
         Model<?, ?> model = switch (configuration.capability()) {
             case CHAT -> {
-                var options = DashScopeChatOptions.builder().model(configuration.model()).build();
+                DashScopeChatOptions options = DashScopeChatOptions.builder().model(configuration.model()).build();
                 yield DashScopeChatModel.builder().dashScopeApi(api).defaultOptions(options)
                         .retryTemplate(retry).observationRegistry(observations).build();
             }
             case EMBEDDING -> {
-                var options = DashScopeEmbeddingOptions.builder().model(configuration.model()).build();
+                DashScopeEmbeddingOptions options = DashScopeEmbeddingOptions.builder().model(configuration.model()).build();
                 yield DashScopeEmbeddingModel.builder().dashScopeApi(api).defaultOptions(options)
                         .retryTemplate(retry).observationRegistry(observations).build();
             }
             case RERANK -> {
-                var options = DashScopeRerankOptions.builder().model(configuration.model()).build();
+                DashScopeRerankOptions options = DashScopeRerankOptions.builder().model(configuration.model()).build();
                 yield DashScopeRerankModel.builder().dashScopeApi(api).defaultOptions(options).retryTemplate(retry).build();
             }
             default -> throw new IllegalArgumentException("DashScope适配器不支持该模型能力");
@@ -79,20 +84,20 @@ public class DashScopeModelClientProvider implements ModelClientProvider {
     private DashScopeApi createApi(ModelConnectionConfiguration configuration) {
         String secret = configuration.resolveApiKey();
         ApiKey apiKey = secret == null ? new NoopApiKey() : new SimpleApiKey(secret);
-        var headers = new LinkedMultiValueMap<String, String>();
-        var rest = transport.restClientBuilder();
+        LinkedMultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
+        RestClient.Builder rest = transport.restClientBuilder();
         // 百炼现有文本向量模型分别返回text_index或index；仅修正当前SDK向量记录的反序列化。
         // 复制客户端专属Mapper，避免影响其他协议、业务HTTP响应和全局Jackson配置。
         rest.messageConverters(converters -> {
-            for (var converter : converters) {
+            for (HttpMessageConverter<?> converter : converters) {
                 if (converter instanceof MappingJackson2HttpMessageConverter jackson) {
-                    var mapper = jackson.getObjectMapper().copy();
+                    ObjectMapper mapper = jackson.getObjectMapper().copy();
                     mapper.addMixIn(DashScopeApiSpec.Embedding.class, EmbeddingIndexMixin.class);
                     jackson.setObjectMapper(mapper);
                 }
             }
         });
-        var web = transport.webClientBuilder();
+        WebClient.Builder web = transport.webClientBuilder();
         return new DashScopeApi(configuration.baseUrl().toString(), apiKey, headers, null,
                 CHAT_PATH, EMBEDDING_PATH, RERANK_PATH, rest, web, RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER);
     }

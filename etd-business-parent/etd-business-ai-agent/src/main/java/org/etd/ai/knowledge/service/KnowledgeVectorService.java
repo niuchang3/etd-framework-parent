@@ -34,7 +34,7 @@ public class KnowledgeVectorService {
         }
         String table = resolveTable(base.getActiveDimensions());
         for (int index = 0; index < chunks.size(); index++) {
-            var chunk = chunks.get(index);
+            KnowledgeChunkEntity chunk = chunks.get(index);
             Long id = IdWorker.getId();
             String vector = formatVector(vectors.get(index));
             mapper.insertVector(table, id, document, chunk.getId(), chunk.getContent(),

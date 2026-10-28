@@ -34,7 +34,7 @@ public class ModelClientAutoConfiguration {
     @ConditionalOnMissingBean
     public DashScopeModelClientProvider dashScopeModelClientProvider(ModelClientTransport transport,
             ObjectProvider<ObservationRegistry> observations) {
-        var registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
+        ObservationRegistry registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
         return new DashScopeModelClientProvider(transport, registry);
     }
 
@@ -43,7 +43,7 @@ public class ModelClientAutoConfiguration {
     @ConditionalOnMissingBean
     public OpenAiModelClientProvider openAiModelClientProvider(ModelClientTransport transport,
             ObjectProvider<ObservationRegistry> observations) {
-        var registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
+        ObservationRegistry registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
         return new OpenAiModelClientProvider(transport, registry);
     }
 
@@ -52,7 +52,7 @@ public class ModelClientAutoConfiguration {
     @ConditionalOnMissingBean
     public OllamaModelClientProvider ollamaModelClientProvider(ModelClientTransport transport,
             ObjectProvider<ObservationRegistry> observations) {
-        var registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
+        ObservationRegistry registry = observations.getIfAvailable(() -> ObservationRegistry.NOOP);
         return new OllamaModelClientProvider(transport, registry);
     }
 

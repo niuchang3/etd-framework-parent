@@ -41,9 +41,9 @@ public class KnowledgeChunkConfirmBizService {
      * @throws ApiRuntimeException 权限、内容、配置已变化或模型调用失败，保留原分片并记录本次向量失败状态
      */
     public KnowledgeDocumentEntity confirmChunks(Long id, Long version) {
-        var snapshot = transactions.execute(status -> readSnapshot(id, version));
+        ConfirmationSnapshot snapshot = transactions.execute(status -> readSnapshot(id, version));
         try {
-            var embeddings = createEmbeddingList(snapshot);
+            List<float[]> embeddings = createEmbeddingList(snapshot);
             return transactions.execute(status -> publishConfirmation(snapshot, embeddings));
         } catch (RuntimeException exception) {
             // 发布事务失败后单独落库失败状态；仅更新仍属于本次版本的processing，不能覆盖编辑或重试结果。
@@ -55,21 +55,21 @@ public class KnowledgeChunkConfirmBizService {
 
     /** 仅向量及混合模式执行推理，外部模型调用不占用数据库事务。 */
     private List<float[]> createEmbeddingList(ConfirmationSnapshot snapshot) {
-        var base = snapshot.base();
+        KnowledgeBaseEntity base = snapshot.base();
         if (KnowledgeRetrievalPolicy.KEYWORD.equals(base.getRetrievalMode())) {
             return List.of();
         }
         settings.validate(base.getEmbeddingConnectionId(), ModelType.EMBEDDING, base.getDimensions());
-        var texts = snapshot.chunks().stream().map(KnowledgeChunkEntity::getContent).toList();
+        List<String> texts = snapshot.chunks().stream().map(KnowledgeChunkEntity::getContent).toList();
         return inference.createEmbeddingList(base.getEmbeddingConnectionId(), base.getDimensions(), texts);
     }
 
     /** 先锁知识库再锁资料，与知识库配置失效流程保持锁顺序；提交processing后释放行锁。 */
     private ConfirmationSnapshot readSnapshot(Long id, Long version) {
-        var readable = documents.requireDocument(id, false);
-        var base = bases.requireIndexBase(readable);
-        var document = requireConfirmable(id, version);
-        var records = chunks.fetchChunkList(id);
+        KnowledgeDocumentEntity readable = documents.requireDocument(id, false);
+        KnowledgeBaseEntity base = bases.requireIndexBase(readable);
+        KnowledgeDocumentEntity document = requireConfirmable(id, version);
+        List<KnowledgeChunkEntity> records = chunks.fetchChunkList(id);
         if (records.isEmpty() || records.size() != document.getChunkCount()) {
             throw new ApiRuntimeException("分片数量已变化，请刷新后重试");
         }
@@ -83,8 +83,8 @@ public class KnowledgeChunkConfirmBizService {
 
     /** 两次读取使用相同锁顺序；编辑或知识库设置变化会使在途结果失去发布资格。 */
     private KnowledgeDocumentEntity publishConfirmation(ConfirmationSnapshot snapshot, List<float[]> embeddings) {
-        var base = bases.requireIndexBase(snapshot.document());
-        var document = requireConfirmable(snapshot.document().getId(), snapshot.document().getVersion());
+        KnowledgeBaseEntity base = bases.requireIndexBase(snapshot.document());
+        KnowledgeDocumentEntity document = requireConfirmable(snapshot.document().getId(), snapshot.document().getVersion());
         if (!Objects.equals(base.getVersion(), snapshot.base().getVersion())) {
             throw new ApiRuntimeException("知识库配置已变化，请重新确认分片");
         }
@@ -114,7 +114,7 @@ public class KnowledgeChunkConfirmBizService {
 
     /** 人工确认和发布均要求维护权限、上传完成、有效分片及同一资料版本。 */
     private KnowledgeDocumentEntity requireConfirmable(Long id, Long version) {
-        var document = documents.requireDocument(id, true);
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         documents.requireChunkIdle(document);
         if (!Objects.equals(document.getVersion(), version)) {
             throw new ApiRuntimeException("分片已变化，请刷新后重试");

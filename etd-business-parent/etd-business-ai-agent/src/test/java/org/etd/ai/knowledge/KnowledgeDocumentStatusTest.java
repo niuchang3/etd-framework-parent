@@ -22,13 +22,13 @@ class KnowledgeDocumentStatusTest {
     /** 确认内容可启用，未确认内容仍然被拒绝。 */
     @Test
     void shouldEnableConfirmedDocumentWithoutVectorInitialization() {
-        var documents = mock(KnowledgeDocumentService.class);
-        var folders = mock(KnowledgeFolderService.class);
-        var objects = mock(KnowledgeObjectService.class);
-        var chunks = mock(KnowledgeChunkService.class);
-        var vectors = mock(KnowledgeVectorService.class);
-        var biz = new KnowledgeDocumentBizService(documents, folders, objects, chunks, vectors);
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentService documents = mock(KnowledgeDocumentService.class);
+        KnowledgeFolderService folders = mock(KnowledgeFolderService.class);
+        KnowledgeObjectService objects = mock(KnowledgeObjectService.class);
+        KnowledgeChunkService chunks = mock(KnowledgeChunkService.class);
+        KnowledgeVectorService vectors = mock(KnowledgeVectorService.class);
+        KnowledgeDocumentBizService biz = new KnowledgeDocumentBizService(documents, folders, objects, chunks, vectors);
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setVersion(0L);
         document.setChunkStatus(KnowledgeChunkStatus.CONFIRMED);
         document.setChunkCount(1);

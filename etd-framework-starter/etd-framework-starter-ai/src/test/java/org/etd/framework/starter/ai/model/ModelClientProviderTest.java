@@ -13,6 +13,11 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Locale;
+import org.etd.framework.common.core.context.model.RequestContext;
+import org.etd.framework.starter.ai.model.client.ModelRequestHeaders;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.etd.framework.starter.ai.model.client.ModelClientFactory;
 import org.etd.framework.starter.ai.model.client.ModelClientTransport;
@@ -35,6 +40,11 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingOptions;
 import org.springframework.ai.embedding.EmbeddingRequest;
+import com.alibaba.cloud.ai.model.RerankResponse;
+import java.io.OutputStream;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.embedding.Embedding;
+import org.springframework.ai.model.Model;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -51,15 +61,15 @@ class ModelClientProviderTest {
     /** 创建真实HTTP传输及生产适配器，初始化时不得发送任何请求。 */
     @BeforeEach
     void initialize() throws IOException {
-        var address = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         server = HttpServer.create(address, 0);
         server.createContext("/", this::respond);
         server.start();
-        var properties = new ModelClientProperties();
+        ModelClientProperties properties = new ModelClientProperties();
         transport = new ModelClientTransport(properties);
-        var dashscope = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
-        var openai = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
-        var ollama = new OllamaModelClientProvider(transport, ObservationRegistry.NOOP);
+        DashScopeModelClientProvider dashscope = new DashScopeModelClientProvider(transport, ObservationRegistry.NOOP);
+        OpenAiModelClientProvider openai = new OpenAiModelClientProvider(transport, ObservationRegistry.NOOP);
+        OllamaModelClientProvider ollama = new OllamaModelClientProvider(transport, ObservationRegistry.NOOP);
         List<ModelClientProvider> providers = List.of(dashscope, openai, ollama);
         factory = new ModelClientFactory(providers);
     }
@@ -73,12 +83,12 @@ class ModelClientProviderTest {
     /** 三种协议均使用SDK完成聊天与向量请求，两个不同连接不串用凭证。 */
     @Test
     void shouldCallChatAndEmbeddingThroughAllBuiltInProtocols() {
-        var protocols = List.of(ModelClientProtocol.OPENAI_COMPATIBLE, ModelClientProtocol.DASHSCOPE, ModelClientProtocol.OLLAMA);
-        for (var protocol : protocols) {
-            var chatConfig = configuration(protocol, ModelCapability.CHAT, "test-key-a");
-            var embeddingConfig = configuration(protocol, ModelCapability.EMBEDDING, "test-key-b");
-            var model = createModel(chatConfig, ChatModel.class);
-            var vectors = createModel(embeddingConfig, EmbeddingModel.class);
+        List<String> protocols = List.of(ModelClientProtocol.OPENAI_COMPATIBLE, ModelClientProtocol.DASHSCOPE, ModelClientProtocol.OLLAMA);
+        for (String protocol : protocols) {
+            ModelConnectionConfiguration chatConfig = configuration(protocol, ModelCapability.CHAT, "test-key-a");
+            ModelConnectionConfiguration embeddingConfig = configuration(protocol, ModelCapability.EMBEDDING, "test-key-b");
+            ChatModel model = createModel(chatConfig, ChatModel.class);
+            EmbeddingModel vectors = createModel(embeddingConfig, EmbeddingModel.class);
             int previous = requests.size();
             assertThat(model.call("你好")).isEqualTo("本地响应");
             assertThat(vectors.embed("文本")).containsExactly(1.0f, 0.0f);
@@ -94,12 +104,12 @@ class ModelClientProviderTest {
     /** 流式请求通过真实WebClient执行，独立于同步请求构建器，凭证仍属于当前连接。 */
     @Test
     void shouldStreamAllProtocolsAndSupportUnauthenticatedConnections() {
-        var protocols = List.of(ModelClientProtocol.OPENAI_COMPATIBLE, ModelClientProtocol.DASHSCOPE, ModelClientProtocol.OLLAMA);
-        for (var protocol : protocols) {
-            var configuration = configuration(protocol, ModelCapability.CHAT, null);
-            var model = createModel(configuration, ChatModel.class);
-            var prompt = new Prompt("问题");
-            var result = model.stream(prompt).collectList().block(Duration.ofSeconds(5));
+        List<String> protocols = List.of(ModelClientProtocol.OPENAI_COMPATIBLE, ModelClientProtocol.DASHSCOPE, ModelClientProtocol.OLLAMA);
+        for (String protocol : protocols) {
+            ModelConnectionConfiguration configuration = configuration(protocol, ModelCapability.CHAT, null);
+            ChatModel model = createModel(configuration, ChatModel.class);
+            Prompt prompt = new Prompt("问题");
+            List<ChatResponse> result = model.stream(prompt).collectList().block(Duration.ofSeconds(5));
             assertThat(result).isNotEmpty();
             assertThat(result.getFirst().getResult().getOutput().getText()).isEqualTo("流式响应");
             assertThat(requests.getLast().authorization()).isNull();
@@ -109,11 +119,11 @@ class ModelClientProviderTest {
     /** 请求级维度不污染共享默认选项，后续请求仍按自己的参数执行。 */
     @Test
     void shouldKeepEmbeddingDimensionsScopedToEachRequest() {
-        var configuration = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.EMBEDDING, null);
-        var model = createModel(configuration, EmbeddingModel.class);
-        var options = EmbeddingOptions.builder().dimensions(2).build();
-        var texts = List.of("正文");
-        var request = new EmbeddingRequest(texts, options);
+        ModelConnectionConfiguration configuration = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.EMBEDDING, null);
+        EmbeddingModel model = createModel(configuration, EmbeddingModel.class);
+        EmbeddingOptions options = EmbeddingOptions.builder().dimensions(2).build();
+        List<String> texts = List.of("正文");
+        EmbeddingRequest request = new EmbeddingRequest(texts, options);
         assertThat(model.call(request).getResults()).hasSize(1);
         assertThat(requests.getLast().body().path("dimensions").asInt()).isEqualTo(2);
         model.embed("另一份正文");
@@ -126,12 +136,12 @@ class ModelClientProviderTest {
     @ValueSource(strings = {"index", "text_index"})
     void shouldReadDashScopeEmbeddingIndices(String indexField) {
         embeddingIndexField = indexField;
-        var configuration = configuration(ModelClientProtocol.DASHSCOPE, ModelCapability.EMBEDDING, null);
-        var model = createModel(configuration, EmbeddingModel.class);
-        var options = EmbeddingOptions.builder().dimensions(2).build();
-        var texts = List.of("正文甲", "正文乙");
-        var request = new EmbeddingRequest(texts, options);
-        var results = model.call(request).getResults();
+        ModelConnectionConfiguration configuration = configuration(ModelClientProtocol.DASHSCOPE, ModelCapability.EMBEDDING, null);
+        EmbeddingModel model = createModel(configuration, EmbeddingModel.class);
+        EmbeddingOptions options = EmbeddingOptions.builder().dimensions(2).build();
+        List<String> texts = List.of("正文甲", "正文乙");
+        EmbeddingRequest request = new EmbeddingRequest(texts, options);
+        List<Embedding> results = model.call(request).getResults();
         assertThat(results).hasSize(2);
         assertThat(results.getFirst().getIndex()).isEqualTo(1);
         assertThat(results.getFirst().getOutput()).containsExactly(1.0f, 0.0f);
@@ -143,23 +153,53 @@ class ModelClientProviderTest {
     /** 原生重排仅匹配DashScope；OpenAI兼容接口不能被当作通用重排协议。 */
     @Test
     void shouldCreateDashScopeRerankAndRejectUnsupportedCombinations() {
-        var unsupported = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.RERANK, null);
+        ModelConnectionConfiguration unsupported = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.RERANK, null);
         assertThatThrownBy(() -> factory.create(unsupported)).hasMessageContaining("没有支持");
-        var configuration = configuration(ModelClientProtocol.DASHSCOPE, ModelCapability.RERANK, "test-rerank-key");
-        var model = createModel(configuration, RerankModel.class);
+        ModelConnectionConfiguration configuration = configuration(ModelClientProtocol.DASHSCOPE, ModelCapability.RERANK, "test-rerank-key");
+        RerankModel model = createModel(configuration, RerankModel.class);
         assertThat(requests).isEmpty();
-        var document = new Document("文档正文");
-        var documents = List.of(document);
-        var request = new RerankRequest("问题", documents);
-        var response = model.call(request);
+        Document document = new Document("文档正文");
+        List<Document> documents = List.of(document);
+        RerankRequest request = new RerankRequest("问题", documents);
+        RerankResponse response = model.call(request);
         assertThat(response.getResults()).hasSize(1);
         assertThat(requests.getFirst().path()).isEqualTo("/api/v1/services/rerank/text-rerank/text-rerank");
         assertThat(requests.getFirst().authorization()).isEqualTo("Bearer test-rerank-key");
     }
 
+    /** 同一缓存SDK按次透传请求头，前端Token不会覆盖供应商凭证，后续请求不残留前一租户。 */
+    @Test
+    void propagatesPerRequestHeadersWithoutChangingModelCredentials() {
+        ModelConnectionConfiguration configuration = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.CHAT, "synthetic-model-key");
+        ChatModel model = createModel(configuration, ChatModel.class);
+        Prompt prompt = new Prompt("问题");
+        try {
+            RequestContext.setTenantCode(1L);
+            RequestContext.setToken("synthetic-user-token");
+            RequestContext.setTraceId("trace-one");
+            RequestContext.setAttribute("x-business", "business-one");
+            model.call(prompt);
+            CapturedRequest first = requests.getLast();
+            assertThat(first.headers()).containsEntry("tenant-code", "1").containsEntry("trace-id", "trace-one");
+            assertThat(first.authorization()).isEqualTo("Bearer synthetic-model-key");
+            RequestContext.setTenantCode(2L);
+            RequestContext.setTraceId("trace-two");
+            Map<String, String> headers = ModelRequestHeaders.capture();
+            model.stream(prompt).contextWrite(context -> context.put(ModelRequestHeaders.REACTOR_KEY, headers))
+                    .collectList().block(Duration.ofSeconds(5));
+            assertThat(requests.getLast().headers()).containsEntry("tenant-code", "2").containsEntry("trace-id", "trace-two");
+            assertThat(requests.getLast().authorization()).isEqualTo("Bearer synthetic-model-key");
+            RequestContext.clean();
+            model.call(prompt);
+            assertThat(requests.getLast().headers()).doesNotContainKey("tenant-code");
+        } finally {
+            RequestContext.clean();
+        }
+    }
+
     /** 原生模型不需要租约或逐实例close，共享HTTP传输由测试上下文统一关闭。 */
     private <T> T createModel(ModelConnectionConfiguration configuration, Class<T> type) {
-        var model = factory.create(configuration);
+        Model<?, ?> model = factory.create(configuration);
         return type.cast(model);
     }
 
@@ -169,16 +209,18 @@ class ModelClientProviderTest {
             case ModelClientProtocol.DASHSCOPE -> "/api/v1";
             default -> "";
         };
-        var uri = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + path);
+        URI uri = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + path);
         return new ModelConnectionConfiguration("tenant", "connection", 1, true, protocol, capability,
                 "test-model", uri, () -> key);
     }
 
     private void respond(HttpExchange exchange) throws IOException {
-        var body = json.readTree(exchange.getRequestBody());
+        JsonNode body = json.readTree(exchange.getRequestBody());
         String path = exchange.getRequestURI().getPath();
         String authorization = exchange.getRequestHeaders().getFirst("Authorization");
-        var captured = new CapturedRequest(path, authorization, body);
+        Map<String, String> headers = new HashMap<>();
+        exchange.getRequestHeaders().forEach((key, values) -> headers.put(key.toLowerCase(Locale.ROOT), values.getFirst()));
+        CapturedRequest captured = new CapturedRequest(path, authorization, body, headers);
         requests.add(captured);
         boolean stream = body.path("stream").asBoolean(false)
                 || "enable".equals(exchange.getRequestHeaders().getFirst("X-DashScope-SSE"));
@@ -195,7 +237,7 @@ class ModelClientProviderTest {
         exchange.getResponseHeaders().set("Content-Type", contentType);
         byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(200, bytes.length);
-        try (var output = exchange.getResponseBody()) { output.write(bytes); }
+        try (OutputStream output = exchange.getResponseBody()) { output.write(bytes); }
     }
 
     private String response(String path, boolean stream) {
@@ -235,5 +277,5 @@ class ModelClientProviderTest {
     }
 
     /** 本地合成请求的断言快照，不包含真实密钥。 */
-    private record CapturedRequest(String path, String authorization, JsonNode body) { }
+    private record CapturedRequest(String path, String authorization, JsonNode body, Map<String, String> headers) { }
 }

@@ -26,8 +26,8 @@ public class ModelSquareService {
      */
     public IPage<ModelSquareModel> fetchModelPage(long current, long size, String providerCode,
             String modelType, String keyword, Boolean connected) {
-        var page = new Page<ModelSquareModel>(current, size);
-        var search = resolveSearchPattern(keyword);
+        Page<ModelSquareModel> page = new Page<ModelSquareModel>(current, size);
+        String search = resolveSearchPattern(keyword);
         return mapper.selectSquareModelPage(page, providerCode, modelType, search, connected);
     }
 
@@ -36,7 +36,7 @@ public class ModelSquareService {
         if (!StringUtils.hasText(keyword)) {
             return null;
         }
-        var escaped = keyword.trim().replace("\\", "\\\\")
+        String escaped = keyword.trim().replace("\\", "\\\\")
                 .replace("%", "\\%").replace("_", "\\_");
         return "%" + escaped + "%";
     }

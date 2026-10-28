@@ -49,7 +49,7 @@ class ModelCredentialInvocationTest {
     /** 每次生成临时密钥及凭证，只在本地随机端口接收SDK请求。 */
     @BeforeEach
     void prepare() throws IOException {
-        var address = new InetSocketAddress("127.0.0.1", 0);
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         server = HttpServer.create(address, 0);
         server.createContext("/v1/embeddings", this::respond);
         server.start();
@@ -60,7 +60,7 @@ class ModelCredentialInvocationTest {
         connections = mock(ModelConnectionMapper.class);
         models = mock(ModelMapper.class);
         when(connections.selectById(30L)).thenReturn(connection);
-        var model = createModel();
+        ModelEntity model = createModel();
         when(models.selectById(20L)).thenReturn(model);
     }
 
@@ -73,12 +73,12 @@ class ModelCredentialInvocationTest {
     /** 原生SDK必须发送业务解密后的Bearer值；更新连接版本后必须使用新的凭证。 */
     @Test
     void passesDecryptedCredentialThroughFrameworkToSdk() {
-        var runner = createContextRunner();
+        ApplicationContextRunner runner = createContextRunner();
         runner.run(context -> {
             assertThat(context).hasNotFailed().hasSingleBean(ModelClientRegistry.class);
-            var registry = context.getBean(ModelClientRegistry.class);
-            var inference = new ModelInferenceService(connections, registry);
-            var texts = List.of("测试正文");
+            ModelClientRegistry registry = context.getBean(ModelClientRegistry.class);
+            ModelInferenceService inference = new ModelInferenceService(connections, registry);
+            List<String> texts = List.of("测试正文");
             assertThat(inference.createEmbeddingList(30L, 2, texts)).hasSize(1);
             assertThat(authorizationHeaders).containsExactly("Bearer " + apiKey);
             assertThat(connection.getApiKeyCiphertext()).doesNotContain(apiKey);
@@ -94,12 +94,12 @@ class ModelCredentialInvocationTest {
     @Test
     void rejectsInvalidCiphertextBeforeSendingRequest() {
         connection.setApiKeyCiphertext(UUID.randomUUID().toString());
-        var runner = createContextRunner();
+        ApplicationContextRunner runner = createContextRunner();
         runner.run(context -> {
             assertThat(context).hasNotFailed();
-            var registry = context.getBean(ModelClientRegistry.class);
-            var inference = new ModelInferenceService(connections, registry);
-            var texts = List.of("测试正文");
+            ModelClientRegistry registry = context.getBean(ModelClientRegistry.class);
+            ModelInferenceService inference = new ModelInferenceService(connections, registry);
+            List<String> texts = List.of("测试正文");
             assertThatThrownBy(() -> inference.createEmbeddingList(30L, 2, texts))
                     .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("向量生成失败");
             assertThat(authorizationHeaders).isEmpty();
@@ -108,8 +108,8 @@ class ModelCredentialInvocationTest {
 
     /** 真实装配业务Resolver及框架自动配置，避免手动new Registry绕过Bean注册问题。 */
     private ApplicationContextRunner createContextRunner() {
-        var resolver = new BusinessModelConnectionResolver(connections, models, cipher);
-        var configuration = AutoConfigurations.of(ModelClientAutoConfiguration.class);
+        BusinessModelConnectionResolver resolver = new BusinessModelConnectionResolver(connections, models, cipher);
+        AutoConfigurations configuration = AutoConfigurations.of(ModelClientAutoConfiguration.class);
         return new ApplicationContextRunner().withConfiguration(configuration)
                 .withBean(BusinessModelConnectionResolver.class, () -> resolver);
     }
@@ -118,7 +118,7 @@ class ModelCredentialInvocationTest {
     private ModelCredentialCipher createCipher() {
         byte[] key = new byte[32];
         new SecureRandom().nextBytes(key);
-        var properties = new ModelCredentialProperties();
+        ModelCredentialProperties properties = new ModelCredentialProperties();
         properties.setKey(Base64.getEncoder().encodeToString(key));
         properties.setKeyId(UUID.randomUUID().toString());
         return new ModelCredentialCipher(properties);
@@ -126,7 +126,7 @@ class ModelCredentialInvocationTest {
 
     /** 模拟持久化后的连接，SDK根地址只指向本测试的回环HTTP服务。 */
     private ModelConnectionEntity createConnection() {
-        var entity = new ModelConnectionEntity();
+        ModelConnectionEntity entity = new ModelConnectionEntity();
         entity.setId(30L);
         entity.setTenantId(900001L);
         entity.setModelId(20L);
@@ -140,7 +140,7 @@ class ModelCredentialInvocationTest {
 
     /** 模拟平台模型目录，使用小维度输出验证认证链，无需依赖向量数据库。 */
     private ModelEntity createModel() {
-        var entity = new ModelEntity();
+        ModelEntity entity = new ModelEntity();
         entity.setVersion(0L);
         entity.setDataStatus(BasicConstant.DataStatus.ENABLED_CODE);
         entity.setModelType(ModelType.EMBEDDING);

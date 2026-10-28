@@ -19,6 +19,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.ListPartsResponse;
+import io.minio.MakeBucketArgs;
+import io.minio.RemoveObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.messages.ListPartsResult;
+import java.util.ArrayList;
 
 /** 知识原件的MinIO适配，不读取系统参数中的文件扩展名筛选配置。 */
 @Service
@@ -43,9 +52,9 @@ public class KnowledgeObjectService {
     /** @param document 由后端生成对象键的上传记录 @return MinIO上传会话ID */
     public String initUpload(KnowledgeDocumentEntity document) throws Exception {
         String bucket = document.getStorageBucket();
-        var existsArgs = BucketExistsArgs.builder().bucket(bucket).build();
+        BucketExistsArgs existsArgs = BucketExistsArgs.builder().bucket(bucket).build();
         if (!client.bucketExists(existsArgs).get()) {
-            var createArgs = MakeBucketArgs.builder().bucket(bucket).build();
+            MakeBucketArgs createArgs = MakeBucketArgs.builder().bucket(bucket).build();
             client.makeBucket(createArgs).get();
         }
         return client.initMultipartUpload(bucket, null, document.getStorageObjectKey(), null, null);
@@ -59,7 +68,7 @@ public class KnowledgeObjectService {
             throw new ApiRuntimeException("上传会话已过期");
         }
         int expiry = (int) Math.min(properties.getUrlSeconds(), remaining);
-        var args = GetPresignedObjectUrlArgs.builder().bucket(document.getStorageBucket())
+        GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder().bucket(document.getStorageBucket())
                 .object(document.getStorageObjectKey()).method(Method.PUT)
                 .expiry(expiry).extraQueryParams(query).build();
         return client.getPresignedObjectUrl(args);
@@ -67,15 +76,15 @@ public class KnowledgeObjectService {
 
     /** @param document 会话记录 @return 分页读取全部真实上传分片 */
     public List<UploadPart> fetchPartList(KnowledgeDocumentEntity document) throws Exception {
-        var parts = new ArrayList<UploadPart>();
+        ArrayList<UploadPart> parts = new ArrayList<UploadPart>();
         int marker = 0;
         boolean truncated;
         do {
-            var response = client.listPartsAsync(document.getStorageBucket(), null,
+            ListPartsResponse response = client.listPartsAsync(document.getStorageBucket(), null,
                     document.getStorageObjectKey(), 1000, marker, document.getUploadId(), null, null).get();
-            var result = response.result();
+            ListPartsResult result = response.result();
             for (Part part : result.partList()) {
-                var item = new UploadPart(part.partNumber(), part.etag(), part.partSize());
+                UploadPart item = new UploadPart(part.partNumber(), part.etag(), part.partSize());
                 parts.add(item);
             }
             truncated = result.isTruncated();
@@ -89,7 +98,7 @@ public class KnowledgeObjectService {
         if (existsObject(document)) {
             return;
         }
-        var parts = new Part[document.getUploadParts().size()];
+        Part[] parts = new Part[document.getUploadParts().size()];
         for (int i = 0; i < parts.length; i++) {
             UploadPart item = document.getUploadParts().get(i);
             parts[i] = new Part(item.partNumber(), item.etag());
@@ -100,7 +109,7 @@ public class KnowledgeObjectService {
 
     /** @param document 目标原件 @return 是否存在；仅NoSuchKey视为不存在 */
     public boolean existsObject(KnowledgeDocumentEntity document) throws Exception {
-        var args = StatObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
+        StatObjectArgs args = StatObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
         try {
             client.statObject(args).get();
             return true;
@@ -114,7 +123,7 @@ public class KnowledgeObjectService {
 
     /** @param document 已合并原件；同时核验总大小及SHA-256 */
     public void verifyObject(KnowledgeDocumentEntity document) throws Exception {
-        var digest = MessageDigest.getInstance("SHA-256");
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
         long size = 0;
         try (InputStream input = openObject(document)) {
             byte[] buffer = new byte[65536];
@@ -135,7 +144,7 @@ public class KnowledgeObjectService {
 
     /** @param document 原件记录 @return 调用方负责关闭的读取流 */
     public InputStream openObject(KnowledgeDocumentEntity document) throws Exception {
-        var args = GetObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
+        GetObjectArgs args = GetObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
         return client.getObject(args).get();
     }
 
@@ -144,7 +153,7 @@ public class KnowledgeObjectService {
         String disposition = ContentDisposition.attachment()
                 .filename(document.getOriginalFilename(), StandardCharsets.UTF_8).build().toString();
         Map<String, String> query = Map.of(DOWNLOAD_DISPOSITION_QUERY, disposition);
-        var args = GetPresignedObjectUrlArgs.builder().bucket(document.getStorageBucket())
+        GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder().bucket(document.getStorageBucket())
                 .object(document.getStorageObjectKey()).method(Method.GET).expiry(properties.getUrlSeconds())
                 .extraQueryParams(query).build();
         return client.getPresignedObjectUrl(args);
@@ -167,7 +176,7 @@ public class KnowledgeObjectService {
 
     /** @param document 待清理的原件，删除不存在的对象也视为成功 */
     public void removeObject(KnowledgeDocumentEntity document) throws Exception {
-        var args = RemoveObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
+        RemoveObjectArgs args = RemoveObjectArgs.builder().bucket(document.getStorageBucket()).object(document.getStorageObjectKey()).build();
         client.removeObject(args).get();
     }
     /** SDK异步异常可能嵌套CompletionException，按根错误码识别正常的不存在状态。 */

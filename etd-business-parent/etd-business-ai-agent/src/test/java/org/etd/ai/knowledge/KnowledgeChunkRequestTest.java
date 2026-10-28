@@ -9,6 +9,9 @@ import org.etd.ai.knowledge.controller.dto.KnowledgeChunkGenerateDTO;
 import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import static org.assertj.core.api.Assertions.*;
 
 /** 编辑正文和规则允许请求读取，但不进入框架异常cURL日志的JSON序列化。 */
@@ -18,7 +21,7 @@ class KnowledgeChunkRequestTest {
     @Test
     void acceptsContentButHidesItFromSerialization() throws Exception {
         String body = "{\"version\":2,\"chunks\":[{\"id\":1,\"content\":\"敏感正文\"}]}";
-        var request = json.readValue(body, KnowledgeChunkSaveDTO.class);
+        KnowledgeChunkSaveDTO request = json.readValue(body, KnowledgeChunkSaveDTO.class);
         assertThat(request.getChunks().getFirst().getContent()).isEqualTo("敏感正文");
         String serialized = json.writeValueAsString(request);
         assertThat(serialized).doesNotContain("敏感正文");
@@ -30,8 +33,8 @@ class KnowledgeChunkRequestTest {
                 {"version":0,"parameters":{"basic":{"strategy":"hybrid","maxTokens":128},
                 "normal":{},"advanced":{"documentTimeout":"PT90S"}}}
                 """;
-        var request = json.readValue(body, KnowledgeChunkGenerateDTO.class);
-        var payload = json.valueToTree(request.getParameters());
+        KnowledgeChunkGenerateDTO request = json.readValue(body, KnowledgeChunkGenerateDTO.class);
+        JsonNode payload = json.valueToTree(request.getParameters());
         assertThat(payload.path("advanced").path("documentTimeout").asText()).isEqualTo("PT1M30S");
         assertThat(json.writeValueAsString(request)).doesNotContain("parameters");
     }
@@ -41,12 +44,12 @@ class KnowledgeChunkRequestTest {
         String body = """
                 {"version":2,"firstContent":"拆分前半段","secondContent":"拆分后半段"}
                 """;
-        var input = json.readValue(body, KnowledgeChunkSplitDTO.class);
+        KnowledgeChunkSplitDTO input = json.readValue(body, KnowledgeChunkSplitDTO.class);
         assertThat(input.getFirstContent()).isEqualTo("拆分前半段");
         assertThat(input.getSecondContent()).isEqualTo("拆分后半段");
         assertThat(json.writeValueAsString(input)).doesNotContain("拆分前半段", "拆分后半段");
-        try (var factory = Validation.buildDefaultValidatorFactory()) {
-            var validator = factory.getValidator();
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = factory.getValidator();
             assertThat(validator.validate(input)).isEmpty();
             input.setVersion(-1L);
             input.setFirstContent(" ");
@@ -60,7 +63,7 @@ class KnowledgeChunkRequestTest {
     @Test
     void rejectsDuplicateEditIds() throws Exception {
         String body = "{\"version\":2,\"chunks\":[{\"id\":1,\"content\":\"A\"},{\"id\":1,\"content\":\"B\"}]}";
-        var request = json.readValue(body, KnowledgeChunkSaveDTO.class);
+        KnowledgeChunkSaveDTO request = json.readValue(body, KnowledgeChunkSaveDTO.class);
         assertThatThrownBy(() -> KnowledgeChunkConverter.INSTANCE.toEditValues(request.getChunks()))
                 .isInstanceOf(ApiRuntimeException.class);
     }

@@ -101,6 +101,9 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.lang.reflect.Method;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.test.web.servlet.MvcResult;
 
 /** 验证AI直接声明框架权限后，登录、功能read/write与公开健康路径的访问边界。 */
 class AiEndpointAuthenticationTest {
@@ -114,7 +117,7 @@ class AiEndpointAuthenticationTest {
     @BeforeEach
     void createSecurityContext() {
         context = new AnnotationConfigWebApplicationContext();
-        var servletContext = new MockServletContext();
+        MockServletContext servletContext = new MockServletContext();
         context.setServletContext(servletContext);
         context.register(AuthenticationConfiguration.class);
         context.refresh();
@@ -133,9 +136,9 @@ class AiEndpointAuthenticationTest {
     /** 未提供的手动全库索引、search及正式recall入口不注册路由，仅保留召回测试。 */
     @Test
     void shouldKeepUnimplementedKnowledgeEndpointsUnregistered() throws Exception {
-        var session = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
-        for (var action : List.of("index", "search", "recall")) {
-            var request = post("/v1/knowledge-bases/1/" + action).session(session)
+        MockHttpSession session = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
+        for (String action : List.of("index", "search", "recall")) {
+            MockHttpServletRequestBuilder request = post("/v1/knowledge-bases/1/" + action).session(session)
                     .contentType(MediaType.APPLICATION_JSON).content("{}");
             mvc.perform(request).andExpect(status().isNotFound());
         }
@@ -144,8 +147,8 @@ class AiEndpointAuthenticationTest {
     /** 问题字段必须通过HTTP校验，不能以空白问题触发收费模型调用。 */
     @Test
     void shouldRejectBlankRecallQuery() throws Exception {
-        var session = createSession("ai:knowledge-base:read");
-        var request = post("/v1/knowledge-bases/1/recall-test").session(session)
+        MockHttpSession session = createSession("ai:knowledge-base:read");
+        MockHttpServletRequestBuilder request = post("/v1/knowledge-bases/1/recall-test").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"query\":\"   \"}");
         mvc.perform(request).andExpect(status().isBadRequest());
     }
@@ -153,32 +156,32 @@ class AiEndpointAuthenticationTest {
     /** 匿名业务请求仍被框架认证入口拒绝。 */
     @Test
     void shouldRequireAuthenticationForBusinessEndpoints() throws Exception {
-        var request = get("/v1/model-square/connections");
+        MockHttpServletRequestBuilder request = get("/v1/model-square/connections");
         mvc.perform(request).andExpect(status().isUnauthorized());
-        var writeRequest = delete("/v1/model-square/connections/1");
+        MockHttpServletRequestBuilder writeRequest = delete("/v1/model-square/connections/1");
         mvc.perform(writeRequest).andExpect(status().isUnauthorized());
     }
 
     /** 资料接口保持认证和功能权限；只读用户可获取下载地址，但不能取消上传。 */
     @Test
     void shouldProtectKnowledgeUploadsAndKeepDownloadsReadable() throws Exception {
-        var anonymous = get("/v1/knowledge-documents");
+        MockHttpServletRequestBuilder anonymous = get("/v1/knowledge-documents");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var session = createSession("ai:knowledge-base:read");
-        var list = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").session(session);
+        MockHttpSession session = createSession("ai:knowledge-base:read");
+        MockHttpServletRequestBuilder list = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").session(session);
         mvc.perform(list).andExpect(status().isOk());
-        var folders = get("/v1/knowledge-folders").param("knowledgeBaseId", "1").session(session);
+        MockHttpServletRequestBuilder folders = get("/v1/knowledge-folders").param("knowledgeBaseId", "1").session(session);
         mvc.perform(folders).andExpect(status().isOk());
-        var policy = get("/v1/knowledge-documents/uploads/policy").session(session);
+        MockHttpServletRequestBuilder policy = get("/v1/knowledge-documents/uploads/policy").session(session);
         mvc.perform(policy).andExpect(status().isOk());
-        var download = post("/v1/knowledge-documents/1/download-url").session(session);
+        MockHttpServletRequestBuilder download = post("/v1/knowledge-documents/1/download-url").session(session);
         mvc.perform(download).andExpect(status().isOk());
-        var denied = post("/v1/knowledge-documents/uploads/1/cancel").session(session);
+        MockHttpServletRequestBuilder denied = post("/v1/knowledge-documents/uploads/1/cancel").session(session);
         mvc.perform(denied).andExpect(status().isForbidden());
-        var writable = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
-        var allowed = post("/v1/knowledge-documents/uploads/1/cancel").session(writable);
+        MockHttpSession writable = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
+        MockHttpServletRequestBuilder allowed = post("/v1/knowledge-documents/uploads/1/cancel").session(writable);
         mvc.perform(allowed).andExpect(status().isOk());
-        var uploads = context.getBean(KnowledgeUploadBizService.class);
+        KnowledgeUploadBizService uploads = context.getBean(KnowledgeUploadBizService.class);
         verify(uploads).cancelUpload(1L);
     }
 
@@ -189,20 +192,20 @@ class AiEndpointAuthenticationTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("knowledgeEndpointList")
     void shouldAuthorizeEveryKnowledgeEndpointWithOneMenu(KnowledgeEndpoint endpoint) throws Exception {
-        var anonymous = createKnowledgeRequest(endpoint, null);
+        MockHttpServletRequestBuilder anonymous = createKnowledgeRequest(endpoint, null);
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var ungrantedSession = createSession();
-        var ungranted = createKnowledgeRequest(endpoint, ungrantedSession);
+        MockHttpSession ungrantedSession = createSession();
+        MockHttpServletRequestBuilder ungranted = createKnowledgeRequest(endpoint, ungrantedSession);
         mvc.perform(ungranted).andExpect(status().isForbidden());
-        var readSession = createSession("ai:knowledge-base:read");
-        var read = createKnowledgeRequest(endpoint, readSession);
+        MockHttpSession readSession = createSession("ai:knowledge-base:read");
+        MockHttpServletRequestBuilder read = createKnowledgeRequest(endpoint, readSession);
         mvc.perform(read).andExpect(endpoint.write() ? status().isForbidden() : status().isOk());
-        var writeSession = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
-        var write = createKnowledgeRequest(endpoint, writeSession);
+        MockHttpSession writeSession = createSession("ai:knowledge-base:read", "ai:knowledge-base:write");
+        MockHttpServletRequestBuilder write = createKnowledgeRequest(endpoint, writeSession);
         mvc.perform(write).andExpect(status().isOk());
         if (endpoint.write()) {
             RequestContext.getUser().setLocked(true);
-            var locked = createKnowledgeRequest(endpoint, writeSession);
+            MockHttpServletRequestBuilder locked = createKnowledgeRequest(endpoint, writeSession);
             mvc.perform(locked).andExpect(status().isForbidden());
         }
     }
@@ -212,7 +215,7 @@ class AiEndpointAuthenticationTest {
      * @return 与真实Controller请求方式、参数一致的路由用例
      */
     private static List<KnowledgeEndpoint> knowledgeEndpointList() {
-        var result = new ArrayList<KnowledgeEndpoint>();
+        ArrayList<KnowledgeEndpoint> result = new ArrayList<KnowledgeEndpoint>();
         String bases = "/v1/knowledge-bases";
         String settings = """
                 {"version":0,"name":"测试库","orgId":1,"dataStatus":1,"isPublic":false,
@@ -269,14 +272,14 @@ class AiEndpointAuthenticationTest {
     /** 先构造路由用例再加入集合，避免在调用处嵌套组装对象。 */
     private static void addKnowledgeEndpoint(List<KnowledgeEndpoint> endpoints, String method, String path,
             String body, boolean write) {
-        var endpoint = new KnowledgeEndpoint(method, path, body, write);
+        KnowledgeEndpoint endpoint = new KnowledgeEndpoint(method, path, body, write);
         endpoints.add(endpoint);
     }
 
     /** 按同一路由构造不同菜单授权身份的真实HTTP请求。 */
     private MockHttpServletRequestBuilder createKnowledgeRequest(KnowledgeEndpoint endpoint, MockHttpSession session) {
-        var method = HttpMethod.valueOf(endpoint.method());
-        var request = request(method, endpoint.path());
+        HttpMethod method = HttpMethod.valueOf(endpoint.method());
+        MockHttpServletRequestBuilder request = request(method, endpoint.path());
         if (session != null) {
             request.session(session);
         }
@@ -298,10 +301,10 @@ class AiEndpointAuthenticationTest {
     /** 查询和上传入口均声明中文操作日志，不能遗漏只读入口。 */
     @Test
     void shouldLogAllKnowledgeEndpoints() {
-        var controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
+        List<Class<? extends Object>> controllers = List.of(KnowledgeDocumentController.class, KnowledgeUploadController.class,
                 KnowledgeFolderController.class, KnowledgeChunkController.class, KnowledgeBaseController.class, KnowledgeRecallController.class);
         for (Class<?> controller : controllers) {
-            for (var method : controller.getDeclaredMethods()) {
+            for (Method method : controller.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
                     assertNotNull(method.getAnnotation(AutoLog.class), method.getName());
                 }
@@ -312,24 +315,24 @@ class AiEndpointAuthenticationTest {
     /** 登录但无功能权限时，读写接口均拒绝且不能进入业务服务。 */
     @Test
     void shouldDenyAuthenticatedUserWithoutFunctionalAuthorities() throws Exception {
-        var session = createSession();
-        var readRequest = get("/v1/model-square/connections").session(session);
+        MockHttpSession session = createSession();
+        MockHttpServletRequestBuilder readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isForbidden());
-        var writeRequest = delete("/v1/model-square/connections/1").session(session);
+        MockHttpServletRequestBuilder writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
-        var models = context.getBean(ModelConnectionService.class);
+        ModelConnectionService models = context.getBean(ModelConnectionService.class);
         verifyNoInteractions(models);
     }
 
     /** read只允许查询，不能执行删除等写操作。 */
     @Test
     void shouldAllowReadWithoutGrantingWrite() throws Exception {
-        var session = createSession("ai:model-square:read");
-        var readRequest = get("/v1/model-square/connections").session(session);
+        MockHttpSession session = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-square/connections/1").session(session);
+        MockHttpServletRequestBuilder writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isForbidden());
-        var models = context.getBean(ModelConnectionService.class);
+        ModelConnectionService models = context.getBean(ModelConnectionService.class);
         verify(models).fetchPage(1L, 10L, null, null, null);
         verify(models, never()).removeConnection(anyLong());
     }
@@ -337,12 +340,12 @@ class AiEndpointAuthenticationTest {
     /** 同时具备read/write时，真实Controller可调用读写业务能力。 */
     @Test
     void shouldAllowGrantedReadAndWrite() throws Exception {
-        var session = createSession("ai:model-square:read", "ai:model-square:write");
-        var readRequest = get("/v1/model-square/connections").session(session);
+        MockHttpSession session = createSession("ai:model-square:read", "ai:model-square:write");
+        MockHttpServletRequestBuilder readRequest = get("/v1/model-square/connections").session(session);
         mvc.perform(readRequest).andExpect(status().isOk());
-        var writeRequest = delete("/v1/model-square/connections/1").session(session);
+        MockHttpServletRequestBuilder writeRequest = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(writeRequest).andExpect(status().isOk());
-        var models = context.getBean(ModelConnectionService.class);
+        ModelConnectionService models = context.getBean(ModelConnectionService.class);
         verify(models).fetchPage(1L, 10L, null, null, null);
         verify(models).removeConnection(1L);
     }
@@ -350,41 +353,41 @@ class AiEndpointAuthenticationTest {
     /** 全局目录要求read权限；普通用户即使有write权限也不能维护。 */
     @Test
     void shouldKeepCatalogReadOnlyForTenantUsers() throws Exception {
-        var anonymous = get("/v1/models");
+        MockHttpServletRequestBuilder anonymous = get("/v1/models");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var deniedSession = createSession("ai:model-square:read");
-        var denied = get("/v1/models").session(deniedSession);
+        MockHttpSession deniedSession = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder denied = get("/v1/models").session(deniedSession);
         mvc.perform(denied).andExpect(status().isForbidden());
-        var session = createSession("ai:model:read", "ai:model:write");
-        var catalog = get("/v1/models").session(session);
+        MockHttpSession session = createSession("ai:model:read", "ai:model:write");
+        MockHttpServletRequestBuilder catalog = get("/v1/models").session(session);
         mvc.perform(catalog).andExpect(status().isOk());
-        var write = post("/v1/models").session(session)
+        MockHttpServletRequestBuilder write = post("/v1/models").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
         mvc.perform(write).andExpect(status().isForbidden());
         RequestContext.getUser().setTenantAdmin(true);
         mvc.perform(write).andExpect(status().isForbidden());
-        var update = put("/v1/models/1").session(session)
+        MockHttpServletRequestBuilder update = put("/v1/models/1").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
         mvc.perform(update).andExpect(status().isForbidden());
-        var remove = delete("/v1/models/1").session(session);
+        MockHttpServletRequestBuilder remove = delete("/v1/models/1").session(session);
         mvc.perform(remove).andExpect(status().isForbidden());
-        var removed = get("/v1/model-configs").session(session);
+        MockHttpServletRequestBuilder removed = get("/v1/model-configs").session(session);
         mvc.perform(removed).andExpect(status().isNotFound());
     }
 
     /** 平台管理员无需人工写SQL即可维护目录，真实能力服务仍执行身份检查。 */
     @Test
     void shouldAllowPlatformAdministratorToManageCatalog() throws Exception {
-        var session = createPlatformSession(false);
-        var create = post("/v1/models").session(session)
+        MockHttpSession session = createPlatformSession(false);
+        MockHttpServletRequestBuilder create = post("/v1/models").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
         mvc.perform(create).andExpect(status().isOk());
-        var update = put("/v1/models/1").session(session)
+        MockHttpServletRequestBuilder update = put("/v1/models/1").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
         mvc.perform(update).andExpect(status().isOk());
-        var remove = delete("/v1/models/1").session(session);
+        MockHttpServletRequestBuilder remove = delete("/v1/models/1").session(session);
         mvc.perform(remove).andExpect(status().isOk());
-        var mapper = context.getBean(ModelMapper.class);
+        ModelMapper mapper = context.getBean(ModelMapper.class);
         verify(mapper).insert(any(ModelEntity.class));
         verify(mapper).update(any(ModelEntity.class), any());
         verify(mapper).deleteById(1L);
@@ -393,11 +396,11 @@ class AiEndpointAuthenticationTest {
     /** 锁定身份不能利用平台管理员豁免绕过写保护。 */
     @Test
     void shouldRejectReadOnlyPlatformAdministrator() throws Exception {
-        var session = createPlatformSession(true);
-        var write = post("/v1/models").session(session)
+        MockHttpSession session = createPlatformSession(true);
+        MockHttpServletRequestBuilder write = post("/v1/models").session(session)
                 .contentType(MediaType.APPLICATION_JSON).content(MODEL_REQUEST);
         mvc.perform(write).andExpect(status().isForbidden());
-        var mapper = context.getBean(ModelMapper.class);
+        ModelMapper mapper = context.getBean(ModelMapper.class);
         verifyNoInteractions(mapper);
     }
 
@@ -409,8 +412,8 @@ class AiEndpointAuthenticationTest {
 
     /** 管理身份同时放入会话认证详情与框架可信请求上下文。 */
     private MockHttpSession createPlatformSession(boolean readOnly) {
-        var session = createSession();
-        var user = RequestContext.getUser();
+        MockHttpSession session = createSession();
+        UserDetails user = RequestContext.getUser();
         user.setPlatformAdmin(true);
         user.setLocked(readOnly);
         return session;
@@ -420,18 +423,18 @@ class AiEndpointAuthenticationTest {
     private MockHttpSession createSession(String... authorityCodes) {
         List<GrantedAuthority> authorities = new ArrayList<>();
         for (String code : authorityCodes) {
-            var authority = new SimpleGrantedAuthority(code);
+            SimpleGrantedAuthority authority = new SimpleGrantedAuthority(code);
             authorities.add(authority);
         }
-        var authentication =
+        UsernamePasswordAuthenticationToken authentication =
                 UsernamePasswordAuthenticationToken.authenticated("tenant-user", "", authorities);
-        var user = new UserDetails();
+        UserDetails user = new UserDetails();
         user.setId(1L);
         authentication.setDetails(user);
         RequestContext.setUser(user);
-        var securityContext = SecurityContextHolder.createEmptyContext();
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
-        var session = new MockHttpSession();
+        MockHttpSession session = new MockHttpSession();
         session.setAttribute(
                 HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
         return session;
@@ -440,36 +443,36 @@ class AiEndpointAuthenticationTest {
     /** 广场单一read权限覆盖模型和连接全部查询，不能替代平台模型目录管理权限。 */
     @Test
     void shouldAllowAllSquareReadsWithOneAuthority() throws Exception {
-        var paths = List.of("/v1/model-square/models", "/v1/model-square/models/1",
+        List<String> paths = List.of("/v1/model-square/models", "/v1/model-square/models/1",
                 "/v1/model-square/connections", "/v1/model-square/connections/1");
-        var session = createSession("ai:model-square:read");
-        for (var path : paths) {
-            var request = get(path).session(session);
+        MockHttpSession session = createSession("ai:model-square:read");
+        for (String path : paths) {
+            MockHttpServletRequestBuilder request = get(path).session(session);
             mvc.perform(request).andExpect(status().isOk());
         }
-        var forbidden = get("/v1/models").session(session);
+        MockHttpServletRequestBuilder forbidden = get("/v1/models").session(session);
         mvc.perform(forbidden).andExpect(status().isForbidden());
-        var mapper = context.getBean(ModelMapper.class);
+        ModelMapper mapper = context.getBean(ModelMapper.class);
         verify(mapper, never()).insert(any(ModelEntity.class));
     }
 
     /** 广场read只允许浏览，广场write可接入具体模型，无需第二个菜单资源权限。 */
     @Test
     void shouldConnectModelWithSquareWriteAuthority() throws Exception {
-        var payload = """
+        String payload = """
                 {"modelId":"1","protocol":"ollama","baseUrl":"http://127.0.0.1:11434","authType":"none"}
                 """;
-        var browseOnly = createSession("ai:model-square:read");
-        var denied = post("/v1/model-square/connections").session(browseOnly)
+        MockHttpSession browseOnly = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder denied = post("/v1/model-square/connections").session(browseOnly)
                 .contentType(MediaType.APPLICATION_JSON).content(payload);
         mvc.perform(denied).andExpect(status().isForbidden());
-        var writable = createSession("ai:model-square:read", "ai:model-square:write");
-        var allowed = post("/v1/model-square/connections").session(writable)
+        MockHttpSession writable = createSession("ai:model-square:read", "ai:model-square:write");
+        MockHttpServletRequestBuilder allowed = post("/v1/model-square/connections").session(writable)
                 .contentType(MediaType.APPLICATION_JSON).content(payload);
         mvc.perform(allowed).andExpect(status().isOk());
-        var connections = context.getBean(ModelConnectionService.class);
+        ModelConnectionService connections = context.getBean(ModelConnectionService.class);
         verify(connections).createConnection(argThat(connection -> connection.getModelId().equals(1L)), isNull());
-        var missingModel = post("/v1/model-square/connections").session(writable)
+        MockHttpServletRequestBuilder missingModel = post("/v1/model-square/connections").session(writable)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"protocol\":\"ollama\",\"baseUrl\":\"http://127.0.0.1:11434\",\"authType\":\"none\"}");
         mvc.perform(missingModel).andExpect(status().isBadRequest());
@@ -478,29 +481,29 @@ class AiEndpointAuthenticationTest {
     /** 修改连接也按广场write授权，并将目标连接及版本交给真实广场Biz编排。 */
     @Test
     void shouldUpdateConnectionWithSquareWriteAuthority() throws Exception {
-        var payload = """
+        String payload = """
                 {"modelId":"1","protocol":"ollama","baseUrl":"http://127.0.0.1:11434",
                  "authType":"none","version":0}
                 """;
-        var readOnly = createSession("ai:model-square:read");
-        var denied = put("/v1/model-square/connections/1").session(readOnly)
+        MockHttpSession readOnly = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder denied = put("/v1/model-square/connections/1").session(readOnly)
                 .contentType(MediaType.APPLICATION_JSON).content(payload);
         mvc.perform(denied).andExpect(status().isForbidden());
-        var writable = createSession("ai:model-square:read", "ai:model-square:write");
-        var allowed = put("/v1/model-square/connections/1").session(writable)
+        MockHttpSession writable = createSession("ai:model-square:read", "ai:model-square:write");
+        MockHttpServletRequestBuilder allowed = put("/v1/model-square/connections/1").session(writable)
                 .contentType(MediaType.APPLICATION_JSON).content(payload);
         mvc.perform(allowed).andExpect(status().isOk());
-        var connections = context.getBean(ModelConnectionService.class);
+        ModelConnectionService connections = context.getBean(ModelConnectionService.class);
         verify(connections).modifyConnection(argThat(connection -> connection.getId().equals(1L)), isNull(), eq(0L));
     }
 
     /** 聚合连接详情保持只返回凭证存在标记，不因移动入口而泄露内部存储字段。 */
     @Test
     void shouldKeepAggregatedConnectionResponseSecretFree() throws Exception {
-        var session = createSession("ai:model-square:read");
-        var request = get("/v1/model-square/connections/1").session(session);
-        var response = mvc.perform(request).andExpect(status().isOk()).andReturn();
-        var body = response.getResponse().getContentAsString();
+        MockHttpSession session = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder request = get("/v1/model-square/connections/1").session(session);
+        MvcResult response = mvc.perform(request).andExpect(status().isOk()).andReturn();
+        String body = response.getResponse().getContentAsString();
         assertTrue(body.contains("\"credentialConfigured\":true"));
         assertFalse(body.contains("test-encrypted-secret"));
         assertFalse(body.contains("test-key-id"));
@@ -511,54 +514,54 @@ class AiEndpointAuthenticationTest {
     /** 移除旧Controller后，已认证用户访问旧路径仍应404，不保留别名或兼容入口。 */
     @Test
     void shouldRemoveStandaloneConnectionEndpoints() throws Exception {
-        var session = createPlatformSession(false);
-        var paths = List.of("/v1/model-connections", "/v1/model-connections/1",
+        MockHttpSession session = createPlatformSession(false);
+        List<String> paths = List.of("/v1/model-connections", "/v1/model-connections/1",
                 "/v1/model-square/providers");
-        for (var path : paths) {
-            var request = get(path).session(session);
+        for (String path : paths) {
+            MockHttpServletRequestBuilder request = get(path).session(session);
             mvc.perform(request).andExpect(status().isNotFound());
         }
-        var write = delete("/v1/model-connections/1").session(session);
+        MockHttpServletRequestBuilder write = delete("/v1/model-connections/1").session(session);
         mvc.perform(write).andExpect(status().isNotFound());
     }
 
     /** 旧连接器资源码不再授权广场，防止移除菜单后形成隐式权限别名。 */
     @Test
     void shouldRejectRemovedConnectionAuthority() throws Exception {
-        var session = createSession("ai:model-connection:read", "ai:model-connection:write");
-        var read = get("/v1/model-square/connections").session(session);
+        MockHttpSession session = createSession("ai:model-connection:read", "ai:model-connection:write");
+        MockHttpServletRequestBuilder read = get("/v1/model-square/connections").session(session);
         mvc.perform(read).andExpect(status().isForbidden());
-        var write = delete("/v1/model-square/connections/1").session(session);
+        MockHttpServletRequestBuilder write = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(write).andExpect(status().isForbidden());
-        var connections = context.getBean(ModelConnectionService.class);
+        ModelConnectionService connections = context.getBean(ModelConnectionService.class);
         verifyNoInteractions(connections);
     }
 
     /** 广场read/write权限不能绕过用户及平台管理员的只读身份保护。 */
     @Test
     void shouldRejectSquareWritesForReadOnlyIdentity() throws Exception {
-        var session = createSession("ai:model-square:read", "ai:model-square:write");
+        MockHttpSession session = createSession("ai:model-square:read", "ai:model-square:write");
         RequestContext.getUser().setLocked(true);
-        var request = delete("/v1/model-square/connections/1").session(session);
+        MockHttpServletRequestBuilder request = delete("/v1/model-square/connections/1").session(session);
         mvc.perform(request).andExpect(status().isForbidden());
         RequestContext.getUser().setPlatformAdmin(true);
         mvc.perform(request).andExpect(status().isForbidden());
-        var connections = context.getBean(ModelConnectionService.class);
+        ModelConnectionService connections = context.getBean(ModelConnectionService.class);
         verifyNoInteractions(connections);
     }
 
     /** 连接启停遵循write权限，参数合法后才进入编排服务。 */
     @Test
     void shouldRequireWriteForConnectionStatus() throws Exception {
-        var readOnly = createSession("ai:model-square:read");
-        var denied = put("/v1/model-square/connections/1/status").session(readOnly)
+        MockHttpSession readOnly = createSession("ai:model-square:read");
+        MockHttpServletRequestBuilder denied = put("/v1/model-square/connections/1/status").session(readOnly)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":0,\"version\":0}");
         mvc.perform(denied).andExpect(status().isForbidden());
-        var writable = createSession("ai:model-square:read", "ai:model-square:write");
-        var allowed = put("/v1/model-square/connections/1/status").session(writable)
+        MockHttpSession writable = createSession("ai:model-square:read", "ai:model-square:write");
+        MockHttpServletRequestBuilder allowed = put("/v1/model-square/connections/1/status").session(writable)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":0,\"version\":0}");
         mvc.perform(allowed).andExpect(status().isOk());
-        var invalid = put("/v1/model-square/connections/1/status").session(writable)
+        MockHttpServletRequestBuilder invalid = put("/v1/model-square/connections/1/status").session(writable)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"dataStatus\":2,\"version\":0}");
         mvc.perform(invalid).andExpect(status().isBadRequest());
     }
@@ -566,54 +569,54 @@ class AiEndpointAuthenticationTest {
     /** 健康路径仍使用框架匿名白名单，未将全部AI路径加入白名单。 */
     @Test
     void shouldKeepHealthPathPublic() throws Exception {
-        var request = get("/actuator/health");
+        MockHttpServletRequestBuilder request = get("/actuator/health");
         mvc.perform(request).andExpect(status().isOk());
     }
 
     /** Agent基本信息允许read，配置及选择项要求write，匿名请求仍由生产认证链拒绝。 */
     @Test
     void shouldProtectAgentConfigurationAndWriteEndpoints() throws Exception {
-        var anonymous = get("/v1/agents/1");
+        MockHttpServletRequestBuilder anonymous = get("/v1/agents/1");
         mvc.perform(anonymous).andExpect(status().isUnauthorized());
-        var reader = createSession("ai:agent:read");
-        var list = get("/v1/agents").session(reader);
+        MockHttpSession reader = createSession("ai:agent:read");
+        MockHttpServletRequestBuilder list = get("/v1/agents").session(reader);
         mvc.perform(list).andExpect(status().isOk());
-        var detail = get("/v1/agents/1").session(reader);
+        MockHttpServletRequestBuilder detail = get("/v1/agents/1").session(reader);
         mvc.perform(detail).andExpect(status().isOk());
-        var configuration = get("/v1/agents/1/configuration").session(reader);
+        MockHttpServletRequestBuilder configuration = get("/v1/agents/1/configuration").session(reader);
         mvc.perform(configuration).andExpect(status().isForbidden());
-        var options = get("/v1/agents/options/models").session(reader);
+        MockHttpServletRequestBuilder options = get("/v1/agents/options/models").session(reader);
         mvc.perform(options).andExpect(status().isForbidden());
-        var publish = post("/v1/agents/1/publish").session(reader)
+        MockHttpServletRequestBuilder publish = post("/v1/agents/1/publish").session(reader)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0}");
         mvc.perform(publish).andExpect(status().isForbidden());
-        var writer = createSession("ai:agent:read", "ai:agent:write");
-        var allowedConfiguration = get("/v1/agents/1/configuration").session(writer);
+        MockHttpSession writer = createSession("ai:agent:read", "ai:agent:write");
+        MockHttpServletRequestBuilder allowedConfiguration = get("/v1/agents/1/configuration").session(writer);
         mvc.perform(allowedConfiguration).andExpect(status().isOk());
-        var allowedPublish = post("/v1/agents/1/publish").session(writer)
+        MockHttpServletRequestBuilder allowedPublish = post("/v1/agents/1/publish").session(writer)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0}");
         mvc.perform(allowedPublish).andExpect(status().isOk());
-        var biz = context.getBean(AgentBizService.class);
+        AgentBizService biz = context.getBean(AgentBizService.class);
         verify(biz).publishAgent(1L, 0L);
     }
 
     /** 只读身份即使拥有菜单write，也不能读取维护配置或执行删除。 */
     @Test
     void shouldRejectAgentMaintenanceForReadOnlyIdentity() throws Exception {
-        var session = createSession("ai:agent:read", "ai:agent:write");
+        MockHttpSession session = createSession("ai:agent:read", "ai:agent:write");
         RequestContext.getUser().setLocked(true);
-        var configuration = get("/v1/agents/1/configuration").session(session);
+        MockHttpServletRequestBuilder configuration = get("/v1/agents/1/configuration").session(session);
         mvc.perform(configuration).andExpect(status().isForbidden());
-        var remove = delete("/v1/agents/1").param("version", "0").session(session);
+        MockHttpServletRequestBuilder remove = delete("/v1/agents/1").param("version", "0").session(session);
         mvc.perform(remove).andExpect(status().isForbidden());
-        var biz = context.getBean(AgentBizService.class);
+        AgentBizService biz = context.getBean(AgentBizService.class);
         verifyNoInteractions(biz);
     }
 
     /** 首页所有聚合接口使用广场资源码，平台模型目录仍保持独立管理权限。 */
     @Test
     void shouldDeclareFrameworkPermissionOnAllAiControllers() {
-        var resources =
+        Map<Class<? extends Object>, String> resources =
                 Map.of(
                         ModelController.class, "ai:model",
                         ModelSquareController.class, "ai:model-square",
@@ -625,8 +628,8 @@ class AiEndpointAuthenticationTest {
                         KnowledgeChunkController.class, "ai:knowledge-base",
                         AgentController.class, "ai:agent",
                         AgentOptionController.class, "ai:agent");
-        for (var resource : resources.entrySet()) {
-            var permission =
+        for (Map.Entry<Class<? extends Object>, String> resource : resources.entrySet()) {
+            Permission permission =
                     AnnotatedElementUtils.findMergedAnnotation(resource.getKey(), Permission.class);
             assertNotNull(permission);
             assertEquals(List.of(resource.getValue()), List.of(permission.value()));
@@ -652,10 +655,10 @@ class AiEndpointAuthenticationTest {
         /** Agent查询替身，认证和方法授权仍使用生产实现。 */
         @Bean
         AgentService agentService() {
-            var service = mock(AgentService.class);
-            var page = new Page<AgentEntity>(1, 12);
+            AgentService service = mock(AgentService.class);
+            Page<AgentEntity> page = new Page<AgentEntity>(1, 12);
             when(service.fetchAgentPage(1, 12, null, null, null)).thenReturn(page);
-            var agent = new AgentEntity();
+            AgentEntity agent = new AgentEntity();
             agent.setId(1L);
             when(service.requireAgent(1L, false, false)).thenReturn(agent);
             when(service.requireAgent(1L, true, false)).thenReturn(agent);
@@ -677,7 +680,7 @@ class AiEndpointAuthenticationTest {
         /** 真实选择项入口验证GET显式write覆盖。 */
         @Bean
         AgentOptionController agentOptionController(ModelConnectionService connections) {
-            var bases = mock(KnowledgeBaseService.class);
+            KnowledgeBaseService bases = mock(KnowledgeBaseService.class);
             return new AgentOptionController(connections, bases);
         }
 
@@ -685,13 +688,13 @@ class AiEndpointAuthenticationTest {
         @Bean
         SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json)
                 throws Exception {
-            var properties = new SecurityProperties();
-            var publicPaths = List.of("/actuator/health");
+            SecurityProperties properties = new SecurityProperties();
+            List<String> publicPaths = List.of("/actuator/health");
             properties.getPermissions().setIgnore(publicPaths);
             SecurityMessageResolver messages = (code, args, locale, defaultMessage) -> code;
-            var denied = new AccessDeniedHandlerImpl(json, messages);
-            var unauthenticated = new AuthenticationEntryPointImpl(json, messages);
-            var configuration = new SecurityClientAutoConfiguration();
+            AccessDeniedHandlerImpl denied = new AccessDeniedHandlerImpl(json, messages);
+            AuthenticationEntryPointImpl unauthenticated = new AuthenticationEntryPointImpl(json, messages);
+            SecurityClientAutoConfiguration configuration = new SecurityClientAutoConfiguration();
             return configuration.bearerAuthenticationSecurityFilterChain(
                     http, properties, denied, unauthenticated);
         }
@@ -731,18 +734,18 @@ class AiEndpointAuthenticationTest {
         /** 页面目录导航能力替身；读目录不要求拥有目录维护菜单资源权限。 */
         @Bean
         KnowledgeFolderController knowledgeFolderController() {
-            var folders = mock(KnowledgeFolderService.class);
-            var biz = mock(KnowledgeFolderBizService.class);
+            KnowledgeFolderService folders = mock(KnowledgeFolderService.class);
+            KnowledgeFolderBizService biz = mock(KnowledgeFolderBizService.class);
             return new KnowledgeFolderController(folders, biz);
         }
 
         /** 资料接口服务替身，实际认证与方法权限不做替身。 */
         @Bean
         KnowledgeDocumentService knowledgeDocumentService() {
-            var service = mock(KnowledgeDocumentService.class);
-            var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+            KnowledgeDocumentService service = mock(KnowledgeDocumentService.class);
+            Page<KnowledgeDocumentEntity> page = new Page<KnowledgeDocumentEntity>(1L, 10L);
             when(service.fetchDocumentPage(1L, 10L, null, null, null, null, null, 1L, null)).thenReturn(page);
-            var document = createKnowledgeDocumentResponse();
+            KnowledgeDocumentEntity document = createKnowledgeDocumentResponse();
             when(service.requireDocument(1L, false)).thenReturn(document);
             return service;
         }
@@ -750,7 +753,7 @@ class AiEndpointAuthenticationTest {
         /** 原件下载能力替身，不访问MinIO。 */
         @Bean
         KnowledgeDocumentBizService knowledgeDocumentBizService() {
-            var service = mock(KnowledgeDocumentBizService.class);
+            KnowledgeDocumentBizService service = mock(KnowledgeDocumentBizService.class);
             when(service.createDownloadUrl(1L)).thenReturn("https://example.invalid/test-download");
             return service;
         }
@@ -758,8 +761,8 @@ class AiEndpointAuthenticationTest {
         /** 上传能力替身，确认无write权限时不会执行取消。 */
         @Bean
         KnowledgeUploadBizService knowledgeUploadBizService() {
-            var service = mock(KnowledgeUploadBizService.class);
-            var document = createKnowledgeDocumentResponse();
+            KnowledgeUploadBizService service = mock(KnowledgeUploadBizService.class);
+            KnowledgeDocumentEntity document = createKnowledgeDocumentResponse();
             when(service.createUpload(any(KnowledgeDocumentEntity.class))).thenReturn(document);
             when(service.createPartUrl(1L, 1)).thenReturn("https://example.invalid/upload-part");
             when(service.confirmPart(1L, 1, "test-etag")).thenReturn(document);
@@ -771,7 +774,7 @@ class AiEndpointAuthenticationTest {
         /** 召回POST接口必须按read授权，不能误用HTTP方法推断write。 */
         @Bean
         KnowledgeRecallController knowledgeRecallController() {
-            var biz = mock(KnowledgeRecallBizService.class);
+            KnowledgeRecallBizService biz = mock(KnowledgeRecallBizService.class);
             when(biz.testRecall(any(), any())).thenReturn(List.of());
             return new KnowledgeRecallController(biz);
         }
@@ -779,15 +782,15 @@ class AiEndpointAuthenticationTest {
         /** 分片接口使用真实Controller和权限链，外部IO及持久化在此隔离。 */
         @Bean
         KnowledgeChunkController knowledgeChunkController(KnowledgeDocumentService documents) {
-            var chunks = mock(KnowledgeChunkService.class);
-            var generation = mock(KnowledgeChunkGenerationBizService.class);
-            var editing = mock(KnowledgeChunkEditBizService.class);
-            var page = new Page<KnowledgeChunkEntity>(1L, 20L);
+            KnowledgeChunkService chunks = mock(KnowledgeChunkService.class);
+            KnowledgeChunkGenerationBizService generation = mock(KnowledgeChunkGenerationBizService.class);
+            KnowledgeChunkEditBizService editing = mock(KnowledgeChunkEditBizService.class);
+            Page<KnowledgeChunkEntity> page = new Page<KnowledgeChunkEntity>(1L, 20L);
             when(chunks.fetchChunkPage(1L, 1L, 20L)).thenReturn(page);
-            var chunk = new KnowledgeChunkEntity();
+            KnowledgeChunkEntity chunk = new KnowledgeChunkEntity();
             chunk.setId(1L);
             when(chunks.requireChunk(1L, 1L)).thenReturn(chunk);
-            var document = createKnowledgeDocumentResponse();
+            KnowledgeDocumentEntity document = createKnowledgeDocumentResponse();
             when(generation.generateChunks(any(), any(), any())).thenReturn(document);
             when(editing.modifyChunks(any(), any(), any())).thenReturn(document);
             when(editing.mergeChunks(any(), any(), any())).thenReturn(document);
@@ -797,7 +800,7 @@ class AiEndpointAuthenticationTest {
 
         /** 仅提供路由转换所需字段，不模拟真实外部存储或模型处理结果。 */
         private static KnowledgeDocumentEntity createKnowledgeDocumentResponse() {
-            var document = new KnowledgeDocumentEntity();
+            KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
             document.setId(1L);
             return document;
         }
@@ -805,11 +808,11 @@ class AiEndpointAuthenticationTest {
         /** 知识库新入口使用真实Controller和认证链，模型与数据库能力隔离。 */
         @Bean
         KnowledgeBaseController knowledgeBaseController() {
-            var bases = mock(KnowledgeBaseService.class);
-            var biz = mock(KnowledgeBaseBizService.class);
-            var page = new Page<KnowledgeBaseEntity>(1, 12);
+            KnowledgeBaseService bases = mock(KnowledgeBaseService.class);
+            KnowledgeBaseBizService biz = mock(KnowledgeBaseBizService.class);
+            Page<KnowledgeBaseEntity> page = new Page<KnowledgeBaseEntity>(1, 12);
             when(bases.fetchBasePage(1, 12, null)).thenReturn(page);
-            var base = new KnowledgeBaseEntity();
+            KnowledgeBaseEntity base = new KnowledgeBaseEntity();
             base.setId(1L);
             when(bases.requireBase(1L, false, false)).thenReturn(base);
             return new KnowledgeBaseController(bases, biz);
@@ -819,24 +822,24 @@ class AiEndpointAuthenticationTest {
         @Bean
         KnowledgeDocumentController knowledgeDocumentController(KnowledgeDocumentService documents,
                 KnowledgeDocumentBizService biz) {
-            var batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
+            KnowledgeDocumentBatchDeleteBizService batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
             return new KnowledgeDocumentController(documents, biz, batchDeletion);
         }
 
         /** 装配真实上传控制器及默认技术参数。 */
         @Bean
         KnowledgeUploadController knowledgeUploadController(KnowledgeUploadBizService uploads) {
-            var properties = new KnowledgeUploadProperties();
+            KnowledgeUploadProperties properties = new KnowledgeUploadProperties();
             return new KnowledgeUploadController(uploads, properties);
         }
 
         /** 不访问数据库，仅验证接口是否经过认证后进入服务。 */
         @Bean
         ModelConnectionService modelConnectionService() {
-            var models = mock(ModelConnectionService.class);
-            var page = new Page<ModelConnectionEntity>(1L, 10L);
+            ModelConnectionService models = mock(ModelConnectionService.class);
+            Page<ModelConnectionEntity> page = new Page<ModelConnectionEntity>(1L, 10L);
             when(models.fetchPage(1L, 10L, null, null, null)).thenReturn(page);
-            var connection = new ModelConnectionEntity();
+            ModelConnectionEntity connection = new ModelConnectionEntity();
             connection.setId(1L);
             connection.setModelId(1L);
             connection.setApiKeyCiphertext("test-encrypted-secret");
@@ -869,15 +872,15 @@ class AiEndpointAuthenticationTest {
         /** 真实目录能力服务使用Mapper替身，身份规则不做mock。 */
         @Bean
         ModelMapper modelMapper() {
-            var configuration = new MybatisConfiguration();
-            var assistant = new MapperBuilderAssistant(configuration, "catalog-security-test");
+            MybatisConfiguration configuration = new MybatisConfiguration();
+            MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "catalog-security-test");
             TableInfoHelper.initTableInfo(assistant, ModelEntity.class);
-            var mapper = mock(ModelMapper.class);
-            var page = new Page<ModelEntity>(1L, 10L);
+            ModelMapper mapper = mock(ModelMapper.class);
+            Page<ModelEntity> page = new Page<ModelEntity>(1L, 10L);
             when(mapper.selectPage(any(), any())).thenReturn(page);
             when(mapper.selectSquareModelPage(any(), any(), any(), any(), any()))
                     .thenAnswer(call -> call.getArgument(0));
-            var model = new ModelEntity();
+            ModelEntity model = new ModelEntity();
             model.setId(1L);
             model.setVersion(0L);
             model.setDataStatus(1);

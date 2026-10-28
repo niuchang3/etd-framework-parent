@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -44,25 +45,25 @@ class KnowledgeDocumentPageEndpointTest {
     void setUp() {
         documents = mock(KnowledgeDocumentService.class);
         biz = mock(KnowledgeDocumentBizService.class);
-        var batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
-        var controller = new KnowledgeDocumentController(documents, biz, batchDeletion);
+        KnowledgeDocumentBatchDeleteBizService batchDeletion = mock(KnowledgeDocumentBatchDeleteBizService.class);
+        KnowledgeDocumentController controller = new KnowledgeDocumentController(documents, biz, batchDeletion);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
-        var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+        Page<KnowledgeDocumentEntity> page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);
     }
 
     /** 列表直接返回独立向量状态，前端无需根据分片状态或启停状态推断。 */
     @Test
     void shouldReturnVectorStatusInDocumentList() throws Exception {
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setId(1L);
         document.setVectorStatus(KnowledgeVectorStatus.READY);
-        var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
-        var records = List.of(document);
+        Page<KnowledgeDocumentEntity> page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+        List<KnowledgeDocumentEntity> records = List.of(document);
         page.setRecords(records);
         when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(page);
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records[0].vectorStatus").value(KnowledgeVectorStatus.READY));
     }
@@ -71,7 +72,7 @@ class KnowledgeDocumentPageEndpointTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldBindFolderIds(boolean repeated) throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
                 .param("keyword", "说明").param("uploadStatus", "completed")
                 .param("chunkStatus", KnowledgeChunkStatus.DRAFT);
         if (repeated) {
@@ -87,7 +88,7 @@ class KnowledgeDocumentPageEndpointTest {
     /** 原有单目录调用及分页参数继续按原字段名绑定。 */
     @Test
     void shouldKeepSingleFolderQuery() throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderId", "9")
                 .param("current", "2").param("size", "20");
         mvc.perform(request).andExpect(status().isOk());
         verify(documents).fetchDocumentPage(2L, 20L, 9L, null, null, null, null, 1L, null);
@@ -96,7 +97,7 @@ class KnowledgeDocumentPageEndpointTest {
     /** 不传目录时维持原有不按目录筛选的入口行为。 */
     @Test
     void shouldKeepDefaultPage() throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
         mvc.perform(request).andExpect(status().isOk());
         verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, null, 1L, null);
     }
@@ -105,7 +106,7 @@ class KnowledgeDocumentPageEndpointTest {
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "abc", "1,0"})
     void shouldRejectInvalidFolderIds(String value) throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderIds", value);
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("folderIds", value);
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(documents);
     }
@@ -114,7 +115,7 @@ class KnowledgeDocumentPageEndpointTest {
     @ParameterizedTest
     @ValueSource(strings = {"current", "size", "folderId"})
     void shouldKeepExistingValidation(String parameter) throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param(parameter, "0");
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param(parameter, "0");
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(documents);
     }
@@ -125,7 +126,7 @@ class KnowledgeDocumentPageEndpointTest {
         String body = """
                 {"version":3,"folderId":9,"documentName":"资料名称"}
                 """;
-        var request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
+        MockHttpServletRequestBuilder request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isBadRequest());
         verifyNoInteractions(biz);
     }
@@ -135,16 +136,16 @@ class KnowledgeDocumentPageEndpointTest {
     @ValueSource(strings = {KnowledgePolicy.INITIALIZING, KnowledgePolicy.UPLOADING, KnowledgePolicy.COMPLETING,
             KnowledgePolicy.COMPLETED, KnowledgePolicy.FAILED, KnowledgePolicy.CANCELLED})
     void shouldDisplayUploadStatusOnly(String uploadStatus) throws Exception {
-        var document = new KnowledgeDocumentEntity();
+        KnowledgeDocumentEntity document = new KnowledgeDocumentEntity();
         document.setId(1L);
         document.setDocumentName("资料.pdf");
         document.setFileType("pdf");
         document.setUploadStatus(uploadStatus);
-        var records = List.of(document);
-        var page = new Page<KnowledgeDocumentEntity>(1L, 10L);
+        List<KnowledgeDocumentEntity> records = List.of(document);
+        Page<KnowledgeDocumentEntity> page = new Page<KnowledgeDocumentEntity>(1L, 10L);
         page.setRecords(records);
         when(documents.fetchDocumentPage(anyLong(), anyLong(), any(), any(), any(), any(), any(), any(), any())).thenReturn(page);
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1");
         mvc.perform(request).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records[0].documentName").value("资料.pdf"))
                 .andExpect(jsonPath("$.data.records[0].fileType").value("pdf"))
@@ -159,9 +160,9 @@ class KnowledgeDocumentPageEndpointTest {
         String body = """
                 {"version":3,"folderId":9,"documentName":"资料名称","description":"用途说明","isPublic":true}
                 """;
-        var request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
+        MockHttpServletRequestBuilder request = put("/v1/knowledge-documents/1").contentType(MediaType.APPLICATION_JSON).content(body);
         mvc.perform(request).andExpect(status().isOk());
-        var input = ArgumentCaptor.forClass(KnowledgeDocumentEntity.class);
+        ArgumentCaptor<KnowledgeDocumentEntity> input = ArgumentCaptor.forClass(KnowledgeDocumentEntity.class);
         verify(biz).modifyDocument(eq(1L), input.capture(), eq(3L));
         assertEquals(9L, input.getValue().getFolderId());
         assertEquals("资料名称", input.getValue().getDocumentName());
@@ -174,7 +175,7 @@ class KnowledgeDocumentPageEndpointTest {
     @ValueSource(strings = {KnowledgeChunkStatus.UNPROCESSED, KnowledgeChunkStatus.GENERATING,
             KnowledgeChunkStatus.DRAFT, KnowledgeChunkStatus.CONFIRMED, KnowledgeChunkStatus.FAILED})
     void shouldBindChunkStatus(String chunkStatus) throws Exception {
-        var request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("chunkStatus", chunkStatus);
+        MockHttpServletRequestBuilder request = get("/v1/knowledge-documents").param("knowledgeBaseId", "1").param("chunkStatus", chunkStatus);
         mvc.perform(request).andExpect(status().isOk());
         verify(documents).fetchDocumentPage(1L, 10L, null, null, null, null, chunkStatus, 1L, null);
     }
