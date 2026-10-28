@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -32,6 +33,9 @@ import java.io.IOException;
 @NoArgsConstructor
 public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
+    /** 同一HTTP请求内保存认证结果，供ASYNC及ERROR派发恢复身份，不写入Session或跨请求复用。 */
+    private static final RequestAttributeSecurityContextRepository REQUEST_SECURITY_CONTEXT_REPOSITORY =
+            new RequestAttributeSecurityContextRepository();
 
     /**
      * 请求到认证对象的转换器。
@@ -81,9 +85,14 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             context.setAuthentication(authenticate);
             SecurityContextHolder.setContext(context);
             contextSet = true;
+            // SSE交出原请求线程后会清理ThreadLocal；默认安全上下文仓储可从请求属性恢复认证。
+            REQUEST_SECURITY_CONTEXT_REPOSITORY.saveContext(context, request, response);
             filterChain.doFilter(request, response);
         } catch (AuthenticationException exception) {
             SecurityContextHolder.clearContext();
+            // 认证失败时同时清除请求级身份，防止后续错误派发重新读取先前的认证结果。
+            SecurityContext emptyContext = SecurityContextHolder.createEmptyContext();
+            REQUEST_SECURITY_CONTEXT_REPOSITORY.saveContext(emptyContext, request, response);
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             failureHandler.onAuthenticationFailure(request, response, exception);
         } finally {
