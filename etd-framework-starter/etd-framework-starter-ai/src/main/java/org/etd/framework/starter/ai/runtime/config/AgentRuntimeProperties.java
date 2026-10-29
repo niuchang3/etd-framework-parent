@@ -19,13 +19,13 @@ public class AgentRuntimeProperties {
     private int maxConcurrentRuns = 32;
     /** 输入估算Token预算，默认12000，不含输出预留。 */
     @Min(256) @Max(200000)
-    private int inputTokenBudget = 12000;
+    private int inputTokenBudget = 4096;
     /** 未配置Agent最大输出时使用的Token限制，默认2048。 */
     @Min(1) @Max(32768)
     private int defaultMaxOutputTokens = 2048;
     /** 多库融合后实际纳入上下文的引用上限，默认12。 */
     @Min(1) @Max(100)
-    private int maxReferences = 12;
+    private int maxReferences = 4;
     /** 输出通道心跳间隔秒数，默认10秒。 */
     @Min(1) @Max(60)
     private int heartbeatSeconds = 10;
