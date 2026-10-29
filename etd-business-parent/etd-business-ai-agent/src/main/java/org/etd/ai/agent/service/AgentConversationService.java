@@ -58,6 +58,13 @@ public class AgentConversationService {
         return mapper.selectOwnedList(ownerId, agentId, beforeId, size);
     }
 
+    /** @param id 已授权且无活跃运行的会话ID，调用方事务持有会话行锁 */
+    public void removeConversation(Long id) {
+        if (mapper.deleteConversation(id) != 1) {
+            throw new ApiRuntimeException("会话不存在或已删除");
+        }
+    }
+
     /** @param id 已授权会话ID，调用方持有会话行锁 */
     public void updateLastMessageTime(Long id) {
         mapper.updateLastMessageTime(id);

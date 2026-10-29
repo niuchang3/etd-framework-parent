@@ -43,6 +43,11 @@ public class AgentRunService {
         if (existing != null) {
             throw new ApiRuntimeException("请求已提交，runId=" + existing.getId() + "，请查询运行状态和消息");
         }
+        requireNoActiveRun(conversationId);
+    }
+
+    /** @param conversationId 已加锁的会话ID @throws ApiRuntimeException 正在生成或等待取消完成 */
+    public void requireNoActiveRun(Long conversationId) {
         if (mapper.selectActive(conversationId) != null) {
             throw new ApiRuntimeException("当前会话正在生成，请先停止或等待完成");
         }

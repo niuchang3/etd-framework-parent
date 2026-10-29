@@ -175,6 +175,67 @@ class AgentChatIntegrationTest {
         assertThat(prompt.getValue().getContents()).contains("发布指令").doesNotContain("草稿指令");
     }
 
+    /** 删除接口隐藏会话，保留底层记录，并阻止历史、运行查询和继续聊天。 */
+    @Test
+    void removesSessionAndBlocksFurtherAccess() throws Exception {
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "待删除会话");
+        MvcResult result = start(session.getId(), "before-delete");
+        complete(result);
+        AgentRunEntity run = runBiz.requireOwnedRunByRequest(session.getId(), "before-delete");
+        MockHttpServletRequestBuilder request = delete("/agent/chat/sessions/" + session.getId());
+        mvc.perform(request).andExpect(status().isOk()).andExpect(jsonPath("$.data").value(true));
+        assertThat(conversations.fetchConversationList(null, null, 20)).isEmpty();
+        assertThat(jdbc.queryForObject("select del_flag from ai_agent_conversation where id = ?",
+                Integer.class, session.getId())).isEqualTo(1);
+        assertThat(messages.fetchMessageList(session.getId(), null, 20)).hasSize(2);
+        assertThatThrownBy(() -> conversations.requireConversation(session.getId(), false))
+                .isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> runBiz.requireOwnedRun(run.getId())).isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> runBiz.requireOwnedRunByRequest(session.getId(), "before-delete"))
+                .isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> biz.beginRun(session.getId(), "after-delete", "新问题"))
+                .isInstanceOf(ApiRuntimeException.class);
+        assertThatThrownBy(() -> biz.removeSession(session.getId())).isInstanceOf(ApiRuntimeException.class);
+    }
+
+    /** 生成中和取消中均不能删除，避免运行回调写入已删除会话。 */
+    @Test
+    void rejectsDeletionUntilRunHasFinished() {
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "生成中的会话");
+        AgentChatExecution execution = biz.beginRun(session.getId(), "active-delete", "问题");
+        assertThatThrownBy(() -> biz.removeSession(session.getId()))
+                .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("正在生成");
+        runBiz.cancelRun(execution.run().getId());
+        assertThatThrownBy(() -> biz.removeSession(session.getId()))
+                .isInstanceOf(ApiRuntimeException.class).hasMessageContaining("正在生成");
+        assertThat(conversations.requireConversation(session.getId(), false)).isNotNull();
+    }
+
+    /** 同租户其他用户及其他租户均不能删除，失败后原会话仍然可用。 */
+    @Test
+    void rejectsDeletionOutsideSessionOwnership() {
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "私有会话");
+        identity(8L, 1L);
+        assertThatThrownBy(() -> biz.removeSession(session.getId())).isInstanceOf(ApiRuntimeException.class);
+        identity(7L, 2L);
+        assertThatThrownBy(() -> biz.removeSession(session.getId())).isInstanceOf(ApiRuntimeException.class);
+        identity(7L, 1L);
+        assertThat(conversations.requireConversation(session.getId(), false)).isNotNull();
+        biz.removeSession(session.getId());
+    }
+
+    /** 平台管理员遵循框架全局管理规则，可删除跨租户空闲会话。 */
+    @Test
+    void allowsPlatformAdminToRemoveSessionAcrossTenants() {
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "跨租户会话");
+        identity(9L, 2L);
+        RequestContext.getUser().setPlatformAdmin(true);
+        biz.removeSession(session.getId());
+        identity(7L, 1L);
+        assertThatThrownBy(() -> conversations.requireConversation(session.getId(), false))
+                .isInstanceOf(ApiRuntimeException.class);
+    }
+
     /** 真实知识SQL、上下文注入、SSE引用及JSONB持久化贯通，展示接口不泄漏内部指令。 */
     @Test
     void retrievesKnowledgeAndPersistsCitationSources() throws Exception {

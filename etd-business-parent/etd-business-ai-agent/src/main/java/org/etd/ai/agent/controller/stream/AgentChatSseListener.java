@@ -54,6 +54,8 @@ public final class AgentChatSseListener implements AgentRunEventListener {
                 finished.set(true);
             }
             SseEmitter.SseEventBuilder outgoing = SseEmitter.event().name(name).id(data.getSequence().toString()).data(data);
+            // MVC绑定输出通道后，send同步写出完整SSE事件并flush；不另加异步队列或等待终态批量发送。
+            // 绑定前的早期事件由Spring在初始化通道时写出，不能提前flush原始response破坏异常响应。
             emitter.send(outgoing);
         } catch (IOException | IllegalStateException exception) {
             disconnect();

@@ -19,6 +19,9 @@ import java.util.Locale;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.starter.ai.model.client.ModelRequestHeaders;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.etd.framework.starter.ai.model.client.ModelClientFactory;
 import org.etd.framework.starter.ai.model.client.ModelClientTransport;
 import org.etd.framework.starter.ai.model.config.ModelClientProperties;
@@ -113,6 +116,59 @@ class ModelClientProviderTest {
             assertThat(result).isNotEmpty();
             assertThat(result.getFirst().getResult().getOutput().getText()).isEqualTo("流式响应");
             assertThat(requests.getLast().authorization()).isNull();
+        }
+    }
+
+    /** 真实JDK连接器及OpenAI SDK必须在上游结束之前交付首段，不能仅验证聚合后的结果。 */
+    @Test
+    void shouldReceiveDeltaBeforeUpstreamCompletes() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch received = new CountDownLatch(1);
+        server.removeContext("/");
+        server.createContext("/", exchange -> respondInParts(exchange, release));
+        ModelConnectionConfiguration config = configuration(ModelClientProtocol.OPENAI_COMPATIBLE, ModelCapability.CHAT, null);
+        ChatModel model = createModel(config, ChatModel.class);
+        Prompt prompt = new Prompt("问题");
+        CompletableFuture<List<ChatResponse>> result = model.stream(prompt).doOnNext(response -> {
+            if (response.getResult() != null && "首段".equals(response.getResult().getOutput().getText())) {
+                received.countDown();
+            }
+        }).collectList().toFuture();
+        try {
+            assertThat(received.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(result).isNotDone();
+            release.countDown();
+            assertThat(result.get(5, TimeUnit.SECONDS)).isNotEmpty();
+        } finally {
+            release.countDown();
+            result.cancel(true);
+        }
+    }
+
+    /** SDK 1.1.2内部buffer(2,1)保留一个片段；先发两段验证不会聚合整轮，再等待放行结束。 */
+    private void respondInParts(HttpExchange exchange, CountDownLatch release) throws IOException {
+        exchange.getRequestBody().readAllBytes();
+        exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+        exchange.sendResponseHeaders(200, 0);
+        String event = "data: {\"id\":\"1\",\"model\":\"test-model\",\"choices\":[{\"index\":0,"
+                + "\"delta\":{\"role\":\"assistant\",\"content\":\"首段\"},\"finish_reason\":null}]}\n\n";
+        String nextEvent = event.replace("首段", "后段");
+        byte[] first = event.getBytes(StandardCharsets.UTF_8);
+        byte[] second = nextEvent.getBytes(StandardCharsets.UTF_8);
+        byte[] done = "data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8);
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(first);
+            output.flush();
+            output.write(second);
+            output.flush();
+            if (!release.await(10, TimeUnit.SECONDS)) {
+                throw new IOException("等待测试放行模型流超时");
+            }
+            output.write(done);
+            output.flush();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IOException("模型流测试被中断", exception);
         }
     }
 

@@ -32,11 +32,13 @@ import org.etd.framework.common.core.constants.PermissionAction;
 import org.etd.framework.common.core.constants.HeaderConstant;
 import org.etd.ai.agent.constant.AgentChatPolicy;
 import org.etd.framework.common.core.model.ResultModel;
+import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.log.annotation.AutoLog;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -97,6 +99,17 @@ public class AgentChatController {
         return ResultModel.success(result);
     }
 
+    /** 删除已结束生成的会话，逻辑删除后不可继续访问历史或发起聊天。
+     * @param sessionId 个人会话ID @return 删除成功
+     * @throws ApiRuntimeException 会话不可访问或仍在生成
+     */
+    @DeleteMapping("/sessions/{sessionId}")
+    @AutoLog("删除Agent聊天会话")
+    public ResultModel<Boolean> removeSession(@PathVariable @Positive Long sessionId) {
+        biz.removeSession(sessionId);
+        return ResultModel.success(true);
+    }
+
     /** @param sessionId 个人会话 @param beforeSequence 向前消息序号游标 @param size 页大小 @return 本页按序号升序的消息 */
     @GetMapping("/sessions/{sessionId}/messages")
     @AutoLog("查询Agent聊天消息历史")
@@ -114,12 +127,15 @@ public class AgentChatController {
     @AutoLog("流式生成Agent回答")
     public SseEmitter stream(@PathVariable @Positive Long sessionId,
             @Valid @RequestBody AgentChatMessageDTO dto, HttpServletResponse response) {
+        // 必须在启动模型任务和写出正文之前设置；Tomcat不会因传入0而缩小已有缓冲，逐事件刷新由SseEmitter负责。
+        response.setBufferSize(0);
         SseEmitter emitter = new SseEmitter(TimeUnit.SECONDS.toMillis(runtimeProperties.getTimeoutSeconds() + 10L));
         AgentChatSseListener output = new AgentChatSseListener(emitter);
         AgentRunControl handle = runtime.start(() -> biz.prepareRun(sessionId, dto.getRequestId(), dto.getContent(), output));
         output.bind(handle);
-        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-transform");
         response.setHeader(HeaderConstant.X_ACCEL_BUFFERING, "no");
+        response.setHeader(HttpHeaders.CONNECTION, "keep-alive");
         return emitter;
     }
 

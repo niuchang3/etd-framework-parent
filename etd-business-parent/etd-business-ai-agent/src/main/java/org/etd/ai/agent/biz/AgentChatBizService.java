@@ -124,6 +124,17 @@ public class AgentChatBizService {
         return conversations.createConversation(agentId, type, title);
     }
 
+    /** 逻辑删除会话，消息和运行记录保留，但所有前端访问仍须校验会话未删除。
+     * @param sessionId 会话ID @throws ApiRuntimeException 会话不可访问或生成尚未结束
+     */
+    @Transactional
+    public void removeSession(Long sessionId) {
+        // 与开始聊天持有同一行锁，避免校验空闲后又插入新的运行记录。
+        conversations.requireConversation(sessionId, true);
+        runs.requireNoActiveRun(sessionId);
+        conversations.removeConversation(sessionId);
+    }
+
     /** @param sessionId 会话 @param requestId 幂等ID @param question 问题 @return 固定本轮配置及历史 @throws ApiRuntimeException 权限或执行状态不满足 */
     @Transactional
     public AgentChatExecution beginRun(Long sessionId, String requestId, String question) {

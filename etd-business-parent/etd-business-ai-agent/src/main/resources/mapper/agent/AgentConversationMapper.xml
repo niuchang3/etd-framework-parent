@@ -38,6 +38,15 @@
         limit #{size}
     </select>
 
+    <!-- 复用已有逻辑删除标记，所有前端入口通过会话校验隔离保留记录。 -->
+    <update id="deleteConversation">
+        update ai_agent_conversation
+        set del_flag = 1,
+            update_time = current_timestamp
+        where id = #{id}
+          and del_flag = 0
+    </update>
+
     <update id="updateLastMessageTime">
         update ai_agent_conversation
         set last_message_time = current_timestamp,
