@@ -79,31 +79,34 @@ public final class DoclingStructureReader {
         return new DoclingContent(document, blocks);
     }
 
+    /** 按正文引用树做深度优先遍历，分组节点只决定顺序，不作为正文块输出。 */
     private List<DocumentBlock> readBody(JsonNode document, JsonNode body) {
-        ArrayDeque<String> pending = new ArrayDeque<String>();
-        HashSet<String> visited = new HashSet<String>();
+        ArrayDeque<String> pendingReferences = new ArrayDeque<>();
+        HashSet<String> visitedReferences = new HashSet<>();
         ArrayList<DocumentBlock> result = new ArrayList<DocumentBlock>();
-        enqueueChildren(body, pending);
-        while (!pending.isEmpty()) {
-            String reference = pending.pop();
-            JsonNode node = resolveReference(document, reference, visited);
+        pushChildReferences(body, pendingReferences);
+        while (!pendingReferences.isEmpty()) {
+            String reference = pendingReferences.pop();
+            JsonNode node = resolveReference(document, reference, visitedReferences);
             if (!reference.startsWith(GROUP_PREFIX)) {
                 DocumentBlock block = readBlock(document, node, reference);
                 result.add(block);
             }
-            enqueueChildren(node, pending);
+            pushChildReferences(node, pendingReferences);
         }
         return List.copyOf(result);
     }
 
-    private void enqueueChildren(JsonNode node, ArrayDeque<String> pending) {
+    /** 栈后进先出，因此子节点必须倒序压入，才能按原数组顺序读取；子节点先于后续兄弟节点处理。 */
+    private void pushChildReferences(JsonNode node, ArrayDeque<String> pendingReferences) {
         JsonNode children = node.path(CHILDREN);
         for (int index = children.size() - 1; index >= 0; index--) {
             String reference = children.path(index).path(REF).asText();
-            pending.push(reference);
+            pendingReferences.push(reference);
         }
     }
 
+    /** 引用必须指向文档内对象，重复或循环引用统一拒绝，避免正文重复或遍历无法结束。 */
     private JsonNode resolveReference(JsonNode document, String reference, Set<String> visited) {
         if (!reference.startsWith(INTERNAL_REFERENCE_PREFIX) || !visited.add(reference)) {
             throw invalidStructure();
@@ -130,14 +133,17 @@ public final class DoclingStructureReader {
         ArrayList<DocumentTableCell> cells = new ArrayList<DocumentTableCell>();
         for (JsonNode cell : data.path(CELLS)) {
             String text = cell.path(TEXT).asText(null);
-            Integer firstRow = integer(cell.path(FIRST_ROW)), endRow = integer(cell.path(END_ROW));
-            Integer firstColumn = integer(cell.path(FIRST_COLUMN)), endColumn = integer(cell.path(END_COLUMN));
+            Integer firstRow = integer(cell.path(FIRST_ROW));
+            Integer endRow = integer(cell.path(END_ROW));
+            Integer firstColumn = integer(cell.path(FIRST_COLUMN));
+            Integer endColumn = integer(cell.path(END_COLUMN));
             boolean columnHeader = cell.path(COLUMN_HEADER).asBoolean();
             boolean rowHeader = cell.path(ROW_HEADER).asBoolean();
             DocumentTableCell parsed = new DocumentTableCell(text, firstRow, endRow, firstColumn, endColumn, columnHeader, rowHeader);
             cells.add(parsed);
         }
-        Integer rows = integer(data.path(ROWS)), columns = integer(data.path(COLUMNS));
+        Integer rows = integer(data.path(ROWS));
+        Integer columns = integer(data.path(COLUMNS));
         return new DocumentTable(rows, columns, cells);
     }
 
@@ -174,18 +180,24 @@ public final class DoclingStructureReader {
         return result;
     }
 
+    /** 先判断页面尺寸、矩形字段和坐标原点，再统一转换为左上原点；不完整定位只保留原有页码信息。 */
     private DocumentSourceLocation readRectangle(JsonNode source, JsonNode size, int page) {
-        Double width = number(size.path(WIDTH)), height = number(size.path(HEIGHT));
+        Double width = number(size.path(WIDTH));
+        Double height = number(size.path(HEIGHT));
         JsonNode box = source.path(BBOX);
-        Double left = number(box.path(LEFT)), right = number(box.path(RIGHT));
-        Double top = number(box.path(TOP)), bottom = number(box.path(BOTTOM));
+        Double left = number(box.path(LEFT));
+        Double right = number(box.path(RIGHT));
+        Double top = number(box.path(TOP));
+        Double bottom = number(box.path(BOTTOM));
         String origin = box.path(ORIGIN).asText();
-        if (width == null || height == null || width <= 0 || height <= 0
-                || left == null || right == null || top == null || bottom == null
-                || !(TOP_LEFT.equals(origin) || BOTTOM_LEFT.equals(origin))) {
+        boolean pageSizeAvailable = width != null && height != null && width > 0 && height > 0;
+        boolean rectangleAvailable = left != null && right != null && top != null && bottom != null;
+        boolean originSupported = TOP_LEFT.equals(origin) || BOTTOM_LEFT.equals(origin);
+        if (!pageSizeAvailable || !rectangleAvailable || !originSupported) {
             return new DocumentSourceLocation(page, null, null, null, null, width, height);
         }
         if (BOTTOM_LEFT.equals(origin)) {
+            // 左下原点的纵坐标向上增大；转换后向下增大，横坐标保持原值。
             top = height - top;
             bottom = height - bottom;
         }

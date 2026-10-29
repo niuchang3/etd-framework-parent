@@ -42,24 +42,27 @@ public class AgentMessageService {
         return rows;
     }
 
-    /** @param conversationId 已授权会话 @param limit 消息上限 @return 仅包含完整成功问答的升序历史 */
+    /** @param conversationId 已授权会话 @param limit 消息上限 @return 过滤失败记录后的升序历史消息 */
     public List<Message> fetchHistoryList(Long conversationId, int limit) {
-        if (limit < 2) {
+        if (limit < 1) {
             return List.of();
         }
         List<AgentMessageEntity> rows = fetchMessageList(conversationId, null, limit);
         List<Message> history = new ArrayList<>();
-        for (int index = 0; index + 1 < rows.size(); index++) {
-            AgentMessageEntity user = rows.get(index);
-            AgentMessageEntity assistant = rows.get(index + 1);
-            if (AgentChatPolicy.USER.equals(user.getRole()) && AgentChatPolicy.ASSISTANT.equals(assistant.getRole())
-                    && user.getRunId().equals(assistant.getRunId())
-                    && AgentChatPolicy.COMPLETED.equals(assistant.getMessageStatus())) {
-                UserMessage question = new UserMessage(user.getContent());
-                AssistantMessage answer = new AssistantMessage(assistant.getContent());
-                history.add(question);
-                history.add(answer);
-                index++;
+        for (AgentMessageEntity row : rows) {
+            if (AgentChatPolicy.FAILED.equals(row.getMessageStatus())) {
+                continue;
+            }
+            String content = row.getContent();
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            if (AgentChatPolicy.USER.equals(row.getRole())) {
+                history.add(new UserMessage(content));
+            } else if (AgentChatPolicy.ASSISTANT.equals(row.getRole())) {
+                String text = AgentChatPolicy.INTERRUPTED.equals(row.getMessageStatus())
+                        ? content + "\n[用户已中断此轮生成]" : content;
+                history.add(new AssistantMessage(text));
             }
         }
         return history;

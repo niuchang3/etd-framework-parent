@@ -1,5 +1,6 @@
 package org.etd.ai.knowledge.converter;
 
+import java.util.List;
 import org.etd.ai.knowledge.controller.dto.KnowledgeFolderSaveDTO;
 import org.etd.ai.knowledge.controller.vo.KnowledgeFolderVO;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
@@ -39,6 +40,9 @@ public interface KnowledgeFolderConverter {
     @Mapping(target = "writable", expression = "java(canManageFolder(entity))")
     @Mapping(target = "navigationOnly", expression = "java(!canManageFolder(entity))")
     KnowledgeFolderVO toVO(KnowledgeFolderEntity entity);
+
+    /** @param entities 已授权的目录及导航节点 @return 保持原顺序并逐项执行导航信息隐藏规则的响应列表 */
+    List<KnowledgeFolderVO> toVOList(List<KnowledgeFolderEntity> entities);
 
     /** @param entity 目录记录 @return 框架角色范围是否允许维护该目录 */
     default boolean canManageFolder(KnowledgeFolderEntity entity) {

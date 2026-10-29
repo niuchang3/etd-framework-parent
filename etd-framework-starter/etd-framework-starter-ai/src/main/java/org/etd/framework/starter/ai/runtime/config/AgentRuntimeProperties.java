@@ -17,13 +17,13 @@ public class AgentRuntimeProperties {
     /** 单节点并发轮数上限，默认32，超限立即拒绝。 */
     @Min(1) @Max(1000)
     private int maxConcurrentRuns = 32;
-    /** 输入估算Token预算，默认12000，不含输出预留。 */
+    /** 输入估算Token预算，默认4096，不含输出预留，兼顾上下文深度与Prefill延迟。 */
     @Min(256) @Max(200000)
     private int inputTokenBudget = 4096;
     /** 未配置Agent最大输出时使用的Token限制，默认2048。 */
     @Min(1) @Max(32768)
     private int defaultMaxOutputTokens = 2048;
-    /** 多库融合后实际纳入上下文的引用上限，默认12。 */
+    /** 多库融合后实际纳入上下文的引用上限，默认4，保证权威证据并降低首字延迟。 */
     @Min(1) @Max(100)
     private int maxReferences = 4;
     /** 输出通道心跳间隔秒数，默认10秒。 */

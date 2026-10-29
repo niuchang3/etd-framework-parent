@@ -117,22 +117,25 @@ public class KnowledgeChunkGenerationService {
         }
     }
 
-    /** 外部IO不占用数据库事务；线程被中断时及时退出并恢复中断标志。 */
-    private void awaitTask(AsynchronousDocumentParser parser, DocumentParseTask initial, Instant deadline, Duration timeout) {
-        DocumentParseTask task = initial;
-        while (task.status() != DocumentTaskStatus.COMPLETED && task.status() != DocumentTaskStatus.FAILED) {
+    /** 先检查统一截止时间，再等待轮询间隔并查询状态；外部IO不占用数据库事务。 */
+    private void awaitTask(AsynchronousDocumentParser parser, DocumentParseTask initialTask, Instant deadline, Duration timeout) {
+        DocumentParseTask currentTask = initialTask;
+        // 只有完成或失败才结束轮询；截止时间沿用提交前计算的预算，不在每次查询后重新计时。
+        while (currentTask.status() != DocumentTaskStatus.COMPLETED && currentTask.status() != DocumentTaskStatus.FAILED) {
             if (Instant.now().isAfter(deadline)) {
                 Duration budget = timeout.plus(KnowledgeChunkLimits.REQUEST_GRACE);
                 throw KnowledgeChunkGenerationException.waitTimeout(budget);
             }
-            try { Thread.sleep(KnowledgeChunkLimits.POLL_MILLIS); }
-            catch (InterruptedException exception) {
+            try {
+                Thread.sleep(KnowledgeChunkLimits.POLL_MILLIS);
+            } catch (InterruptedException exception) {
+                // 保留中断标志，阻止被取消的请求继续发起下一次远端查询。
                 Thread.currentThread().interrupt();
                 throw new KnowledgeChunkGenerationException(Reason.INTERRUPTED);
             }
-            task = parser.fetchStatus(initial.taskId());
+            currentTask = parser.fetchStatus(initialTask.taskId());
         }
-        if (task.status() == DocumentTaskStatus.FAILED) {
+        if (currentTask.status() == DocumentTaskStatus.FAILED) {
             throw new KnowledgeChunkGenerationException(Reason.TASK_FAILED);
         }
     }

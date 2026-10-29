@@ -1,7 +1,6 @@
 package org.etd.ai.knowledge.service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +8,10 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
+import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.mapper.KnowledgeRecallMapper;
 import org.etd.ai.knowledge.model.KnowledgeRecallHit;
+import org.etd.ai.knowledge.model.KnowledgeRecallHitComparator;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermission;
 import org.etd.framework.starter.mybaits.permission.annotation.DataPermissionTable;
 import org.springframework.stereotype.Service;
@@ -43,22 +44,25 @@ public class KnowledgeRecallService {
     public List<KnowledgeRecallHit> mergeCandidateList(List<KnowledgeRecallHit> keyword,
             List<KnowledgeRecallHit> vector, boolean hybrid) {
         Map<Long, KnowledgeRecallHit> merged = new LinkedHashMap<>();
-        appendCandidateList(merged, keyword, hybrid, true);
-        appendCandidateList(merged, vector, hybrid, false);
+        if (hybrid) {
+            appendCandidateList(merged, keyword, KnowledgeRetrievalPolicy.HYBRID);
+            appendCandidateList(merged, vector, KnowledgeRetrievalPolicy.HYBRID);
+        } else {
+            appendCandidateList(merged, keyword, KnowledgeRetrievalPolicy.KEYWORD);
+            appendCandidateList(merged, vector, KnowledgeRetrievalPolicy.VECTOR);
+        }
         ArrayList<KnowledgeRecallHit> result = new ArrayList<>(merged.values());
-        result.sort(Comparator.comparing(KnowledgeRecallHit::getScore).reversed()
-                .thenComparing(KnowledgeRecallHit::getChunkId));
+        result.sort(KnowledgeRecallHitComparator.INSTANCE);
         return result;
     }
 
     /** 这里只合并两路检索排名，不在Java组装任何业务表关联。 */
     private void appendCandidateList(Map<Long, KnowledgeRecallHit> merged, List<KnowledgeRecallHit> source,
-            boolean hybrid, boolean keyword) {
+            String scoringMode) {
         for (int index = 0; index < source.size(); index++) {
             KnowledgeRecallHit hit = source.get(index);
             KnowledgeRecallHit target = merged.get(hit.getChunkId());
-            double score = hybrid ? 1.0 / (RRF_OFFSET + index + 1)
-                    : keyword ? hit.getKeywordScore() : hit.getVectorScore();
+            double score = calculateCandidateScore(hit, index, scoringMode);
             if (target == null) {
                 hit.setScore(score);
                 merged.put(hit.getChunkId(), hit);
@@ -67,6 +71,16 @@ public class KnowledgeRecallService {
                 target.setScore(target.getScore() + score);
             }
         }
+    }
+
+    /** 混合检索按名次融合，单路检索保留其原始分数，不能把全文分数与余弦分数直接比较。 */
+    private double calculateCandidateScore(KnowledgeRecallHit hit, int index, String scoringMode) {
+        return switch (scoringMode) {
+            case KnowledgeRetrievalPolicy.HYBRID -> 1.0 / (RRF_OFFSET + index + 1);
+            case KnowledgeRetrievalPolicy.KEYWORD -> hit.getKeywordScore();
+            case KnowledgeRetrievalPolicy.VECTOR -> hit.getVectorScore();
+            default -> throw new IllegalArgumentException("不支持的召回评分方式");
+        };
     }
 
     /**

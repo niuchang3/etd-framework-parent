@@ -8,13 +8,18 @@ import org.etd.ai.knowledge.config.KnowledgeUploadProperties;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
 import org.etd.ai.knowledge.model.UploadPart;
-import org.etd.ai.knowledge.service.*;
+import org.etd.ai.knowledge.service.KnowledgeBaseService;
+import org.etd.ai.knowledge.service.KnowledgeDocumentService;
+import org.etd.ai.knowledge.service.KnowledgeFolderService;
+import org.etd.ai.knowledge.service.KnowledgeObjectService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Instant;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 import java.util.ArrayList;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.entity.KnowledgeFolderEntity;
@@ -56,29 +61,9 @@ public class KnowledgeUploadBizService {
 
     /** 目录结构锁避免上传初始化与目录删除交叉，INSERT权限由资料服务校验。 */
     private KnowledgeDocumentEntity initializeUpload(KnowledgeDocumentEntity document) {
-        KnowledgeBaseEntity base = bases.requireBase(document.getKnowledgeBaseId(), true, false);
-        if (base.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
-            throw new ApiRuntimeException("停用知识库不能上传文档");
-        }
-        // 资料归属已授权的知识库组织，不取上传人的主组织或客户端指定值。
-        document.setOrgId(base.getOrgId());
-        if (document.getIsPublic() == null) {
-            document.setIsPublic(base.getIsPublic());
-        }
-        folders.lockStructure();
-        KnowledgeFolderEntity folder = folders.requireFolderByBase(document.getFolderId(), document.getKnowledgeBaseId());
-        if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
-            throw new ApiRuntimeException("停用目录不能上传资料");
-        }
-        document.setId(IdWorker.getId());
-        document.setDocumentName(document.getOriginalFilename());
-        document.setStorageBucket(objects.requireBucket());
-        document.setStorageObjectKey("knowledge/" + document.getId() + "/original");
-        document.setPartSizeBytes(properties.getPartSizeBytes());
-        document.setPartCount(Math.toIntExact((document.getFileSize() - 1) / properties.getPartSizeBytes() + 1));
-        ArrayList<UploadPart> emptyParts = new ArrayList<UploadPart>();
-        document.setUploadParts(emptyParts);
-        document.setUploadExpiresAt(Instant.now().plusSeconds(properties.getSessionSeconds()));
+        populateUploadOwnership(document);
+        requireUploadFolder(document);
+        populateUploadFields(document);
         documents.createDocument(document);
         try {
             document.setUploadId(objects.initUpload(document));
@@ -88,6 +73,43 @@ public class KnowledgeUploadBizService {
         document.setUploadStatus(KnowledgePolicy.UPLOADING);
         documents.modifyDocument(document);
         return document;
+    }
+
+    /** 先校验知识库维护权限，再继承其组织和默认公开范围，不采信客户端归属。 */
+    private void populateUploadOwnership(KnowledgeDocumentEntity document) {
+        KnowledgeBaseEntity base = bases.requireBase(document.getKnowledgeBaseId(), true, false);
+        if (base.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
+            throw new ApiRuntimeException("停用知识库不能上传文档");
+        }
+        // 资料归属已授权的知识库组织，不取上传人的主组织或客户端指定值。
+        document.setOrgId(base.getOrgId());
+        if (document.getIsPublic() == null) {
+            document.setIsPublic(base.getIsPublic());
+        }
+    }
+
+    /** 在资料入库前持有目录结构锁，校验目录属于当前知识库且处于启用状态。 */
+    private void requireUploadFolder(KnowledgeDocumentEntity document) {
+        folders.lockStructure();
+        KnowledgeFolderEntity folder = folders.requireFolderByBase(document.getFolderId(), document.getKnowledgeBaseId());
+        if (folder.getDataStatus() != BasicConstant.DataStatus.ENABLED_CODE) {
+            throw new ApiRuntimeException("停用目录不能上传资料");
+        }
+    }
+
+    /** 初始化原件位置、固定分片参数和会话有效期，仍在原上传事务及目录结构锁内执行。 */
+    private void populateUploadFields(KnowledgeDocumentEntity document) {
+        document.setId(IdWorker.getId());
+        document.setDocumentName(document.getOriginalFilename());
+        document.setStorageBucket(objects.requireBucket());
+        document.setStorageObjectKey("knowledge/" + document.getId() + "/original");
+        document.setPartSizeBytes(properties.getPartSizeBytes());
+        // 向上取整得到分片数，避免文件大小恰好为整片时多出空分片。
+        long partCount = (document.getFileSize() - 1) / properties.getPartSizeBytes() + 1;
+        document.setPartCount(Math.toIntExact(partCount));
+        ArrayList<UploadPart> emptyParts = new ArrayList<UploadPart>();
+        document.setUploadParts(emptyParts);
+        document.setUploadExpiresAt(Instant.now().plusSeconds(properties.getSessionSeconds()));
     }
 
     /** 上传初始化失败时回收已知会话；网络异常导致ID未知的残片由MinIO生命周期清理。 */
@@ -103,60 +125,70 @@ public class KnowledgeUploadBizService {
 
     /** @param id 资料ID @param partNumber 上传分片编号 @return 临时PUT地址 */
     public String createPartUrl(Long id, int partNumber) {
-        return transactions.execute(status -> {
-            KnowledgeDocumentEntity document = documents.requireDocument(id, true);
-            requireActiveUpload(document);
-            requirePartNumber(document, partNumber);
-            try {
-                return objects.generatePartUrl(document, partNumber);
-            } catch (Exception exception) {
-                throw storageFailure(id, "签发上传地址", exception);
-            }
-        });
+        return transactions.execute(status -> createLockedPartUrl(id, partNumber));
+    }
+
+    /** 调用方事务持有资料行锁，校验会话和分片编号后签发地址。 */
+    private String createLockedPartUrl(Long id, int partNumber) {
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
+        requireActiveUpload(document);
+        requirePartNumber(document, partNumber);
+        try {
+            return objects.generatePartUrl(document, partNumber);
+        } catch (Exception exception) {
+            throw storageFailure(id, "签发上传地址", exception);
+        }
     }
 
     /** @param id 资料ID @param sha256 重新选择文件的摘要 @return 与MinIO核对后的续传记录 */
     public KnowledgeDocumentEntity resumeUpload(Long id, String sha256) {
-        return transactions.execute(status -> {
-            KnowledgeDocumentEntity document = documents.requireDocument(id, true);
-            if (!document.getFileSha256().equals(sha256)) {
-                throw new ApiRuntimeException("所选文件与原上传文件不一致");
-            }
-            if (KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
-                return document;
-            }
-            requireActiveUpload(document);
-            try {
-                reconcilePartList(document, objects.fetchPartList(document));
-            } catch (Exception exception) {
-                throw storageFailure(id, "恢复上传", exception);
-            }
-            documents.modifyDocument(document);
+        return transactions.execute(status -> resumeLockedUpload(id, sha256));
+    }
+
+    /** 在原事务和资料行锁内核对文件摘要及远端分片，不提前释放锁。 */
+    private KnowledgeDocumentEntity resumeLockedUpload(Long id, String sha256) {
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
+        if (!document.getFileSha256().equals(sha256)) {
+            throw new ApiRuntimeException("所选文件与原上传文件不一致");
+        }
+        if (KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
             return document;
-        });
+        }
+        requireActiveUpload(document);
+        try {
+            List<UploadPart> actual = objects.fetchPartList(document);
+            reconcilePartList(document, actual);
+        } catch (Exception exception) {
+            throw storageFailure(id, "恢复上传", exception);
+        }
+        documents.modifyDocument(document);
+        return document;
     }
 
     /** @param id 资料ID @param partNumber 分片编号 @param etag PUT响应标识 @return 更新后的上传进度 */
     public KnowledgeDocumentEntity confirmPart(Long id, int partNumber, String etag) {
-        return transactions.execute(status -> {
-            KnowledgeDocumentEntity document = documents.requireDocument(id, true);
-            requireActiveUpload(document);
-            requirePartNumber(document, partNumber);
-            List<UploadPart> actual;
-            try {
-                actual = objects.fetchPartList(document);
-            } catch (Exception exception) {
-                throw storageFailure(id, "核对分片", exception);
-            }
-            UploadPart part = requireActualPart(actual, partNumber);
-            if (!part.etag().equals(etag.replace(String.valueOf('"'), ""))) {
-                throw new ApiRuntimeException("分片ETag与对象存储不一致");
-            }
-            requirePartSize(document, part);
-            mergeConfirmedPart(document, part);
-            documents.modifyDocument(document);
-            return document;
-        });
+        return transactions.execute(status -> confirmLockedPart(id, partNumber, etag));
+    }
+
+    /** 核对对象存储回执并在同一资料行锁下合并确认记录，重复确认仍然幂等。 */
+    private KnowledgeDocumentEntity confirmLockedPart(Long id, int partNumber, String etag) {
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
+        requireActiveUpload(document);
+        requirePartNumber(document, partNumber);
+        List<UploadPart> actual;
+        try {
+            actual = objects.fetchPartList(document);
+        } catch (Exception exception) {
+            throw storageFailure(id, "核对分片", exception);
+        }
+        UploadPart part = requireActualPart(actual, partNumber);
+        if (!part.etag().equals(etag.replace(String.valueOf('"'), ""))) {
+            throw new ApiRuntimeException("分片ETag与对象存储不一致");
+        }
+        requirePartSize(document, part);
+        mergeConfirmedPart(document, part);
+        documents.modifyDocument(document);
+        return document;
     }
 
     /** @param id 资料ID @return 完整文件记录；失败状态先提交，再向接口返回错误 */
@@ -177,7 +209,8 @@ public class KnowledgeUploadBizService {
         requireActiveUpload(document);
         try {
             if (!objects.existsObject(document)) {
-                reconcilePartList(document, objects.fetchPartList(document));
+                List<UploadPart> actual = objects.fetchPartList(document);
+                reconcilePartList(document, actual);
                 requireCompleteParts(document);
             }
             document.setUploadStatus(KnowledgePolicy.COMPLETING);
@@ -198,23 +231,26 @@ public class KnowledgeUploadBizService {
 
     /** @param id 资料ID；重复取消幂等，完整文件不得通过取消接口删除 */
     public void cancelUpload(Long id) {
-        transactions.executeWithoutResult(status -> {
-            KnowledgeDocumentEntity document = documents.requireDocument(id, true);
-            if (KnowledgePolicy.CANCELLED.equals(document.getUploadStatus())) {
-                return;
-            }
-            if (KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
-                throw new ApiRuntimeException("上传已完成，请使用资料删除操作");
-            }
-            try {
-                objects.abortUpload(document);
-                objects.removeObject(document);
-            } catch (Exception exception) {
-                throw storageFailure(id, "取消上传", exception);
-            }
-            document.setUploadStatus(KnowledgePolicy.CANCELLED);
-            documents.modifyDocument(document);
-        });
+        transactions.executeWithoutResult(status -> cancelLockedUpload(id));
+    }
+
+    /** 取消与状态更新共用原事务和行锁；存储清理失败时仍回滚，不误标记为已取消。 */
+    private void cancelLockedUpload(Long id) {
+        KnowledgeDocumentEntity document = documents.requireDocument(id, true);
+        if (KnowledgePolicy.CANCELLED.equals(document.getUploadStatus())) {
+            return;
+        }
+        if (KnowledgePolicy.COMPLETED.equals(document.getUploadStatus())) {
+            throw new ApiRuntimeException("上传已完成，请使用资料删除操作");
+        }
+        try {
+            objects.abortUpload(document);
+            objects.removeObject(document);
+        } catch (Exception exception) {
+            throw storageFailure(id, "取消上传", exception);
+        }
+        document.setUploadStatus(KnowledgePolicy.CANCELLED);
+        documents.modifyDocument(document);
     }
 
     /** 校验原件大小与S3分片总数技术限制，不读取扩展名系统参数。 */
@@ -264,8 +300,12 @@ public class KnowledgeUploadBizService {
 
     /** 行锁下替换同编号记录，重复确认幂等，避免JSON读改写丢失并发分片。 */
     private void mergeConfirmedPart(KnowledgeDocumentEntity document, UploadPart part) {
-        ArrayList<UploadPart> parts = new ArrayList<>(document.getUploadParts());
-        parts.removeIf(item -> item.partNumber() == part.partNumber());
+        List<UploadPart> parts = new ArrayList<>();
+        for (UploadPart confirmed : document.getUploadParts()) {
+            if (confirmed.partNumber() != part.partNumber()) {
+                parts.add(confirmed);
+            }
+        }
         parts.add(part);
         parts.sort(Comparator.comparingInt(UploadPart::partNumber));
         document.setUploadParts(parts);

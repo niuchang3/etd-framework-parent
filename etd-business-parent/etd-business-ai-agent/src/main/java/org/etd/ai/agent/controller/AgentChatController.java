@@ -10,6 +10,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+import java.util.function.Supplier;
+import org.etd.framework.starter.ai.runtime.model.AgentRunRequest;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.agent.biz.AgentChatBizService;
 import org.etd.ai.agent.biz.AgentRunBizService;
@@ -95,7 +97,7 @@ public class AgentChatController {
             @RequestParam(required = false) @Positive Long beforeId,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         List<AgentConversationEntity> rows = conversations.fetchConversationList(agentId, beforeId, size);
-        List<AgentChatSessionVO> result = rows.stream().map(AgentChatConverter.INSTANCE::toSessionVO).toList();
+        List<AgentChatSessionVO> result = AgentChatConverter.INSTANCE.toSessionVOList(rows);
         return ResultModel.success(result);
     }
 
@@ -118,7 +120,7 @@ public class AgentChatController {
             @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
         conversations.requireConversation(sessionId, false);
         List<AgentMessageEntity> rows = messages.fetchMessageList(sessionId, beforeSequence, size);
-        List<AgentChatMessageVO> result = rows.stream().map(AgentChatConverter.INSTANCE::toMessageVO).toList();
+        List<AgentChatMessageVO> result = AgentChatConverter.INSTANCE.toMessageVOList(rows);
         return ResultModel.success(result);
     }
 
@@ -131,7 +133,9 @@ public class AgentChatController {
         response.setBufferSize(0);
         SseEmitter emitter = new SseEmitter(TimeUnit.SECONDS.toMillis(runtimeProperties.getTimeoutSeconds() + 10L));
         AgentChatSseListener output = new AgentChatSseListener(emitter);
-        AgentRunControl handle = runtime.start(() -> biz.prepareRun(sessionId, dto.getRequestId(), dto.getContent(), output));
+        // 延迟准备可确保框架先检查并发容量，再创建本轮数据库记录。
+        Supplier<AgentRunRequest> preparation = () -> biz.prepareRun(sessionId, dto.getRequestId(), dto.getContent(), output);
+        AgentRunControl handle = runtime.start(preparation);
         output.bind(handle);
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-transform");
         response.setHeader(HeaderConstant.X_ACCEL_BUFFERING, "no");

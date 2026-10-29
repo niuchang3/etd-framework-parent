@@ -58,6 +58,19 @@ class AgentExecutionEngineTest {
         assertThat(content).contains("最近问题", "最近答案").doesNotContain("旧问题", "旧答案");
     }
 
+    /** 截断时若最老一条是孤立的助手回答，则予以剔除，确保上下文始终以用户提问开启。 */
+    @Test
+    void discardsOrphanAssistantAtStartOfTruncatedHistory() {
+        AssistantMessage orphanAnswer = new AssistantMessage("早期遗留答案");
+        UserMessage recentQuestion = new UserMessage("追问问题");
+        AssistantMessage recentAnswer = new AssistantMessage("追问答案");
+        List<Message> history = List.of(orphanAnswer, recentQuestion, recentAnswer);
+        AgentKnowledgeQueryService knowledgeService = query -> List.of();
+        AgentExecutionRequest request = request(knowledgeService, history, 512, 12);
+        String content = engine.prepare(request).prompt().getContents();
+        assertThat(content).contains("追问问题", "追问答案").doesNotContain("早期遗留答案");
+    }
+
     private KnowledgeFragment fragment(String id, String content) {
         return new KnowledgeFragment(id, content, Map.of());
     }

@@ -11,6 +11,7 @@ import com.alibaba.cloud.ai.dashscope.spec.DashScopeApiSpec;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micrometer.observation.ObservationRegistry;
+import java.util.List;
 import org.springframework.ai.model.Model;
 import org.etd.framework.starter.ai.model.client.ModelClientTransport;
 import org.etd.framework.starter.ai.model.config.ModelConnectionConfiguration;
@@ -86,20 +87,21 @@ public class DashScopeModelClientProvider implements ModelClientProvider {
         ApiKey apiKey = secret == null ? new NoopApiKey() : new SimpleApiKey(secret);
         LinkedMultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
         RestClient.Builder rest = transport.restClientBuilder();
-        // 百炼现有文本向量模型分别返回text_index或index；仅修正当前SDK向量记录的反序列化。
-        // 复制客户端专属Mapper，避免影响其他协议、业务HTTP响应和全局Jackson配置。
-        rest.messageConverters(converters -> {
-            for (HttpMessageConverter<?> converter : converters) {
-                if (converter instanceof MappingJackson2HttpMessageConverter jackson) {
-                    ObjectMapper mapper = jackson.getObjectMapper().copy();
-                    mapper.addMixIn(DashScopeApiSpec.Embedding.class, EmbeddingIndexMixin.class);
-                    jackson.setObjectMapper(mapper);
-                }
-            }
-        });
+        rest.messageConverters(this::configureEmbeddingIndexMapping);
         WebClient.Builder web = transport.webClientBuilder();
         return new DashScopeApi(configuration.baseUrl().toString(), apiKey, headers, null,
                 CHAT_PATH, EMBEDDING_PATH, RERANK_PATH, rest, web, RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER);
+    }
+
+    /** 百炼向量返回text_index或index；复制客户端专属Mapper，仅配置SDK向量序号，不影响全局序列化。 */
+    private void configureEmbeddingIndexMapping(List<HttpMessageConverter<?>> converters) {
+        for (HttpMessageConverter<?> converter : converters) {
+            if (converter instanceof MappingJackson2HttpMessageConverter jackson) {
+                ObjectMapper mapper = jackson.getObjectMapper().copy();
+                mapper.addMixIn(DashScopeApiSpec.Embedding.class, EmbeddingIndexMixin.class);
+                jackson.setObjectMapper(mapper);
+            }
+        }
     }
 
     /**

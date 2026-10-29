@@ -84,17 +84,24 @@ public class ModelClientRegistry implements AutoCloseable {
         return getModel(tenantId, connectionId, ModelCapability.MODERATION, ModerationModel.class);
     }
 
+    /** 每次先授权，再确定是否由当前请求创建实例，最后取得共享创建结果。 */
     private <T> T getModel(String tenantId, String connectionId, ModelCapability capability, Class<T> type) {
         requireOpen();
-        ModelConnectionConfiguration configuration = resolve(tenantId, connectionId, capability);
+        ModelConnectionConfiguration configuration = resolveAuthorizedConfiguration(tenantId, connectionId, capability);
         ModelClientKey key = new ModelClientKey(tenantId, connectionId, configuration.version(), capability);
-        Reservation reservation = reserve(key);
-        if (reservation.creator()) {
-            initialize(key, reservation.cached(), configuration);
+        ModelCacheLookup lookup = findOrCreateCacheEntry(key);
+        if (lookup.initializationRequired()) {
+            // 只有首次登记缓存的请求负责创建SDK；创建在缓存锁外执行。
+            initializeCachedModel(key, lookup.cachedModel(), configuration);
         }
+        Model<?, ?> model = awaitCachedModel(lookup.cachedModel());
+        return type.cast(model);
+    }
+
+    /** 已完成的实例直接返回；其他请求正在创建时等待同一个Future，不重复创建SDK。 */
+    private Model<?, ?> awaitCachedModel(CachedModel cached) {
         try {
-            Model<?, ?> model = reservation.cached().model.join();
-            return type.cast(model);
+            return cached.modelFuture.join();
         } catch (CompletionException exception) {
             if (exception.getCause() instanceof RuntimeException cause) {
                 throw cause;
@@ -104,7 +111,8 @@ public class ModelClientRegistry implements AutoCloseable {
     }
 
     /** 授权不缓存；较早开始的请求可完成旧版本，新请求依据最新配置版本选实例。 */
-    private ModelConnectionConfiguration resolve(String tenantId, String connectionId, ModelCapability capability) {
+    private ModelConnectionConfiguration resolveAuthorizedConfiguration(String tenantId, String connectionId,
+            ModelCapability capability) {
         Assert.hasText(tenantId, "租户标识不能为空");
         Assert.hasText(connectionId, "连接标识不能为空");
         ModelConnectionConfiguration configuration = resolver.resolveAuthorized(tenantId, connectionId);
@@ -116,33 +124,38 @@ public class ModelClientRegistry implements AutoCloseable {
         return configuration;
     }
 
-    /** 在锁内预留共享Future，同一缓存键的并发请求等待一次初始化。 */
-    private synchronized Reservation reserve(ModelClientKey key) {
+    /** 锁内查找已有实例或登记创建位置；并发请求取得相同缓存项，并刷新最近访问时间。 */
+    private synchronized ModelCacheLookup findOrCreateCacheEntry(ModelClientKey key) {
         requireOpen();
         long now = ticker.getAsLong();
         removeExpired(now);
         CachedModel existing = cache.get(key);
         if (existing != null) {
-            existing.accessed = now;
-            return new Reservation(existing, false);
+            existing.lastAccessNanos = now;
+            return new ModelCacheLookup(existing, false);
         }
         CachedModel created = new CachedModel(now);
         cache.put(key, created);
+        removeLeastRecentlyUsedModels();
+        return new ModelCacheLookup(created, true);
+    }
+
+    /** 调用方持有缓存锁；LinkedHashMap按访问顺序排列，容量超限时移除最久未使用的引用。 */
+    private void removeLeastRecentlyUsedModels() {
         while (cache.size() > maximumSize) {
             Iterator<ModelClientKey> iterator = cache.keySet().iterator();
             iterator.next();
             iterator.remove();
         }
-        return new Reservation(created, true);
     }
 
     /** 失效期间已移除的槽位不会被初始化完成回调重新放回Map。 */
-    private void initialize(ModelClientKey key, CachedModel cached, ModelConnectionConfiguration configuration) {
+    private void initializeCachedModel(ModelClientKey key, CachedModel cached, ModelConnectionConfiguration configuration) {
         try {
             Model<?, ?> model = factory.create(configuration);
-            cached.model.complete(model);
+            cached.modelFuture.complete(model);
         } catch (RuntimeException | Error exception) {
-            cached.model.completeExceptionally(exception);
+            cached.modelFuture.completeExceptionally(exception);
             synchronized (this) {
                 cache.remove(key, cached);
             }
@@ -160,7 +173,7 @@ public class ModelClientRegistry implements AutoCloseable {
     public synchronized void cleanUp() { removeExpired(ticker.getAsLong()); }
 
     private void removeExpired(long now) {
-        cache.values().removeIf(cached -> now - cached.accessed >= expireNanos);
+        cache.values().removeIf(cached -> now - cached.lastAccessNanos >= expireNanos);
     }
 
     private synchronized void requireOpen() {
@@ -176,13 +189,19 @@ public class ModelClientRegistry implements AutoCloseable {
 
     /** 只包含身份及版本，不保存地址、凭证或会话状态。 */
     private record ModelClientKey(String tenantId, String connectionId, long version, ModelCapability capability) { }
-    /** 首个请求负责创建SDK，其余请求等待相同Future。 */
-    private record Reservation(CachedModel cached, boolean creator) { }
+    /** 缓存查找结果，首次登记者创建实例，其余请求等待共享结果。
+     * @param cachedModel 当前缓存项 @param initializationRequired 是否由本次请求初始化SDK
+     */
+    private record ModelCacheLookup(CachedModel cachedModel, boolean initializationRequired) { }
     /** 缓存槽位只记录共享Future和最近访问时间，不维护租约计数或独占资源。 */
     private static final class CachedModel {
-        private final CompletableFuture<Model<?, ?>> model = new CompletableFuture<>();
-        private long accessed;
+        /** 共享实例创建结果，避免同一缓存键并发重复创建；失败时也通知所有等待者。 */
+        private final CompletableFuture<Model<?, ?>> modelFuture = new CompletableFuture<>();
+        /** 最近访问的单调时钟纳秒值，用于空闲过期判断。 */
+        private long lastAccessNanos;
 
-        private CachedModel(long accessed) { this.accessed = accessed; }
+        private CachedModel(long lastAccessNanos) {
+            this.lastAccessNanos = lastAccessNanos;
+        }
     }
 }

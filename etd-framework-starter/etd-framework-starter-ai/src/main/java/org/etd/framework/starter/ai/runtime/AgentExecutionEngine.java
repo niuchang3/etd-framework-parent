@@ -75,9 +75,20 @@ public class AgentExecutionEngine {
             }
         }
         ArrayList<KnowledgeFragment> result = new ArrayList<>(fragments.values());
-        result.sort(Comparator.<KnowledgeFragment>comparingDouble(value -> scores.get(value.id())).reversed()
-                .thenComparing(KnowledgeFragment::id));
+        Comparator<KnowledgeFragment> ranking = (first, second) -> compareRankings(first, second, scores);
+        result.sort(ranking);
         return result;
+    }
+
+    /** 融合分数从高到低；分数相同时按分片ID字符串升序，保持引用编号稳定。 */
+    private int compareRankings(KnowledgeFragment first, KnowledgeFragment second, Map<String, Double> scores) {
+        double firstScore = scores.get(first.id());
+        double secondScore = scores.get(second.id());
+        int scoreOrder = Double.compare(secondScore, firstScore);
+        if (scoreOrder != 0) {
+            return scoreOrder;
+        }
+        return first.id().compareTo(second.id());
     }
 
     private int appendKnowledge(List<KnowledgeFragment> ranked, int maxReferences,
@@ -99,19 +110,21 @@ public class AgentExecutionEngine {
         return Math.max(0, remaining);
     }
 
-    /** 按完整问答对从最近向前选取，避免截取后只剩助手消息。 */
+    /** 从最近向前选取消息，确保输入预算内保留高相关历史并从用户提问开始。 */
     private List<Message> selectHistory(List<Message> history, int remaining) {
         List<Message> selected = new ArrayList<>();
-        for (int index = history.size() - 2; index >= 0; index -= 2) {
-            Message user = history.get(index);
-            Message assistant = history.get(index + 1);
-            int cost = count(user.getText()) + count(assistant.getText());
-            if (cost > remaining) {
+        int budget = remaining;
+        for (int index = history.size() - 1; index >= 0; index--) {
+            Message message = history.get(index);
+            int cost = count(message.getText());
+            if (cost > budget) {
                 break;
             }
-            selected.addFirst(assistant);
-            selected.addFirst(user);
-            remaining -= cost;
+            selected.addFirst(message);
+            budget -= cost;
+        }
+        while (!selected.isEmpty() && !(selected.getFirst() instanceof UserMessage)) {
+            selected.removeFirst();
         }
         return selected;
     }

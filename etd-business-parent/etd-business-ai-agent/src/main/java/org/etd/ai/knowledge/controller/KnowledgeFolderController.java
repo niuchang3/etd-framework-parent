@@ -52,7 +52,7 @@ public class KnowledgeFolderController {
                     @Max(BasicConstant.DataStatus.ENABLED_CODE)
                     Integer dataStatus) {
         List<KnowledgeFolderEntity> folders = service.fetchFolderList(knowledgeBaseId, dataStatus);
-        List<KnowledgeFolderVO> result = folders.stream().map(KnowledgeFolderConverter.INSTANCE::toVO).toList();
+        List<KnowledgeFolderVO> result = KnowledgeFolderConverter.INSTANCE.toVOList(folders);
         return ResultModel.success(result);
     }
 

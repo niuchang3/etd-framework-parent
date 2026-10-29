@@ -136,6 +136,25 @@ class KnowledgeRecallPersistenceTest {
         RequestContext.clean();
     }
 
+    /** 多库并发真实SQL必须保留租户及组织权限；其他租户的知识库仍被拒绝。 */
+    @Test
+    void recallsMultipleBasesWithTenantContext() {
+        jdbc.execute("""
+                update ai_knowledge_base set retrieval_mode = 'keyword' where id = 10;
+                insert into ai_knowledge_base (id, tenant_id, org_id, create_by, name, retrieval_mode)
+                values (11, 900001, 10, 100, '同租户知识库', 'keyword'),
+                       (12, 900002, 10, 100, '其他租户知识库', 'keyword');
+                """);
+        List<Long> readable = List.of(10L, 11L);
+        List<List<KnowledgeRecallHit>> results = recall.recallEnabledList(readable, "设备");
+        assertThat(results).hasSize(2);
+        List<Long> forbidden = List.of(10L, 12L);
+        assertThatThrownBy(() -> recall.recallEnabledList(forbidden, "设备"))
+                .isInstanceOf(ApiRuntimeException.class);
+        assertThat(RequestContext.getTenantCode()).isEqualTo(900001L);
+        assertThat(RequestContext.getUser().getId()).isEqualTo(100L);
+    }
+
     /** 框架字符串连接ID必须转换为Long后绑定，真实PostgreSQL不能用varchar与bigint主键比较。 */
     @Test
     void resolvesStringConnectionIdAgainstPostgreSql() {

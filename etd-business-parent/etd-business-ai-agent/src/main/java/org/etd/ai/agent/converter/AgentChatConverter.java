@@ -46,8 +46,12 @@ public interface AgentChatConverter {
 
     /** @param entity 会话 @return 对外会话 */
     AgentChatSessionVO toSessionVO(AgentConversationEntity entity);
+    /** @param entities 会话列表 @return 保持原顺序的接口会话列表 */
+    List<AgentChatSessionVO> toSessionVOList(List<AgentConversationEntity> entities);
     /** @param entity 消息 @return 对外消息 */
     AgentChatMessageVO toMessageVO(AgentMessageEntity entity);
+    /** @param entities 消息列表 @return 保持原顺序的接口消息列表 */
+    List<AgentChatMessageVO> toMessageVOList(List<AgentMessageEntity> entities);
     /** @param entity 执行记录 @return 对外状态 */
     AgentChatRunVO toRunVO(AgentRunEntity entity);
     /** @param hit 已授权候选 @param baseId 知识库ID @return 不含正文的引用 */

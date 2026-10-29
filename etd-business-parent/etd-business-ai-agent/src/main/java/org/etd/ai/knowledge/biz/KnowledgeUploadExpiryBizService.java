@@ -22,16 +22,24 @@ public class KnowledgeUploadExpiryBizService {
     /** 多实例用skip locked避免重复处理；首次延迟一分钟，启动时不访问外部存储。 */
     @Scheduled(initialDelay = 60000, fixedDelay = 60000)
     public void cancelExpiredUploadList() {
-        transactions.executeWithoutResult(status -> {
-            for (KnowledgeDocumentEntity document : expiry.fetchExpiredUploadList()) {
-                try {
-                    objects.abortUpload(document);
-                    objects.removeObject(document);
-                    expiry.cancelExpiredUpload(document.getId());
-                } catch (Exception exception) {
-                    log.warn("到期知识上传清理失败，资料ID={}，异常类型={}", document.getId(), exception.getClass().getSimpleName());
-                }
-            }
-        });
+        transactions.executeWithoutResult(status -> cancelLockedExpiredUploadList());
+    }
+
+    /** 整批领取和清理保持在同一事务内，skip locked取得的行锁直到批次结束才释放。 */
+    private void cancelLockedExpiredUploadList() {
+        for (KnowledgeDocumentEntity document : expiry.fetchExpiredUploadList()) {
+            cancelExpiredUpload(document);
+        }
+    }
+
+    /** 单份存储清理失败时保留原状态并继续处理本批其他记录。 */
+    private void cancelExpiredUpload(KnowledgeDocumentEntity document) {
+        try {
+            objects.abortUpload(document);
+            objects.removeObject(document);
+            expiry.cancelExpiredUpload(document.getId());
+        } catch (Exception exception) {
+            log.warn("到期知识上传清理失败，资料ID={}，异常类型={}", document.getId(), exception.getClass().getSimpleName());
+        }
     }
 }

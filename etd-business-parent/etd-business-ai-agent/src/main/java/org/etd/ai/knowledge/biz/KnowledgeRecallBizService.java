@@ -2,21 +2,24 @@ package org.etd.ai.knowledge.biz;
 
 import java.util.ArrayList;
 import com.alibaba.cloud.ai.document.DocumentWithScore;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.model.KnowledgeRecallHit;
+import org.etd.ai.knowledge.model.KnowledgeRecallHitComparator;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.service.KnowledgeRecallService;
 import org.etd.ai.knowledge.service.KnowledgeModelSettingsService;
 import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.service.ModelInferenceService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.starter.ai.runtime.context.RequestContextTaskExecutor;
 import org.springframework.ai.document.Document;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.springframework.stereotype.Service;
@@ -44,12 +47,22 @@ public class KnowledgeRecallBizService {
 
     /** @param ids Agent绑定的知识库 @param query 用户问题 @return 各库独立排序的正式候选 @throws ApiRuntimeException 库停用、无权访问或索引失效 */
     public List<List<KnowledgeRecallHit>> recallEnabledList(List<Long> ids, String query) {
-        Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
-        List<List<KnowledgeRecallHit>> groups = new ArrayList<>();
-        for (Long id : ids) {
-            groups.add(recallBase(id, query, true, vectors));
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
         }
-        return groups;
+        if (ids.size() == 1) {
+            Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
+            List<KnowledgeRecallHit> hits = recallBase(ids.getFirst(), query, true, vectors);
+            return List.of(hits);
+        }
+        return recallParallelList(ids, query);
+    }
+
+    /** 业务只描述单库召回；上下文传递、任务等待和取消统一交给框架。 */
+    private List<List<KnowledgeRecallHit>> recallParallelList(List<Long> ids, String query) {
+        Map<EmbeddingSpace, float[]> vectors = new ConcurrentHashMap<>();
+        Function<Long, List<KnowledgeRecallHit>> recallTask = id -> recallBase(id, query, true, vectors);
+        return RequestContextTaskExecutor.invokeList(ids, recallTask);
     }
 
     /** 每轮缓存仅复用相同模型连接及维度的问题向量，不跨请求缓存身份或查询内容。 */
@@ -144,8 +157,7 @@ public class KnowledgeRecallBizService {
                 reranked.add(hit);
             }
         }
-        reranked.sort(Comparator.comparing(KnowledgeRecallHit::getScore).reversed()
-                .thenComparing(KnowledgeRecallHit::getChunkId));
+        reranked.sort(KnowledgeRecallHitComparator.INSTANCE);
         return reranked;
     }
 }

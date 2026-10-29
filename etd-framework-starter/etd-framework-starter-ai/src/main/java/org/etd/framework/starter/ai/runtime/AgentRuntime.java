@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.ai.model.client.ModelRequestHeaders;
 import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
-import org.etd.framework.starter.ai.runtime.context.RequestContextSnapshot;
+import org.etd.framework.starter.ai.runtime.context.RequestContextTaskExecutor;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeEvent;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeEventType;
 import org.etd.framework.starter.ai.runtime.model.AgentRunRequest;
@@ -33,6 +33,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.util.context.Context;
 
 /** 通用运行容器；业务通过检索、生命周期和输出插槽接入，框架负责线程、上下文、超时及取消。 */
 public class AgentRuntime implements AutoCloseable {
@@ -70,10 +71,10 @@ public class AgentRuntime implements AutoCloseable {
         try {
             AgentRunRequest runRequest = preparation.get();
             state = new AgentRunTask(runRequest);
-            RequestContextSnapshot context = RequestContextSnapshot.capture();
             AgentRunTask task = state;
             active.put(state.executionId(), state);
-            workers.submit(() -> context.run(() -> execute(task, context)));
+            Runnable execution = () -> execute(task);
+            RequestContextTaskExecutor.submit(workers, execution);
             return state;
         } catch (RuntimeException exception) {
             capacity.release();
@@ -86,13 +87,16 @@ public class AgentRuntime implements AutoCloseable {
         }
     }
 
-    private void execute(AgentRunTask state, RequestContextSnapshot context) {
+    /** 工作任务与定时维护共用框架上下文执行入口，业务流程不再嵌套包装回调。 */
+    private void execute(AgentRunTask state) {
         state.worker = Thread.currentThread();
-        ScheduledFuture<?> maintenance = clock.scheduleWithFixedDelay(() -> context.run(() -> maintain(state)), 1, 1, TimeUnit.SECONDS);
+        Runnable maintenanceTask = () -> maintain(state);
+        ScheduledFuture<?> maintenance = RequestContextTaskExecutor.scheduleWithFixedDelay(
+                clock, maintenanceTask, 1, 1, TimeUnit.SECONDS);
         try {
             executeAnswer(state);
         } catch (Exception exception) {
-            LOG.warn("Agent运行异常，executionId={}，异常类型={}", state.executionId(), exception.getClass().getSimpleName());
+            LOG.warn("Agent运行异常，executionId={}，异常类型={}", state.executionId(), exception.getClass().getSimpleName(),exception);
             Thread.interrupted();
             if (exception instanceof AgentOutputException) {
                 state.cancel();
@@ -122,13 +126,29 @@ public class AgentRuntime implements AutoCloseable {
         finish(state, desired == null ? AgentRuntimeStatus.SUCCEEDED : desired);
     }
 
+    /** 主流程按创建响应流、消费增量、检查最终正文三个步骤执行。 */
     private void consume(AgentRunTask state, AgentModelInput prepared) {
+        Flux<ChatResponse> stream = createModelResponseStream(state, prepared);
+        consumeModelResponseStream(state, stream);
+        if (state.content().isEmpty() && state.stopStatus.get() == null) {
+            throw new IllegalStateException("模型未返回可展示正文");
+        }
+    }
+
+    /** 为本轮流式调用配置取消信号和请求头，不在这里读取或聚合模型正文。 */
+    private Flux<ChatResponse> createModelResponseStream(AgentRunTask state, AgentModelInput prepared) {
         ChatModel model = state.runRequest.model().get();
         Map<String, String> headers = ModelRequestHeaders.capture();
         Mono<Boolean> cancellation = state.cancellation.asMono();
-        Flux<ChatResponse> stream = engine.stream(model, prepared).takeUntilOther(cancellation)
-                .contextWrite(context -> context.put(ModelRequestHeaders.REACTOR_KEY, headers));
-        // 错误以有序信号处理，防止快速失败丢弃最后一段文本；关闭Stream必须取消上游订阅。
+        Context requestContext = Context.of(ModelRequestHeaders.REACTOR_KEY, headers);
+        Flux<ChatResponse> modelStream = engine.stream(model, prepared);
+        Flux<ChatResponse> cancellableStream = modelStream.takeUntilOther(cancellation);
+        return cancellableStream.contextWrite(requestContext);
+    }
+
+    /** 按顺序读取文字、错误和结束信号，每次只预取一个；关闭读取通道时取消上游订阅。 */
+    private void consumeModelResponseStream(AgentRunTask state, Flux<ChatResponse> stream) {
+        // 先交付已经收到的片段，再处理后续错误，避免快速失败时丢失最后一段正文。
         try (Stream<Signal<ChatResponse>> responses = stream.materialize().toStream(1)) {
             Iterator<Signal<ChatResponse>> iterator = responses.iterator();
             while (iterator.hasNext()) {
@@ -141,9 +161,6 @@ public class AgentRuntime implements AutoCloseable {
                     appendResponse(state, signal.get());
                 }
             }
-        }
-        if (state.content().isEmpty() && state.stopStatus.get() == null) {
-            throw new IllegalStateException("模型未返回可展示正文");
         }
     }
 

@@ -1,8 +1,17 @@
 package org.etd.framework.starter.ai.model.client;
 
 import java.net.http.HttpClient;
+import java.io.IOException;
 import java.util.Map;
+import java.util.function.Consumer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFunction;
+import reactor.util.context.ContextView;
 import reactor.core.publisher.Mono;
 import org.springframework.retry.support.RetryTemplate;
 import org.etd.framework.starter.ai.model.config.ModelClientProperties;
@@ -31,22 +40,43 @@ public class ModelClientTransport implements AutoCloseable {
 
     /** @return 单连接专用Builder，禁止跨租户共享其可变默认请求头 */
     public RestClient.Builder restClientBuilder() {
-        return RestClient.builder().requestFactory(requestFactory).requestInterceptor((request, body, execution) -> {
-            // 同步Embedding/Rerank在调用线程读取上下文，不能在客户端创建时捕获。
-            ModelRequestHeaders.capture().forEach((key, value) -> request.getHeaders().set(key, value));
-            return execution.execute(request, body);
-        });
+        return RestClient.builder().requestFactory(requestFactory).requestInterceptor(this::executeWithRequestHeaders);
     }
 
     /** @return 单连接专用流式Builder，与同步调用共用HTTP连接池 */
     public WebClient.Builder webClientBuilder() {
-        return WebClient.builder().clientConnector(connector).filter((request, next) -> Mono.deferContextual(context -> {
-            Map<String, String> headers = context.getOrDefault(ModelRequestHeaders.REACTOR_KEY, Map.of());
-            ClientRequest.Builder builder = ClientRequest.from(request);
-            builder.headers(outgoing -> headers.forEach(outgoing::set));
-            ClientRequest outgoing = builder.build();
-            return next.exchange(outgoing);
-        }));
+        return WebClient.builder().clientConnector(connector).filter(this::exchangeWithRequestHeaders);
+    }
+
+    /** 同步Embedding/Rerank在实际调用线程读取上下文，不能在客户端创建时捕获。 */
+    private ClientHttpResponse executeWithRequestHeaders(HttpRequest request, byte[] body,
+            ClientHttpRequestExecution execution) throws IOException {
+        Map<String, String> headers = ModelRequestHeaders.capture();
+        copyRequestHeaders(request.getHeaders(), headers);
+        return execution.execute(request, body);
+    }
+
+    /** 流式调用在订阅时读取Reactor上下文，构建客户端和发起请求分别发生在不同时间。 */
+    private Mono<ClientResponse> exchangeWithRequestHeaders(ClientRequest request, ExchangeFunction next) {
+        return Mono.deferContextual(context -> sendWithRequestHeaders(request, next, context));
+    }
+
+    /** 按请求复制消息头，不修改模型客户端的共享配置。 */
+    private Mono<ClientResponse> sendWithRequestHeaders(ClientRequest request, ExchangeFunction next,
+            ContextView context) {
+        Map<String, String> headers = context.getOrDefault(ModelRequestHeaders.REACTOR_KEY, Map.of());
+        Consumer<HttpHeaders> headerWriter = outgoing -> copyRequestHeaders(outgoing, headers);
+        ClientRequest.Builder builder = ClientRequest.from(request);
+        builder.headers(headerWriter);
+        ClientRequest outgoing = builder.build();
+        return next.exchange(outgoing);
+    }
+
+    /** 同步和流式请求使用相同的覆盖规则，避免扩展消息头被追加为重复值。 */
+    private void copyRequestHeaders(HttpHeaders outgoing, Map<String, String> headers) {
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            outgoing.set(header.getKey(), header.getValue());
+        }
     }
 
     /** @return 明确只尝试一次的SDK调用策略，由上层决定是否重试完整业务动作 */

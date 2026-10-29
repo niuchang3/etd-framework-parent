@@ -44,8 +44,8 @@ public final class AgentChatPolicy {
     public static final String DONE = "done";
     /** SSE错误事件。 */
     public static final String ERROR = "error";
-    /** 默认历史消息条数上限，始终按完整问答对裁剪。 */
-    public static final int DEFAULT_HISTORY_LIMIT = 20;
+    /** 默认历史消息条数上限，控制在合理轮数内降低首字延迟。 */
+    public static final int DEFAULT_HISTORY_LIMIT = 8;
     /** 用户问题最大字符数，与知识检索入口保持一致。 */
     public static final int MAX_QUESTION_CHARACTERS = 2000;
     /** 租约到期错误码；仅标记失败，不自动重放模型调用。 */

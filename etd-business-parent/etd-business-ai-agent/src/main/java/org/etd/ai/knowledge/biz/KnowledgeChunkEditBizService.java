@@ -1,10 +1,16 @@
 package org.etd.ai.knowledge.biz;
 
 import org.etd.framework.common.core.constants.BasicConstant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import lombok.RequiredArgsConstructor;
-import org.etd.ai.knowledge.constant.*;
-import org.etd.ai.knowledge.entity.*;
+import org.etd.ai.knowledge.constant.KnowledgeChunkLimits;
+import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
+import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
 import org.etd.ai.knowledge.model.KnowledgeChunkSource;
 import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.ai.knowledge.service.KnowledgeChunkService;
@@ -52,7 +58,10 @@ public class KnowledgeChunkEditBizService {
         first.setTokenCount(DocumentTokenCounter.count(content));
         first.setSource(source);
         chunks.modifyChunk(first);
-        for (int index = 1; index < selected.size(); index++) { chunks.removeChunk(selected.get(index).getId()); }
+        // 合并结果保留第一片ID，其余被合并分片在同一事务内删除。
+        for (int index = 1; index < selected.size(); index++) {
+            chunks.removeChunk(selected.get(index).getId());
+        }
         document.setChunkCount(records.size() - selected.size() + 1);
         markDraft(document);
         return document;
@@ -121,41 +130,66 @@ public class KnowledgeChunkEditBizService {
         return confirmation.confirmChunks(id, version);
     }
 
+    /** 编辑前持有资料行锁，先校验生成状态、版本和现有分片数量。 */
     private KnowledgeDocumentEntity requireEditable(Long id, Long version) {
         KnowledgeDocumentEntity document = documents.requireDocument(id, true);
         documents.requireChunkIdle(document);
-        if (!Objects.equals(document.getVersion(), version)) { throw new ApiRuntimeException("分片已变化，请刷新后重试"); }
-        if (document.getChunkCount() == null || document.getChunkCount() == 0) { throw new ApiRuntimeException("请先生成分片"); }
+        if (!Objects.equals(document.getVersion(), version)) {
+            throw new ApiRuntimeException("分片已变化，请刷新后重试");
+        }
+        if (document.getChunkCount() == null || document.getChunkCount() == 0) {
+            throw new ApiRuntimeException("请先生成分片");
+        }
         return document;
     }
 
-    private List<KnowledgeChunkEntity> requireAdjacent(List<KnowledgeChunkEntity> all, List<Long> ids) {
-        Set<Long> unique = new HashSet<>(ids);
-        if (ids.size() < 2 || unique.size() != ids.size()) { throw new ApiRuntimeException("至少选择两个不同的相邻分片"); }
-        int first = -1;
-        for (int index = 0; index < all.size(); index++) {
-            if (all.get(index).getId().equals(ids.getFirst())) { first = index; break; }
+    /** 按去重、定位首片、逐项核对原文顺序校验，禁止跨资料或跳片合并。 */
+    private List<KnowledgeChunkEntity> requireAdjacent(List<KnowledgeChunkEntity> documentChunks, List<Long> selectedIds) {
+        Set<Long> uniqueIds = new HashSet<>(selectedIds);
+        if (selectedIds.size() < 2 || uniqueIds.size() != selectedIds.size()) {
+            throw new ApiRuntimeException("至少选择两个不同的相邻分片");
         }
-        if (first < 0 || first + ids.size() > all.size()) { throw new ApiRuntimeException("分片不属于当前资料"); }
-        List<KnowledgeChunkEntity> selected = new ArrayList<>();
-        for (int index = 0; index < ids.size(); index++) {
-            KnowledgeChunkEntity chunk = all.get(first + index);
-            if (!chunk.getId().equals(ids.get(index))) { throw new ApiRuntimeException("只能按原文顺序合并相邻分片"); }
-            selected.add(chunk);
+        int firstChunkIndex = findChunkIndex(documentChunks, selectedIds.getFirst());
+        if (firstChunkIndex < 0 || firstChunkIndex + selectedIds.size() > documentChunks.size()) {
+            throw new ApiRuntimeException("分片不属于当前资料");
         }
-        return selected;
+        List<KnowledgeChunkEntity> selectedChunks = new ArrayList<>();
+        for (int offset = 0; offset < selectedIds.size(); offset++) {
+            KnowledgeChunkEntity chunk = documentChunks.get(firstChunkIndex + offset);
+            if (!chunk.getId().equals(selectedIds.get(offset))) {
+                throw new ApiRuntimeException("只能按原文顺序合并相邻分片");
+            }
+            selectedChunks.add(chunk);
+        }
+        return selectedChunks;
     }
 
+    /** 在当前资料的有序分片中定位首片，不存在时返回-1供上层统一拒绝。 */
+    private int findChunkIndex(List<KnowledgeChunkEntity> documentChunks, Long chunkId) {
+        for (int index = 0; index < documentChunks.size(); index++) {
+            if (documentChunks.get(index).getId().equals(chunkId)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /** 按原文顺序连接正文，并校验合并后的总长度。 */
     private String mergeContent(List<KnowledgeChunkEntity> selected) {
         StringBuilder content = new StringBuilder();
         for (KnowledgeChunkEntity chunk : selected) {
-            if (!content.isEmpty()) { content.append(KnowledgeChunkLimits.CONTENT_SEPARATOR); }
+            if (!content.isEmpty()) {
+                content.append(KnowledgeChunkLimits.CONTENT_SEPARATOR);
+            }
             content.append(chunk.getContent());
         }
-        if (content.length() > KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS) { throw new ApiRuntimeException("合并后正文超过长度限制"); }
+        if (content.length() > KnowledgeChunkLimits.MAX_CONTENT_CHARACTERS) {
+            throw new ApiRuntimeException("合并后正文超过长度限制");
+        }
         return content.toString();
     }
 
+    /** 标题和引用按首次出现顺序去重，页码按数值升序合并。 */
     private KnowledgeChunkSource mergeSource(List<KnowledgeChunkEntity> selected) {
         Set<String> headings = new LinkedHashSet<>();
         Set<Integer> pages = new TreeSet<>();
@@ -171,6 +205,7 @@ public class KnowledgeChunkEditBizService {
         return new KnowledgeChunkSource(path, pageNumbers, references);
     }
 
+    /** 编辑后递增正文轮次、撤销确认并停用正式检索，旧向量状态按原规则失效。 */
     private void markDraft(KnowledgeDocumentEntity document) {
         document.setVectorStatus(KnowledgeVectorStatus.afterContentChange(document.getVectorStatus()));
         document.setDataStatus(BasicConstant.DataStatus.DISABLED_CODE);
