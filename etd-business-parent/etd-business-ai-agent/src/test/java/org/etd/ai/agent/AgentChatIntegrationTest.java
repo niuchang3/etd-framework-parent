@@ -16,8 +16,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.etd.ai.agent.biz.AgentChatBizService;
 import org.etd.ai.agent.biz.AgentRunBizService;
-import org.etd.framework.starter.ai.runtime.AgentRuntime;
-import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
+import org.etd.framework.starter.ai.runtime.AgentChatService;
 import org.etd.ai.agent.constant.AgentChatPolicy;
 import org.etd.ai.agent.controller.AgentChatController;
 import org.etd.ai.agent.service.AgentConversationService;
@@ -94,8 +93,7 @@ class AgentChatIntegrationTest {
     @Autowired private AgentMessageService messages;
     @Autowired private AgentRunService runs;
     @Autowired private AgentService agents;
-    @Autowired private AgentRuntime runtime;
-    @Autowired private AgentRuntimeProperties runtimeProperties;
+    @Autowired private AgentChatService chat;
     @MockitoBean private ModelClientRegistry clients;
     @LocalServerPort private int port;
     private ChatModel model;
@@ -144,7 +142,7 @@ class AgentChatIntegrationTest {
                 return Flux.just(first, second).delayElements(Duration.ofMillis(20));
             });
         });
-        AgentChatController controller = new AgentChatController(biz, runBiz, agents, conversations, messages, runtime, runtimeProperties);
+        AgentChatController controller = new AgentChatController(biz, runBiz, agents, conversations, messages, chat);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 

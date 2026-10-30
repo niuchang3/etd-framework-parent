@@ -9,8 +9,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.ai.model.client.ModelRequestHeaders;
 import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
 import org.etd.framework.starter.ai.runtime.context.RequestContextTaskExecutor;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeEvent;
@@ -33,7 +33,6 @@ import org.springframework.ai.chat.model.ChatModel;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
-import reactor.util.context.Context;
 
 /** 通用运行容器；业务通过检索、生命周期和输出插槽接入，框架负责线程、上下文、超时及取消。 */
 public class AgentRuntime implements AutoCloseable {
@@ -63,7 +62,7 @@ public class AgentRuntime implements AutoCloseable {
      * @return 本节点运行句柄
      * @throws RuntimeException 业务校验、容量或任务提交失败
      */
-    public AgentRunControl start(Supplier<AgentRunRequest> preparation) {
+    AgentRunControl start(Supplier<AgentRunRequest> preparation) {
         if (!capacity.tryAcquire()) {
             throw new ApiRuntimeException("当前生成任务较多，请稍后再试");
         }
@@ -117,33 +116,36 @@ public class AgentRuntime implements AutoCloseable {
     private void executeAnswer(AgentRunTask state) {
         emit(state, AgentRuntimeEventType.START, null, null);
         requireNotStopped(state);
-        AgentModelInput prepared = engine.prepare(state.runRequest.chatRequest());
-        state.references = state.runRequest.chatRequest().citationsEnabled() ? prepared.references() : List.of();
-        emit(state, AgentRuntimeEventType.REFERENCES, null, null);
-        requireNotStopped(state);
-        consume(state, prepared);
+        consume(state);
         AgentRuntimeStatus desired = state.stopStatus.get();
         finish(state, desired == null ? AgentRuntimeStatus.SUCCEEDED : desired);
     }
 
     /** 主流程按创建响应流、消费增量、检查最终正文三个步骤执行。 */
-    private void consume(AgentRunTask state, AgentModelInput prepared) {
-        Flux<ChatResponse> stream = createModelResponseStream(state, prepared);
+    private void consume(AgentRunTask state) {
+        Flux<ChatResponse> stream = createModelResponseStream(state);
         consumeModelResponseStream(state, stream);
         if (state.content().isEmpty() && state.stopStatus.get() == null) {
             throw new IllegalStateException("模型未返回可展示正文");
         }
     }
 
-    /** 为本轮流式调用配置取消信号和请求头，不在这里读取或聚合模型正文。 */
-    private Flux<ChatResponse> createModelResponseStream(AgentRunTask state, AgentModelInput prepared) {
+    /** 为本轮官方 Agent 配置取消、引用和用量通知；模型边界统一透传请求头。 */
+    private Flux<ChatResponse> createModelResponseStream(AgentRunTask state) {
         ChatModel model = state.runRequest.model().get();
-        Map<String, String> headers = ModelRequestHeaders.capture();
         Mono<Boolean> cancellation = state.cancellation.asMono();
-        Context requestContext = Context.of(ModelRequestHeaders.REACTOR_KEY, headers);
-        Flux<ChatResponse> modelStream = engine.stream(model, prepared);
-        Flux<ChatResponse> cancellableStream = modelStream.takeUntilOther(cancellation);
-        return cancellableStream.contextWrite(requestContext);
+        Consumer<AgentModelInput> prepared = input -> publishReferences(state, input);
+        Consumer<ChatResponse> usage = response -> recordUsage(state, response);
+        Flux<ChatResponse> modelStream = engine.stream(model, state.runRequest.chatRequest(), prepared, usage);
+        return modelStream.takeUntilOther(cancellation);
+    }
+
+    /** 官方模型前 Hook 完成授权检索后发布引用；取消后不得继续启动模型调用。 */
+    private void publishReferences(AgentRunTask state, AgentModelInput prepared) {
+        requireNotStopped(state);
+        state.references = state.runRequest.chatRequest().citationsEnabled() ? prepared.references() : List.of();
+        emit(state, AgentRuntimeEventType.REFERENCES, null, null);
+        requireNotStopped(state);
     }
 
     /** 按顺序读取文字、错误和结束信号，每次只预取一个；关闭读取通道时取消上游订阅。 */
@@ -165,7 +167,6 @@ public class AgentRuntime implements AutoCloseable {
     }
 
     private void appendResponse(AgentRunTask state, ChatResponse response) {
-        recordUsage(state, response);
         if (response.getResult() == null || response.getResult().getOutput() == null) {
             return;
         }

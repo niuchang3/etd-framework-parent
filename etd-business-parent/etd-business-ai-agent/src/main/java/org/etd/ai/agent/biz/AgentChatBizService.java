@@ -1,14 +1,13 @@
 package org.etd.ai.agent.biz;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.function.Supplier;
-import org.springframework.ai.chat.model.ChatModel;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.etd.ai.agent.config.AgentChatProperties;
+import org.etd.framework.starter.ai.runtime.spi.AgentChatPrepareService;
+import org.etd.framework.starter.ai.runtime.model.AgentChatPreparation;
+import org.etd.framework.starter.ai.runtime.model.AgentChatRequest;
 import org.etd.ai.agent.constant.AgentChatPolicy;
 import org.etd.ai.agent.converter.AgentConverter;
 import org.etd.ai.agent.entity.AgentConversationEntity;
@@ -29,45 +28,18 @@ import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
 import org.etd.ai.agent.converter.AgentChatConverter;
-import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
-import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
-import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
-import org.etd.framework.starter.ai.runtime.model.AgentExecutionRequest;
-import org.etd.framework.starter.ai.runtime.model.AgentRunRequest;
-import org.etd.framework.starter.ai.runtime.model.KnowledgeFragment;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
-import org.etd.framework.starter.ai.runtime.spi.AgentKnowledgeQueryService;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
-import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.transaction.annotation.Transactional;
 import org.etd.ai.agent.entity.AgentEntity;
 import org.etd.ai.agent.entity.AgentRunEntity;
-import org.etd.ai.agent.model.AgentCitation;
-import org.etd.ai.agent.model.AgentModelOptions;
-import org.etd.ai.knowledge.model.KnowledgeRecallHit;
 import org.etd.ai.model.entity.ModelConnectionEntity;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.common.core.user.PermissionAuthority;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
 
 /** 聊天事务编排；所有外部模型和知识检索调用均在此类事务之外执行。 */
 @Service
 @RequiredArgsConstructor
-@Slf4j
-public class AgentChatBizService {
-    /** 检索词重写只读取最近4条历史消息，保持当前上下文范围。 */
-    private static final int REWRITE_HISTORY_MESSAGE_LIMIT = 4;
-    /** 检索词重写的输出Token上限，不影响最终回答的输出预算。 */
-    private static final int REWRITE_MAX_OUTPUT_TOKENS = 64;
-    /** 重写任务沿用低随机性参数，减少追问检索词偏移。 */
-    private static final double REWRITE_TEMPERATURE = 0.1;
-    /** 只重写检索词，不让该模型调用提前回答用户问题。 */
-    private static final String REWRITE_SYSTEM_PROMPT = "你是一个搜索意图提炼助手。请根据对话历史，将用户的最新追问重写为一个语义完整、独立可检索的搜索语句。"
-            + "若最新追问表意已完整且无代词指代，直接原样输出。不要回答问题，严禁输出任何解释，仅输出重写后的语句。";
+public class AgentChatBizService implements AgentChatPrepareService {
     private final AgentService agents;
     private final AgentConversationService conversations;
     private final AgentMessageService messages;
@@ -75,114 +47,20 @@ public class AgentChatBizService {
     private final ModelConnectionService connections;
     private final KnowledgeModelSettingsService settings;
     private final AgentChatProperties properties;
-    private final AgentRunRecordService runRecordService;
-    private final AgentRuntimeProperties runtimeProperties;
-    private final ModelClientRegistry clients;
-    private final KnowledgeRecallBizService knowledge;
 
-    /** 业务提供配置、授权模型与检索插槽；生命周期实现由Spring按接口注入，保证回调事务生效。
-     * @param sessionId 会话 @param requestId 幂等ID @param question 问题
-     * @param eventListener 输出插槽 @return 框架执行定义
+    /** 只准备已授权数据并提交本轮记录；模型、检索和运行对象由框架统一组织。
+     * @param request 当前会话及问题 @return 本轮配置、历史、运行标识和模型连接信息
+     * @throws ApiRuntimeException 权限、幂等、忙闲或配置校验失败，事务整体回滚
      */
+    @Override
     @Transactional
-    public AgentRunRequest prepareRun(Long sessionId, String requestId, String question,
-            AgentRunEventListener eventListener) {
-        AgentChatExecution execution = beginRun(sessionId, requestId, question.trim());
-        Supplier<ChatModel> model = () -> clients.getChatModel(execution.modelTenantId(),
-                execution.configuration().getModelConnectionId().toString());
-        AgentExecutionRequest request = createExecutionRequest(execution, model);
+    public AgentChatPreparation prepareChat(AgentChatRequest request) {
+        AgentChatExecution execution = beginRun(request.sessionId(), request.requestId(), request.question());
+        AgentChatPreparation preparation = AgentChatConverter.INSTANCE.toChatPreparation(execution);
         Map<String, Object> attributes = Map.of(AgentChatPolicy.SESSION_ID, execution.run().getConversationId(),
                 AgentChatPolicy.MESSAGE_ID, execution.assistantMessageId());
-        return new AgentRunRequest(execution.run().getId().toString(), request, model,
-                runRecordService, eventListener, attributes);
-    }
-
-    private AgentExecutionRequest createExecutionRequest(AgentChatExecution execution,
-            Supplier<ChatModel> modelSupplier) {
-        AgentConfiguration config = execution.configuration();
-        ChatOptions.Builder builder = ChatOptions.builder();
-        AgentModelOptions options = config.getModelOptions();
-        builder.maxTokens(options == null || options.getMaxTokens() == null
-                ? runtimeProperties.getDefaultMaxOutputTokens() : options.getMaxTokens());
-        if (options != null && options.getTemperature() != null) {
-            builder.temperature(options.getTemperature());
-        }
-        ChatOptions chatOptions = builder.build();
-        AgentKnowledgeQueryService knowledgeService = query -> retrieveKnowledge(config.getKnowledgeBaseIds(),
-                query, execution.history(), modelSupplier);
-        boolean citations = !Boolean.FALSE.equals(config.getCitationEnabled());
-        return new AgentExecutionRequest(config.getSystemPrompt(), execution.question(), execution.history(),
-                chatOptions, knowledgeService, runtimeProperties.getInputTokenBudget(), runtimeProperties.getMaxReferences(), citations);
-    }
-
-    /** 业务实现检索插槽，负责多轮意图消解、知识库授权及来源转换；框架不读取知识库表或业务Entity。 */
-    private List<List<KnowledgeFragment>> retrieveKnowledge(List<Long> ids, String question,
-            List<Message> history, Supplier<ChatModel> modelSupplier) {
-        if (ids == null || ids.isEmpty()) {
-            return List.of();
-        }
-        String searchQuery = rewriteSearchQuery(question, history, modelSupplier);
-        List<List<KnowledgeRecallHit>> groups = knowledge.recallEnabledList(ids, searchQuery);
-        List<List<KnowledgeFragment>> result = new ArrayList<>();
-        for (int index = 0; index < groups.size(); index++) {
-            List<KnowledgeFragment> fragments = new ArrayList<>();
-            for (KnowledgeRecallHit hit : groups.get(index)) {
-                AgentCitation citation = AgentChatConverter.INSTANCE.toCitation(hit, ids.get(index));
-                Map<String, Object> metadata = Map.of(AgentChatPolicy.CITATION, citation);
-                KnowledgeFragment fragment = new KnowledgeFragment(hit.getChunkId().toString(), hit.getContent(), metadata);
-                fragments.add(fragment);
-            }
-            result.add(fragments);
-        }
-        return result;
-    }
-
-    /** 存在历史时尝试重写追问，失败或无有效结果时沿用原问题；不改变当前检索策略。 */
-    private String rewriteSearchQuery(String question, List<Message> history, Supplier<ChatModel> modelSupplier) {
-        if (history == null || history.isEmpty()) {
-            return question;
-        }
-        try {
-            ChatModel model = modelSupplier.get();
-            if (model == null) {
-                return question;
-            }
-            Prompt prompt = createSearchRewritePrompt(question, history);
-            ChatResponse response = model.call(prompt);
-            return readSearchRewriteResult(response, question);
-        } catch (Exception exception) {
-            // 保留原有失败处理，但记录异常类型便于排查；不输出用户历史、问题或模型异常正文。
-            log.warn("Agent检索词重写失败，沿用原问题，异常类型={}", exception.getClass().getSimpleName());
-            return question;
-        }
-    }
-
-    /** 系统指令、最近历史和本轮问题按原顺序组装，参数仅作用于本次检索词重写。 */
-    private Prompt createSearchRewritePrompt(String question, List<Message> history) {
-        List<Message> messages = new ArrayList<>();
-        SystemMessage instruction = new SystemMessage(REWRITE_SYSTEM_PROMPT);
-        messages.add(instruction);
-        int start = Math.max(0, history.size() - REWRITE_HISTORY_MESSAGE_LIMIT);
-        for (int index = start; index < history.size(); index++) {
-            messages.add(history.get(index));
-        }
-        UserMessage latestQuestion = new UserMessage("最新追问：" + question);
-        messages.add(latestQuestion);
-        ChatOptions options = ChatOptions.builder().maxTokens(REWRITE_MAX_OUTPUT_TOKENS)
-                .temperature(REWRITE_TEMPERATURE).build();
-        return new Prompt(messages, options);
-    }
-
-    /** 空响应、缺少正文或空白正文均沿用原问题，有效结果只去除首尾空白。 */
-    private String readSearchRewriteResult(ChatResponse response, String question) {
-        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
-            return question;
-        }
-        String rewritten = response.getResult().getOutput().getText();
-        if (rewritten == null || rewritten.isBlank()) {
-            return question;
-        }
-        return rewritten.trim();
+        preparation.setAttributes(attributes);
+        return preparation;
     }
 
     /** @param agentId Agent @param type 会话类型 @param title 标题 @return 已授权会话 */

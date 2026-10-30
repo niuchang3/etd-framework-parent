@@ -6,7 +6,7 @@ import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
 import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
 import org.springframework.ai.chat.model.ChatModel;
 
-/** Agent执行请求：业务提供聊天输入、模型、运行记录服务和事件接收器。
+/** 框架内部执行定义，由AgentChatService统一组装，业务仅实现接口并返回AgentChatPreparation数据。
  * @param executionId 唯一执行标识
  * @param chatRequest 已授权聊天输入及检索插槽
  * @param model 本轮授权模型供应器，在实际调用前执行

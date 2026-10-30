@@ -4,6 +4,8 @@ import org.etd.ai.agent.controller.vo.AgentChatSessionVO;
 import org.etd.ai.agent.controller.vo.AgentChatProfileVO;
 import org.etd.ai.agent.entity.AgentEntity;
 import org.etd.ai.agent.model.AgentConfiguration;
+import org.etd.ai.agent.model.AgentChatExecution;
+import org.etd.framework.starter.ai.runtime.model.AgentChatPreparation;
 import org.etd.ai.agent.controller.vo.AgentChatMessageVO;
 import org.etd.ai.agent.controller.vo.AgentChatRunVO;
 import org.etd.ai.agent.entity.AgentConversationEntity;
@@ -25,6 +27,16 @@ import org.mapstruct.factory.Mappers;
 public interface AgentChatConverter {
     /** 无状态转换实例。 */
     AgentChatConverter INSTANCE = Mappers.getMapper(AgentChatConverter.class);
+    /** @param execution 业务事务准备结果 @return 仅含数据的框架接入契约，不携带任何执行回调 */
+    @Mapping(target = "executionId", source = "run.id")
+    @Mapping(target = "modelConnectionId", source = "configuration.modelConnectionId")
+    @Mapping(target = "systemPrompt", source = "configuration.systemPrompt")
+    @Mapping(target = "knowledgeBaseIds", source = "configuration.knowledgeBaseIds")
+    @Mapping(target = "maxOutputTokens", source = "configuration.modelOptions.maxTokens")
+    @Mapping(target = "temperature", source = "configuration.modelOptions.temperature")
+    @Mapping(target = "citationsEnabled", expression = "java(!Boolean.FALSE.equals(execution.configuration().getCitationEnabled()))")
+    @Mapping(target = "attributes", ignore = true)
+    AgentChatPreparation toChatPreparation(AgentChatExecution execution);
     /** @param references 框架实际使用的业务来源 @return 按上下文顺序编号的引用列表 */
     default List<AgentCitation> toCitationList(List<KnowledgeFragment> references) {
         List<AgentCitation> result = new ArrayList<>();

@@ -44,6 +44,11 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-graph-core</artifactId>
         </dependency>
+        <!-- 复用官方追问压缩器，版本由现有 Spring AI BOM 统一管理。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-rag</artifactId>
+        </dependency>
         <!-- 使用底层 SDK，避免供应商 starter 启动时要求全局 API Key。 -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>

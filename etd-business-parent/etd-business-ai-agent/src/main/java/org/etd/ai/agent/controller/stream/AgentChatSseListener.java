@@ -32,6 +32,7 @@ public final class AgentChatSseListener implements AgentRunEventListener {
     }
 
     /** @param handle 框架启动后返回的控制句柄；若先发生断线则立即取消 */
+    @Override
     public void bind(AgentRunControl handle) {
         this.handle = handle;
         if (disconnected.get()) {

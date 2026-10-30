@@ -10,15 +10,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
-import java.util.function.Supplier;
-import org.etd.framework.starter.ai.runtime.model.AgentRunRequest;
+import org.etd.framework.starter.ai.runtime.model.AgentChatRequest;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.agent.biz.AgentChatBizService;
 import org.etd.ai.agent.biz.AgentRunBizService;
-import org.etd.framework.starter.ai.runtime.AgentRuntime;
-import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
+import org.etd.framework.starter.ai.runtime.AgentChatService;
 import org.etd.ai.agent.controller.stream.AgentChatSseListener;
-import java.util.concurrent.TimeUnit;
 import org.etd.ai.agent.controller.dto.AgentChatMessageDTO;
 import org.etd.ai.agent.controller.dto.AgentChatSessionDTO;
 import org.etd.ai.agent.controller.vo.AgentChatSessionVO;
@@ -53,7 +50,6 @@ import org.etd.ai.agent.entity.AgentEntity;
 import org.etd.ai.agent.entity.AgentMessageEntity;
 import org.etd.ai.agent.entity.AgentRunEntity;
 import org.etd.ai.agent.model.AgentConfiguration;
-import org.etd.framework.starter.ai.runtime.AgentRunControl;
 
 /** Agent聊天入口；流式请求复用框架认证和请求头上下文，个人会话不随Agent公开。 */
 @RestController
@@ -67,8 +63,7 @@ public class AgentChatController {
     private final AgentService agents;
     private final AgentConversationService conversations;
     private final AgentMessageService messages;
-    private final AgentRuntime runtime;
-    private final AgentRuntimeProperties runtimeProperties;
+    private final AgentChatService chat;
 
     /** @param agentId Agent ID @param conversationType 正式或调试 @return 聊天页面开场白与推荐问题，不含内部指令 */
     @GetMapping("/agents/{agentId}")
@@ -131,12 +126,10 @@ public class AgentChatController {
             @Valid @RequestBody AgentChatMessageDTO dto, HttpServletResponse response) {
         // 必须在启动模型任务和写出正文之前设置；Tomcat不会因传入0而缩小已有缓冲，逐事件刷新由SseEmitter负责。
         response.setBufferSize(0);
-        SseEmitter emitter = new SseEmitter(TimeUnit.SECONDS.toMillis(runtimeProperties.getTimeoutSeconds() + 10L));
+        SseEmitter emitter = new SseEmitter(chat.getOutputTimeoutMillis());
         AgentChatSseListener output = new AgentChatSseListener(emitter);
-        // 延迟准备可确保框架先检查并发容量，再创建本轮数据库记录。
-        Supplier<AgentRunRequest> preparation = () -> biz.prepareRun(sessionId, dto.getRequestId(), dto.getContent(), output);
-        AgentRunControl handle = runtime.start(preparation);
-        output.bind(handle);
+        AgentChatRequest request = new AgentChatRequest(sessionId, dto.getRequestId(), dto.getContent());
+        chat.start(request, output);
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-transform");
         response.setHeader(HeaderConstant.X_ACCEL_BUFFERING, "no");
         response.setHeader(HttpHeaders.CONNECTION, "keep-alive");

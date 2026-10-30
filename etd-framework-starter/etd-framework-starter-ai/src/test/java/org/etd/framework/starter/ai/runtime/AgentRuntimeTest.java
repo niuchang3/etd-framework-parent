@@ -16,7 +16,8 @@ import org.etd.framework.starter.ai.runtime.model.AgentRuntimeResult;
 import org.etd.framework.starter.ai.runtime.model.AgentRunProgress;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeStatus;
 import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
-import org.etd.framework.starter.ai.runtime.spi.AgentKnowledgeQueryService;
+import java.util.function.Supplier;
+import org.etd.framework.starter.ai.runtime.model.KnowledgeFragment;
 import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.DefaultUsage;
 import reactor.core.publisher.Flux;
 
 import static org.assertj.core.api.Assertions.*;
@@ -139,8 +142,58 @@ class AgentRuntimeTest {
         return recordService;
     }
 
+    /** 官方图会过滤无正文的统计事件，框架仍须保存最终用量，且不能重复追加图的聚合正文。 */
+    @Test
+    void recordsUsageOnlyFinalChunkWithoutDuplicatingAnswer() throws Exception {
+        ChatModel model = mock(ChatModel.class);
+        ChatResponse answer = response("完整回答");
+        DefaultUsage usage = new DefaultUsage(120, 8);
+        ChatResponseMetadata metadata = ChatResponseMetadata.builder().usage(usage).build();
+        List<Generation> empty = List.of();
+        ChatResponse statistics = new ChatResponse(empty, metadata);
+        Flux<ChatResponse> stream = Flux.just(answer, statistics);
+        when(model.stream(any(Prompt.class))).thenReturn(stream);
+        AgentRunRecordService records = recordService();
+        CapturingOutput output = new CapturingOutput();
+        AgentRunRequest request = runRequest(model, records, output);
+        runToCompletion(request, records, output);
+        AgentRuntimeResult result = output.events.getLast().result();
+        assertThat(result.status()).isEqualTo(AgentRuntimeStatus.SUCCEEDED);
+        assertThat(result.progress().content()).isEqualTo("完整回答");
+        assertThat(result.progress().inputTokens()).isEqualTo(120L);
+        assertThat(result.progress().outputTokens()).isEqualTo(8L);
+    }
+
+    /** SDK 创建流时直接抛错也必须进入失败终态，不能将上游异常文本持久化或推给前端。 */
+    @Test
+    void failsWhenModelThrowsBeforeReturningStream() throws Exception {
+        ChatModel model = mock(ChatModel.class);
+        IllegalStateException failure = new IllegalStateException("private-model-detail");
+        when(model.stream(any(Prompt.class))).thenThrow(failure);
+        AgentRunRecordService records = recordService();
+        CapturingOutput output = new CapturingOutput();
+        AgentRunRequest request = runRequest(model, records, output);
+        runToCompletion(request, records, output);
+        AgentRuntimeResult result = output.events.getLast().result();
+        assertThat(result.status()).isEqualTo(AgentRuntimeStatus.FAILED);
+        assertThat(result.progress().content()).isEmpty();
+        assertThat(result.errorMessage()).doesNotContain("private-model-detail");
+    }
+
+    /** 使用真实官方图执行至关闭，统一释放本测试拥有的线程容器。 */
+    private void runToCompletion(AgentRunRequest request, AgentRunRecordService records,
+            CapturingOutput output) throws Exception {
+        AgentExecutionEngine engine = new AgentExecutionEngine();
+        AgentRuntimeProperties properties = new AgentRuntimeProperties();
+        List<AgentRunRecordService> providers = List.of(records);
+        try (AgentRuntime runtime = new AgentRuntime(engine, properties, () -> providers)) {
+            runtime.start(() -> request);
+            assertThat(output.closed.await(5, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
     private AgentRunRequest runRequest(ChatModel model, AgentRunRecordService recordService, CapturingOutput output) {
-        AgentKnowledgeQueryService knowledgeService = query -> List.of();
+        Supplier<List<List<KnowledgeFragment>>> knowledgeService = () -> List.of();
         ChatOptions options = ChatOptions.builder().maxTokens(100).build();
         AgentExecutionRequest request = new AgentExecutionRequest("帮助用户", "问题", List.of(), options, knowledgeService, 1000, 12, true);
         Map<String, Object> attributes = Map.<String, Object>of("caller", "test");

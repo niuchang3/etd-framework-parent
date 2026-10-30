@@ -25,18 +25,19 @@ import org.etd.ai.agent.service.AgentService;
 import org.etd.framework.starter.ai.runtime.AgentExecutionEngine;
 import org.etd.framework.starter.ai.runtime.AgentRuntime;
 import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
-import org.etd.framework.starter.ai.runtime.model.AgentExecutionRequest;
-import org.etd.framework.starter.ai.runtime.model.AgentRunRequest;
+import org.etd.framework.starter.ai.runtime.model.AgentChatPreparation;
+import org.etd.framework.starter.ai.runtime.AgentChatService;
+import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
+import org.etd.framework.starter.ai.runtime.spi.AgentChatPrepareService;
+import org.etd.framework.starter.ai.runtime.spi.AgentKnowledgeQueryService;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeResult;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeStatus;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
 import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
@@ -102,19 +103,24 @@ class AgentChatSseFlushTest {
         Flux<ChatResponse> stream = Flux.concat(firstPart, remaining);
         when(model.stream(any(Prompt.class))).thenReturn(stream);
         AgentChatBizService biz = mock(AgentChatBizService.class);
-        when(biz.prepareRun(eq(1L), eq("flush-test"), eq("问题"), any())).thenAnswer(call -> {
-            AgentRunEventListener listener = call.getArgument(3);
-            ChatOptions options = ChatOptions.builder().maxTokens(100).build();
-            AgentExecutionRequest request = new AgentExecutionRequest("测试指令", "问题", List.of(), options,
-                    question -> List.of(), 12000, 12, true);
-            Map<String, Object> attributes = Map.of(AgentChatPolicy.SESSION_ID, 1L, AgentChatPolicy.MESSAGE_ID, 2L);
-            return new AgentRunRequest("3", request, () -> model, records, listener, attributes);
-        });
+        AgentChatPrepareService preparation = mock(AgentChatPrepareService.class);
+        AgentChatPreparation data = new AgentChatPreparation();
+        data.setExecutionId("3");
+        data.setModelTenantId("1");
+        data.setModelConnectionId("100");
+        data.setSystemPrompt("测试指令");
+        Map<String, Object> attributes = Map.of(AgentChatPolicy.SESSION_ID, 1L, AgentChatPolicy.MESSAGE_ID, 2L);
+        data.setAttributes(attributes);
+        when(preparation.prepareChat(any())).thenReturn(data);
+        ModelClientRegistry models = mock(ModelClientRegistry.class);
+        when(models.getChatModel("1", "100")).thenReturn(model);
+        AgentKnowledgeQueryService knowledge = mock(AgentKnowledgeQueryService.class);
+        AgentChatService chat = new AgentChatService(runtime, properties, models, preparation, knowledge, records);
         AgentRunBizService runBiz = mock(AgentRunBizService.class);
         AgentService agents = mock(AgentService.class);
         AgentConversationService conversations = mock(AgentConversationService.class);
         AgentMessageService messages = mock(AgentMessageService.class);
-        return new AgentChatController(biz, runBiz, agents, conversations, messages, runtime, properties);
+        return new AgentChatController(biz, runBiz, agents, conversations, messages, chat);
     }
 
     /** 客户端逐行读取而非聚合整个响应；读取超时可直接揭示被缓冲的事件。 */
