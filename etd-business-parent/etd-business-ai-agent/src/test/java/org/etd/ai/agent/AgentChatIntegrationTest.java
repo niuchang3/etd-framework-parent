@@ -16,7 +16,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.etd.ai.agent.biz.AgentChatBizService;
 import org.etd.ai.agent.biz.AgentRunBizService;
+import org.etd.ai.agent.biz.AgentRunLeaseBizService;
 import org.etd.framework.starter.ai.runtime.AgentChatService;
+import org.etd.framework.starter.ai.runtime.context.RequestContextSnapshot;
 import org.etd.ai.agent.constant.AgentChatPolicy;
 import org.etd.ai.agent.controller.AgentChatController;
 import org.etd.ai.agent.service.AgentConversationService;
@@ -46,6 +48,10 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.etd.framework.starter.ai.memory.semantic.AgentKnowledgeTool;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -61,6 +67,7 @@ import org.etd.ai.agent.entity.AgentConversationEntity;
 import org.etd.ai.agent.entity.AgentMessageEntity;
 import org.etd.ai.agent.entity.AgentRunEntity;
 import org.etd.ai.agent.model.AgentChatExecution;
+import org.etd.framework.starter.ai.runtime.model.AgentChatCommand;
 import org.etd.ai.agent.model.AgentCitation;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -89,6 +96,7 @@ class AgentChatIntegrationTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private AgentChatBizService biz;
     @Autowired private AgentRunBizService runBiz;
+    @Autowired private AgentRunLeaseBizService leaseBiz;
     @Autowired private AgentConversationService conversations;
     @Autowired private AgentMessageService messages;
     @Autowired private AgentRunService runs;
@@ -173,6 +181,18 @@ class AgentChatIntegrationTest {
         assertThat(prompt.getValue().getContents()).contains("发布指令").doesNotContain("草稿指令");
     }
 
+    /** 真实入口使用的准备代理必须回滚消息写入失败之前已创建的 Run。 */
+    @Test
+    void preparationRollsBackRunWhenMessageInsertFails() {
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "事务回滚");
+        AgentChatCommand invalid = new AgentChatCommand(session.getId(), "rollback-request", null);
+        assertThatThrownBy(() -> biz.prepare(invalid)).isInstanceOf(RuntimeException.class);
+        Long runCount = jdbc.queryForObject("select count(*) from ai_agent_run where conversation_id = ?", Long.class, session.getId());
+        Long messageCount = jdbc.queryForObject("select count(*) from ai_agent_message where conversation_id = ?", Long.class, session.getId());
+        assertThat(runCount).isZero();
+        assertThat(messageCount).isZero();
+    }
+
     /** 删除接口隐藏会话，保留底层记录，并阻止历史、运行查询和继续聊天。 */
     @Test
     void removesSessionAndBlocksFurtherAccess() throws Exception {
@@ -237,6 +257,71 @@ class AgentChatIntegrationTest {
     /** 真实知识SQL、上下文注入、SSE引用及JSONB持久化贯通，展示接口不泄漏内部指令。 */
     @Test
     void retrievesKnowledgeAndPersistsCitationSources() throws Exception {
+        prepareKnowledge();
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "知识会话");
+        MvcResult result = start(session.getId(), "rag-request");
+        assertThat(complete(result)).contains("event:references", "安装指南", "pageNumbers");
+        AgentRunEntity run = runBiz.requireOwnedRunByRequest(session.getId(), "rag-request");
+        List<AgentCitation> citations = messages.fetchAssistant(run.getId()).getCitations();
+        assertThat(citations).hasSize(1);
+        assertThat(citations.getFirst().getNumber()).isEqualTo(1);
+        assertThat(citations.getFirst().getSource().pageNumbers()).containsExactly(2);
+        ArgumentCaptor<Prompt> prompt = ArgumentCaptor.forClass(Prompt.class);
+        verify(model).stream(prompt.capture());
+        assertThat(prompt.getValue().getContents()).contains("先安装驱动再连接设备");
+        MockHttpServletRequestBuilder profile = get("/agent/chat/agents/1");
+        mvc.perform(profile).andExpect(status().isOk()).andExpect(jsonPath("$.data.openingMessage").value("欢迎使用"))
+                .andExpect(jsonPath("$.data.systemPrompt").doesNotExist());
+    }
+
+    /** 正式 HTTP 入口、官方 ReAct、真实授权检索 SQL、观察回传与引用落库的完整闭环。 */
+    @Test
+    void officialKnowledgeToolUsesSqlAndReturnsObservationToNextModelCall() throws Exception {
+        prepareKnowledge();
+        jdbc.update("update ai_agent set published_config = published_config || '{\"knowledgeMode\":\"tool\"}'::jsonb where id = 1");
+        AtomicInteger calls = new AtomicInteger();
+        AssistantMessage.ToolCall call = new AssistantMessage.ToolCall("knowledge-sql", "function", AgentKnowledgeTool.NAME,
+                "{\"query\":\"问题\",\"baseIds\":[999],\"tenantId\":999}");
+        List<AssistantMessage.ToolCall> toolCalls = List.of(call);
+        AssistantMessage decision = AssistantMessage.builder().content("").toolCalls(toolCalls).build();
+        Generation generation = new Generation(decision);
+        ChatResponse first = new ChatResponse(List.of(generation));
+        ChatResponse finalAnswer = response("根据安装指南回答[1]");
+        when(model.stream(any(Prompt.class))).thenAnswer(invocation -> {
+            assertThat(RequestContext.getTenantCode()).isEqualTo(1L);
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            Prompt prompt = invocation.getArgument(0);
+            if (calls.incrementAndGet() == 1) {
+                assertThat(prompt.getContents()).doesNotContain("先安装驱动再连接设备");
+                return Flux.just(first);
+            }
+            assertKnowledgeObservation(prompt);
+            return Flux.just(finalAnswer);
+        });
+        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "工具知识会话");
+        MvcResult output = start(session.getId(), "knowledge-tool-request");
+        assertThat(complete(output)).contains("event:references", "安装指南", "event:done", "根据安装指南回答[1]");
+        AgentRunEntity run = runBiz.requireOwnedRunByRequest(session.getId(), "knowledge-tool-request");
+        assertThat(run.getRunStatus()).isEqualTo(AgentChatPolicy.SUCCEEDED);
+        assertThat(calls.get()).isEqualTo(2);
+        List<AgentCitation> citations = messages.fetchAssistant(run.getId()).getCitations();
+        assertThat(citations).hasSize(1);
+        assertThat(citations.getFirst().getKnowledgeBaseId()).isEqualTo(200L);
+        assertThat(citations.getFirst().getNumber()).isEqualTo(1);
+    }
+
+    private void assertKnowledgeObservation(Prompt prompt) {
+        for (Message message : prompt.getInstructions()) {
+            if (message instanceof ToolResponseMessage observation) {
+                assertThat(observation.getResponses().getFirst().responseData()).contains("[1]", "先安装驱动再连接设备");
+                return;
+            }
+        }
+        throw new AssertionError("工具观察未进入下一次模型调用");
+    }
+
+    /** 仅写入当前测试独立数据库，复用同一真实知识索引与引用来源数据。 */
+    private void prepareKnowledge() {
         jdbc.execute("""
                 insert into ai_knowledge_base (id, tenant_id, org_id, create_by, name, retrieval_mode)
                 values (200, 1, 10, 7, '设备库', 'keyword');
@@ -255,20 +340,6 @@ class AgentChatIntegrationTest {
                 update ai_agent set published_config = published_config || '{"knowledgeBaseIds":[200],"openingMessage":"欢迎使用"}'::jsonb
                 where id=1;
                 """);
-        AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "知识会话");
-        MvcResult result = start(session.getId(), "rag-request");
-        assertThat(complete(result)).contains("event:references", "安装指南", "pageNumbers");
-        AgentRunEntity run = runBiz.requireOwnedRunByRequest(session.getId(), "rag-request");
-        List<AgentCitation> citations = messages.fetchAssistant(run.getId()).getCitations();
-        assertThat(citations).hasSize(1);
-        assertThat(citations.getFirst().getNumber()).isEqualTo(1);
-        assertThat(citations.getFirst().getSource().pageNumbers()).containsExactly(2);
-        ArgumentCaptor<Prompt> prompt = ArgumentCaptor.forClass(Prompt.class);
-        verify(model).stream(prompt.capture());
-        assertThat(prompt.getValue().getContents()).contains("先安装驱动再连接设备");
-        MockHttpServletRequestBuilder profile = get("/agent/chat/agents/1");
-        mvc.perform(profile).andExpect(status().isOk()).andExpect(jsonPath("$.data.openingMessage").value("欢迎使用"))
-                .andExpect(jsonPath("$.data.systemPrompt").doesNotExist());
     }
 
     /** 直接修改数据库模拟其他实例请求取消，当前节点停止上游订阅并保留已生成文本。 */
@@ -406,7 +477,11 @@ class AgentChatIntegrationTest {
         AgentConversationEntity session = biz.createSession(1L, AgentChatPolicy.CHAT, "失联会话");
         AgentChatExecution execution = biz.beginRun(session.getId(), "lost", "问题");
         jdbc.update("update ai_agent_run set lease_until=current_timestamp - interval '1 minute' where id=?", execution.run().getId());
-        runBiz.expireRunList();
+        // 定时维护不借用请求用户身份，只允许通过受限的过期记录入口完成回收。
+        RequestContextSnapshot maintenanceContext = RequestContextSnapshot.maintenance();
+        try (RequestContextSnapshot.Scope ignored = maintenanceContext.openScope()) {
+            leaseBiz.finishExpiredRunList();
+        }
         assertThat(runs.requireRun(execution.run().getId()).getErrorCode()).isEqualTo(AgentChatPolicy.LEASE_EXPIRED);
         assertThat(messages.fetchAssistant(execution.run().getId()).getMessageStatus()).isEqualTo(AgentChatPolicy.FAILED);
         assertThat(biz.beginRun(session.getId(), "new", "新问题").run().getRunStatus()).isEqualTo(AgentChatPolicy.RUNNING);

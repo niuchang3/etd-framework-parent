@@ -10,40 +10,28 @@ import org.etd.ai.agent.model.AgentCitation;
 import org.etd.ai.agent.service.AgentRunService;
 import org.etd.ai.agent.service.AgentMessageService;
 import org.etd.ai.agent.service.AgentConversationService;
-import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeResult;
 import org.etd.framework.starter.ai.runtime.model.AgentRunProgress;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeStatus;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.etd.ai.agent.entity.AgentMessageEntity;
 
 /** 业务实现框架运行生命周期插槽，编排个人会话授权、Run状态与消息落库事务。 */
 @Service
 @RequiredArgsConstructor
-public class AgentRunBizService implements AgentRunRecordService {
+public class AgentRunBizService implements AgentRunStore {
     private final AgentRunService runs;
     private final AgentMessageService messages;
     private final AgentConversationService conversations;
     private final AgentChatProperties properties;
 
-    /** @param executionId 本轮标识 @return 数据库续租及取消状态，框架不自行推断数据库规则 */
-    @Override
-    public AgentRuntimeStatus renewRunLease(String executionId) {
-        Long id = Long.valueOf(executionId);
-        if (runs.renewLease(id, properties.getLeaseSeconds())) {
-            return AgentRuntimeStatus.RUNNING;
-        }
-        return resolveRuntimeStatus(runs.requireRun(id).getRunStatus());
-    }
-
     /** @param progress 框架部分正文及引用 @throws ApiRuntimeException 无法继续保存时明确停止 */
     @Override
     @Transactional
     public void saveRunProgress(AgentRunProgress progress) {
-        Long id = Long.valueOf(progress.executionId());
+        Long id = Long.valueOf(progress.runId());
         List<AgentCitation> citations = AgentChatConverter.INSTANCE.toCitationList(progress.references());
         if (!checkpointRun(id, progress.content(), citations)) {
             throw new ApiRuntimeException("运行租约已结束");
@@ -55,7 +43,7 @@ public class AgentRunBizService implements AgentRunRecordService {
     @Transactional
     public AgentRuntimeResult finishRun(AgentRuntimeResult result) {
         AgentRunProgress progress = result.progress();
-        Long id = Long.valueOf(progress.executionId());
+        Long id = Long.valueOf(progress.runId());
         AgentRunEntity run = runs.requireRun(id);
         run.setRunStatus(result.status().getCode());
         run.setInputTokens(progress.inputTokens());
@@ -69,14 +57,7 @@ public class AgentRunBizService implements AgentRunRecordService {
         return new AgentRuntimeResult(progress, actualStatus, persisted.getErrorCode(), persisted.getErrorMessage());
     }
 
-    /** 业务数据库租约回收插槽，必须通过Spring代理开启事务。 */
-    @Override
-    @Transactional
-    public void finishExpiredRunList() {
-        expireRunList();
-    }
-
-    private AgentRuntimeStatus resolveRuntimeStatus(String status) {
+    static AgentRuntimeStatus resolveRuntimeStatus(String status) {
         return switch (status) {
             case AgentChatPolicy.RUNNING -> AgentRuntimeStatus.RUNNING;
             case AgentChatPolicy.CANCEL_REQUESTED, AgentChatPolicy.CANCELLED -> AgentRuntimeStatus.CANCELLED;
@@ -129,27 +110,5 @@ public class AgentRunBizService implements AgentRunRecordService {
         return runs.requestCancel(id);
     }
 
-    /** 每批最多100个失联任务；仅跨租户领取语句忽略租户，其余更新按任务真实租户执行。 */
-    @Transactional
-    public void expireRunList() {
-        Long previous = RequestContext.getTenantCode();
-        try {
-            for (AgentRunEntity run : runs.fetchExpiredRunList()) {
-                RequestContext.setTenantCode(run.getTenantId());
-                AgentMessageEntity assistant = messages.fetchAssistant(run.getId());
-                run.setRunStatus(AgentChatPolicy.FAILED);
-                run.setErrorCode(AgentChatPolicy.LEASE_EXPIRED);
-                run.setErrorMessage("执行节点失联或租约到期，请重新发送问题");
-                String status = runs.finishRun(run);
-                if (status != null && assistant != null) {
-                    String messageStatus = AgentChatPolicy.CANCELLED.equals(status)
-                            ? AgentChatPolicy.INTERRUPTED : AgentChatPolicy.FAILED;
-                    messages.modifyAssistant(run.getId(), assistant.getContent(), messageStatus, assistant.getCitations());
-                }
-            }
-        } finally {
-            RequestContext.setTenantCode(previous);
-        }
-    }
 
 }

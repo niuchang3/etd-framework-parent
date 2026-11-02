@@ -6,6 +6,10 @@ public final class AgentPolicy {
     public static final String PUBLIC_COLUMN = "is_public";
     /** 单个Agent最多绑定的知识库数量。 */
     public static final int MAX_KNOWLEDGE_BASES = 100;
+    /** 单个 Agent 最多绑定的工具数量。 */
+    public static final int MAX_TOOLS = 32;
+    /** 官方工具名称的最大字符数。 */
+    public static final int MAX_TOOL_NAME_LENGTH = 128;
     /** 系统提示词最大字符数。 */
     public static final int MAX_PROMPT_LENGTH = 32000;
     /** 最多纳入上下文的历史消息条数，仍需受模型Token预算约束。 */

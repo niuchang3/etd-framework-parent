@@ -22,17 +22,23 @@ import org.etd.ai.agent.controller.AgentChatController;
 import org.etd.ai.agent.service.AgentConversationService;
 import org.etd.ai.agent.service.AgentMessageService;
 import org.etd.ai.agent.service.AgentService;
-import org.etd.framework.starter.ai.runtime.AgentExecutionEngine;
-import org.etd.framework.starter.ai.runtime.AgentRuntime;
-import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
+import org.etd.framework.starter.ai.agent.AgentExecutor;
+import org.etd.framework.starter.ai.agent.ReactAgentExecutor;
+import org.etd.framework.starter.ai.memory.AgentMemoryManager;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunStore;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunLeaseStore;
 import org.etd.framework.starter.ai.runtime.model.AgentChatPreparation;
-import org.etd.framework.starter.ai.runtime.AgentChatService;
-import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
 import org.etd.framework.starter.ai.runtime.spi.AgentChatPrepareService;
-import org.etd.framework.starter.ai.runtime.spi.AgentKnowledgeQueryService;
+import org.etd.framework.starter.ai.memory.semantic.AgentKnowledgeQueryService;
+import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.etd.framework.starter.ai.runtime.AgentChatService;
+import org.etd.framework.starter.ai.runtime.AgentTaskRunner;
+import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeResult;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeStatus;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -56,7 +62,6 @@ import reactor.core.publisher.Sinks;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** 真实Tomcat和HTTP客户端验证小于8KB的delta在模型完成前可读，不依赖MockMvc的内存响应。 */
@@ -65,13 +70,13 @@ class AgentChatSseFlushTest {
     @Test
     void flushesEachDeltaBeforeModelCompletes() {
         Sinks.Empty<Void> release = Sinks.empty();
-        AgentRunRecordService records = mock(AgentRunRecordService.class);
-        when(records.renewRunLease(anyString())).thenReturn(AgentRuntimeStatus.RUNNING);
+        AgentRunStore records = mock(AgentRunStore.class);
+        AgentRunLeaseStore leases = mock(AgentRunLeaseStore.class);
+        when(leases.renewRunLease(anyString())).thenReturn(AgentRuntimeStatus.RUNNING);
         when(records.finishRun(any())).thenAnswer(call -> call.getArgument(0, AgentRuntimeResult.class));
         AgentRuntimeProperties properties = new AgentRuntimeProperties();
-        AgentExecutionEngine engine = new AgentExecutionEngine();
-        try (AgentRuntime runtime = new AgentRuntime(engine, properties, () -> List.of(records))) {
-            AgentChatController controller = createController(runtime, properties, records, release);
+        try (AgentTaskRunner taskRunner = new AgentTaskRunner(properties, leaseProvider(leases))) {
+            AgentChatController controller = createController(taskRunner, properties, records, release);
             AutoConfigurations configurations = AutoConfigurations.of(ServletWebServerFactoryAutoConfiguration.class,
                     DispatcherServletAutoConfiguration.class, JacksonAutoConfiguration.class,
                     HttpMessageConvertersAutoConfiguration.class, WebMvcAutoConfiguration.class);
@@ -92,8 +97,8 @@ class AgentChatSseFlushTest {
     }
 
     /** 仅替换业务数据准备及模型，运行调度、消息组装、Controller和SSE监听器均使用生产实现。 */
-    private AgentChatController createController(AgentRuntime runtime, AgentRuntimeProperties properties,
-            AgentRunRecordService records, Sinks.Empty<Void> release) {
+    private AgentChatController createController(AgentTaskRunner taskRunner,
+            AgentRuntimeProperties properties, AgentRunStore records, Sinks.Empty<Void> release) {
         ChatModel model = mock(ChatModel.class);
         ChatResponse first = response("第一段");
         ChatResponse second = response("第二段");
@@ -102,20 +107,28 @@ class AgentChatSseFlushTest {
         Flux<ChatResponse> remaining = release.asMono().thenMany(lastPart);
         Flux<ChatResponse> stream = Flux.concat(firstPart, remaining);
         when(model.stream(any(Prompt.class))).thenReturn(stream);
+
+        DefaultListableBeanFactory beans = new DefaultListableBeanFactory();
         AgentChatBizService biz = mock(AgentChatBizService.class);
-        AgentChatPrepareService preparation = mock(AgentChatPrepareService.class);
-        AgentChatPreparation data = new AgentChatPreparation();
-        data.setExecutionId("3");
-        data.setModelTenantId("1");
-        data.setModelConnectionId("100");
-        data.setSystemPrompt("测试指令");
         Map<String, Object> attributes = Map.of(AgentChatPolicy.SESSION_ID, 1L, AgentChatPolicy.MESSAGE_ID, 2L);
-        data.setAttributes(attributes);
-        when(preparation.prepareChat(any())).thenReturn(data);
+        AgentChatPreparation prepared = new AgentChatPreparation("3", "1", "100", "测试指令", List.of(),
+                null, null, List.of(), List.of(), false, null, null, null, null, attributes);
+        when(biz.prepare(any())).thenReturn(prepared);
         ModelClientRegistry models = mock(ModelClientRegistry.class);
-        when(models.getChatModel("1", "100")).thenReturn(model);
-        AgentKnowledgeQueryService knowledge = mock(AgentKnowledgeQueryService.class);
-        AgentChatService chat = new AgentChatService(runtime, properties, models, preparation, knowledge, records);
+        when(models.getChatModel(any(), any())).thenReturn(model);
+        AgentRunLeaseStore leases = mock(AgentRunLeaseStore.class);
+        when(leases.renewRunLease(any())).thenReturn(AgentRuntimeStatus.RUNNING);
+        beans.registerSingleton("preparation", biz);
+        beans.registerSingleton("records", records);
+        beans.registerSingleton("leases", leases);
+        beans.registerSingleton("models", models);
+        AgentMemoryManager memory = new AgentMemoryManager();
+        AgentExecutor executor = new ReactAgentExecutor(memory, null, beans.getBeanProvider(ModelClientRegistry.class),
+                beans.getBeanProvider(AgentKnowledgeQueryService.class), beans.getBeanProvider(ToolCallbackProvider.class), properties);
+        AgentChatService chat = new AgentChatService(taskRunner, executor, properties,
+                beans.getBeanProvider(AgentChatPrepareService.class), beans.getBeanProvider(AgentRunStore.class),
+                beans.getBeanProvider(AgentRunLeaseStore.class));
+
         AgentRunBizService runBiz = mock(AgentRunBizService.class);
         AgentService agents = mock(AgentService.class);
         AgentConversationService conversations = mock(AgentConversationService.class);
@@ -124,7 +137,7 @@ class AgentChatSseFlushTest {
     }
 
     /** 客户端逐行读取而非聚合整个响应；读取超时可直接揭示被缓冲的事件。 */
-    private void verifyHttpStream(int port, Sinks.Empty<Void> release, AgentRunRecordService records) throws Exception {
+    private void verifyHttpStream(int port, Sinks.Empty<Void> release, AgentRunStore records) throws Exception {
         URI uri = URI.create("http://127.0.0.1:" + port + "/agent/chat/sessions/1/stream");
         String body = "{\"requestId\":\"flush-test\",\"content\":\"问题\"}";
         HttpRequest.BodyPublisher publisher = HttpRequest.BodyPublishers.ofString(body);
@@ -146,7 +159,7 @@ class AgentChatSseFlushTest {
 
     /** 无论断言是否通过都先放行模型，保证失败时关闭读通道也不会等待未完成的生成。 */
     private void verifyFirstDelta(HttpResponse<InputStream> response, BufferedReader reader, ExecutorService readers,
-            AgentRunRecordService records, Sinks.Empty<Void> release) throws Exception {
+            AgentRunStore records, Sinks.Empty<Void> release) throws Exception {
         try {
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue(HttpHeaders.CACHE_CONTROL)).contains("no-cache, no-transform");
@@ -180,4 +193,10 @@ class AgentChatSseFlushTest {
         List<Generation> results = List.of(generation);
         return new ChatResponse(results);
     }
+    private static ObjectProvider<AgentRunLeaseStore> leaseProvider(AgentRunLeaseStore lease) {
+        DefaultListableBeanFactory beans = new DefaultListableBeanFactory();
+        beans.registerSingleton("lease", lease);
+        return beans.getBeanProvider(AgentRunLeaseStore.class);
+    }
+
 }

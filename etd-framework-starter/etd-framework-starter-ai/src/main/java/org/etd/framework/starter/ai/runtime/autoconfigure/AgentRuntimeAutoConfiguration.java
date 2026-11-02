@@ -1,54 +1,59 @@
 package org.etd.framework.starter.ai.runtime.autoconfigure;
 
-import org.etd.framework.starter.ai.runtime.AgentExecutionEngine;
-import org.etd.framework.starter.ai.runtime.AgentRuntime;
-import org.etd.framework.starter.ai.runtime.AgentChatService;
+import org.etd.framework.starter.ai.agent.AgentExecutor;
+import org.etd.framework.starter.ai.agent.ReactAgentExecutor;
+import org.etd.framework.starter.ai.memory.AgentMemoryManager;
 import org.etd.framework.starter.ai.model.autoconfigure.ModelClientAutoConfiguration;
-import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
-import org.etd.framework.starter.ai.runtime.spi.AgentChatPrepareService;
-import org.etd.framework.starter.ai.runtime.spi.AgentKnowledgeQueryService;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunStore;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunLeaseStore;
+import org.etd.framework.starter.ai.runtime.AgentChatService;
+import org.etd.framework.starter.ai.runtime.AgentTaskRunner;
 import org.etd.framework.starter.ai.runtime.config.AgentRuntimeProperties;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
 import org.springframework.beans.factory.ObjectProvider;
-import java.util.List;
-import java.util.function.Supplier;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.etd.framework.starter.ai.tooling.AgentToolAuthorization;
+import org.etd.framework.starter.ai.runtime.spi.AgentChatPrepareService;
+import org.etd.framework.starter.ai.memory.semantic.AgentKnowledgeQueryService;
+import org.etd.framework.starter.ai.model.client.ModelClientRegistry;
+import org.springframework.ai.tool.ToolCallbackProvider;
 
-/** 注册无业务状态的运行引擎，不创建默认模型或业务会话。 */
+/**
+ * 智能体运行时自动配置：装配记忆管理、执行中枢、任务守护底座与聊天服务门面。
+ */
 @AutoConfiguration(after = ModelClientAutoConfiguration.class)
 @EnableConfigurationProperties(AgentRuntimeProperties.class)
 public class AgentRuntimeAutoConfiguration {
-    /** 仅在业务实现三个接口及模型解析器后注册统一入口；业务无需手工连接各接口。
-     * @param runtime 内部运行容器 @param properties 框架运行策略 @param models 授权模型入口
-     * @param preparation 业务准备实现 @param knowledge 业务检索实现 @param records 业务记录实现
-     * @return 业务统一调用入口，同一应用各接口须具有唯一可注入实现
-     */
+
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean({AgentChatPrepareService.class, AgentKnowledgeQueryService.class,
-            AgentRunRecordService.class, ModelClientRegistry.class})
-    public AgentChatService agentChatService(AgentRuntime runtime, AgentRuntimeProperties properties,
-            ModelClientRegistry models, AgentChatPrepareService preparation,
-            AgentKnowledgeQueryService knowledge, AgentRunRecordService records) {
-        return new AgentChatService(runtime, properties, models, preparation, knowledge, records);
-    }
-    /** @param engine 执行引擎 @param properties 运行策略 @param recordServices 业务生命周期插槽 @return 不绑定HTTP及数据库的运行容器 */
-    @Bean(destroyMethod = "close")
-    @ConditionalOnMissingBean
-    public AgentRuntime agentRuntime(AgentExecutionEngine engine, AgentRuntimeProperties properties,
-            ObjectProvider<AgentRunRecordService> recordServices) {
-        Supplier<List<AgentRunRecordService>> providers = () -> recordServices.orderedStream().toList();
-        return new AgentRuntime(engine, properties, providers);
+    public AgentMemoryManager agentMemoryManager() {
+        return new AgentMemoryManager();
     }
 
-    /** @return 可由应用替换的通用Agent执行器 */
     @Bean
     @ConditionalOnMissingBean
-    public AgentExecutionEngine agentExecutionEngine() {
-        return new AgentExecutionEngine();
+    public AgentExecutor agentExecutor(AgentMemoryManager memoryManager, ObjectProvider<AgentToolAuthorization> authorization,
+            ObjectProvider<ModelClientRegistry> models, ObjectProvider<AgentKnowledgeQueryService> knowledge,
+            ObjectProvider<ToolCallbackProvider> tools, AgentRuntimeProperties properties) {
+        AgentToolAuthorization policy = authorization.getIfAvailable();
+        return new ReactAgentExecutor(memoryManager, policy, models, knowledge, tools, properties);
+    }
+
+    @Bean(destroyMethod = "close")
+    @ConditionalOnMissingBean
+    public AgentTaskRunner agentTaskRunner(AgentRuntimeProperties properties,
+            ObjectProvider<AgentRunLeaseStore> runStores) {
+        return new AgentTaskRunner(properties, runStores);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentChatService agentChatService(AgentTaskRunner taskRunner, AgentExecutor executor,
+            AgentRuntimeProperties properties, ObjectProvider<AgentChatPrepareService> preparation,
+            ObjectProvider<AgentRunStore> records, ObjectProvider<AgentRunLeaseStore> leases) {
+        return new AgentChatService(taskRunner, executor, properties, preparation, records, leases);
     }
 }

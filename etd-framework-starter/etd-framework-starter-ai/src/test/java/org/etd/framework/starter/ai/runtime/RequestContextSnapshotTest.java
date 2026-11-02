@@ -4,6 +4,7 @@ import java.util.concurrent.Executors;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.starter.ai.runtime.context.RequestContextSnapshot;
+import org.etd.framework.starter.ai.runtime.context.RequestContextSnapshot.Scope;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,14 +37,21 @@ class RequestContextSnapshotTest {
         RequestContextSnapshot second = RequestContextSnapshot.capture();
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
             Future<?> task = executor.submit(() -> {
-                first.run(() -> {
+                try (Scope scope = first.openScope()) {
                     assertThat(RequestContext.getTenantCode()).isEqualTo(1L);
                     assertThat(RequestContext.getToken()).isEqualTo("synthetic-user-token");
-                    second.run(() -> assertThat(RequestContext.getTenantCode()).isEqualTo(2L));
+                    try (Scope nested = second.openScope()) {
+                        assertThat(RequestContext.getTenantCode()).isEqualTo(2L);
+                    }
                     assertThat(RequestContext.getTenantCode()).isEqualTo(1L);
-                });
-                assertThatThrownBy(() -> first.run(() -> { throw new IllegalStateException("test"); }))
-                        .isInstanceOf(IllegalStateException.class);
+                }
+                try {
+                    try (Scope scope = first.openScope()) {
+                        throw new IllegalStateException("test");
+                    }
+                } catch (IllegalStateException failure) {
+                    assertThat(failure).hasMessage("test");
+                }
                 assertThat(RequestContext.getTenantCode()).isNull();
                 assertThat(RequestContext.getToken()).isNull();
             });

@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
@@ -19,7 +17,7 @@ import org.etd.ai.knowledge.service.KnowledgeModelSettingsService;
 import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.service.ModelInferenceService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
-import org.etd.framework.starter.ai.runtime.context.RequestContextTaskExecutor;
+import org.etd.framework.starter.ai.memory.semantic.EmbeddingSpace;
 import org.springframework.ai.document.Document;
 import org.etd.framework.common.core.constants.BasicConstant;
 import org.springframework.stereotype.Service;
@@ -45,24 +43,22 @@ public class KnowledgeRecallBizService {
         return recallBase(id, query, false, vectors);
     }
 
-    /** @param ids Agent绑定的知识库 @param query 用户问题 @return 各库独立排序的正式候选 @throws ApiRuntimeException 库停用、无权访问或索引失效 */
+    /** @param ids 业务批量读取范围 @param query 问题 @return 各库独立排名，业务层不组织线程或传递执行回调 */
     public List<List<KnowledgeRecallHit>> recallEnabledList(List<Long> ids, String query) {
-        if (ids == null || ids.isEmpty()) {
-            return List.of();
+        Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
+        List<List<KnowledgeRecallHit>> result = new ArrayList<>();
+        if (ids != null) {
+            for (Long id : ids) {
+                List<KnowledgeRecallHit> hits = recallEnabled(id, query, vectors);
+                result.add(hits);
+            }
         }
-        if (ids.size() == 1) {
-            Map<EmbeddingSpace, float[]> vectors = new HashMap<>();
-            List<KnowledgeRecallHit> hits = recallBase(ids.getFirst(), query, true, vectors);
-            return List.of(hits);
-        }
-        return recallParallelList(ids, query);
+        return List.copyOf(result);
     }
 
-    /** 业务只描述单库召回；上下文传递、任务等待和取消统一交给框架。 */
-    private List<List<KnowledgeRecallHit>> recallParallelList(List<Long> ids, String query) {
-        Map<EmbeddingSpace, float[]> vectors = new ConcurrentHashMap<>();
-        Function<Long, List<KnowledgeRecallHit>> recallTask = id -> recallBase(id, query, true, vectors);
-        return RequestContextTaskExecutor.invokeList(ids, recallTask);
+    /** @param id 单库标识 @param query 问题 @param vectors 框架管理生命周期的本轮向量数据 @return 已授权当前版本候选 */
+    public List<KnowledgeRecallHit> recallEnabled(Long id, String query, Map<EmbeddingSpace, float[]> vectors) {
+        return recallBase(id, query, true, vectors);
     }
 
     /** 每轮缓存仅复用相同模型连接及维度的问题向量，不跨请求缓存身份或查询内容。 */
@@ -105,12 +101,16 @@ public class KnowledgeRecallBizService {
         }
         settings.validate(base.getActiveConnectionId(), ModelType.EMBEDDING, base.getActiveDimensions());
         EmbeddingSpace space = new EmbeddingSpace(base.getActiveConnectionId(), base.getActiveDimensions());
-        float[] vector = cache.get(space);
-        if (vector == null) {
-            List<String> questions = List.of(query);
-            List<float[]> generated = inference.createEmbeddingList(space.connectionId(), space.dimensions(), questions);
-            vector = generated.getFirst();
-            cache.put(space, vector);
+        float[] vector;
+        // 同一 Run 的向量缓存只在生成期间协调；避免多库命中同一空间时重复计费，不能替代上面的授权。
+        synchronized (cache) {
+            vector = cache.get(space);
+            if (vector == null) {
+                List<String> questions = List.of(query);
+                List<float[]> generated = inference.createEmbeddingList(space.connectionId(), space.dimensions(), questions);
+                vector = generated.getFirst();
+                cache.put(space, vector);
+            }
         }
         return recall.fetchVectorList(base, vector, formal);
     }
@@ -119,10 +119,6 @@ public class KnowledgeRecallBizService {
         if (formal && !Objects.equals(base.getDataStatus(), BasicConstant.DataStatus.ENABLED_CODE)) {
             throw new ApiRuntimeException("知识库已停用，不能用于正式问答");
         }
-    }
-
-    /** 查询向量的空间身份；同维度不同连接不能复用。 */
-    private record EmbeddingSpace(Long connectionId, Integer dimensions) {
     }
 
     /** SDK结果通过稳定ID匹配，禁止使用服务商返回正文替代数据库权威正文。 */

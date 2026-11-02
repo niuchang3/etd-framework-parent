@@ -1,5 +1,6 @@
-package org.etd.framework.starter.ai.runtime.model;
+package org.etd.framework.starter.ai.memory;
 
+import org.springframework.ai.document.Document;
 import java.util.List;
 import org.springframework.ai.chat.prompt.Prompt;
 
@@ -7,5 +8,5 @@ import org.springframework.ai.chat.prompt.Prompt;
  * @param prompt 发送给模型的消息
  * @param references 实际纳入上下文的引用，顺序对应从1开始的编号
  */
-public record AgentModelInput(Prompt prompt, List<KnowledgeFragment> references) {
+public record AgentModelInput(Prompt prompt, List<Document> references) {
 }

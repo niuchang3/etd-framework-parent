@@ -7,9 +7,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.etd.ai.knowledge.biz.KnowledgeRecallBizService;
+import org.etd.ai.agent.biz.AgentKnowledgeBizService;
+import org.etd.framework.starter.ai.memory.semantic.AgentSemanticMemory;
+import org.springframework.ai.document.Document;
 import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
-import org.etd.ai.knowledge.model.KnowledgeRecallHit;
 import org.etd.ai.knowledge.service.KnowledgeBaseService;
 import org.etd.ai.knowledge.service.KnowledgeModelSettingsService;
 import org.etd.ai.knowledge.service.KnowledgeRecallService;
@@ -34,8 +36,10 @@ import static org.mockito.Mockito.*;
 class KnowledgeRecallContextTest {
     /** 权限读取替身，模拟依赖当前租户和用户的数据库入口。 */
     private KnowledgeBaseService bases;
-    /** 使用真实业务实现触发内部虚拟线程。 */
+    /** 真实业务单库能力，线程调度由框架语义记忆负责。 */
     private KnowledgeRecallBizService biz;
+    private AgentKnowledgeBizService knowledge;
+    private final AgentSemanticMemory memory = new AgentSemanticMemory();
 
     /** 使用关键词召回隔离外部模型，逐个数据库入口核对租户、认证与请求头。 */
     @BeforeEach
@@ -45,6 +49,7 @@ class KnowledgeRecallContextTest {
         KnowledgeModelSettingsService settings = mock(KnowledgeModelSettingsService.class);
         ModelInferenceService inference = mock(ModelInferenceService.class);
         biz = new KnowledgeRecallBizService(bases, recall, settings, inference);
+        knowledge = new AgentKnowledgeBizService(biz, bases);
         when(bases.requireBase(anyLong(), eq(false), eq(false))).thenAnswer(call -> {
             Long id = call.getArgument(0);
             assertContext(id / 10);
@@ -101,7 +106,7 @@ class KnowledgeRecallContextTest {
         doThrow(denied).when(bases).requireBase(11L, false, false);
         installIdentity(1L);
         List<Long> ids = List.of(11L, 12L);
-        assertThatThrownBy(() -> biz.recallEnabledList(ids, "问题")).isSameAs(denied);
+        assertThatThrownBy(() -> memory.queryKnowledgeList(ids, "问题", knowledge)).isSameAs(denied);
         assertContext(1L);
     }
 
@@ -110,7 +115,7 @@ class KnowledgeRecallContextTest {
         installIdentity(tenantId);
         try {
             List<Long> ids = List.of(tenantId * 10 + 1, tenantId * 10 + 2);
-            List<List<KnowledgeRecallHit>> results = biz.recallEnabledList(ids, "问题");
+            List<List<Document>> results = memory.queryKnowledgeList(ids, "问题", knowledge);
             assertThat(results).hasSize(2);
             assertContext(tenantId);
             assertThat(RequestContext.getAttribute("child-base")).isNull();

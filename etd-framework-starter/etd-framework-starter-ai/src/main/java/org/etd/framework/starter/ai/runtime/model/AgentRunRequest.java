@@ -1,22 +1,26 @@
 package org.etd.framework.starter.ai.runtime.model;
 
 import java.util.Map;
-import java.util.function.Supplier;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunRecordService;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
-import org.springframework.ai.chat.model.ChatModel;
+import org.etd.framework.starter.ai.adapter.AgentRunEventListener;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunStore;
+import org.etd.framework.starter.ai.persistence.spi.AgentRunLeaseStore;
 
-/** 框架内部执行定义，由AgentChatService统一组装，业务仅实现接口并返回AgentChatPreparation数据。
- * @param executionId 唯一执行标识
- * @param chatRequest 已授权聊天输入及检索插槽
- * @param model 本轮授权模型供应器，在实际调用前执行
- * @param recordService 运行记录读写插槽
- * @param eventListener 运行事件接收插槽
- * @param attributes 业务关联标识，不允许存放凭证
+/** 框架内部任务输入：纯授权数据、记录与租约存储、输出适配；不含模型或检索回调。
+ * @param preparation 业务短事务返回的数据
+ * @param question 本轮问题
+ * @param runStore 正文与结果存储
+ * @param leaseStore 租约协调存储
+ * @param eventListener 每次请求独立的事件通道
  */
-public record AgentRunRequest(String executionId, AgentExecutionRequest chatRequest, Supplier<ChatModel> model,
-        AgentRunRecordService recordService, AgentRunEventListener eventListener, Map<String, Object> attributes) {
-    public AgentRunRequest {
-        attributes = Map.copyOf(attributes);
+public record AgentRunRequest(AgentChatPreparation preparation, String question, AgentRunStore runStore,
+        AgentRunLeaseStore leaseStore, AgentRunEventListener eventListener) {
+    /** @return 唯一 Run 标识，任务不创建第二个 Execution 实体 */
+    public String runId() {
+        return preparation.runId();
+    }
+
+    /** @return 已授权的协议关联数据，不包含可信身份 */
+    public Map<String, Object> attributes() {
+        return preparation.attributes();
     }
 }

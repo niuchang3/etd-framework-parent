@@ -2,30 +2,35 @@ package org.etd.framework.starter.ai.runtime.model;
 
 import java.util.List;
 import java.util.Map;
-import lombok.Data;
+import org.etd.framework.starter.ai.memory.semantic.AgentKnowledgeMode;
 import org.springframework.ai.chat.messages.Message;
 
-/** 业务准备接口返回的聊天数据；只提供已授权事实，框架自行组装模型选项和执行流程。 */
-@Data
-public class AgentChatPreparation {
-    /** 业务已建立并提交的本轮运行记录ID，后续保存回调使用同一标识。 */
-    private String executionId;
-    /** 授权模型连接实际所属租户，框架通过模型注册中心再次校验。 */
-    private String modelTenantId;
-    /** 本轮聊天模型连接ID，不传模型实例或凭证。 */
-    private String modelConnectionId;
-    /** 本轮系统提示词。 */
-    private String systemPrompt;
-    /** 已授权的历史消息，按时间升序排列，不含本轮问题。 */
-    private List<Message> history = List.of();
-    /** 本轮已授权绑定的知识库ID；空列表表示不调用检索接口。 */
-    private List<Long> knowledgeBaseIds = List.of();
-    /** 最终回答输出Token上限，未提供时使用框架配置。 */
-    private Integer maxOutputTokens;
-    /** 模型生成温度，未提供时沿用模型默认值。 */
-    private Double temperature;
-    /** 是否要求并展示知识引用，默认开启。 */
-    private boolean citationsEnabled = true;
-    /** 事件所需的业务关联标识，例如会话和消息ID；禁止存放凭证和内部配置。 */
-    private Map<String, Object> attributes = Map.of();
+/** 业务短事务返回的授权数据，不含模型客户端、执行器、回调或凭证。
+ * @param runId 已创建的 Run 标识
+ * @param modelTenantId 模型连接所属租户，仍须由网关再次授权
+ * @param modelConnectionId 已授权连接标识
+ * @param systemPrompt 已发布或有调试资格的系统指令
+ * @param history 已授权历史消息
+ * @param maxOutputTokens 可选输出 Token 上限
+ * @param temperature 可选生成温度
+ * @param knowledgeBaseIds Agent 已绑定的知识库范围，实际检索必须按当前用户独立授权
+ * @param toolNames Agent 配置允许的官方工具名称，不代表当前用户有执行权限
+ * @param citationsEnabled 是否要求模型输出引用编号
+ * @param knowledgeMode 知识接入模式，省略时有绑定则预检索，否则纯模型
+ * @param inputTokenBudget 可选的 Agent 输入预算，仍以 Token 而非消息条数控制
+ * @param modelCallLimit 可选的单 Run 图内模型调用上限，不含检索词改写
+ * @param toolCallLimit 可选的单 Run 工具调用次数上限
+ * @param attributes SSE 关联数据，不包含可信身份
+ */
+public record AgentChatPreparation(String runId, String modelTenantId, String modelConnectionId,
+        String systemPrompt, List<Message> history, Integer maxOutputTokens, Double temperature,
+        List<Long> knowledgeBaseIds, List<String> toolNames, boolean citationsEnabled, AgentKnowledgeMode knowledgeMode,
+        Integer inputTokenBudget, Integer modelCallLimit,
+        Integer toolCallLimit, Map<String, Object> attributes) {
+    public AgentChatPreparation {
+        history = List.copyOf(history);
+        knowledgeBaseIds = knowledgeBaseIds == null ? List.of() : List.copyOf(knowledgeBaseIds);
+        toolNames = toolNames == null ? List.of() : List.copyOf(toolNames);
+        attributes = Map.copyOf(attributes);
+    }
 }

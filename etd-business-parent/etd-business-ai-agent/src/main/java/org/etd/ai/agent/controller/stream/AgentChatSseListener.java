@@ -5,12 +5,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.etd.ai.agent.constant.AgentChatPolicy;
 import org.etd.ai.agent.converter.AgentChatConverter;
 import org.etd.ai.agent.model.AgentChatEvent;
-import org.etd.framework.starter.ai.runtime.AgentRunControl;
+import reactor.core.Disposable;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeEvent;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeEventType;
 import org.etd.framework.starter.ai.runtime.model.AgentRuntimeStatus;
-import org.etd.framework.starter.ai.runtime.spi.AgentOutputException;
-import org.etd.framework.starter.ai.runtime.spi.AgentRunEventListener;
+import org.etd.framework.starter.ai.adapter.AgentOutputException;
+import org.etd.framework.starter.ai.adapter.AgentRunEventListener;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 import org.etd.ai.agent.model.AgentCitation;
@@ -21,7 +21,7 @@ public final class AgentChatSseListener implements AgentRunEventListener {
     private final SseEmitter emitter;
     private final AtomicBoolean finished = new AtomicBoolean();
     private final AtomicBoolean disconnected = new AtomicBoolean();
-    private volatile AgentRunControl handle;
+    private volatile Disposable handle;
 
     /** @param emitter 本次HTTP输出通道 */
     public AgentChatSseListener(SseEmitter emitter) {
@@ -32,11 +32,10 @@ public final class AgentChatSseListener implements AgentRunEventListener {
     }
 
     /** @param handle 框架启动后返回的控制句柄；若先发生断线则立即取消 */
-    @Override
-    public void bind(AgentRunControl handle) {
+    public void bind(Disposable handle) {
         this.handle = handle;
         if (disconnected.get()) {
-            handle.cancel();
+            handle.dispose();
         }
     }
 
@@ -66,7 +65,7 @@ public final class AgentChatSseListener implements AgentRunEventListener {
 
     private AgentChatEvent toEvent(AgentRuntimeEvent input) {
         AgentChatEvent event = new AgentChatEvent();
-        event.setRunId(Long.valueOf(input.progress().executionId()));
+        event.setRunId(Long.valueOf(input.progress().runId()));
         event.setSessionId((Long) input.attributes().get(AgentChatPolicy.SESSION_ID));
         event.setMessageId((Long) input.attributes().get(AgentChatPolicy.MESSAGE_ID));
         event.setSequence(input.sequence());
@@ -99,9 +98,9 @@ public final class AgentChatSseListener implements AgentRunEventListener {
     private void disconnect() {
         if (!finished.get()) {
             disconnected.set(true);
-            AgentRunControl current = handle;
+            Disposable current = handle;
             if (current != null) {
-                current.cancel();
+                current.dispose();
             }
         }
     }
