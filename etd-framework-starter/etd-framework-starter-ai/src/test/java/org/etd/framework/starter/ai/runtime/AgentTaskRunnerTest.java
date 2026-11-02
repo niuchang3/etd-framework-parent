@@ -8,7 +8,11 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
+import org.etd.framework.common.core.user.UserDetails;
 import org.etd.framework.starter.ai.adapter.AgentRunEventListener;
 import org.etd.framework.starter.ai.adapter.AgentOutputException;
 import org.etd.framework.starter.ai.agent.AgentExecutor;
@@ -25,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.etd.framework.common.core.context.model.RequestContext;
 import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -277,6 +282,285 @@ class AgentTaskRunnerTest {
                 closed.countDown();
             }
         };
+    }
+
+    /** 两个续租操作同时阻塞时，第三个 Run 的超时守护不能被它们占住。 */
+    @Test
+    void blockedLeaseOperationsDoNotDelayAnotherRunsDeadline() throws Exception {
+        taskRunner.close();
+        properties.setMaxConcurrentRuns(3);
+        properties.setTimeoutSeconds(2);
+        taskRunner = new AgentTaskRunner(properties, leaseProvider(leaseStore));
+        CountDownLatch blocked = new CountDownLatch(2);
+        CountDownLatch release = new CountDownLatch(1);
+        when(leaseStore.renewRunLease(any())).thenAnswer(invocation -> {
+            String id = invocation.getArgument(0);
+            if (id.startsWith("blocked-")) {
+                awaitBlockedMaintenance(blocked, release);
+            }
+            return AgentRuntimeStatus.RUNNING;
+        });
+        CountDownLatch closed = new CountDownLatch(1);
+        try {
+            startNeverEndingRun("blocked-1", closingListener(new CountDownLatch(1), false));
+            startNeverEndingRun("blocked-2", closingListener(new CountDownLatch(1), false));
+            assertThat(blocked.await(3, TimeUnit.SECONDS)).isTrue();
+            startNeverEndingRun("independent-deadline", closingListener(closed, false));
+            assertThat(closed.await(4, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            release.countDown();
+        }
+    }
+
+    /** 模拟驱动不响应线程中断；只由测试放行，避免假设数据库一定可被中断。 */
+    private void awaitBlockedMaintenance(CountDownLatch entered, CountDownLatch release) {
+        entered.countDown();
+        boolean interrupted = false;
+        while (release.getCount() != 0) {
+            try {
+                release.await();
+            } catch (InterruptedException failure) {
+                interrupted = true;
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private AgentRunControl startNeverEndingRun(String id, AgentRunEventListener output) {
+        AgentChatPreparation preparation = prepared(id);
+        AgentRunRequest request = new AgentRunRequest(preparation, "问题", runStore, leaseStore, output);
+        AgentExecutor executor = (prepared, question, control) -> Flux.never();
+        return taskRunner.start(request, executor);
+    }
+
+    /** 慢心跳不能拖住同一 Run 的续租及跨节点取消查询。 */
+    @Test
+    void blockedHeartbeatDoesNotDelayLeaseCancellation() throws Exception {
+        CountDownLatch heartbeat = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch persisted = new CountDownLatch(1);
+        AtomicInteger renewals = new AtomicInteger();
+        when(leaseStore.renewRunLease(any())).thenAnswer(invocation -> {
+            int calls = renewals.incrementAndGet();
+            return calls > 1 && heartbeat.getCount() == 0 ? AgentRuntimeStatus.CANCELLED : AgentRuntimeStatus.RUNNING;
+        });
+        when(runStore.finishRun(any())).thenAnswer(invocation -> {
+            AgentRuntimeResult result = invocation.getArgument(0);
+            assertThat(result.status()).isEqualTo(AgentRuntimeStatus.CANCELLED);
+            persisted.countDown();
+            return result;
+        });
+        AgentRunEventListener output = new AgentRunEventListener() {
+            @Override
+            public void onEvent(AgentRuntimeEvent event) {
+                if (event.type() == AgentRuntimeEventType.HEARTBEAT) {
+                    awaitBlockedMaintenance(heartbeat, release);
+                }
+            }
+        };
+        try {
+            startNeverEndingRun("slow-heartbeat", output);
+            assertThat(heartbeat.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(persisted.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(renewals.get()).isGreaterThanOrEqualTo(2);
+        } finally {
+            release.countDown();
+        }
+    }
+
+    /** 底层维护不响应中断时，Run 退出也不能提前归还容量并不断创建替代维护线程。 */
+    @Test
+    void blockedMaintenanceRetainsCapacityAndDoesNotOverlap() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch closed = new CountDownLatch(1);
+        AtomicInteger renewals = new AtomicInteger();
+        when(leaseStore.renewRunLease(any())).thenAnswer(invocation -> {
+            renewals.incrementAndGet();
+            awaitBlockedMaintenance(entered, release);
+            return AgentRuntimeStatus.RUNNING;
+        });
+        AgentRunControl control = startNeverEndingRun("retained-maintenance", closingListener(closed, false));
+        try {
+            assertThat(entered.await(3, TimeUnit.SECONDS)).isTrue();
+            control.dispose();
+            assertThat(closed.await(3, TimeUnit.SECONDS)).isTrue();
+            startNeverEndingRun("remaining-slot", closingListener(new CountDownLatch(1), false));
+            AgentRunEventListener third = closingListener(new CountDownLatch(1), false);
+            assertThatThrownBy(() -> startNeverEndingRun("over-capacity", third))
+                    .isInstanceOf(ApiRuntimeException.class);
+            // 第一个 Run 的数据库调用未退出，不能为它重复启动续租任务。
+            assertThat(renewals.get()).isEqualTo(1);
+        } finally {
+            release.countDown();
+        }
+    }
+
+    /** 高频短任务取消周期维护后，队列应只剩全局扫描触发器，而非等待延迟到期才移除。 */
+    @Test
+    void completedRunsImmediatelyRemoveTheirScheduledTasks() throws Exception {
+        ScheduledThreadPoolExecutor clock = (ScheduledThreadPoolExecutor) ReflectionTestUtils.getField(taskRunner, "clock");
+        AgentExecutor executor = (prepared, question, control) -> Flux.just("完成");
+        for (int index = 0; index < 20; index++) {
+            CountDownLatch closed = new CountDownLatch(1);
+            AgentRunEventListener output = closingListener(closed, false);
+            AgentChatPreparation preparation = prepared("short-" + index);
+            AgentRunRequest request = new AgentRunRequest(preparation, "问题", runStore, leaseStore, output);
+            taskRunner.start(request, executor);
+            assertThat(closed.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(clock.getQueue()).hasSize(1);
+        }
+    }
+
+    /** 全局回收阻塞时只允许一个在途任务，不能阻塞在线任务的超时守护。 */
+    @Test
+    void blockedRecoveryDoesNotDelayOnlineDeadlineOrDuplicateRecovery() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger recoveries = new AtomicInteger();
+        doAnswer(invocation -> {
+            recoveries.incrementAndGet();
+            awaitBlockedMaintenance(entered, release);
+            return null;
+        }).when(leaseStore).finishExpiredRunList();
+        properties.setTimeoutSeconds(1);
+        CountDownLatch closed = new CountDownLatch(1);
+        try {
+            taskRunner.triggerExpiredRunScan();
+            assertThat(entered.await(3, TimeUnit.SECONDS)).isTrue();
+            taskRunner.triggerExpiredRunScan();
+            startNeverEndingRun("deadline-during-recovery", closingListener(closed, false));
+            assertThat(closed.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(recoveries.get()).isEqualTo(1);
+        } finally {
+            release.countDown();
+        }
+    }
+
+    /** 官方取消令牌同步执行第三方回调时，也不能占住调度线程影响另一个 Run。 */
+    @Test
+    void blockingCancellationCallbackDoesNotDelayAnotherDeadline() throws Exception {
+        properties.setTimeoutSeconds(1);
+        CountDownLatch callback = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch firstClosed = new CountDownLatch(1);
+        CountDownLatch secondClosed = new CountDownLatch(1);
+        AgentChatPreparation preparation = prepared("blocking-cancel-callback");
+        AgentRunEventListener output = closingListener(firstClosed, false);
+        AgentRunRequest request = new AgentRunRequest(preparation, "问题", runStore, leaseStore, output);
+        AgentExecutor executor = (prepared, question, control) -> configureBlockingCancellation(control, callback, release);
+        try {
+            taskRunner.start(request, executor);
+            assertThat(callback.await(3, TimeUnit.SECONDS)).isTrue();
+            startNeverEndingRun("other-deadline", closingListener(secondClosed, false));
+            assertThat(secondClosed.await(3, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            release.countDown();
+        }
+        assertThat(firstClosed.await(3, TimeUnit.SECONDS)).isTrue();
+    }
+
+    /** 新的数据库、心跳和停止异步边界必须使用 Run 快照，不能使用触发线程的身份。 */
+    @Test
+    void backgroundMaintenanceAndTimeoutKeepRunIdentity() throws Exception {
+        UserDetails user = new UserDetails();
+        user.setId(1701L);
+        RequestContext.setUser(user);
+        RequestContext.setTenantCode(17L);
+        RequestContext.setOrganizationId(170L);
+        RequestContext.setAttribute("x-business", "maintenance-business");
+        RequestContext.setToken("synthetic-run-maintenance");
+        MDC.put("trace", "maintenance-17");
+        UsernamePasswordAuthenticationToken authentication = UsernamePasswordAuthenticationToken.authenticated("user-17", null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        properties.setTimeoutSeconds(2);
+        CountDownLatch renewed = new CountDownLatch(1);
+        CountDownLatch stopped = new CountDownLatch(1);
+        CountDownLatch closed = new CountDownLatch(1);
+        when(leaseStore.renewRunLease(any())).thenAnswer(invocation -> {
+            assertMaintenanceIdentity(authentication);
+            renewed.countDown();
+            return AgentRuntimeStatus.RUNNING;
+        });
+        AgentChatPreparation preparation = prepared("maintenance-context");
+        AgentRunEventListener output = identityCheckingListener(authentication, closed);
+        AgentRunRequest request = new AgentRunRequest(preparation, "问题", runStore, leaseStore, output);
+        AgentExecutor executor = (prepared, question, control) -> configureIdentityCancellation(control, authentication, stopped);
+        try {
+            taskRunner.start(request, executor);
+            RequestContext.clean();
+            SecurityContextHolder.clearContext();
+            MDC.clear();
+            assertThat(renewed.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(stopped.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(closed.await(3, TimeUnit.SECONDS)).isTrue();
+            assertThat(RequestContext.getTenantCode()).isNull();
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        } finally {
+            RequestContext.clean();
+            SecurityContextHolder.clearContext();
+            MDC.clear();
+        }
+    }
+
+    private void assertStopIdentity(UsernamePasswordAuthenticationToken authentication, CountDownLatch stopped) {
+        assertMaintenanceIdentity(authentication);
+        stopped.countDown();
+    }
+
+    /** 官方取消令牌要求回调签名，回调只调用明确的阻塞测试方法。 */
+    private Flux<String> configureBlockingCancellation(AgentRunControl control, CountDownLatch callback, CountDownLatch release) {
+        control.cancellationToken().onCancel(() -> awaitBlockedMaintenance(callback, release));
+        return Flux.never();
+    }
+
+    /** 测试只通过官方令牌注册，取消回调的线程由生产容器决定。 */
+    private Flux<String> configureIdentityCancellation(AgentRunControl control,
+            UsernamePasswordAuthenticationToken authentication, CountDownLatch stopped) {
+        control.cancellationToken().onCancel(() -> assertStopIdentity(authentication, stopped));
+        return Flux.never();
+    }
+
+    private void assertMaintenanceIdentity(UsernamePasswordAuthenticationToken authentication) {
+        assertThat(RequestContext.getTenantCode()).isEqualTo(17L);
+        assertThat(RequestContext.getUser().getId()).isEqualTo(1701L);
+        assertThat(RequestContext.getOrganizationId()).isEqualTo(170L);
+        assertThat(RequestContext.getHeaderContext().toMap()).containsEntry("x-business", "maintenance-business");
+        assertThat(RequestContext.getToken()).isEqualTo("synthetic-run-maintenance");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isSameAs(authentication);
+        assertThat(MDC.get("trace")).isEqualTo("maintenance-17");
+    }
+
+    /** 开始、后台心跳、终态和关闭都必须恢复同一 Run 的完整请求上下文。 */
+    private AgentRunEventListener identityCheckingListener(UsernamePasswordAuthenticationToken authentication,
+            CountDownLatch closed) {
+        return new AgentRunEventListener() {
+            @Override
+            public void onEvent(AgentRuntimeEvent event) {
+                assertMaintenanceIdentity(authentication);
+            }
+
+            @Override
+            public void close() {
+                assertMaintenanceIdentity(authentication);
+                closed.countDown();
+            }
+        };
+    }
+
+    /** 容器关闭属于取消，不因关闭定时器或异步派发竞争而错误保存成模型失败。 */
+    @Test
+    void shutdownPersistsCancellation() throws Exception {
+        CountDownLatch closed = new CountDownLatch(1);
+        AgentRunEventListener output = closingListener(closed, false);
+        startNeverEndingRun("shutdown-cancel", output);
+        taskRunner.close();
+        assertThat(closed.await(3, TimeUnit.SECONDS)).isTrue();
+        ArgumentCaptor<AgentRuntimeResult> result = ArgumentCaptor.forClass(AgentRuntimeResult.class);
+        verify(runStore).finishRun(result.capture());
+        assertThat(result.getValue().status()).isEqualTo(AgentRuntimeStatus.CANCELLED);
     }
 
     @Test
