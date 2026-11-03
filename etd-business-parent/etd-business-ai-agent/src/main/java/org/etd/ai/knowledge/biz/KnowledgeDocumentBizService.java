@@ -47,10 +47,15 @@ public class KnowledgeDocumentBizService {
         if (!Objects.equals(document.getIsPublic(), input.getIsPublic())) {
             chunks.modifyPublicByDocument(id, input.getIsPublic());
         }
+        boolean nameChanged = !Objects.equals(document.getDocumentName(), input.getDocumentName());
         KnowledgeDocumentConverter.INSTANCE.updateEntity(input, document);
-        // 资料版本变化会取消在途向量确认；后续重试必须使用最新版本。
-        if (KnowledgeVectorStatus.PROCESSING.equals(document.getVectorStatus())) {
-            document.setVectorStatus(KnowledgeVectorStatus.STALE);
+        if (nameChanged) {
+            // 名称改变后，已取出的向量候选也必须在版本复核时失效，不能只依赖后续查询过滤状态。
+            document.setProcessingVersion(Math.incrementExact(document.getProcessingVersion()));
+        }
+        // 名称参与 Embedding，改名必须失效旧向量；普通配置变化仍只取消在途确认。
+        if (nameChanged || KnowledgeVectorStatus.PROCESSING.equals(document.getVectorStatus())) {
+            document.setVectorStatus(KnowledgeVectorStatus.afterContentChange(document.getVectorStatus()));
         }
         documents.modifyDocument(document);
     }

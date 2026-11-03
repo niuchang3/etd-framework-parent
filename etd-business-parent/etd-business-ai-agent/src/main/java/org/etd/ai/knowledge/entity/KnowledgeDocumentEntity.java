@@ -24,7 +24,7 @@ public class KnowledgeDocumentEntity extends OrgScopedEntity {
     private Integer dataStatus;
     /** 所属知识库，写入时由可信归属校验。 */
     private Long knowledgeBaseId;
-    /** 正文处理版本，内容变更后递增，防止旧向量继续被召回。 */
+    /** 处理版本，正文或参与向量化的资料名称变更后递增，防止旧向量及在途候选继续生效。 */
     @TableField(fill = FieldFill.INSERT)
     @TableFieldExtend("0")
     private Long processingVersion;

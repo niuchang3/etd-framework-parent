@@ -185,6 +185,97 @@ class KnowledgeRecallPersistenceTest {
         assertThat(recall.testRecall(10L, "安装")).hasSize(2);
     }
 
+    /** 只在标题、章节或图表说明中出现的查询也能命中，返回及向量副本正文不含格式化前缀。 */
+    @Test
+    void embedsDescriptiveMetadataAndRecallsCleanContent() {
+        jdbc.execute("""
+                update ai_knowledge_base set retrieval_mode='vector', similarity_threshold=0.5 where id=10;
+                update ai_knowledge_document set document_name='员工手册' where id=1;
+                update ai_knowledge_chunk set content='提前三个工作日提交申请',
+                    source='{"headings":["休假制度","年假申请"],"captions":["审批流程图"],"pageNumbers":[7],"documentItemRefs":["#/texts/9"]}'
+                    where id=101;
+                update ai_knowledge_chunk set content='请联系负责人',
+                    source='{"headings":["考勤"],"captions":[],"pageNumbers":[8],"documentItemRefs":[]}'
+                    where id=102;
+                """);
+        when(inference.createEmbeddingList(any(), any(), any())).thenAnswer(call -> createMetadataVectors(call.getArgument(2), call.getArgument(1)));
+        editing.confirmChunks(1L, 0L);
+        List<KnowledgeRecallHit> byHeading = recall.testRecall(10L, "年假申请");
+        assertThat(byHeading).extracting(KnowledgeRecallHit::getChunkId).containsExactly(101L);
+        assertThat(byHeading.getFirst().getContent()).isEqualTo("提前三个工作日提交申请");
+        assertThat(byHeading.getFirst().getSource().captions()).containsExactly("审批流程图");
+        assertThat(recall.testRecall(10L, "员工手册")).hasSize(2);
+        assertThat(recall.testRecall(10L, "审批流程图")).extracting(KnowledgeRecallHit::getChunkId).containsExactly(101L);
+        assertThat(jdbc.queryForObject("select content from ai_knowledge_chunk where id=101", String.class)).isEqualTo("提前三个工作日提交申请");
+        assertThat(jdbc.queryForObject("select content from ai_vector_768 where chunk_id=101", String.class)).isEqualTo("提前三个工作日提交申请");
+    }
+
+    /** 名称是向量语义的一部分，改名后拒绝旧向量，重新确认替换全部副本。 */
+    @Test
+    void renamingInvalidatesVectorsAndReconfirmationUsesLatestNameAndBody() {
+        KnowledgeDocumentEntity initial = editing.confirmChunks(1L, 0L);
+        List<KnowledgeRecallHit> previousHits = recall.testRecall(10L, "安装");
+        KnowledgeDocumentEntity input = new KnowledgeDocumentEntity();
+        input.setDocumentName("新的年假制度");
+        input.setFolderId(1L);
+        input.setIsPublic(false);
+        documentEditing.modifyDocument(1L, input, initial.getVersion());
+        KnowledgeDocumentEntity renamed = documents.requireDocument(1L, false);
+        assertThat(renamed.getVectorStatus()).isEqualTo(KnowledgeVectorStatus.STALE);
+        assertThat(renamed.getProcessingVersion()).isEqualTo(initial.getProcessingVersion() + 1);
+        assertThat(recallQueries.retainCurrentList(10L, previousHits, false)).isEmpty();
+        assertThat(recallQueries.expandContextWindow(previousHits, 1, false)).isEmpty();
+        jdbc.update("update ai_knowledge_base set retrieval_mode='vector' where id=10");
+        assertThat(recall.testRecall(10L, "安装")).isEmpty();
+        Map<Long, String> changes = Map.of(101L, "使用当前人工编辑正文");
+        KnowledgeDocumentEntity edited = editing.modifyChunks(1L, renamed.getVersion(), changes);
+        clearInvocations(inference);
+        when(inference.createEmbeddingList(any(), any(), any())).thenAnswer(call -> {
+            List<String> texts = call.getArgument(2);
+            assertThat(texts.getFirst()).contains("新的年假制度", "使用当前人工编辑正文")
+                    .doesNotContain("设备指南", "设备安装指南");
+            float[] value = vector(768);
+            return List.of(value, value);
+        });
+        editing.confirmChunks(1L, edited.getVersion());
+        verify(inference).createEmbeddingList(eq(30L), eq(768), any());
+        assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isEqualTo(2);
+    }
+
+    /** 推理期间改名必须拒绝旧快照发布，不能让已失效的名称重新成为生效向量。 */
+    @Test
+    void rejectsRenameDuringEmbedding() {
+        when(inference.createEmbeddingList(any(), any(), any())).thenAnswer(call -> {
+            KnowledgeDocumentEntity current = documents.requireDocument(1L, false);
+            KnowledgeDocumentEntity input = new KnowledgeDocumentEntity();
+            input.setDocumentName("推理期间改名");
+            input.setFolderId(1L);
+            input.setIsPublic(false);
+            documentEditing.modifyDocument(1L, input, current.getVersion());
+            float[] value = vector(768);
+            return List.of(value, value);
+        });
+        assertThatThrownBy(() -> editing.confirmChunks(1L, 0L)).hasMessageContaining("分片已变化");
+        assertThat(jdbc.queryForObject("select count(*) from ai_vector_768", Integer.class)).isZero();
+        assertThat(documents.requireDocument(1L, false).getVectorStatus()).isEqualTo(KnowledgeVectorStatus.STALE);
+    }
+
+    /** 确定性替身按描述性词元编码，真实 pgvector 查询负责余弦排序及阈值过滤。 */
+    private List<float[]> createMetadataVectors(List<String> texts, int dimensions) {
+        List<float[]> results = new ArrayList<>();
+        for (String text : texts) {
+            float[] value = new float[dimensions];
+            value[0] = text.contains("年假申请") ? 1 : 0;
+            value[1] = text.contains("员工手册") ? 1 : 0;
+            value[2] = text.contains("审批流程图") ? 1 : 0;
+            if (value[0] == 0 && value[1] == 0 && value[2] == 0) {
+                value[3] = 1;
+            }
+            results.add(value);
+        }
+        return results;
+    }
+
     /** 正式召回排除未启用资料，包含候选复核和邻片扩展，管理测试行为保持独立。 */
     @Test
     void filtersDisabledDocumentsAtEveryFormalRecallBoundary() {

@@ -451,7 +451,7 @@ comment on column ai_knowledge_chunk.document_id is '所属资料ID，无物理�
 comment on column ai_knowledge_chunk.chunk_index is '原文顺序，从0开始，合并后允许空号';
 comment on column ai_knowledge_chunk.content is '可编辑的权威正文';
 comment on column ai_knowledge_chunk.token_count is 'cl100k_base正文Token数，与Docling切分所选分词器可不同';
-comment on column ai_knowledge_chunk.source is '来源标题、页码及Docling结构块引用';
+comment on column ai_knowledge_chunk.source is '来源标题、可选图表说明、页码及Docling结构块引用；描述性信息参与向量化，正文单独保存';
 comment on column ai_knowledge_chunk.tenant_id is '复制所属资料租户';
 comment on column ai_knowledge_chunk.org_id is '复制所属资料组织归属';
 comment on column ai_knowledge_chunk.create_time is '创建时间';
@@ -550,7 +550,7 @@ create index idx_ai_document_base on ai_knowledge_document (knowledge_base_id, c
 create index idx_ai_document_public on ai_knowledge_document (knowledge_base_id, folder_id) where is_public = true and del_flag = 0;
 create index idx_ai_chunk_base on ai_knowledge_chunk (knowledge_base_id, document_id) where del_flag = 0;
 comment on column ai_knowledge_document.knowledge_base_id is '所属知识库，上传与移动须校验分类归属';
-comment on column ai_knowledge_document.processing_version is '正文处理轮次，正文编辑和重新生成递增，元数据编辑不变';
+comment on column ai_knowledge_document.processing_version is '处理轮次，正文编辑、重新生成及参与向量化的资料名称变更时递增，其他元数据编辑不变';
 comment on column ai_knowledge_chunk.knowledge_base_id is '所属知识库，由资料继承';
 comment on column ai_knowledge_chunk.processing_version is '生成时的资料轮次，召回最终以资料当前轮次校验';
 comment on column ai_knowledge_base.id is '全局雪花主键';
@@ -564,7 +564,7 @@ comment on column ai_knowledge_base.data_status is '知识库启停状态：0禁
 comment on column ai_knowledge_base.del_flag is '逻辑删除：0未删除、1已删除';
 comment on column ai_knowledge_base.index_lease_until is '后台任务租约，工作线程重启或失效后可重新领取';
 comment on column ai_vector_768.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
-comment on column ai_vector_768.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_768.content is '纯净正文副本，不包含向量化时附加的描述性元数据，权威正文以分片表为准';
 comment on column ai_vector_768.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
 comment on column ai_vector_768.vector is '固定768维非零向量';
 comment on column ai_vector_768.tenant_id is '由metadata生成的租户ID';
@@ -573,7 +573,7 @@ comment on column ai_vector_768.document_id is '所属文档ID，检索时实时
 comment on column ai_vector_768.chunk_id is '分片ID，业务层保证关联完整性';
 comment on column ai_vector_768.model_connection_id is '生成向量所用的租户模型连接ID';
 comment on column ai_vector_1024.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
-comment on column ai_vector_1024.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_1024.content is '纯净正文副本，不包含向量化时附加的描述性元数据，权威正文以分片表为准';
 comment on column ai_vector_1024.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
 comment on column ai_vector_1024.vector is '固定1024维非零向量';
 comment on column ai_vector_1024.tenant_id is '由metadata生成的租户ID';
@@ -582,7 +582,7 @@ comment on column ai_vector_1024.document_id is '所属文档ID，检索时实�
 comment on column ai_vector_1024.chunk_id is '分片ID，业务层保证关联完整性';
 comment on column ai_vector_1024.model_connection_id is '生成向量所用的租户模型连接ID';
 comment on column ai_vector_1536.id is '独立向量记录雪花ID，一个分片可跨索引代次拥有多条记录';
-comment on column ai_vector_1536.content is '模型输入正文副本，权威正文以分片表为准';
+comment on column ai_vector_1536.content is '纯净正文副本，不包含向量化时附加的描述性元数据，权威正文以分片表为准';
 comment on column ai_vector_1536.metadata is '后端写入的租户、知识库、文档、分片、模型及版本信息';
 comment on column ai_vector_1536.vector is '固定1536维非零向量';
 comment on column ai_vector_1536.tenant_id is '由metadata生成的租户ID';

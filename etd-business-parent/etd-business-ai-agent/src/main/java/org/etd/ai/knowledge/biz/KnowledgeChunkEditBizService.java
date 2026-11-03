@@ -192,17 +192,20 @@ public class KnowledgeChunkEditBizService {
     /** 标题和引用按首次出现顺序去重，页码按数值升序合并。 */
     private KnowledgeChunkSource mergeSource(List<KnowledgeChunkEntity> selected) {
         Set<String> headings = new LinkedHashSet<>();
+        Set<String> captions = new LinkedHashSet<>();
         Set<Integer> pages = new TreeSet<>();
         Set<String> refs = new LinkedHashSet<>();
         for (KnowledgeChunkEntity chunk : selected) {
             headings.addAll(chunk.getSource().headings());
+            captions.addAll(chunk.getSource().captions());
             pages.addAll(chunk.getSource().pageNumbers());
             refs.addAll(chunk.getSource().documentItemRefs());
         }
         List<String> path = List.copyOf(headings);
+        List<String> descriptions = List.copyOf(captions);
         List<Integer> pageNumbers = List.copyOf(pages);
         List<String> references = List.copyOf(refs);
-        return new KnowledgeChunkSource(path, pageNumbers, references);
+        return new KnowledgeChunkSource(path, descriptions, pageNumbers, references);
     }
 
     /** 编辑后递增正文轮次、撤销确认并停用正式检索，旧向量状态按原规则失效。 */

@@ -15,7 +15,7 @@ public class KnowledgeRecallHit {
     private Integer chunkIndex;
     /** 当前分片正文。 */
     private String content;
-    /** 原文标题、页码及块引用。 */
+    /** 原文标题、图表说明、页码及块引用，与召回正文分别返回。 */
     private KnowledgeChunkSource source;
     /** 查询时资料内容轮次，用于模型调用后复核。 */
     private Long processingVersion;

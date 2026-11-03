@@ -120,7 +120,7 @@ class KnowledgeChunkPersistenceTest {
             List<String> headings = List.of("标题" + index);
             List<Integer> pages = List.of(index + 1);
             List<String> refs = List.of("#/texts/" + index);
-            List<String> captions = List.of();
+            List<String> captions = List.of("图表说明" + index);
             Map<String, Object> metadata = Map.of();
             DocumentChunk chunk = new DocumentChunk("sample.md", index, "正文" + index, "正文" + index,
                     3, headings, captions, refs, pages, metadata);
@@ -151,6 +151,7 @@ class KnowledgeChunkPersistenceTest {
         assertThat(merged).hasSize(2);
         assertThat(merged.getFirst().getContent()).isEqualTo("人工修改正文\n\n正文1");
         assertThat(merged.getFirst().getSource().pageNumbers()).containsExactly(1, 2);
+        assertThat(merged.getFirst().getSource().captions()).containsExactly("图表说明0", "图表说明1");
         state = editing.confirmChunks(1L, state.getVersion());
         assertThat(state.getChunkStatus()).isEqualTo(KnowledgeChunkStatus.CONFIRMED);
         assertThat(state.getChunkConfirmedTime()).isNotNull();
@@ -587,7 +588,11 @@ class KnowledgeChunkPersistenceTest {
     }
     private DocumentChunkParameters parameters(DocumentChunkStrategy strategy) {
         DocumentChunkParameters.Basic.BasicBuilder basic = DocumentChunkParameters.Basic.builder().strategy(strategy).tableStructure(true)
-                .useMarkdownTables(true).maxTokens(64);
+                .useMarkdownTables(true);
+        // 层级策略由原文结构分块，当前契约明确禁止附带 Token 上限。
+        if (strategy != DocumentChunkStrategy.HIERARCHICAL) {
+            basic.maxTokens(64);
+        }
         DocumentChunkParameters.Normal.NormalBuilder normal = DocumentChunkParameters.Normal.builder();
         if (strategy == DocumentChunkStrategy.REGEX) {
             basic.pattern("(?m)^# ");
@@ -595,6 +600,8 @@ class KnowledgeChunkPersistenceTest {
         }
         Duration timeout = Duration.ofSeconds(90);
         DocumentChunkParameters.Advanced advanced = DocumentChunkParameters.Advanced.builder().documentTimeout(timeout).build();
-        return new DocumentChunkParameters(basic.build(), normal.build(), advanced);
+        DocumentChunkParameters.Basic basicOptions = basic.build();
+        DocumentChunkParameters.Normal normalOptions = normal.build();
+        return new DocumentChunkParameters(basicOptions, normalOptions, advanced);
     }
 }

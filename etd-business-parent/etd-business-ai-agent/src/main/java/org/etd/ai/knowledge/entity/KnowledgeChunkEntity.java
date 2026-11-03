@@ -40,7 +40,7 @@ public class KnowledgeChunkEntity extends OrgScopedEntity {
     private String content;
     /** 以cl100k_base计算的正文Token数，与Docling原生分片预算可使用不同分词器。 */
     private Integer tokenCount;
-    /** 来源标题、页码及结构块引用。 */
+    /** 来源标题、图表说明、页码及结构块引用；描述性信息用于向量输入，正文保持独立。 */
     @TableField(typeHandler = KnowledgeChunkSourceTypeHandler.class)
     private KnowledgeChunkSource source;
 }

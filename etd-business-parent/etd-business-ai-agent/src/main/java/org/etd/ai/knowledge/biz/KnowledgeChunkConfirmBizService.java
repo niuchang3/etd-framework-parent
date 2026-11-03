@@ -1,6 +1,7 @@
 package org.etd.ai.knowledge.biz;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.etd.ai.knowledge.constant.KnowledgeChunkStatus;
 import org.etd.ai.knowledge.constant.KnowledgeVectorStatus;
 import org.etd.ai.knowledge.constant.KnowledgePolicy;
 import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
+import org.etd.ai.knowledge.converter.KnowledgeChunkConverter;
 import org.etd.ai.knowledge.entity.KnowledgeBaseEntity;
 import org.etd.ai.knowledge.entity.KnowledgeChunkEntity;
 import org.etd.ai.knowledge.entity.KnowledgeDocumentEntity;
@@ -20,6 +22,8 @@ import org.etd.ai.model.constant.ModelType;
 import org.etd.ai.model.service.ModelInferenceService;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.springframework.stereotype.Service;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.document.MetadataMode;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** 人工确认用例：事务外推理，提交前重新校验资料和模型配置版本，原子发布确认状态及向量。 */
@@ -60,7 +64,12 @@ public class KnowledgeChunkConfirmBizService {
             return List.of();
         }
         settings.validate(base.getEmbeddingConnectionId(), ModelType.EMBEDDING, base.getDimensions());
-        List<String> texts = snapshot.chunks().stream().map(KnowledgeChunkEntity::getContent).toList();
+        List<String> texts = new ArrayList<>();
+        for (KnowledgeChunkEntity chunk : snapshot.chunks()) {
+            Document input = KnowledgeChunkConverter.INSTANCE.toEmbeddingDocument(snapshot.document(), chunk);
+            // 元数据只参与推理输入；向量副本、召回和窗口扩展仍使用纯净正文。
+            texts.add(input.getFormattedContent(MetadataMode.EMBED));
+        }
         return inference.createEmbeddingList(base.getEmbeddingConnectionId(), base.getDimensions(), texts);
     }
 

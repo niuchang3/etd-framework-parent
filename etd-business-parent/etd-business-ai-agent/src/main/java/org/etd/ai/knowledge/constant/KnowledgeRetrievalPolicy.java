@@ -12,6 +12,12 @@ public final class KnowledgeRetrievalPolicy {
     public static final String VECTOR = "vector";
     /** 混合检索。 */
     public static final String HYBRID = "hybrid";
+    /** Embedding 描述性元数据：资料当前显示名称。 */
+    public static final String EMBEDDING_DOCUMENT_NAME = "文档名称";
+    /** Embedding 描述性元数据：所属章节路径或合并标题集合。 */
+    public static final String EMBEDDING_HEADINGS = "章节标题";
+    /** Embedding 描述性元数据：原文图表说明。 */
+    public static final String EMBEDDING_CAPTIONS = "图表说明";
     /** 系统支持维度。 */
     public static final Set<Integer> DIMENSIONS = Set.of(768, 1024, 1536);
     private KnowledgeRetrievalPolicy() { }

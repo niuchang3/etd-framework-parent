@@ -11,6 +11,8 @@ import org.etd.framework.starter.ai.document.tokenizer.DocumentTokenCounter;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import org.springframework.ai.document.Document;
+import org.etd.ai.knowledge.constant.KnowledgeRetrievalPolicy;
 import org.etd.ai.knowledge.controller.dto.KnowledgeChunkEditDTO;
 import org.etd.framework.common.core.exception.ApiRuntimeException;
 import org.mapstruct.factory.Mappers;
@@ -35,6 +37,34 @@ public interface KnowledgeChunkConverter {
     @Mapping(target = "content", source = "chunk.rawText")
     @Mapping(target = "source", source = "chunk")
     KnowledgeChunkEntity toEntity(KnowledgeDocumentEntity document, DocumentChunk chunk);
+
+    /**
+     * 只选择描述性来源，正文保持原样，是否加入向量输入由官方 MetadataMode 控制。
+     * @param document 已授权且已锁定版本的资料
+     * @param chunk 当前人工确认的分片，不能使用解析时缓存的旧正文
+     * @return 官方文本对象；不含租户、用户、权限字段、页码或内部引用
+     */
+    @Mapping(target = "id", source = "chunk.id")
+    @Mapping(target = "text", source = "chunk.content")
+    @Mapping(target = "metadata", expression = "java(embeddingMetadata(document, chunk))")
+    @Mapping(target = "media", ignore = true)
+    @Mapping(target = "score", ignore = true)
+    @Mapping(target = "idGenerator", ignore = true)
+    Document toEmbeddingDocument(KnowledgeDocumentEntity document, KnowledgeChunkEntity chunk);
+
+    /** 白名单选择业务语义字段，格式化由官方 Document 完成，不修改权威正文。 */
+    default Map<String, Object> embeddingMetadata(KnowledgeDocumentEntity document, KnowledgeChunkEntity chunk) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put(KnowledgeRetrievalPolicy.EMBEDDING_DOCUMENT_NAME, document.getDocumentName());
+        KnowledgeChunkSource source = chunk.getSource();
+        if (!source.headings().isEmpty()) {
+            metadata.put(KnowledgeRetrievalPolicy.EMBEDDING_HEADINGS, source.headings());
+        }
+        if (!source.captions().isEmpty()) {
+            metadata.put(KnowledgeRetrievalPolicy.EMBEDDING_CAPTIONS, source.captions());
+        }
+        return metadata;
+    }
     /**
      * @param original 已校验的原分片
      * @param content 第二片的权威正文
